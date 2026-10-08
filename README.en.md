@@ -216,7 +216,7 @@ For the backend, run these commands in `agenteam-server`:
 
 In Windows PowerShell, replace `./mvnw` with `.\mvnw.cmd`. Backend tests require Docker and use separate MySQL and Redis containers. Office document tests use the `agenteam/sandbox-office:local` image built in the setup steps above.
 
-Object storage tests build a separate MinIO image from pinned official source. The first run downloads the Go build environment and dependencies; later runs can reuse local Docker caches. The source archive checksum is verified and its original license is retained. This test service is excluded from application images. Tests cache at most four Spring application contexts, and GitHub backend checks cap the Java heap at 3 GB.
+Object storage tests build a separate MinIO image from pinned official source. The first run downloads the Go build environment and dependencies; later runs can reuse local Docker caches. The source archive checksum is verified and its original license is retained. This test service is excluded from application images. Backend test classes run sequentially in separate Java processes, each with a 2 GB heap limit, so database mappings and framework caches cannot accumulate across the full suite. This increases full-suite runtime. GitHub checks retain test reports for seven days to help diagnose failures.
 
 For the frontend, run these commands in `agenteam-web`:
 

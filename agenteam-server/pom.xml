@@ -232,6 +232,16 @@
     <directory>${agenteam.build.directory}</directory>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- 各类独立执行，结束时释放测试数据库映射及框架静态缓存。 -->
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
+          <argLine>-Xmx2g</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <version>3.6.2</version>
