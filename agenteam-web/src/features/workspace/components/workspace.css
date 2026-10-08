@@ -2,11 +2,11 @@
   --shell-gutter: 38px;
   --workspace-sidebar-width: 260px;
   --workspace-content-width: 1180px;
-  /* 将隐藏说明等绝对定位内容约束在工作区内，避免撑出整页滚动。 */
+  /* 外层仅固定页面框架，禁止锚点或聚焦把顶栏滚出视口。正文在自己的容器内滚动。 */
   position: relative;
   height: 100dvh;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .sidebar {
@@ -220,7 +220,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .topbar {
@@ -640,15 +640,27 @@
 
 .skip-link {
   position: fixed;
-  top: -100px;
-  left: 250px;
+  top: calc(var(--topbar-height) + 12px);
+  inset-inline-start: calc(var(--workspace-sidebar-width) + var(--shell-gutter));
   z-index: 400;
+  max-inline-size: calc(100vw - var(--workspace-sidebar-width) - var(--shell-gutter) * 2);
+  min-height: 44px;
   padding: 12px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .skip-link:focus-visible {
-  top: 10px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.workspace-scroll-region:focus-visible {
+  outline-offset: -3px;
 }
 
 @media (min-width: 1600px) {
@@ -755,7 +767,8 @@
   }
 
   .skip-link {
-    left: 20px;
+    inset-inline-start: var(--shell-gutter);
+    max-inline-size: calc(100vw - var(--shell-gutter) * 2);
   }
 }
 

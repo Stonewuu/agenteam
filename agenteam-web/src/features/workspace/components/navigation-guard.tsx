@@ -47,13 +47,18 @@ export function NavigationGuard({children}: { children: ReactNode }) {
       if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || link.target === "_blank" || link.hasAttribute("download")) {
         return;
       }
+      const target = new URL(link.href);
+      // 同一页的正文定位不会卸载表单，不应触发离开确认或阻止正文获得焦点。
+      if (target.hash && target.origin === window.location.origin && target.pathname === window.location.pathname
+        && target.search === window.location.search) {
+        return;
+      }
       if (![...editors.current.values()].some((value) => value.dirty || value.busy) || link.href === window.location.href) {
         return;
       }
       event.preventDefault();
       event.stopImmediatePropagation();
       request(() => {
-        const target = new URL(link.href);
         if (target.origin === window.location.origin) {
           router.push(target.pathname + target.search + target.hash);
         } else {
