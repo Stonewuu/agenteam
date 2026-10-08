@@ -10,7 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.env.MockEnvironment;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.images.builder.ImageFromDockerfile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
@@ -38,7 +38,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class S3FileObjectStoreTest {
     private static final String USER = "agenteam-test", PASSWORD = "p05-local-storage-test-only";
-    private static final GenericContainer<?> SERVER = new GenericContainer<>(DockerImageName.parse("quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"))
+    private static final GenericContainer<?> SERVER = new GenericContainer<>(
+        new ImageFromDockerfile("agenteam/test-minio:2025-09-07-07c3a429", false)
+            .withFileFromClasspath("Dockerfile", "containers/minio/Dockerfile"))
         .withEnv("MINIO_ROOT_USER", USER).withEnv("MINIO_ROOT_PASSWORD", PASSWORD).withEnv("MINIO_BROWSER", "off")
         .withCommand("server", "/data", "--address", ":9000").withExposedPorts(9000)
         .waitingFor(Wait.forHttp("/minio/health/ready").forPort(9000));

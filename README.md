@@ -226,6 +226,8 @@ pnpm dev
 
 Windows PowerShell 将 `./mvnw` 换成 `.\mvnw.cmd`。后端测试需要 Docker，会使用独立的 MySQL 和 Redis 容器；办公文档测试使用前文构建的 `agenteam/sandbox-office:local` 镜像。
 
+对象存储测试会从固定的 MinIO 官方源码构建独立测试镜像，首次运行需要下载 Go 构建环境和依赖，后续可复用本机缓存。源码归档先核对固定摘要，原许可保留在测试镜像中；该服务不进入应用发行镜像。完整测试最多缓存四个 Spring 应用，GitHub 后端检查另将 Java 最大堆内存设为 3 GB。
+
 前端，在 `agenteam-web` 目录执行：
 
 ```sh
