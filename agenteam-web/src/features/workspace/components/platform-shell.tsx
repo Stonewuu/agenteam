@@ -150,7 +150,12 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
     </div>
   </>;
   return <div className="app-shell">
-    <a className="skip-link" href="#main-content">{uiText("跳到页面内容")}</a>
+    <a className="skip-link" href="#main-content" onClick={(event) => {
+      if (container.current) {
+        event.preventDefault();
+        container.current.focus({preventScroll: true});
+      }
+    }}>{uiText("跳到页面内容")}</a>
     <aside className="sidebar">{navigation}</aside>
     {mobile && <Dialog title={areaName} onClose={() => setMobile(false)} drawer>
       <div className="mobile-sidebar">{navigation}</div>
@@ -171,7 +176,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
           <NotificationLink enterpriseId={context.enterprise.id}
                             className="icon-button notification-trigger"/>}<AccountMenu user={user} go={go}/></div>
       </header>
-      <main ref={container} id="main-content" data-page-scroll={fullHeight ? undefined : ""}
+      <main ref={container} id="main-content" tabIndex={-1} data-page-scroll={fullHeight ? undefined : ""}
             className={`workspace-scroll-region${fullHeight ? " workspace-full-height" : ""}`}>
         <div className={fullHeight ? "workspace-viewport" : "page-content"}><ExistingShell.Provider key={user.id} value><PageHeaderIconProvider
           icon={<PageIcon size={26} variant="Bulk"/>}>{chatArea ? <ConversationFrame>{children}</ConversationFrame> :

@@ -76,7 +76,12 @@ export function Dialog({
     <DialogContent ref={loadingSurface} showCloseButton={false} role={variant === "discard" ? "alertdialog" : "dialog"}
                    className={`agenteam-dialog ${drawer ? "drawer" : "modal"} ${variant === "discard" ? "small confirmation" : size ?? (wide ? "large" : "medium")}${tall ? " tall" : ""} ${className}`}
                    initialFocus={() => (variant === "discard" ? body.current?.parentElement?.querySelector<HTMLElement>(".modal-footer button") : body.current?.querySelector<HTMLElement>('input:not([type="hidden"]):not([aria-hidden="true"]):not(:disabled),textarea:not(:disabled),button[role="combobox"]:not(:disabled)')) ?? true}
-                   finalFocus={() => previous.current?.isConnected ? previous.current : true} inert={!open}
+                   finalFocus={() => {
+                     const target = previous.current;
+                     // 自动弹窗打开前可能只有页面获得焦点，不能把页面内第一个链接当成原操作入口。
+                     return target?.isConnected && target !== document.body && target !== document.documentElement
+                       && !target.matches(":disabled") ? target : false;
+                   }} inert={!open}
                    onSubmit={(event) => event.stopPropagation()}>
       <header className="modal-header">
         <div className="modal-heading"><div className="modal-title-line">

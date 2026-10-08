@@ -647,7 +647,7 @@
   background: var(--surface);
 }
 
-.skip-link:focus {
+.skip-link:focus-visible {
   top: 10px;
 }
 
