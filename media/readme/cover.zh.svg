@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="420" viewBox="0 0 1440 420" role="img" aria-labelledby="title description">
+  <title id="title">群策 AgenTeam — 多智能体协作平台</title>
+  <desc id="description">支持对话任务、工具调用、文件处理、待办管理和定时执行的多智能体协作平台。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fcf9f4"/>
+      <stop offset="1" stop-color="#eee3d5"/>
+    </linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="0.8" y2="1">
+      <stop stop-color="#bb7856"/>
+      <stop offset="1" stop-color="#935037"/>
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="210%">
+      <feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#75432e" flood-opacity=".19"/>
+    </filter>
+    <clipPath id="cover">
+      <rect width="1440" height="420" rx="24"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cover)">
+    <rect width="1440" height="420" fill="url(#paper)"/>
+    <path d="M953 0H1440V420H953Z" fill="#e5d3be" opacity=".25"/>
+    <circle cx="1200" cy="205" r="264" fill="none" stroke="#d6bd9f" stroke-width="1" opacity=".7"/>
+    <circle cx="1200" cy="205" r="205" fill="none" stroke="#d6bd9f" stroke-width="1" opacity=".8"/>
+    <circle cx="1200" cy="205" r="148" fill="#ead9c5" opacity=".5"/>
+    <path d="M928 36V384" stroke="#d9c7b6" stroke-width="1"/>
+    <g font-family="Segoe UI, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif">
+      <text x="64" y="64" font-size="24" font-weight="700" fill="#995a40" letter-spacing="1.2">AgenTeam <tspan font-size="19" font-weight="400" letter-spacing="3"> / 群策</tspan></text>
+      <text x="60" y="156" font-size="64" font-weight="750" fill="#2f302b">群策 AgenTeam</text>
+      <text x="60" y="236" font-size="50" font-weight="650" fill="#a05a3f">多智能体协作平台</text>
+      <text x="65" y="283" font-size="22" fill="#6f665c">智能体配置 · 工具调用 · 文件处理 · 团队管理</text>
+      <path d="M64 319H865" stroke="#d5c7b8" stroke-width="1"/>
+      <text x="64" y="365" font-size="17" fill="#574f46">对话任务</text>
+      <text x="340" y="365" font-size="17" fill="#574f46">待办管理</text>
+      <text x="616" y="365" font-size="17" fill="#574f46">定时执行</text>
+      <text x="1184" y="364" text-anchor="middle" font-size="25" font-weight="650" fill="#7d503d" letter-spacing="1">AgenTeam</text>
+    </g>
+    <!-- 标志路径与产品现有 SVG 标志一致。 -->
+    <g transform="translate(1064 80) scale(2.5)" filter="url(#shadow)">
+      <rect width="96" height="96" rx="25" fill="url(#copper)"/>
+      <g fill="#fff5e8" transform="translate(8 8) scale(.8333333333)">
+        <path d="M29 12H45V33L33 45H29C19.61 45 12 37.61 12 28.5S19.61 12 29 12Z"/>
+        <path d="M29 12H45V33L33 45H29C19.61 45 12 37.61 12 28.5S19.61 12 29 12Z" transform="rotate(90 48 48)"/>
+        <path d="M29 12H45V33L33 45H29C19.61 45 12 37.61 12 28.5S19.61 12 29 12Z" transform="rotate(180 48 48)"/>
+        <path d="M29 12H45V33L33 45H29C19.61 45 12 37.61 12 28.5S19.61 12 29 12Z" transform="rotate(270 48 48)"/>
+      </g>
+    </g>
+  </g>
+</svg>

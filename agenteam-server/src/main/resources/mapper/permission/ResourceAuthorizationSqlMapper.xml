@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.permission.ResourceAuthorizationSqlMapper">
+  <select id="findVisible" resultType="com.stonewu.agenteam.model.permission.entity.ResourceAuthorizationQueryRow">
+    SELECT r.id, r.enterprise_id, r.kind, r.owner_user_id, r.status, r.revision FROM resource r
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND r.id = #{id}
+  </select>
+  <select id="findVisibleIds" resultType="String">
+    SELECT r.id FROM resource r WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND r.id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
+  <select id="lockResource" resultType="com.stonewu.agenteam.model.permission.entity.ResourceAuthorizationQueryRow">
+    SELECT r.id, r.enterprise_id, r.kind, r.owner_user_id, r.status, r.revision FROM resource r WHERE r.enterprise_id =
+    #{enterpriseId} AND r.id = #{id} AND r.deleted_at IS NULL FOR UPDATE
+  </select>
+</mapper>

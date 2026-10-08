@@ -1,0 +1,829 @@
+.shell {
+  display: flex;
+  height: 100dvh;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.sidebar {
+  width: 226px;
+  flex: 0 0 226px;
+  padding: 24px 16px;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  overflow-y: auto;
+}
+
+.back {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  margin-bottom: 30px;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  font-size: 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.enterpriseName {
+  margin: 0 12px 16px;
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.navigation {
+  display: grid;
+  gap: 5px;
+}
+
+.navLink {
+  padding: 11px 12px;
+  color: var(--muted-foreground);
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background-color 150ms, color 150ms;
+}
+
+.navLink:hover, .back:hover {
+  background: var(--surface-soft);
+  color: var(--foreground);
+}
+
+.navActive {
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 36px clamp(20px, 4vw, 64px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+
+.description {
+  color: var(--muted-foreground);
+  margin: 10px 0 20px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 22px 0 18px;
+}
+
+.toolbar .input {
+  max-width: 320px;
+}
+
+.input, .textarea, .select {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  border-radius: 16px;
+  padding: 11px 14px;
+  min-height: 44px;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 140ms, box-shadow 140ms;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 2px var(--input-focus-background);
+}
+
+.textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.primary, .secondary, .textButton {
+  min-height: 40px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, opacity 150ms;
+}
+
+.primary {
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+
+.primary:hover {
+  background: color-mix(in srgb, var(--primary) 87%, var(--foreground));
+}
+
+.secondary {
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.secondary:hover {
+  background: var(--surface-soft);
+}
+
+.textButton {
+  border: 0;
+  padding: 5px 7px;
+  color: var(--primary);
+  background: transparent;
+}
+
+.textButton:hover {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.primary:disabled, .secondary:disabled, .textButton:disabled {
+  opacity: .48;
+  cursor: default;
+}
+
+.primary:focus-visible, .secondary:focus-visible, .textButton:focus-visible, .navLink:focus-visible, .closeButton:focus-visible, .back:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  color: var(--muted-foreground);
+  background: var(--surface-soft);
+  font-weight: 500;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.table th, .table td {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr {
+  transition: background-color 150ms;
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-soft) 45%, transparent);
+}
+
+.table strong {
+  font-weight: 500;
+}
+
+.memberIdentity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.memberIdentity > svg {
+  flex-shrink: 0;
+}
+
+.membersFilters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.membersFilters :global(.search-input) {
+  width: 245px;
+  max-width: 100%;
+}
+
+.teamToolbar {
+  justify-content: space-between;
+  color: var(--secondary);
+  font-size: 12px;
+  margin-top: 0;
+  margin-bottom: 26px;
+}
+
+.teamToolbar > :global(.search-input) {
+  width: 245px;
+}
+
+.teamOwner {
+  margin: 0 0 20px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.teamFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--secondary);
+}
+
+.secondaryText {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.rowActions {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--foreground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 64px 20px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.dialog {
+  width: min(660px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 24px 80px #0003;
+  overflow-y: auto;
+  animation: dialog-appear 160ms ease-out;
+}
+
+.dialog::backdrop {
+  background: #131c3052;
+  backdrop-filter: blur(3px);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.dialogHeader h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+}
+
+.closeButton {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 25px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: var(--surface-soft);
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.twoColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.picker {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 0;
+  padding: 14px;
+  min-width: 0;
+}
+
+.picker legend {
+  padding: 0 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.selectionSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.selectedItems {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-height: 118px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.selectionChip {
+  border: 0;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  padding: 5px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pickerOptions {
+  display: grid;
+  gap: 2px;
+  max-height: 210px;
+  overflow-y: auto;
+  padding-top: 10px;
+  font-size: 13px;
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--surface-soft);
+}
+
+.option input {
+  margin-top: 3px;
+  accent-color: var(--primary);
+}
+
+.option small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--red-text);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.permissionGroup {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.permissionGroup h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.permissionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 12px;
+}
+
+.settingsCard {
+  max-width: 780px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  padding: 26px;
+}
+
+@keyframes dialog-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+
+  .back {
+    margin: 0 0 7px;
+    padding: 5px;
+  }
+
+  .enterpriseName {
+    margin: 6px 5px;
+  }
+
+  .navigation {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+  }
+
+  .navLink {
+    white-space: nowrap;
+    padding: 9px 10px;
+  }
+
+  .content {
+    padding: 24px 16px;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .twoColumns, .permissionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .table th, .table td {
+    padding: 13px 12px;
+  }
+
+  .dialog {
+    padding: 22px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    animation: none;
+  }
+
+  .navLink, .primary, .secondary, .textButton, .input, .select, .textarea, .table tbody tr {
+    transition: none;
+  }
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.managementCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 24px 22px 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.cardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.managementCard h2 {
+  font-size: 16px;
+  margin: 22px 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.managementCard > p {
+  font-size: 12px;
+  color: var(--secondary);
+  line-height: 1.85;
+  min-height: 44px;
+  margin: 0 0 18px;
+  overflow-wrap: anywhere;
+}
+
+.cardFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 0 22px;
+}
+
+.cardFacts dt {
+  font-size: 11px;
+  color: var(--secondary);
+  margin-bottom: 8px;
+}
+
+.cardFacts dd {
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.managementCard footer {
+  border-top: 1px solid var(--border-light);
+  padding: 11px 0;
+  margin-top: auto;
+}
+
+.permissionSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 25px;
+  margin: 0 0 20px;
+}
+
+.permissionSummary > span {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.toolbar > :global(.search-input) {
+  width: min(330px, 100%);
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent-action);
+  color: var(--on-accent);
+  font-weight: 500;
+  box-shadow: var(--button-shadow);
+}
+
+.primary:hover {
+  background: var(--accent-hover);
+}
+
+.textButton {
+  color: var(--accent-text);
+}
+
+.textButton:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.picker, .permissionGroup {
+  border-radius: 16px;
+}
+
+@media (max-width: 1200px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .primary, .secondary, .textButton {
+    min-height: 44px;
+  }
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 25px;
+}
+
+.overviewCard {
+  min-width: 0;
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.overviewCard h2 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.overviewIdentity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.overviewIdentity > div {
+  min-width: 0;
+}
+
+.overviewIdentity p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--secondary);
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 18px;
+  padding-top: 25px;
+  border-top: 1px solid var(--border-light);
+  margin: 25px 0 0;
+  font-size: 12px;
+}
+
+.detailGrid dt {
+  color: var(--secondary);
+}
+
+.detailGrid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.quickLinks {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.quickLinks a {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  color: var(--text);
+}
+
+.quickLinks a > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.quickLinks strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.quickLinks small {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--secondary);
+}
+
+.quickLinks a:hover strong {
+  color: var(--accent-text);
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .overviewGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .overviewCard {
+    padding: 21px;
+  }
+
+  .detailGrid {
+    grid-template-columns: 80px minmax(0, 1fr);
+  }
+}
+
+.accessSearch {
+  margin-bottom: 20px;
+}

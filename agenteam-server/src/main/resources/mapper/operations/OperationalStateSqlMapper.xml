@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.operations.OperationalStateSqlMapper">
+  <select timeout="10" id="readBackgroundJob"
+          resultType="com.stonewu.agenteam.model.operations.entity.OperationalStateQueryRow">
+    SELECT kind, SUM(status = 'queued') AS queued,
+    SUM(status = 'queued' AND available_at &lt;= #{now}) AS ready,
+    SUM(status = 'leased') AS leased, SUM(status = 'leased' AND lease_until &lt;= #{now}) AS expired,
+    MIN(CASE WHEN status = 'queued' AND available_at &lt;= #{now} THEN available_at END) AS oldest
+    FROM background_job WHERE status IN ('queued', 'leased') GROUP BY kind
+  </select>
+  <select timeout="10" id="readAgentRun"
+          resultType="com.stonewu.agenteam.model.operations.entity.OperationalStateQueryRow">
+    SELECT status, COUNT(*) AS total FROM agent_run WHERE status IN ('queued', 'running', 'waiting_approval',
+    'cancelling') GROUP BY status
+  </select>
+  <select timeout="10" id="readAgentEvent"
+          resultType="com.stonewu.agenteam.model.operations.entity.OperationalStateQueryRow">
+    SELECT COUNT(*) AS total, MIN(created_at) AS oldest FROM agent_event WHERE published_at IS NULL
+  </select>
+</mapper>

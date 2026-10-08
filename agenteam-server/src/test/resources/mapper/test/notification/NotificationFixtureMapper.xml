@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.notification.NotificationFixtureMapper">
+  <select id="scheduleTriggerApiPausingTheHireImmediatelyPausesItsPlansAndDeliversEachOwnerNoticeOnceList7"
+          resultType="String">
+    SELECT DISTINCT user_id FROM notification WHERE enterprise_id = #{args[0]}
+  </select>
+  <select id="scheduleTriggerApiWaitingForApprovalBlocksTheNextOccurrenceAndExpirationReleasesThePlanList10"
+          resultType="String">
+    SELECT DISTINCT target_id FROM notification WHERE enterprise_id = #{args[0]} AND target_type = 'conversation'
+  </select>
+</mapper>

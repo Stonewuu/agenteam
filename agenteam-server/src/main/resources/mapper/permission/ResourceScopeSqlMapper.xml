@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper">
+  <!-- 标识符来自引用处固定的 XML 属性，业务参数始终通过参数绑定传入。 -->
+  <sql id="owner">
+    (#{${scopePath}.dataScope} = 'enterprise' OR ${ownerColumn} = #{${scopePath}.userId}
+    OR (#{${scopePath}.dataScope} = 'team' AND EXISTS (
+    SELECT 1 FROM enterprise_team_member actor_team
+    JOIN enterprise_team team ON team.enterprise_id = actor_team.enterprise_id AND team.id = actor_team.team_id
+    JOIN enterprise_team_member owner_team ON owner_team.enterprise_id = team.enterprise_id AND owner_team.team_id =
+    team.id
+    JOIN enterprise_member owner_member ON owner_member.enterprise_id = owner_team.enterprise_id AND
+    owner_member.user_id = owner_team.user_id
+    JOIN app_user owner_user ON owner_user.id = owner_member.user_id
+    WHERE actor_team.enterprise_id = ${enterpriseColumn}
+    AND actor_team.user_id = #{${scopePath}.userId} AND owner_team.user_id = ${ownerColumn}
+    AND team.status = 'active' AND team.deleted_at IS NULL
+    AND owner_member.status = 'active' AND owner_user.status = 'active'
+    )))
+  </sql>
+  <sql id="visible">
+    ${alias}.enterprise_id = #{${scopePath}.enterpriseId} AND ${alias}.kind = #{${scopePath}.kind}
+    <if test="!${scopePath}.includeDeleted">AND ${alias}.deleted_at IS NULL</if>
+    AND (#{${scopePath}.maintainAll} OR (
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+      <property name="ownerColumn" value="${alias}.owner_user_id"/>
+      <property name="enterpriseColumn" value="${alias}.enterprise_id"/>
+    </include>
+    AND (${alias}.owner_user_id = #{${scopePath}.userId} OR EXISTS (
+    SELECT 1 FROM resource_grant g
+    WHERE g.enterprise_id = ${alias}.enterprise_id AND g.resource_id = ${alias}.id
+    AND (g.capability = #{${scopePath}.capability} OR (#{${scopePath}.capability} = 'view' AND g.capability = 'edit'))
+    AND ((g.subject_type = 'enterprise' AND g.subject_id = ${alias}.enterprise_id)
+    OR (g.subject_type = 'user' AND g.subject_id = #{${scopePath}.userId})
+    OR (g.subject_type = 'team' AND EXISTS (
+    SELECT 1 FROM enterprise_team t
+    JOIN enterprise_team_member tm ON tm.enterprise_id = t.enterprise_id AND tm.team_id = t.id
+    WHERE t.enterprise_id = g.enterprise_id AND t.id = g.subject_id
+    AND t.status = 'active' AND t.deleted_at IS NULL AND tm.user_id = #{${scopePath}.userId}
+    )))
+    ))
+    ))
+    <if test="${scopePath}.capability == 'use'">
+      AND ${alias}.status = 'active'
+      AND EXISTS (SELECT 1 FROM enterprise_member om JOIN app_user ou ON ou.id = om.user_id
+      WHERE om.enterprise_id = ${alias}.enterprise_id AND om.user_id = ${alias}.owner_user_id
+      AND om.status = 'active' AND ou.status = 'active')
+    </if>
+  </sql>
+</mapper>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.resource.UsableVersionSqlMapper">
+  <sql id="versionFields">
+    SELECT r.id AS resource_id, r.kind, v.id AS version_id, v.version_no, v.name, v.description, v.published_at,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS color
+    FROM resource_version v JOIN resource r ON r.enterprise_id = v.enterprise_id AND r.id = v.resource_id
+  </sql>
+  <select id="listVersions" resultType="com.stonewu.agenteam.model.resource.entity.UsableVersionQueryRow">
+    <include refid="versionFields"/>
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND v.status = 'available' AND LOCATE(#{query}, v.name) > 0
+    <if test="resourceId == null">AND (r.kind &lt;&gt; 'plugin' OR r.source &lt;&gt; 'builtin' OR r.published_version_id
+      = v.id)
+    </if>
+    <if test="subagentsOnly">
+      AND r.kind = 'agent' AND JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.agentType')) IN ('chat', 'task')
+      AND COALESCE(JSON_LENGTH(JSON_EXTRACT(v.config_json, '$.workflowVersionIds')), 0) = 0
+    </if>
+    <if test="resourceId != null">AND r.id = #{resourceId}</if>
+    <if test="latestOnly and resourceId == null">
+      AND NOT EXISTS (
+      SELECT 1 FROM resource_version newer
+      WHERE newer.enterprise_id = v.enterprise_id AND newer.resource_id = v.resource_id
+      AND newer.status = 'available' AND newer.version_no &gt; v.version_no
+      <if test="subagentsOnly">
+        AND JSON_UNQUOTE(JSON_EXTRACT(newer.config_json, '$.agentType')) IN ('chat', 'task')
+        AND COALESCE(JSON_LENGTH(JSON_EXTRACT(newer.config_json, '$.workflowVersionIds')), 0) = 0
+      </if>
+      )
+    </if>
+    <if test="cursor != null">
+      AND (v.published_at &lt; #{cursor.time} OR (v.published_at = #{cursor.time} AND v.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit}
+  </select>
+  <select id="selectedVersions" resultType="com.stonewu.agenteam.model.resource.entity.UsableVersionQueryRow">
+    <include refid="versionFields"/>
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND v.status = 'available' AND v.id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
+</mapper>

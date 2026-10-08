@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.export.ExportBoundaryFixtureMapper">
+  <sql id="digits">
+    SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+    UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
+  </sql>
+  <insert id="seedAuditRows">
+    INSERT INTO audit_event (id, enterprise_id, actor_user_id, actor_name, action, object_type, object_id, result,
+    summary, detail_redacted_json, request_id, created_at)
+    SELECT UUID(), #{enterprise}, #{actor}, '批量验收操作者', #{action}, 'resource', NULL, 'success', '批量记录', '{}',
+    UUID(), #{now}
+    FROM (<include refid="digits"/>) a CROSS JOIN (<include refid="digits"/>) b
+    CROSS JOIN (<include refid="digits"/>) c CROSS JOIN (<include refid="digits"/>) d CROSS JOIN (<include
+    refid="digits"/>) e
+  </insert>
+</mapper>

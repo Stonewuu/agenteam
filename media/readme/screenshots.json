@@ -1,0 +1,212 @@
+[
+  {
+    "file": "screenshots/workspace.jpg",
+    "titleZh": "工作台",
+    "titleEn": "Workspace",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "bytes": 141862,
+    "sha256": "f295b548b1f6aa0387623cc73e21b68517af7ad705ccfb4056e443769db1fb0a",
+    "sourceKind": "browser-capture",
+    "note": "用户清理历史记录后重新截图，按原比例统一导出尺寸。",
+    "locale": "zh-CN",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    }
+  },
+  {
+    "file": "screenshots/conversation.jpg",
+    "titleZh": "对话与文件交付",
+    "titleEn": "Conversations and files",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "bytes": 163256,
+    "sha256": "670efde4c5087890477ff1fb4cf6442e9623b1029c81110567f768ac0a5245ce",
+    "sourceKind": "browser-capture",
+    "note": "收起历史对话列表，并打开右侧 HTML 预览；按原比例统一导出尺寸。",
+    "locale": "zh-CN",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    }
+  },
+  {
+    "file": "screenshots/wecom-notifications.jpg",
+    "titleZh": "企业微信通知",
+    "titleEn": "WeCom notifications",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "providedOn": "2026-09-29",
+    "source": "用户提供的企业微信截图",
+    "sourceKind": "user-attachment",
+    "sourceDimensions": {
+      "width": 2352,
+      "height": 1608
+    },
+    "note": "按比例缩至宽度 1920 后截取上方 1080 像素，保留通知内容，裁去底部输入框空白。",
+    "bytes": 187528,
+    "sha256": "18bbc5e5c02adac736e0ccb6c5cf49b0fdc7fd9e1d856568de63d1425b1c0c89",
+    "locale": "zh-CN"
+  },
+  {
+    "file": "screenshots/todos.jpg",
+    "titleZh": "待办事项",
+    "titleEn": "To-dos",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-24",
+    "source": "doc/user-guide/assets/11-todo-form.png",
+    "bytes": 52874,
+    "sha256": "ca1b3ea2d790dff1a5d9ceea572da6eef493e881e0a9e0a83d185737c64b3afd",
+    "locale": "zh-CN"
+  },
+  {
+    "file": "screenshots/schedules.jpg",
+    "titleZh": "定时任务",
+    "titleEn": "Schedules",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-24",
+    "source": "doc/user-guide/assets/09-schedule-form.png",
+    "bytes": 57839,
+    "sha256": "b87de85ed5dd5215c4477704552868fb60c5e62e85a6f048b30bbac85ba32505",
+    "locale": "zh-CN"
+  },
+  {
+    "file": "screenshots/agents.jpg",
+    "titleZh": "智能体列表",
+    "titleEn": "Agent library",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-24",
+    "source": "doc/user-guide/assets/12-capabilities.png",
+    "bytes": 55845,
+    "sha256": "74ad5ee4453cabbff6fc428ba295581585b16d70c7e89593c214c8702fe54f0e",
+    "locale": "zh-CN"
+  },
+  {
+    "file": "screenshots/en/workspace.jpg",
+    "titleZh": "工作台",
+    "titleEn": "Workspace",
+    "locale": "en",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "sourceKind": "browser-capture",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    },
+    "note": "切换产品为英文界面后采集，用户命名内容保留原文；按原比例统一导出尺寸。",
+    "bytes": 154283,
+    "sha256": "e7faadf3be134576acc08991dc173abf159beaaeb2c410405acb7e0673a7e1b6"
+  },
+  {
+    "file": "screenshots/en/conversation.jpg",
+    "titleZh": "对话与网页预览",
+    "titleEn": "Conversations and HTML preview",
+    "locale": "en",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "sourceKind": "browser-capture",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    },
+    "note": "英文对话示例，历史列表已收起，右侧打开实际生成的网页；按原比例统一导出尺寸。",
+    "bytes": 174448,
+    "sha256": "9cca526b47adf66cf9ec77ea55e09fd6bf302571c3a741293f1ff73792223600"
+  },
+  {
+    "file": "screenshots/en/integrations.jpg",
+    "titleZh": "企业微信与飞书接入",
+    "titleEn": "WeCom and Feishu integrations",
+    "locale": "en",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "sourceKind": "browser-capture",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    },
+    "note": "切换产品为英文界面后采集，用户命名内容保留原文；按原比例统一导出尺寸。",
+    "bytes": 111824,
+    "sha256": "8f30e57fa75796261672f8e050cc6328e739183a1e94fcc4ad9ebb1378572092"
+  },
+  {
+    "file": "screenshots/en/todos.jpg",
+    "titleZh": "待办",
+    "titleEn": "To-dos",
+    "locale": "en",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "sourceKind": "browser-capture",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    },
+    "note": "切换产品为英文界面后采集，用户命名内容保留原文；按原比例统一导出尺寸。",
+    "bytes": 119487,
+    "sha256": "f507730409e2963f414876fcf7b348b43f4ed10d106be55fda96bf9e69de2d79"
+  },
+  {
+    "file": "screenshots/en/schedules.jpg",
+    "titleZh": "定时任务",
+    "titleEn": "Schedules",
+    "locale": "en",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "sourceKind": "browser-capture",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    },
+    "note": "切换产品为英文界面后采集，用户命名内容保留原文；按原比例统一导出尺寸。",
+    "bytes": 129769,
+    "sha256": "e40329ccc2c2161941bba55cce457b131de59b2187561401dbe20ded7516823b"
+  },
+  {
+    "file": "screenshots/en/agents.jpg",
+    "titleZh": "能力中心",
+    "titleEn": "Capabilities",
+    "locale": "en",
+    "width": 1920,
+    "height": 1080,
+    "format": "jpeg",
+    "capturedOn": "2026-09-29",
+    "source": "https://agenteam.stonewu.com",
+    "sourceKind": "browser-capture",
+    "sourceDimensions": {
+      "width": 1920,
+      "height": 1070
+    },
+    "note": "切换产品为英文界面后采集，用户命名内容保留原文；按原比例统一导出尺寸。",
+    "bytes": 116822,
+    "sha256": "3448f2c845bd4648c87561b57e25c870444940bb54200c2e68502052f9f8a683"
+  }
+]

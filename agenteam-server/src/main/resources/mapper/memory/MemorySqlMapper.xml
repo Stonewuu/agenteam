@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.memory.MemorySqlMapper">
+  <select id="listAgents" resultType="com.stonewu.agenteam.model.memory.entity.MemoryQueryRow">
+    SELECT m.agent_id, r.name, m.memory_count, m.updated_at,
+    JSON_UNQUOTE(JSON_EXTRACT(COALESCE(v.config_json, d.config_json), '$.icon')) AS agent_icon,
+    JSON_UNQUOTE(JSON_EXTRACT(COALESCE(v.config_json, d.config_json), '$.color')) AS agent_color FROM
+    (SELECT agent_id, COUNT(*) AS memory_count, MAX(updated_at) AS updated_at FROM agent_memory
+    WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND expires_at > #{now} GROUP BY agent_id) m
+    JOIN resource r ON r.enterprise_id = #{enterprise} AND r.id = m.agent_id
+    LEFT JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.resource_id = r.id AND v.id =
+    r.published_version_id
+    LEFT JOIN resource_draft d ON d.enterprise_id = r.enterprise_id AND d.resource_id = r.id
+    WHERE LOCATE(#{query}, r.name) > 0
+    <if test="after != null">
+      AND (m.updated_at &lt; #{after.time} OR (m.updated_at = #{after.time} AND m.agent_id &lt; #{after.id}))
+    </if>
+    ORDER BY m.updated_at DESC, m.agent_id DESC LIMIT #{limit}
+  </select>
+  <select id="findAgentMemoryLocked" resultType="com.stonewu.agenteam.model.memory.entity.MemoryQueryRow">
+    SELECT * FROM agent_memory WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND agent_id = #{agent} AND id
+    = #{id} AND expires_at &gt; #{now} FOR UPDATE
+  </select>
+  <delete id="expireAgentMemory2">
+    DELETE FROM agent_memory WHERE expires_at &lt;= #{now} ORDER BY expires_at LIMIT 500
+  </delete>
+  <update id="clearSourceConversationAgentMemory">
+    UPDATE agent_memory p JOIN agent_message m ON m.enterprise_id = p.enterprise_id AND m.id = p.source_message_id
+    SET p.source_message_id = NULL WHERE m.enterprise_id = #{enterprise} AND m.conversation_id = #{conversation}
+  </update>
+</mapper>

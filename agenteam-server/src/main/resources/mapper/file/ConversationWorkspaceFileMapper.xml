@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.file.ConversationWorkspaceFileMapper">
+  <!-- 从结构化调用参数提取路径并去重，避免加载完整文件正文和每次修改记录。 -->
+  <select id="modifiedPaths" resultType="string">
+    SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(t.request_redacted_json, '$.path'))
+    FROM tool_call t
+    JOIN agent_run r ON r.enterprise_id = t.enterprise_id AND r.id = t.run_id
+    WHERE t.enterprise_id = #{enterprise} AND t.actor_user_id = #{user}
+    AND r.user_id = #{user} AND r.conversation_id = #{conversation}
+    AND t.resource_kind IN ('agent', 'workflow')
+    AND t.tool_name IN ('write_file', 'edit_file') AND t.status = 'succeeded'
+    AND JSON_TYPE(JSON_EXTRACT(t.result_redacted_json, '$.workspaceVersion')) = 'STRING'
+    AND JSON_TYPE(JSON_EXTRACT(t.request_redacted_json, '$.path')) = 'STRING'
+  </select>
+</mapper>

@@ -1,0 +1,29 @@
+# 输入目录由发布脚本明确准备，只含已核验的可执行包及容器入口。
+FROM docker:29-cli AS docker-client
+FROM eclipse-temurin:21-jre-jammy AS application
+ARG APPLICATION_VERSION
+ARG SOURCE_REVISION
+ARG APPLICATION_EDITION
+LABEL org.opencontainers.image.version=$APPLICATION_VERSION \
+      org.opencontainers.image.revision=$SOURCE_REVISION \
+      com.stonewu.agenteam.edition=$APPLICATION_EDITION
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 agenteam \
+    && useradd --uid 10001 --gid 10001 --no-create-home agenteam
+COPY app.jar /app/agenteam.jar
+COPY licenses/ /usr/share/licenses/agenteam/
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/agenteam.jar"]
+
+FROM application AS sandbox-server
+USER root
+ENV HOME=/tmp
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=docker-client /usr/local/bin/docker /usr/local/bin/docker
+COPY sandbox-entrypoint.sh /app/sandbox-entrypoint.sh
+RUN sed -i 's/\r$//' /app/sandbox-entrypoint.sh
+ENTRYPOINT ["sh", "/app/sandbox-entrypoint.sh"]

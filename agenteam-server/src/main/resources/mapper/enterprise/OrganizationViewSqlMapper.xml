@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.enterprise.OrganizationViewSqlMapper">
+  <select id="memberIds" resultType="String">
+    SELECT m.user_id FROM enterprise_member m JOIN app_user u ON u.id = m.user_id
+    WHERE m.enterprise_id = #{scope.enterpriseId} AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+      <property name="scopePath" value="scope"/>
+      <property name="ownerColumn" value="m.user_id"/>
+      <property name="enterpriseColumn" value="m.enterprise_id"/>
+    </include>
+    AND (LOCATE(#{query}, m.display_name) > 0 OR LOCATE(#{query}, COALESCE(u.email, '')) > 0)
+    <choose>
+      <when test="status == null">AND m.status &lt;> 'removed'</when>
+      <otherwise>AND m.status = #{status}</otherwise>
+    </choose>
+    <if test="teamId != null">
+      AND EXISTS (SELECT 1 FROM enterprise_team_member tm WHERE tm.enterprise_id = m.enterprise_id AND tm.user_id =
+      m.user_id AND tm.team_id = #{teamId})
+    </if>
+    <if test="after != null">
+      AND (m.joined_at &lt; #{after.time} OR (m.joined_at = #{after.time} AND m.user_id &lt; #{after.id}))
+    </if>
+    ORDER BY m.joined_at DESC, m.user_id DESC LIMIT #{count}
+  </select>
+  <select id="listTeams" resultType="com.stonewu.agenteam.model.enterprise.entity.OrganizationViewQueryRow">
+    SELECT t.*, m.display_name AS owner_name,
+    (SELECT COUNT(*) FROM enterprise_team_member tm WHERE tm.enterprise_id = t.enterprise_id AND tm.team_id = t.id) AS
+    member_count
+    FROM enterprise_team t JOIN enterprise_member m ON m.enterprise_id = t.enterprise_id AND m.user_id = t.owner_user_id
+    WHERE t.enterprise_id = #{scope.enterpriseId} AND t.deleted_at IS NULL AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+      <property name="scopePath" value="scope"/>
+      <property name="ownerColumn" value="t.owner_user_id"/>
+      <property name="enterpriseColumn" value="t.enterprise_id"/>
+    </include>
+    AND LOCATE(#{query}, t.name) > 0
+    <if test="after != null">
+      AND (t.created_at &lt; #{after.time} OR (t.created_at = #{after.time} AND t.id &lt; #{after.id}))
+    </if>
+    ORDER BY t.created_at DESC, t.id DESC LIMIT #{count}
+  </select>
+  <sql id="rolesSelect">
+    SELECT r.*, (SELECT COUNT(*) FROM sys_user_role ur WHERE ur.enterprise_id = r.enterprise_id AND ur.role_id = r.id)
+    AS member_count
+    FROM sys_role r
+  </sql>
+  <select id="listRoles" resultType="com.stonewu.agenteam.model.enterprise.entity.OrganizationViewQueryRow">
+    <include refid="rolesSelect"/>
+    WHERE r.enterprise_id = #{enterprise} AND r.deleted_at IS NULL
+    AND (LOCATE(#{query}, r.name) > 0 OR LOCATE(#{query}, r.code) > 0)
+    <if test="after != null">
+      AND (r.created_at &lt; #{after.time} OR (r.created_at = #{after.time} AND r.id &lt; #{after.id}))
+    </if>
+    ORDER BY r.created_at DESC, r.id DESC LIMIT #{count}
+  </select>
+  <select id="findRole" resultType="com.stonewu.agenteam.model.enterprise.entity.OrganizationViewQueryRow">
+    <include refid="rolesSelect"/>
+    WHERE r.enterprise_id = #{enterprise} AND r.id = #{id} AND r.deleted_at IS NULL
+  </select>
+  <select id="enterprisesEnterprise" resultType="com.stonewu.agenteam.model.enterprise.entity.OrganizationViewQueryRow">
+    SELECT e.* FROM enterprise e WHERE #{systemAdministrator} OR EXISTS (SELECT 1 FROM enterprise_member m WHERE
+    m.enterprise_id = e.id AND m.user_id = #{userId} AND m.status = 'active') ORDER BY e.created_at, e.id
+  </select>
+  <select id="teamEnterpriseTeamMember"
+          resultType="com.stonewu.agenteam.model.enterprise.entity.OrganizationViewQueryRow">
+    SELECT t.*, m.display_name AS owner_name, (SELECT COUNT(*) FROM enterprise_team_member tm WHERE tm.enterprise_id =
+    t.enterprise_id AND tm.team_id = t.id) AS member_count
+    FROM enterprise_team t JOIN enterprise_member m ON m.enterprise_id = t.enterprise_id AND m.user_id = t.owner_user_id
+    WHERE t.enterprise_id = #{enterpriseId} AND t.id = #{id} AND t.deleted_at IS NULL
+  </select>
+</mapper>

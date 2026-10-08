@@ -1,0 +1,91 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--control-height, 44px);
+  padding: var(--input-padding-block) var(--input-padding-inline);
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.trigger > svg {
+  flex-shrink: 0;
+  color: var(--secondary);
+}
+
+.trigger:focus, .trigger[data-popup-open] {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 var(--input-focus-width) var(--input-focus-background);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover:not(:focus):not([data-popup-open]) {
+    border-color: var(--input-border-hover);
+  }
+}
+
+.popup {
+  display: grid;
+  gap: 12px;
+  width: min(300px, calc(100vw - 32px));
+  padding: 16px;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.heading > strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.clear {
+  border: 0;
+  background: transparent;
+  padding: 4px;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.list {
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.option:hover {
+  background: var(--surface-hover);
+}
+
+.option > input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-action);
+}

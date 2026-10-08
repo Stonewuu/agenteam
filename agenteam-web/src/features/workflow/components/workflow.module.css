@@ -1,0 +1,568 @@
+.editor {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.toolbar, .heading, .line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar h2, .heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.toolbar select {
+  width: auto;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+  gap: 20px;
+  align-items: start;
+}
+
+.canvasFrame {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  font-size: 13px;
+}
+
+.zoom > div {
+  display: flex;
+  gap: 4px;
+}
+
+.zoom button {
+  min-height: 32px;
+  padding: 4px 10px;
+}
+
+.viewport {
+  overflow: auto;
+  height: 440px;
+  outline-offset: -3px;
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.canvas {
+  position: relative;
+  transform-origin: 0 0;
+}
+
+.connections {
+  position: absolute;
+  inset: 0;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.connections > g > path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+.connections text {
+  fill: var(--foreground);
+  font-size: 12px;
+  paint-order: stroke;
+  stroke: var(--surface-soft);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.node {
+  position: absolute;
+  display: grid;
+  gap: 2px;
+  width: 184px;
+  height: 78px;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  box-shadow: 0 2px 6px #00000009;
+  touch-action: none;
+  user-select: none;
+}
+
+.node strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.node small, .node > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.node:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.selectedNode {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.invalidNode, .node[data-status="failed"] {
+  border-color: var(--danger, #b73249);
+}
+
+.node[data-status="running"], .node[data-status="waiting_approval"] {
+  border-width: 2px;
+  border-color: var(--primary);
+}
+
+.node[data-status="skipped"], .node[data-status="cancelled"] {
+  border-style: dashed;
+}
+
+.panel {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.panel fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.fields {
+  display: grid;
+  gap: 14px;
+}
+
+.section {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+
+.section h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.condition {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.conditionGroup {
+  display: grid;
+  gap: 12px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+}
+
+.variable {
+  display: grid;
+  gap: 8px;
+}
+
+.variable select {
+  font-size: 12px;
+}
+
+.mapping {
+  display: grid;
+  gap: 14px;
+}
+
+.mappingRow {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.mappingRow > .line {
+  flex-wrap: nowrap;
+}
+
+.mappingRow .line > label {
+  flex: 1;
+}
+
+.errors {
+  margin: 0;
+  padding: 14px 14px 14px 32px;
+  color: var(--danger, #b73249);
+  font-size: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.errors button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 5px 0;
+}
+
+.edge {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.edge > span {
+  font-size: 13px;
+}
+
+.edge select {
+  min-width: 0;
+}
+
+.preview {
+  display: grid;
+  gap: 22px;
+}
+
+.previewOutput {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.previewStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.previewSteps {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .viewport {
+    height: 360px;
+  }
+}
+
+@media (max-width: 600px) {
+  .panel {
+    padding: 14px;
+  }
+
+  .edge {
+    grid-template-columns: 75px minmax(0, 1fr) auto;
+  }
+}
+
+.layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.withPanel {
+  grid-template-columns: minmax(0, 1fr) 290px;
+}
+
+.canvasFrame {
+  height: 450px;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-soft);
+}
+
+.node {
+  position: relative;
+  display: block;
+  width: 205px;
+  height: auto;
+  min-height: 110px;
+  padding: 15px;
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / .04);
+}
+
+.nodeHeading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.nodeHeading > div {
+  min-width: 0;
+}
+
+.node strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.node small {
+  display: block;
+  font-size: 11px;
+  color: var(--secondary);
+  margin-top: 4px;
+}
+
+.node p {
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-light);
+  padding-top: 12px;
+  margin: 12px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node :global(.react-flow__handle) {
+  width: 11px;
+  height: 11px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+}
+
+.selectedNode {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.canvasFrame :global(.react-flow__controls) {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.canvasFrame :global(.react-flow__controls-button) {
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  background: var(--surface);
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+
+.canvasFrame :global(.react-flow__controls-button:hover) {
+  background: var(--surface-hover);
+}
+
+.canvasFrame :global(.react-flow__controls-button svg) {
+  fill: none;
+  max-width: 18px;
+  max-height: 18px;
+}
+
+.canvasFrame :global(.react-flow__attribution) {
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 9px;
+}
+
+.canvasFrame :global(.react-flow__node:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 13px;
+}
+
+.configuration {
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  padding: 20px;
+  max-height: 450px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.configuration .heading {
+  flex-wrap: nowrap;
+}
+
+.configuration > button {
+  justify-self: start;
+}
+
+.configuration .edge {
+  grid-template-columns: 45px minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.configuration .edge > button {
+  padding: 6px;
+}
+
+.graphCount {
+  font-size: 11px;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+
+.nodeLibrary {
+  width: 210px;
+  gap: 3px;
+  border-radius: 16px;
+}
+
+.nodeLibrary h2 {
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.libraryItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 10px;
+  border-radius: 10px;
+  min-height: 42px;
+  font-size: 12px;
+}
+
+.libraryItem:hover {
+  background: var(--surface-hover);
+}
+
+.libraryItem:disabled {
+  opacity: .45;
+}
+
+@media (max-width: 900px) {
+  .withPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .configuration {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    max-height: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .canvasFrame {
+    height: 400px;
+  }
+
+  .toolbar {
+    gap: 14px;
+  }
+
+  .toolbar > div {
+    width: 100%;
+  }
+
+  .graphCount {
+    margin-left: auto;
+  }
+}
+
+.editor {
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.layout {
+  border: 0;
+  border-radius: 0;
+}
+
+.validation {
+  margin: 0;
+  padding: 17px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--mint-text);
+  font-size: 12px;
+}
+
+.errors {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.editor > p[role=alert] {
+  padding: 17px 20px;
+}
+
+.node {
+  height: 112px;
+}

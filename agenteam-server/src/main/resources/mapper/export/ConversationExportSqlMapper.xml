@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.export.ConversationExportSqlMapper">
+  <select id="readMessages" resultType="com.stonewu.agenteam.model.export.entity.ConversationExportRow"
+          resultSetType="FORWARD_ONLY" fetchSize="1" timeout="60">
+    SELECT m.id, m.created_at, m.role, m.attempt_no, m.status, m.content, m.blocks_json
+    FROM agent_message m
+    JOIN agent_conversation c ON c.enterprise_id = m.enterprise_id AND c.id = m.conversation_id
+    WHERE m.enterprise_id = #{enterprise} AND m.conversation_id = #{conversation}
+    AND c.user_id = #{user} AND c.status &lt;&gt; 'deleted'
+    ORDER BY m.created_at, CASE WHEN m.role = 'user' THEN 0 ELSE 1 END, m.attempt_no, m.id
+    LIMIT #{limit}
+  </select>
+</mapper>

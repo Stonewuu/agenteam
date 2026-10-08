@@ -1,0 +1,384 @@
+.shell {
+  background: var(--bg);
+}
+
+.page {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.visual {
+  width: 100%;
+  min-width: 0;
+}
+
+.content {
+  display: grid;
+  gap: 28px;
+  padding: 34px var(--shell-gutter, 28px);
+}
+
+.embedded {
+  min-height: 0;
+}
+
+.embedded .content {
+  padding: 0;
+}
+
+.page[data-workspace-page-loading="home"] .content {
+  padding: 0;
+}
+
+.line, .square, .search, .input, .smallPill {
+  display: block;
+  flex-shrink: 0;
+  background: var(--surface-hover);
+  border-radius: 6px;
+  animation: loadingPulse 1.5s ease-in-out infinite alternate;
+}
+
+.line {
+  width: 78%;
+  height: 12px;
+}
+
+.short {
+  width: 42%;
+}
+
+.titleLine {
+  width: min(240px, 60%);
+  height: 24px;
+}
+
+.square {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.smallPill {
+  width: 88px;
+  height: 26px;
+  border-radius: 16px;
+}
+
+.heading {
+  display: grid;
+  gap: 16px;
+  padding-bottom: 6px;
+}
+
+.heading .short {
+  max-width: 350px;
+}
+
+.rows {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  min-width: 0;
+}
+
+.copy {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.copy .line:last-child {
+  height: 9px;
+}
+
+.navigation {
+  margin-top: 46px;
+  padding: 0 10px;
+}
+
+.navigation .rows {
+  gap: 5px;
+}
+
+.navigation .copy .line:last-child, .navigationBottom .copy .line:last-child {
+  display: none;
+}
+
+.navigationBottom {
+  margin-top: auto;
+  padding: 18px 10px 0;
+}
+
+.navigationBottom .rows {
+  gap: 5px;
+}
+
+.navigation .line, .navigation .square, .navigationBottom .line, .navigationBottom .square {
+  background: var(--border);
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account .square {
+  border-radius: 50%;
+}
+
+.homeComposer, .composer {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 36px;
+  min-height: 148px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--input-radius, 16px);
+  background: var(--surface);
+}
+
+.homeComposer > .line {
+  width: min(360px, 65%);
+}
+
+.homeSections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+}
+
+.homeSections > .rows {
+  padding: 22px 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.search {
+  width: min(380px, 100%);
+  height: 40px;
+  border-radius: var(--rail-control-radius, 10px);
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 34px;
+}
+
+.settings > .rows {
+  align-content: start;
+}
+
+.form {
+  display: grid;
+  gap: 26px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.field {
+  display: grid;
+  gap: 12px;
+}
+
+.input {
+  width: 100%;
+  height: 42px;
+}
+
+.field .short {
+  max-width: 100px;
+}
+
+.conversation {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: calc(100dvh - var(--topbar-height));
+}
+
+.conversationList {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  padding: 18px 16px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 45%, var(--bg));
+}
+
+.conversationList > .titleLine {
+  height: 16px;
+  width: 90px;
+}
+
+.conversationList .rows {
+  gap: 20px;
+}
+
+.conversationMain {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+  padding: 18px var(--shell-gutter, 28px);
+}
+
+.conversationMain > .titleLine {
+  height: 16px;
+  width: 120px;
+}
+
+.messageLines {
+  display: grid;
+  gap: 16px;
+  width: min(680px, 90%);
+  padding-top: 40px;
+}
+
+.messageLines .line {
+  width: 100%;
+}
+
+.messageLines .short {
+  width: 60%;
+}
+
+.composer {
+  width: min(850px, 100%);
+  min-height: 120px;
+  margin: auto auto 0;
+}
+
+/* 已有对话侧栏时只省略列表，正文仍占满顶栏下方的高度。 */
+.conversationEmbedded {
+  display: block;
+}
+
+.conversationEmbedded .conversationMain {
+  min-height: inherit;
+}
+
+.error {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 18px;
+  min-height: 320px;
+  padding: 40px var(--shell-gutter, 28px);
+}
+
+.error h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.error p {
+  max-width: 580px;
+  margin: 0;
+  color: var(--secondary);
+  line-height: 1.8;
+}
+
+@keyframes loadingPulse {
+  from {
+    opacity: .45;
+  }
+  to {
+    opacity: .85;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 801px) {
+  .conversation {
+    grid-template-columns: 245px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .content {
+    padding: 26px var(--shell-gutter, 20px);
+    gap: 24px;
+  }
+
+  .settings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .settings > .rows {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .settings > .rows .row:nth-child(n + 4), .settings > .rows .square, .settings > .rows .line:last-child {
+    display: none;
+  }
+
+  .settings > .rows .row {
+    min-height: 30px;
+  }
+
+  .homeSections {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .homeSections > .rows:last-child {
+    display: none;
+  }
+
+  .conversation {
+    display: block;
+  }
+
+  .conversationMain {
+    min-height: calc(100dvh - var(--topbar-height));
+    padding: 18px 17px;
+  }
+
+  .conversationList {
+    display: none;
+  }
+
+  .page[data-list-only=true] .conversationList {
+    display: grid;
+    border-right: 0;
+  }
+
+  .page[data-list-only=true] .conversationMain {
+    display: none;
+  }
+
+  .account .smallPill {
+    width: 56px;
+  }
+
+  .form {
+    padding: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line, .square, .search, .input, .smallPill {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .line, .square, .search, .input, .smallPill {
+    border: 1px solid CanvasText;
+  }
+}

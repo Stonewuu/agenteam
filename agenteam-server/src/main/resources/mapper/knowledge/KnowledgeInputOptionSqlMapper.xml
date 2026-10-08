@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.knowledge.KnowledgeInputOptionSqlMapper">
+  <select id="listDocuments" resultType="com.stonewu.agenteam.model.knowledge.entity.KnowledgeInputOptionQueryRow">
+    SELECT d.id, d.resource_id, d.active_generation, d.name, d.updated_at FROM resource r
+    JOIN knowledge_document d ON d.enterprise_id = r.enterprise_id AND d.resource_id = r.id
+    JOIN file_object f ON f.enterprise_id = d.enterprise_id AND f.id = d.active_file_id
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND r.id IN
+    <foreach collection="resourceIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    AND d.deleted_at IS NULL AND d.active_generation > 0 AND f.status = 'ready' AND f.deleted_at IS NULL AND
+    LOCATE(#{query}, d.name) > 0
+    <if test="cursor != null">
+      AND (d.updated_at &lt; #{cursor.time} OR (d.updated_at = #{cursor.time} AND d.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY d.updated_at DESC, d.id DESC LIMIT #{limit}
+  </select>
+</mapper>

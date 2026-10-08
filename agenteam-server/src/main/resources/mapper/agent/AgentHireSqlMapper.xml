@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.agent.AgentHireSqlMapper">
+  <select id="findAgentHireLocked" resultType="com.stonewu.agenteam.model.agent.entity.AgentHireQueryRow">
+    SELECT * FROM agent_hire WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND id = #{id} FOR UPDATE
+  </select>
+  <select id="forAgentAgentHireLocked" resultType="com.stonewu.agenteam.model.agent.entity.AgentHireQueryRow">
+    SELECT * FROM agent_hire WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND agent_id = #{agent} FOR
+    UPDATE
+  </select>
+</mapper>

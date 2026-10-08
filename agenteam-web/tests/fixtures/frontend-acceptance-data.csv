@@ -1,0 +1,4 @@
+record_code,category,amount,occurred_on,confirmed
+QA-001,准备,12.50,2026-09-15,true
+QA-002,执行,20.00,2026-09-16,false
+QA-003,复核,7.50,2026-09-17,true

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.agent.AgentHireApplicationSqlMapper">
+  <select id="listApplications" resultType="com.stonewu.agenteam.model.agent.entity.AgentHireApplicationQueryRow">
+    SELECT a.*, m.display_name AS applicant_name, v.name AS agent_name, v.config_json AS agent_config_json FROM
+    agent_hire_request a
+    JOIN enterprise_member m ON m.enterprise_id = a.enterprise_id AND m.user_id = a.user_id
+    JOIN resource r ON r.enterprise_id = a.enterprise_id AND r.id = a.agent_id
+    JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.id = r.published_version_id
+    WHERE a.enterprise_id = #{enterprise} AND ((#{includeOwn} AND a.user_id = #{user})
+    <if test="approval != null">OR (
+      <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+        <property name="scopePath" value="approval"/>
+        <property name="alias" value="r"/>
+      </include>
+      )
+    </if>
+    )
+    <if test="cursor != null">
+      AND (a.created_at &lt; #{cursor.time} OR (a.created_at = #{cursor.time} AND a.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY a.created_at DESC, a.id DESC LIMIT #{limit}
+  </select>
+  <select id="findAgentHireRequestLocked"
+          resultType="com.stonewu.agenteam.model.agent.entity.AgentHireApplicationQueryRow">
+    SELECT a.*, m.display_name AS applicant_name, v.name AS agent_name, v.config_json AS agent_config_json FROM
+    agent_hire_request a
+    JOIN enterprise_member m ON m.enterprise_id = a.enterprise_id AND m.user_id = a.user_id
+    JOIN resource r ON r.enterprise_id = a.enterprise_id AND r.id = a.agent_id
+    JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.id = r.published_version_id
+    WHERE a.enterprise_id = #{enterprise} AND a.id = #{id} FOR UPDATE
+  </select>
+  <update id="expireAgentHireRequest">
+    UPDATE agent_hire_request SET status = 'expired', pending_marker = NULL, revision = revision + 1, updated_at =
+    #{now}
+    WHERE status = 'pending' AND expires_at &lt;= #{now} ORDER BY expires_at, id LIMIT 500
+  </update>
+</mapper>

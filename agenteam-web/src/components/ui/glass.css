@@ -1,0 +1,60 @@
+/* 浮层与对话输入框共用毛玻璃参数，只处理背景，不改变文字透明度。 */
+:root,
+[data-theme] {
+  /* 浅色底色占比越高，浮层越白，透出的页面颜色越少。 */
+  --glass-background-opacity: 90%;
+  --glass-background: var(--surface);
+  --glass-backdrop-filter: none;
+}
+
+[data-theme="dark"] {
+  --glass-background-opacity: 78%;
+}
+
+@supports (background: color-mix(in srgb, white 90%, transparent)) and ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  [data-theme] {
+    --glass-background: color-mix(in srgb, var(--surface) var(--glass-background-opacity), transparent);
+    --glass-backdrop-filter: blur(20px) saturate(1.15);
+  }
+}
+
+.agenteam-glass,
+.modal,
+.drawer,
+.popover,
+.toast,
+.theme-error,
+.connection-notice {
+  background: var(--glass-background);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
+  backdrop-filter: var(--glass-backdrop-filter);
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root,
+  [data-theme] {
+    --glass-background: var(--surface);
+    --glass-backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :root,
+  [data-theme] {
+    --glass-background: Canvas;
+    --glass-backdrop-filter: none;
+  }
+
+  .agenteam-glass,
+  .modal,
+  .drawer,
+  .popover,
+  .toast,
+  .theme-error,
+  .connection-notice {
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+}

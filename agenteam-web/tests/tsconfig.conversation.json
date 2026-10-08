@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "incremental": false,
+    "rootDir": "../src/features",
+    "outDir": "../.test-build/conversation"
+  },
+  "include": [
+    "../src/features/agent/state/conversation-event-state.ts",
+    "../src/features/agent/state/conversation-protocol.ts",
+    "../src/features/agent/lib/conversation-display.ts",
+    "../src/features/agent/lib/conversation-reading.ts"
+  ]
+}

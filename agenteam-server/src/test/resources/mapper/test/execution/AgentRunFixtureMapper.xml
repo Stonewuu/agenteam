@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.execution.AgentRunFixtureMapper">
+  <select id="memberRemovalApiStopRemainingRunsList" resultType="String">
+    SELECT DISTINCT user_id FROM agent_run WHERE enterprise_id = #{args[0]}
+  </select>
+  <select id="scheduleRetryApiAssertDelayObject" resultType="Long">
+    SELECT TIMESTAMPDIFF(MICROSECOND, updated_at, next_attempt_at) DIV 1000000 FROM agent_run WHERE id = #{args[0]}
+  </select>
+</mapper>

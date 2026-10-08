@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.schedule.ScheduleOccurrenceSqlMapper">
+  <select id="lock" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduledOccurrenceRow">
+    SELECT * FROM scheduled_occurrence
+    WHERE enterprise_id = #{enterprise} AND schedule_id = #{schedule} AND id = #{id} FOR UPDATE
+  </select>
+  <select id="listOccurrences" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceQueryRow">
+    SELECT o.*, r.error_message,
+    (SELECT COUNT(*) FROM run_attempt a WHERE a.enterprise_id = o.enterprise_id AND a.run_id = o.run_id) AS
+    attempt_count
+    FROM scheduled_occurrence o LEFT JOIN agent_run r ON r.enterprise_id = o.enterprise_id AND r.id = o.run_id
+    WHERE o.enterprise_id = #{enterprise} AND o.schedule_id = #{schedule}
+    <if test="cursor != null">
+      AND (o.scheduled_for &lt; #{cursor.time} OR (o.scheduled_for = #{cursor.time} AND o.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY o.scheduled_for DESC, o.id DESC LIMIT #{limit}
+  </select>
+  <select id="findRunAttempt" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceQueryRow">
+    SELECT o.*, r.error_message,
+    (SELECT COUNT(*) FROM run_attempt a WHERE a.enterprise_id = o.enterprise_id AND a.run_id = o.run_id) AS
+    attempt_count
+    FROM scheduled_occurrence o LEFT JOIN agent_run r ON r.enterprise_id = o.enterprise_id AND r.id = o.run_id
+    WHERE o.enterprise_id = #{enterprise} AND o.schedule_id = #{schedule} AND o.occurrence_key = #{key}
+  </select>
+  <select id="forRunRunAttempt" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceQueryRow">
+    SELECT o.*, r.error_message,
+    (SELECT COUNT(*) FROM run_attempt a WHERE a.enterprise_id = o.enterprise_id AND a.run_id = o.run_id) AS
+    attempt_count
+    FROM scheduled_occurrence o LEFT JOIN agent_run r ON r.enterprise_id = o.enterprise_id AND r.id = o.run_id
+    WHERE o.enterprise_id = #{enterprise} AND o.run_id = #{run}
+  </select>
+  <select id="activeRunAttempt" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceQueryRow">
+    SELECT o.*, r.error_message,
+    (SELECT COUNT(*) FROM run_attempt a WHERE a.enterprise_id = o.enterprise_id AND a.run_id = o.run_id) AS
+    attempt_count
+    FROM scheduled_occurrence o LEFT JOIN agent_run r ON r.enterprise_id = o.enterprise_id AND r.id = o.run_id
+    WHERE o.enterprise_id = #{enterprise} AND o.schedule_id = #{schedule} AND o.id = #{id}
+  </select>
+  <select id="latestRunAttempt" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceQueryRow">
+    SELECT o.*, r.error_message,
+    (SELECT COUNT(*) FROM run_attempt a WHERE a.enterprise_id = o.enterprise_id AND a.run_id = o.run_id) AS
+    attempt_count
+    FROM scheduled_occurrence o LEFT JOIN agent_run r ON r.enterprise_id = o.enterprise_id AND r.id = o.run_id
+    WHERE o.enterprise_id = #{enterprise} AND o.schedule_id = #{schedule} ORDER BY o.scheduled_for DESC, o.id DESC LIMIT
+    1
+  </select>
+  <!-- 当前页只返回每项计划的最近记录和实际活动记录，避免逐项读取历史。 -->
+  <select id="summaries" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceQueryRow">
+    SELECT ranked.* FROM (
+      SELECT o.*, r.error_message, s.active_occurrence_id AS current_active_id,
+        (SELECT COUNT(*) FROM run_attempt a WHERE a.enterprise_id = o.enterprise_id AND a.run_id = o.run_id) AS attempt_count,
+        ROW_NUMBER() OVER (PARTITION BY o.enterprise_id, o.schedule_id ORDER BY o.scheduled_for DESC, o.id DESC) AS occurrence_rank
+      FROM scheduled_occurrence o
+      INNER JOIN scheduled_task s ON s.enterprise_id = o.enterprise_id AND s.id = o.schedule_id
+      LEFT JOIN agent_run r ON r.enterprise_id = o.enterprise_id AND r.id = o.run_id
+      WHERE o.enterprise_id = #{enterprise} AND o.schedule_id IN
+      <foreach collection="schedules" item="schedule" open="(" separator="," close=")">#{schedule}</foreach>
+    ) ranked
+    WHERE occurrence_rank = 1 OR id = current_active_id
+    ORDER BY schedule_id, scheduled_for DESC, id DESC
+  </select>
+</mapper>

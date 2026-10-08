@@ -1,0 +1,198 @@
+.panel {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--border, #e4e4e7);
+  padding-top: 24px;
+  margin-top: 24px;
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.heading h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.options {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.options label {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.options span {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.options strong {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.options small {
+  color: var(--muted-foreground);
+}
+
+.documents {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+}
+
+.documents li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border, #e4e4e7);
+}
+
+.document {
+  flex: 1;
+  min-width: 160px;
+  display: grid;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+
+.document strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.document > span {
+  font-size: 12px;
+  color: var(--muted-foreground, #71717a);
+}
+
+.document p {
+  margin: 0;
+}
+
+.citation {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--card);
+  color: inherit;
+  cursor: pointer;
+}
+
+.citation strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.citation > span {
+  font-size: 12px;
+  color: var(--muted-foreground, #71717a);
+}
+
+.citation q {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.citation q::before, .citation q::after {
+  content: none;
+}
+
+.citation:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.citation:hover {
+  border-color: currentColor;
+}
+
+.citation .open {
+  justify-self: end;
+  color: inherit;
+}
+
+.original {
+  margin: 0;
+  padding: 16px;
+  border-left: 3px solid var(--border);
+  background: var(--surface-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: 22px;
+}
+
+.documentIcon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.documents li {
+  padding: 18px 0;
+  gap: 14px;
+}
+
+.options label, .citation {
+  border-radius: 16px;
+}
+
+@media (max-width: 600px) {
+  .document {
+    min-width: 120px;
+  }
+
+  .documents li > :global(.badge) {
+    margin-left: 60px;
+  }
+}
+
+.documentView {
+  display: grid;
+  gap: 20px;
+}

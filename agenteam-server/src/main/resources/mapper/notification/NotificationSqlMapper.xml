@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.notification.NotificationSqlMapper">
+  <select id="lockSequence" resultType="Long">
+    SELECT notification_sequence FROM enterprise_member WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND
+    status = 'active' FOR UPDATE
+  </select>
+  <select id="findNotificationLocked" resultType="com.stonewu.agenteam.model.notification.entity.NotificationQueryRow">
+    SELECT * FROM notification WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND id = #{id} FOR UPDATE
+  </select>
+</mapper>

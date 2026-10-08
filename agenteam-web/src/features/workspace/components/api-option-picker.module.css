@@ -1,0 +1,16 @@
+.section {
+  margin-top: 24px;
+}
+
+.options {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.options button {
+  text-align: left;
+  justify-content: flex-start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

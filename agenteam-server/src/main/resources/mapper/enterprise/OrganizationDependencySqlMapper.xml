@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.enterprise.OrganizationDependencySqlMapper">
+  <resultMap id="counts" type="com.stonewu.agenteam.model.enterprise.entity.OrganizationDependencyCounts">
+    <constructor>
+      <arg column="members" javaType="_long"/>
+      <arg column="pending_invitations" javaType="_long"/>
+      <arg column="quota_policies" javaType="_long"/>
+      <arg column="resource_grants" javaType="_long"/>
+    </constructor>
+  </resultMap>
+  <select id="role" resultMap="counts">
+    SELECT
+    (SELECT COUNT(*) FROM sys_user_role WHERE enterprise_id = #{enterprise} AND role_id = #{role}) AS members,
+    (SELECT COUNT(*) FROM enterprise_invitation WHERE enterprise_id = #{enterprise}
+    AND JSON_CONTAINS(role_ids_json, JSON_QUOTE(#{role})) AND status = 'pending' AND expires_at > #{now}) AS
+    pending_invitations,
+    (SELECT COUNT(*) FROM quota_policy WHERE enterprise_id = #{enterprise} AND subject_type = 'role' AND subject_id =
+    #{role}) AS quota_policies,
+    0 AS resource_grants
+  </select>
+  <select id="team" resultMap="counts">
+    SELECT
+    (SELECT COUNT(*) FROM enterprise_team_member WHERE enterprise_id = #{enterprise} AND team_id = #{team}) AS members,
+    (SELECT COUNT(*) FROM enterprise_invitation WHERE enterprise_id = #{enterprise}
+    AND JSON_CONTAINS(team_ids_json, JSON_QUOTE(#{team})) AND status = 'pending' AND expires_at > #{now}) AS
+    pending_invitations,
+    (SELECT COUNT(*) FROM quota_policy WHERE enterprise_id = #{enterprise} AND subject_type = 'team' AND subject_id =
+    #{team}) AS quota_policies,
+    (SELECT COUNT(*) FROM resource_grant WHERE enterprise_id = #{enterprise} AND subject_type = 'team' AND subject_id =
+    #{team}) AS resource_grants
+  </select>
+</mapper>

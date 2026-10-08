@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.enterprise.MemberRemovalRecipientSqlMapper">
+  <select id="listRecipients" resultType="com.stonewu.agenteam.model.enterprise.entity.MemberRemovalRecipientQueryRow">
+    SELECT m.user_id, m.display_name, m.joined_at FROM enterprise_member m JOIN app_user u ON u.id = m.user_id
+    WHERE m.enterprise_id = #{enterprise} AND m.user_id &lt;> #{departing} AND m.status = 'active' AND u.status =
+    'active' AND LOCATE(#{query}, m.display_name) > 0
+    <foreach collection="required" item="permission">
+      AND EXISTS (SELECT 1 FROM sys_user_role ur JOIN sys_role r ON r.enterprise_id = ur.enterprise_id AND r.id =
+      ur.role_id
+      JOIN sys_role_permission rp ON rp.enterprise_id = r.enterprise_id AND rp.role_id = r.id
+      WHERE ur.enterprise_id = m.enterprise_id AND ur.user_id = m.user_id AND r.status = 'active' AND r.deleted_at IS
+      NULL AND rp.permission_code = #{permission})
+    </foreach>
+    <if test="todo">
+      AND NOT EXISTS (SELECT 1 FROM todo_item pending WHERE pending.enterprise_id = m.enterprise_id AND
+      pending.owner_user_id = #{departing}
+      AND pending.deleted_at IS NULL AND pending.status IN ('pending', 'in_progress') AND pending.team_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM enterprise_team_member tm JOIN enterprise_team t ON t.enterprise_id =
+      tm.enterprise_id AND t.id = tm.team_id
+      WHERE tm.enterprise_id = pending.enterprise_id AND tm.team_id = pending.team_id AND tm.user_id = m.user_id AND
+      t.status = 'active' AND t.deleted_at IS NULL))
+    </if>
+    <if test="after != null">
+      AND (m.joined_at &lt; #{after.time} OR (m.joined_at = #{after.time} AND m.user_id &lt; #{after.id}))
+    </if>
+    ORDER BY m.joined_at DESC, m.user_id DESC LIMIT #{limit}
+  </select>
+</mapper>

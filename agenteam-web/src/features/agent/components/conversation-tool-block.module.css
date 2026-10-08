@@ -1,0 +1,301 @@
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--surface);
+  container: conversation-tool / inline-size;
+}
+
+.card[data-state="waiting_approval"] {
+  border-color: color-mix(in srgb, var(--amber) 35%, var(--border));
+}
+
+.card[data-state="failed"] {
+  border-color: color-mix(in srgb, var(--red-text) 25%, var(--border));
+}
+
+.card[data-grouped]:not([data-active]):not([data-state="waiting_approval"]):not([data-state="failed"]) {
+  border-color: transparent;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 4px 9px;
+  border-radius: inherit;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.title {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heading:has(.subject) .title {
+  flex-shrink: 0;
+}
+
+.subject {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.groupedTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.trigger:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.trigger:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.modeControl {
+  display: flex;
+  flex-shrink: 0;
+  animation: tool-mode-enter var(--motion-content-duration) ease;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--motion-ease);
+}
+
+.trigger[aria-expanded=true] .chevron {
+  transform: rotate(0);
+}
+
+.details {
+  min-width: 0;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--secondary);
+}
+
+.icon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.card[data-state="running"] .icon {
+  color: var(--accent-text);
+}
+
+.card[data-state="waiting_approval"] .icon {
+  color: var(--amber-text);
+}
+
+.card[data-state="completed"] .icon {
+  color: var(--mint-text);
+}
+
+.card[data-state="failed"] .icon {
+  color: var(--red-text);
+}
+
+.status {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.card[data-state="running"] .status {
+  color: var(--accent-text);
+}
+
+.card[data-state="waiting_approval"] .status {
+  color: var(--amber-text);
+}
+
+.card[data-state="failed"] .status {
+  color: var(--red-text);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.body:empty {
+  display: none;
+}
+
+.preview {
+  min-width: 0;
+  padding-bottom: 12px;
+}
+
+.notice {
+  min-width: 0;
+  padding: 0 12px 10px 38px;
+  color: var(--red-text);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* 活跃状态沿用原有动效，只缩小图标所占空间。 */
+.fluid {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  contain: layout paint;
+}
+
+.fluid > i {
+  position: absolute;
+  inset: 5px 3px 3px 5px;
+  border-radius: 44% 56% 62% 38%;
+  background: var(--accent);
+  animation: tool-fluid 2.4s ease-in-out infinite;
+}
+
+.fluid > i:nth-child(2) {
+  inset: 3px 7px 7px 3px;
+  background: color-mix(in srgb, var(--accent) 55%, var(--surface));
+  animation-delay: -.8s;
+  animation-direction: reverse;
+}
+
+.fluid > i:nth-child(3) {
+  inset: 9px 5px 4px 9px;
+  background: color-mix(in srgb, var(--accent) 72%, var(--surface));
+  animation-delay: -1.6s;
+}
+
+@keyframes tool-fluid {
+  0%, 100% {
+    transform: rotate(0deg) scale(.8);
+    opacity: .72;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes tool-mode-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@container conversation-tool (max-width: 440px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 3px 6px;
+  }
+
+  .heading {
+    flex-basis: calc(100% - 36px);
+  }
+
+  .status {
+    margin-left: 28px;
+    margin-right: auto;
+  }
+
+  .trigger {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .trigger {
+    min-height: 44px;
+    padding-inline: 7px;
+  }
+
+  .notice {
+    padding-left: 12px;
+  }
+
+  .body {
+    gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluid > i, .modeControl {
+    animation: none;
+  }
+
+  .chevron {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .fluid > i {
+    background: Highlight;
+  }
+}

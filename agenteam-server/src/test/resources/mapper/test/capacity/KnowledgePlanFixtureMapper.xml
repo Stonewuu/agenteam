@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.capacity.KnowledgePlanFixtureMapper">
+  <select id="explainVersions" resultType="string">
+    EXPLAIN FORMAT=JSON
+    SELECT d.id, d.active_file_id, d.active_generation FROM knowledge_document d
+    JOIN file_object f ON f.enterprise_id = d.enterprise_id AND f.id = d.active_file_id
+    WHERE d.enterprise_id = #{sample.enterprise} AND d.resource_id = #{sample.resource} AND d.deleted_at IS NULL
+    AND d.active_generation &gt; 0 AND f.status = 'ready' AND f.deleted_at IS NULL
+  </select>
+  <select id="explainCitations" resultType="string">
+    EXPLAIN FORMAT=JSON
+    SELECT c.id AS chunk_id, c.document_id, d.resource_id, f.original_name AS name,
+    c.file_id, c.generation, c.locator_json, c.content_text
+    FROM knowledge_chunk c JOIN knowledge_document d
+    ON d.enterprise_id = c.enterprise_id AND d.id = c.document_id AND c.generation &lt;= d.active_generation
+    AND d.active_generation = c.generation AND d.active_file_id = c.file_id
+    JOIN file_object f ON f.enterprise_id = c.enterprise_id AND f.id = c.file_id
+    WHERE c.enterprise_id = #{sample.enterprise} AND d.resource_id = #{sample.resource}
+    AND d.deleted_at IS NULL AND f.status = 'ready' AND f.deleted_at IS NULL
+    AND c.id IN
+    <foreach collection="sample.ids" item="id" open="(" close=")" separator=",">#{id}</foreach>
+  </select>
+  <sql id="rankQuery">
+    SELECT id, MATCH(search_terms) AGAINST (#{sample.terms}
+    <choose>
+      <when test="variant == 'BOOLEAN'">IN BOOLEAN MODE</when>
+      <otherwise>IN NATURAL LANGUAGE MODE</otherwise>
+    </choose>
+    ) AS score
+    FROM knowledge_chunk WHERE enterprise_id = #{sample.enterprise} AND
+    <choose>
+      <when test="variant == 'EXPANDED'">
+        <foreach collection="sample.versions" item="version" open="(" close=")" separator=" OR ">
+          (document_id = #{version.id} AND file_id = #{version.activeFileId} AND generation =
+          #{version.activeGeneration})
+        </foreach>
+      </when>
+      <otherwise>
+        (document_id, file_id, generation) IN
+        <foreach collection="sample.versions" item="version" open="(" close=")" separator=",">
+          (#{version.id}, #{version.activeFileId}, #{version.activeGeneration})
+        </foreach>
+      </otherwise>
+    </choose>
+    AND MATCH(search_terms) AGAINST (#{sample.terms}
+    <choose>
+      <when test="variant == 'BOOLEAN'">IN BOOLEAN MODE</when>
+      <otherwise>IN NATURAL LANGUAGE MODE</otherwise>
+    </choose>
+    ) &gt; 0
+    ORDER BY score DESC LIMIT #{sample.limit}
+  </sql>
+  <select id="explainRanks" resultType="string">EXPLAIN FORMAT=JSON
+    <include refid="rankQuery"/>
+  </select>
+  <select id="compareRanks" resultType="java.util.LinkedHashMap">
+    <include refid="rankQuery"/>
+  </select>
+</mapper>

@@ -1,0 +1,20 @@
+# 连接另一套部署提供的 MySQL，不启动本套配置里的 MySQL；需要 Docker Compose 2.24.4 或更新版本。
+services:
+  mysql:
+    profiles: [bundled-database]
+  backend:
+    environment:
+      AGENTEAM_DB_URL: "jdbc:mariadb://${SHARED_MYSQL_HOST:-agenteam-shared-mysql}:${SHARED_MYSQL_PORT:-3306}/${SHARED_MYSQL_DATABASE:?请填写本套部署独立使用的数据库名}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&preserveInstants=true"
+      AGENTEAM_DB_USERNAME: ${SHARED_MYSQL_USERNAME:?请填写仅能访问本套数据库的账号}
+      AGENTEAM_DB_PASSWORD: ${DB_PASSWORD:?请填写本套数据库账号的密码}
+    depends_on: !override
+      redis:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+    networks: [application, shared-database]
+
+networks:
+  shared-database:
+    external: true
+    name: ${SHARED_DATABASE_NETWORK:?请填写数据库服务所在的专用共享网络名称}

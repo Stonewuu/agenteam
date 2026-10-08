@@ -1,0 +1,58 @@
+# 服务器只拉取已发布镜像，不读取源码或执行构建。
+x-runtime-logging: &runtime-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:?请先生成发布配置}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00", "--innodb-buffer-pool-size=134217728", "--max-connections=50"]
+    mem_limit: ${MYSQL_MEMORY:-640m}
+    logging: *runtime-logging
+
+  redis:
+    image: ${REDIS_IMAGE:?请先生成发布配置}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --maxmemory 96mb --maxmemory-policy noeviction"]
+    mem_limit: 128m
+    logging: *runtime-logging
+
+  storage-init:
+    build: !reset null
+    pull_policy: always
+
+  sandbox-image:
+    build: !reset null
+    pull_policy: always
+
+  backend:
+    build: !reset null
+    pull_policy: always
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
+    logging: *runtime-logging
+
+  sandbox-executor:
+    build: !reset null
+    pull_policy: always
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0
+    mem_limit: ${EXECUTOR_MEMORY:-256m}
+    logging: *runtime-logging
+
+  frontend:
+    build: !reset null
+    pull_policy: always
+    environment:
+      NODE_OPTIONS: --max-old-space-size=160
+    mem_limit: ${FRONTEND_MEMORY:-256m}
+    logging: *runtime-logging
+
+  nginx:
+    image: ${GATEWAY_IMAGE:?请先生成发布配置}
+    mem_limit: 64m
+    healthcheck:
+      start_period: 120s
+    logging: *runtime-logging

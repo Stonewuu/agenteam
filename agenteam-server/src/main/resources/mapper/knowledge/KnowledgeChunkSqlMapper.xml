@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.knowledge.KnowledgeChunkSqlMapper">
+  <!-- 当前版本和文件状态先限制候选；全文索引只按相关度取数。 -->
+  <select id="searchIds" resultType="string">
+    SELECT id, MATCH(search_terms) AGAINST (#{terms} IN NATURAL LANGUAGE MODE) AS score
+    FROM knowledge_chunk
+    WHERE enterprise_id = #{enterprise} AND (document_id, file_id, generation) IN
+    <foreach collection="versions" item="version" open="(" close=")" separator=",">
+      (#{version.id}, #{version.activeFileId}, #{version.activeGeneration})
+    </foreach>
+    AND MATCH(search_terms) AGAINST (#{terms} IN NATURAL LANGUAGE MODE) &gt; 0 ORDER BY score DESC LIMIT #{limit}
+  </select>
+</mapper>

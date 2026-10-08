@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.RunActivitySqlMapper">
+  <update id="pauseAgentRun">
+    UPDATE agent_run SET status = #{status}, execution_phase = 'waiting_approval', active_millis = active_millis +
+    IF(active_segment_started_at IS NULL, 0, GREATEST(0, TIMESTAMPDIFF(MICROSECOND, active_segment_started_at, #{now})
+    DIV 1000)),
+    active_segment_started_at = NULL, updated_at = #{now} WHERE enterprise_id = #{enterpriseId} AND id = #{id}
+  </update>
+  <update id="queueAgentRun">
+    UPDATE agent_run SET status = 'queued', queued_at = #{now}, active_millis = active_millis +
+    IF(active_segment_started_at IS NULL, 0, GREATEST(0, TIMESTAMPDIFF(MICROSECOND, active_segment_started_at, #{now})
+    DIV 1000)),
+    active_segment_started_at = NULL, updated_at = #{now} WHERE enterprise_id = #{enterpriseId} AND id = #{id}
+  </update>
+</mapper>

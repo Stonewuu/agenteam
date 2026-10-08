@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.source.SourceRowFixtureMapper">
+  <update id="createTable">CREATE TABLE source_rows (id BIGINT PRIMARY KEY, title VARCHAR(100))</update>
+  <resultMap id="status" type="com.stonewu.agenteam.model.test.source.SessionStatusRow">
+    <constructor>
+      <arg column="Variable_name" javaType="string"/>
+      <arg column="Value" javaType="string"/>
+    </constructor>
+  </resultMap>
+  <select id="cipher" resultMap="status">SHOW SESSION STATUS LIKE 'Ssl_cipher'</select>
+  <select id="waitForDelay" resultType="int">SELECT SLEEP(20)</select>
+</mapper>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.resource.ResourceImpactSqlMapper">
+  <select id="visibleDependencies" resultType="com.stonewu.agenteam.model.resource.entity.ResourceImpactQueryRow">
+    SELECT DISTINCT r.id, r.kind, r.name FROM resource_dependency d
+    JOIN resource_version target ON target.enterprise_id = d.enterprise_id AND target.id = d.dependency_version_id
+    JOIN resource_version parent ON parent.enterprise_id = d.enterprise_id AND parent.id = d.parent_version_id
+    JOIN resource r ON r.enterprise_id = parent.enterprise_id AND r.id = parent.resource_id
+    WHERE target.enterprise_id = #{enterprise} AND target.resource_id = #{id} AND parent.status = 'available' AND
+    r.deleted_at IS NULL
+    AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    ORDER BY r.id LIMIT #{limit}
+  </select>
+  <select id="dependentsResourceDependency" resultType="Long">
+    SELECT COUNT(DISTINCT r.id) FROM resource_dependency d
+    JOIN resource_version target ON target.enterprise_id = d.enterprise_id AND target.id = d.dependency_version_id
+    JOIN resource_version parent ON parent.enterprise_id = d.enterprise_id AND parent.id = d.parent_version_id
+    JOIN resource r ON r.enterprise_id = parent.enterprise_id AND r.id = parent.resource_id
+    WHERE target.enterprise_id = #{enterprise} AND target.resource_id = #{id} AND parent.status = 'available' AND
+    r.deleted_at IS NULL
+  </select>
+  <select id="enabledSchedulesResourceVersion" resultType="Long">
+    WITH RECURSIVE dependent_versions (version_id) AS (
+    SELECT id FROM resource_version WHERE enterprise_id = #{enterprise} AND resource_id = #{id}
+    UNION DISTINCT
+    SELECT d.parent_version_id FROM resource_dependency d JOIN dependent_versions v ON v.version_id =
+    d.dependency_version_id
+    WHERE d.enterprise_id = #{enterprise}
+    )
+    SELECT COUNT(*) FROM scheduled_task s JOIN dependent_versions v ON v.version_id = s.agent_version_id
+    WHERE s.enterprise_id = #{enterprise} AND s.enabled = TRUE AND s.deleted_at IS NULL
+  </select>
+  <select id="activeRunsAgentRun" resultType="Long">
+    SELECT COUNT(*) FROM agent_run WHERE enterprise_id = #{enterprise} AND status IN
+    ('queued','running','waiting_approval','cancelling')
+    AND (JSON_UNQUOTE(JSON_EXTRACT(execution_config_json, '$.agentId')) = #{id}
+    OR JSON_UNQUOTE(JSON_EXTRACT(execution_config_json, '$.workflowId')) = #{id}
+    OR JSON_CONTAINS(JSON_EXTRACT(execution_config_json, '$.dependencies'), JSON_OBJECT('resourceId', #{id})))
+  </select>
+  <select id="enabledScheduleIds" resultType="String">
+    WITH RECURSIVE dependent_versions (version_id) AS (
+    SELECT id FROM resource_version WHERE enterprise_id = #{enterprise} AND resource_id = #{id}
+    UNION DISTINCT
+    SELECT d.parent_version_id FROM resource_dependency d JOIN dependent_versions v ON v.version_id =
+    d.dependency_version_id
+    WHERE d.enterprise_id = #{enterprise}
+    )
+    SELECT s.id FROM scheduled_task s JOIN dependent_versions v ON v.version_id = s.agent_version_id
+    WHERE s.enterprise_id = #{enterprise} AND s.enabled = TRUE AND s.deleted_at IS NULL
+  </select>
+</mapper>

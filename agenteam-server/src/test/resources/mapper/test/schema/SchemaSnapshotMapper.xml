@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.schema.SchemaSnapshotMapper">
+  <resultMap id="definition" type="java.util.HashMap">
+    <result column="Create Table" property="definition"/>
+  </resultMap>
+  <select id="tables" resultType="string">
+    SELECT TABLE_NAME FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME != 'flyway_schema_history'
+    ORDER BY TABLE_NAME
+  </select>
+  <!-- 表名来自结构快照的固定允许列表，不接受任意标识符或语句。 -->
+  <select id="tableDefinition" resultMap="definition">SHOW CREATE TABLE `${table.name}`</select>
+  <select id="foreignKeyChecks" resultType="int">SELECT @@SESSION.FOREIGN_KEY_CHECKS</select>
+</mapper>

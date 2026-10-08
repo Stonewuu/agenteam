@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.todo.TodoSqlMapper">
+  <sql id="todoFields">SELECT t.*, creator.display_name AS creator_name, owner.display_name AS owner_name, team.name AS
+    team_name
+    FROM todo_item t JOIN enterprise_member creator ON creator.enterprise_id = t.enterprise_id AND creator.user_id =
+    t.created_by
+    JOIN enterprise_member owner ON owner.enterprise_id = t.enterprise_id AND owner.user_id = t.owner_user_id
+    LEFT JOIN enterprise_team team ON team.enterprise_id = t.enterprise_id AND team.id = t.team_id
+  </sql>
+  <sql id="access">
+    t.enterprise_id = #{access.enterpriseId}
+    AND (t.created_by = #{access.userId} OR t.owner_user_id = #{access.userId} OR (#{access.includeOtherTeamTodos} AND
+    t.team_id IS NOT NULL))
+    AND (t.team_id IS NULL OR EXISTS (
+    SELECT 1 FROM enterprise_team_member tm JOIN enterprise_team current_team ON current_team.enterprise_id =
+    tm.enterprise_id AND current_team.id = tm.team_id
+    WHERE tm.enterprise_id = t.enterprise_id AND tm.team_id = t.team_id AND tm.user_id = #{access.userId}
+    AND current_team.status = 'active' AND current_team.deleted_at IS NULL))
+  </sql>
+  <sql id="ownedOpen">
+    AND t.owner_user_id = #{access.userId} AND t.deleted_at IS NULL AND t.status IN ('pending','in_progress')
+    AND (t.team_id IS NULL OR #{access.includeOtherTeamTodos})
+  </sql>
+  <select id="findTodo" resultType="com.stonewu.agenteam.model.todo.entity.TodoQueryRow">
+    <include refid="todoFields"/>
+    WHERE
+    <include refid="access"/>
+    AND t.id = #{id}
+    <if test="!deleted">AND t.deleted_at IS NULL</if>
+    <if test="lock">FOR UPDATE</if>
+  </select>
+  <select id="listTodos" resultType="com.stonewu.agenteam.model.todo.entity.TodoQueryRow">
+    <include refid="todoFields"/>
+    WHERE
+    <include refid="access"/>
+    AND t.deleted_at IS NULL AND LOCATE(#{query}, t.title) > 0
+    <choose>
+      <when test="scope == 'mine'">AND (t.created_by = #{access.userId} OR t.owner_user_id = #{access.userId})</when>
+      <otherwise>AND t.team_id IS NOT NULL</otherwise>
+    </choose>
+    <if test="team != null">AND t.team_id = #{team}</if>
+    <choose>
+      <when test="state == 'open'">AND t.status IN ('pending','in_progress')</when>
+      <when test="state != ''">AND t.status = #{state}</when>
+    </choose>
+    <if test="after != null">
+      AND (t.updated_at &lt; #{after.time} OR (t.updated_at = #{after.time} AND t.id &lt; #{after.id}))
+    </if>
+    ORDER BY t.updated_at DESC, t.id DESC LIMIT #{limit}
+  </select>
+  <select id="recentOwnedTodos" resultType="com.stonewu.agenteam.model.todo.entity.TodoQueryRow">
+    <include refid="todoFields"/>
+    WHERE
+    <include refid="access"/>
+    <include refid="ownedOpen"/>
+    ORDER BY t.updated_at DESC, t.id DESC LIMIT 3
+  </select>
+  <select id="countOwnedTodos" resultType="long">
+    SELECT COUNT(*) FROM todo_item t WHERE
+    <include refid="access"/>
+    <include refid="ownedOpen"/>
+  </select>
+  <select id="ownedOpenTodoItem" resultType="com.stonewu.agenteam.model.todo.entity.TodoQueryRow">
+    SELECT t.*, creator.display_name AS creator_name, owner.display_name AS owner_name, team.name AS team_name
+    FROM todo_item t JOIN enterprise_member creator ON creator.enterprise_id = t.enterprise_id AND creator.user_id =
+    t.created_by
+    JOIN enterprise_member owner ON owner.enterprise_id = t.enterprise_id AND owner.user_id = t.owner_user_id
+    LEFT JOIN enterprise_team team ON team.enterprise_id = t.enterprise_id AND team.id = t.team_id
+    WHERE t.enterprise_id = #{enterprise} AND t.owner_user_id = #{user} AND t.deleted_at IS NULL AND t.status IN
+    ('pending', 'in_progress') ORDER BY t.id FOR UPDATE
+  </select>
+</mapper>

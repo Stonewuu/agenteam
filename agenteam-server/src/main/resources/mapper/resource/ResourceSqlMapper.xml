@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.resource.ResourceSqlMapper">
+  <sql id="sortColumn">
+    <choose>
+      <when test="sort == 'created_desc'">r.created_at</when>
+      <when test="sort == 'name_asc'">r.name</when>
+      <otherwise>r.updated_at</otherwise>
+    </choose>
+  </sql>
+  <select id="listResources" resultType="com.stonewu.agenteam.model.resource.entity.ResourceQueryRow">
+    SELECT r.*, m.display_name AS owner_display_name, d.config_json, d.config_hash, d.validation_json
+    FROM resource r JOIN enterprise_member m ON m.enterprise_id = r.enterprise_id AND m.user_id = r.owner_user_id
+    LEFT JOIN resource_draft d ON d.enterprise_id = r.enterprise_id AND d.resource_id = r.id
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    <if test="deletedAfter != null">AND r.deleted_at > #{deletedAfter}</if>
+    <if test="query != ''">AND LOCATE(#{query}, r.name) > 0</if>
+    <if test="source != null">AND r.source = #{source}</if>
+    <if test="subtype != null">AND r.subtype = #{subtype}</if>
+    <choose>
+      <when test="status == 'draft'">AND r.status = 'active' AND r.published_version_id IS NULL</when>
+      <when test="status == 'published'">AND r.status = 'active' AND r.published_version_id IS NOT NULL</when>
+      <when test="status == 'unlisted'">
+        AND r.status = 'active' AND r.published_version_id IS NOT NULL AND r.kind = 'agent'
+        AND NOT EXISTS (SELECT 1 FROM agent_listing l WHERE l.enterprise_id = r.enterprise_id AND l.agent_id = r.id AND
+        l.listed = TRUE)
+      </when>
+      <when test="status == 'disabled'">AND r.status = 'disabled'</when>
+      <when test="status == 'deleted'">AND r.status = 'deleted'</when>
+    </choose>
+    <foreach collection="tags" item="tag">
+      AND EXISTS (SELECT 1 FROM resource_tag rt JOIN tag t ON t.enterprise_id = rt.enterprise_id AND t.id = rt.tag_id
+      WHERE rt.enterprise_id = r.enterprise_id AND rt.resource_id = r.id AND rt.tag_id = #{tag} AND t.deleted_at IS
+      NULL)
+    </foreach>
+    <if test="cursor != null">
+      <choose>
+        <when test="sort == 'name_asc'">
+          AND (r.name > #{cursor.sortValue} OR (r.name = #{cursor.sortValue} AND r.id > #{cursor.id}))
+        </when>
+        <otherwise>
+          AND (
+          <include refid="sortColumn"/> &lt; #{cursor.time}
+          OR (
+          <include refid="sortColumn"/>
+          = #{cursor.time} AND r.id &lt; #{cursor.id}))
+        </otherwise>
+      </choose>
+    </if>
+    ORDER BY
+    <include refid="sortColumn"/>
+    <choose>
+      <when test="sort == 'name_asc'">ASC, r.id ASC</when>
+      <otherwise>DESC, r.id DESC</otherwise>
+    </choose>
+    LIMIT #{limit}
+  </select>
+  <select id="findResourceLocked" resultType="com.stonewu.agenteam.model.resource.entity.ResourceQueryRow">
+    SELECT r.*, m.display_name AS owner_display_name, d.config_json, d.config_hash, d.validation_json
+    FROM resource r JOIN enterprise_member m ON m.enterprise_id = r.enterprise_id AND m.user_id = r.owner_user_id
+    LEFT JOIN resource_draft d ON d.enterprise_id = r.enterprise_id AND d.resource_id = r.id
+    WHERE r.enterprise_id = #{enterprise} AND r.id = #{id}
+    <choose>
+      <when test="deleted"></when>
+      <otherwise>AND r.deleted_at IS NULL</otherwise>
+    </choose>
+    FOR UPDATE
+  </select>
+</mapper>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.resource.ResourceAccessFixtureMapper">
+  <select id="visibleIds" resultType="string">
+    SELECT r.id FROM resource r
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="alias" value="r"/>
+      <property name="scopePath" value="scope"/>
+    </include>
+    ORDER BY r.name LIMIT #{limit}
+  </select>
+</mapper>

@@ -1,0 +1,385 @@
+{
+  "description": "旧完整目标结构的权限种子快照，仅用于历史结构兼容测试，不代表当前发行版开放这些接口。",
+  "permissions": [
+    {
+      "code": "workspace.view",
+      "name": "进入用户工作台",
+      "area": "user"
+    },
+    {
+      "code": "capabilities.view",
+      "name": "进入能力中心",
+      "area": "capabilities"
+    },
+    {
+      "code": "admin.view",
+      "name": "进入管理端",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.view",
+      "name": "查看企业资料",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.manage",
+      "name": "管理企业资料",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.members.view",
+      "name": "查看成员与邀请",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.members.manage",
+      "name": "管理成员与邀请",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.teams.view",
+      "name": "查看团队",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.teams.manage",
+      "name": "管理团队",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.roles.view",
+      "name": "查看角色",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.roles.manage",
+      "name": "管理角色",
+      "area": "admin"
+    },
+    {
+      "code": "enterprise.permissions.view",
+      "name": "查看权限目录",
+      "area": "admin"
+    },
+    {
+      "code": "agent.preview",
+      "name": "预览智能体",
+      "area": "capabilities"
+    },
+    {
+      "code": "agent.run",
+      "name": "运行数字员工",
+      "area": "user"
+    },
+    {
+      "code": "agent.market_view",
+      "name": "查看员工广场",
+      "area": "user"
+    },
+    {
+      "code": "agent.hire",
+      "name": "管理本人雇佣",
+      "area": "user"
+    },
+    {
+      "code": "agent.hire_approve",
+      "name": "审批雇佣申请",
+      "area": "admin"
+    },
+    {
+      "code": "resource.grants.manage",
+      "name": "管理资源授权",
+      "area": "admin"
+    },
+    {
+      "code": "resource.manage_all",
+      "name": "维护企业全部能力资源",
+      "area": "admin"
+    },
+    {
+      "code": "credential.manage",
+      "name": "管理凭据引用与轮换",
+      "area": "admin"
+    },
+    {
+      "code": "model.manage",
+      "name": "管理模型提供方与模型",
+      "area": "admin"
+    },
+    {
+      "code": "tag.manage",
+      "name": "管理标签",
+      "area": "capabilities"
+    },
+    {
+      "code": "conversation.view",
+      "name": "查看本人对话",
+      "area": "user"
+    },
+    {
+      "code": "conversation.manage",
+      "name": "管理本人对话",
+      "area": "user"
+    },
+    {
+      "code": "conversation.export",
+      "name": "下载本人对话结果",
+      "area": "user"
+    },
+    {
+      "code": "schedule.view",
+      "name": "查看本人定时任务",
+      "area": "user"
+    },
+    {
+      "code": "schedule.manage",
+      "name": "管理本人定时任务",
+      "area": "user"
+    },
+    {
+      "code": "todo.view",
+      "name": "查看本人待办",
+      "area": "user"
+    },
+    {
+      "code": "todo.manage",
+      "name": "管理本人待办",
+      "area": "user"
+    },
+    {
+      "code": "todo.team_view",
+      "name": "查看授权团队待办",
+      "area": "user"
+    },
+    {
+      "code": "todo.team_manage",
+      "name": "维护授权团队待办",
+      "area": "user"
+    },
+    {
+      "code": "usage.view",
+      "name": "查看企业用量",
+      "area": "admin"
+    },
+    {
+      "code": "usage.manage",
+      "name": "调整用量上限",
+      "area": "admin"
+    },
+    {
+      "code": "audit.view",
+      "name": "查看审计记录",
+      "area": "admin"
+    },
+    {
+      "code": "audit.export",
+      "name": "导出审计记录",
+      "area": "admin"
+    },
+    {
+      "code": "tool_log.view",
+      "name": "查看调用记录摘要",
+      "area": "admin"
+    },
+    {
+      "code": "tool_log.details",
+      "name": "查看脱敏调用详情",
+      "area": "admin"
+    },
+    {
+      "code": "tool_log.export",
+      "name": "导出调用记录",
+      "area": "admin"
+    },
+    {
+      "code": "agent.view",
+      "name": "查看智能体",
+      "area": "capabilities"
+    },
+    {
+      "code": "agent.create",
+      "name": "创建智能体",
+      "area": "capabilities"
+    },
+    {
+      "code": "agent.edit",
+      "name": "编辑智能体",
+      "area": "capabilities"
+    },
+    {
+      "code": "agent.publish",
+      "name": "发布智能体",
+      "area": "capabilities"
+    },
+    {
+      "code": "agent.delete",
+      "name": "删除智能体",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.view",
+      "name": "查看技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.create",
+      "name": "创建技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.edit",
+      "name": "编辑技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.publish",
+      "name": "发布技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.delete",
+      "name": "删除技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.view",
+      "name": "查看插件",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.create",
+      "name": "创建插件",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.edit",
+      "name": "编辑插件",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.publish",
+      "name": "发布插件",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.delete",
+      "name": "删除插件",
+      "area": "capabilities"
+    },
+    {
+      "code": "workflow.view",
+      "name": "查看工作流",
+      "area": "capabilities"
+    },
+    {
+      "code": "workflow.create",
+      "name": "创建工作流",
+      "area": "capabilities"
+    },
+    {
+      "code": "workflow.edit",
+      "name": "编辑工作流",
+      "area": "capabilities"
+    },
+    {
+      "code": "workflow.publish",
+      "name": "发布工作流",
+      "area": "capabilities"
+    },
+    {
+      "code": "workflow.delete",
+      "name": "删除工作流",
+      "area": "capabilities"
+    },
+    {
+      "code": "knowledge.view",
+      "name": "查看知识库",
+      "area": "capabilities"
+    },
+    {
+      "code": "knowledge.create",
+      "name": "创建知识库",
+      "area": "capabilities"
+    },
+    {
+      "code": "knowledge.edit",
+      "name": "编辑知识库",
+      "area": "capabilities"
+    },
+    {
+      "code": "knowledge.publish",
+      "name": "发布知识库",
+      "area": "capabilities"
+    },
+    {
+      "code": "knowledge.delete",
+      "name": "删除知识库",
+      "area": "capabilities"
+    },
+    {
+      "code": "data.view",
+      "name": "查看数据源",
+      "area": "capabilities"
+    },
+    {
+      "code": "data.create",
+      "name": "创建数据源",
+      "area": "capabilities"
+    },
+    {
+      "code": "data.edit",
+      "name": "编辑数据源",
+      "area": "capabilities"
+    },
+    {
+      "code": "data.publish",
+      "name": "发布数据源",
+      "area": "capabilities"
+    },
+    {
+      "code": "data.delete",
+      "name": "删除数据源",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.import",
+      "name": "导入技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.export",
+      "name": "导出技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "skill.use",
+      "name": "在任务中使用技能",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.test",
+      "name": "检查插件连接",
+      "area": "capabilities"
+    },
+    {
+      "code": "plugin.invoke",
+      "name": "在任务中调用授权工具",
+      "area": "capabilities"
+    },
+    {
+      "code": "workflow.preview",
+      "name": "测试工作流",
+      "area": "capabilities"
+    },
+    {
+      "code": "knowledge.search",
+      "name": "检索授权知识",
+      "area": "capabilities"
+    },
+    {
+      "code": "data.query",
+      "name": "查询授权数据",
+      "area": "capabilities"
+    }
+  ]
+}

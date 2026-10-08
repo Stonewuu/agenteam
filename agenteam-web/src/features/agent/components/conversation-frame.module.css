@@ -1,0 +1,645 @@
+.frame {
+  --conversation-layout-duration: 240ms;
+  --list-width: 280px;
+  --list-heading-inset: 48px;
+  --rail-control-height: 36px;
+  --rail-control-radius: 10px;
+  --rail-control-font-size: 13px;
+  --rail-inset: 12px;
+  --conversation-title-inset: 0px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--list-width) minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  transition: grid-template-columns var(--conversation-layout-duration) var(--motion-ease);
+}
+
+.frame[data-collapsed=true] {
+  --conversation-title-inset: 60px;
+  grid-template-columns: 0px minmax(0, 1fr);
+}
+
+.frame[data-collapsed=true][data-can-create=true] {
+  --conversation-title-inset: 168px;
+}
+
+.frame[data-can-toggle=false] {
+  --list-heading-inset: 17px;
+}
+
+.frameAside {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 45%, var(--bg));
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 160ms var(--motion-ease), visibility 0s;
+}
+
+.frame[data-collapsed=true] .frameAside {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms var(--motion-ease), visibility 0s 240ms;
+}
+
+.frameContent {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.listActions {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+}
+
+.listActions > button {
+  pointer-events: auto;
+}
+
+.listActions :global(.icon-button) {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: var(--rail-control-height);
+  min-width: var(--rail-control-height);
+  height: var(--rail-control-height);
+  border: 0;
+  border-radius: var(--rail-control-radius);
+  color: var(--secondary);
+  background: transparent;
+  box-shadow: none;
+  transition: color 180ms ease;
+}
+
+.listActions :global(.icon-button):hover {
+  color: var(--text);
+  background: transparent;
+}
+
+.listActions :global(.icon-button):focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.listActions .listToggle[aria-expanded=true], .listActions .listToggle:active {
+  color: var(--text);
+  background: transparent;
+}
+
+.listToggle svg > path:last-child {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 240ms var(--motion-ease);
+}
+
+.listToggle[aria-expanded=false] svg > path:last-child {
+  transform: rotate(180deg);
+}
+
+.newConversation {
+  position: absolute;
+  top: 9px;
+  left: calc(var(--list-width) - 120px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 108px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  transition: left 240ms var(--motion-ease), width 240ms var(--motion-ease), height 240ms var(--motion-ease), background-color 180ms ease, color 180ms ease;
+}
+
+.newConversation svg {
+  flex-shrink: 0;
+}
+
+.newConversation:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.newConversation:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.frame[data-collapsed=true] .newConversation {
+  left: 48px;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  width: var(--list-width);
+  height: 100%;
+  min-height: 0;
+}
+
+.railHeader {
+  display: flex;
+  flex: 0 0 52px;
+  align-items: center;
+  padding: 8px 12px 8px var(--list-heading-inset);
+}
+
+.frame[data-can-create=true] .railHeader {
+  padding-right: 128px;
+}
+
+.railHeader h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.railBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.filterDisclosure {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.filterTools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--rail-inset) 12px;
+}
+
+.filterTools > :global(.search-input) {
+  flex: 1;
+  min-width: 0;
+}
+
+.filterTools > :global(.icon-button) {
+  flex-shrink: 0;
+  width: var(--rail-control-height);
+  min-width: var(--rail-control-height);
+  height: var(--rail-control-height);
+  border-radius: var(--rail-control-radius);
+}
+
+.filterToggle {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--secondary);
+  cursor: pointer;
+}
+
+.filterToggle:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.filterToggle[aria-expanded=true], .filterToggle[data-active=true] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-color: var(--hero-border);
+}
+
+.filterToggle:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.filterSettingsIcon {
+  transform: rotate(90deg);
+}
+
+.railFilters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 0 var(--rail-inset) 12px;
+}
+
+.filterTools :global(.search-input), .railFilters :global(.select-control) {
+  width: 100%;
+  font-size: var(--rail-control-font-size);
+}
+
+.filterTools :global(.search-input), .railFilters :global(.select-trigger) {
+  height: var(--rail-control-height);
+  min-height: var(--rail-control-height);
+  padding: 0 12px;
+  border-radius: var(--rail-control-radius);
+  font-size: var(--rail-control-font-size);
+  line-height: 20px;
+  gap: 8px;
+}
+
+.filterTools :global(.search-input) {
+  padding-right: 4px;
+  gap: 6px;
+}
+
+.filterTools :global(.search-input > .icon-button) {
+  width: 28px;
+  height: 28px;
+}
+
+.filterTools :global(.search-input input[data-slot="input"]) {
+  height: auto;
+  min-height: 0;
+  font-size: var(--rail-control-font-size);
+  line-height: 20px;
+}
+
+.listActions > button > svg, .filterTools svg, .railFilters :global(.select-trigger svg) {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.railList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 8px 20px;
+  scrollbar-gutter: stable;
+}
+
+.dateGroup + .dateGroup {
+  margin-top: 12px;
+}
+
+.dateGroupTitle {
+  margin: 0;
+  padding: 6px 12px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--secondary);
+}
+
+.conversationItem {
+  position: relative;
+  min-width: 0;
+  margin-bottom: 3px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background-color 180ms ease;
+}
+
+.conversationItem:hover {
+  background: color-mix(in srgb, var(--surface-hover) 60%, transparent);
+}
+
+.conversationItem[data-active=true] {
+  background: var(--surface-hover);
+}
+
+.conversationLink {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: inherit;
+  color: var(--text);
+}
+
+.conversationLink:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.conversationItem[data-active=true] .conversationLink > strong {
+  font-weight: 600;
+}
+
+.conversationLink > strong {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.conversationItem[data-manageable=true] .conversationLink > strong {
+  padding-right: 24px;
+}
+
+.conversationMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.agentName {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.conversationLink small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 16px;
+  min-width: 0;
+  color: var(--secondary);
+}
+
+.agentName > small {
+  transform: translateY(-0.5px);
+}
+
+.conversationLink time {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.conversationLink svg {
+  flex-shrink: 0;
+}
+
+.favoriteIcon {
+  display: inline-flex;
+  color: var(--accent-text);
+}
+
+.itemActions {
+  position: absolute;
+  right: 5px;
+  top: 6px;
+}
+
+.itemActions > :global(.icon-button) {
+  position: relative;
+  isolation: isolate;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--secondary);
+  background: transparent;
+  transition: opacity 180ms ease, color 180ms ease;
+}
+
+.itemActions > :global(.icon-button)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 7px;
+  background: transparent;
+  pointer-events: none;
+  transition: background-color 180ms ease;
+}
+
+.itemActions > :global(.icon-button):hover, .itemActions > :global(.icon-button)[aria-expanded=true] {
+  background: transparent;
+  color: var(--text);
+}
+
+.itemActions > :global(.icon-button):hover::before, .itemActions > :global(.icon-button)[aria-expanded=true]::before {
+  background: var(--border);
+}
+
+.itemActions > :global(.icon-button):focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .itemActions > :global(.icon-button) {
+    opacity: 0;
+  }
+
+  .conversationItem:hover .itemActions > :global(.icon-button),
+  .conversationItem:focus-within .itemActions > :global(.icon-button),
+  .conversationItem[data-active=true] .itemActions > :global(.icon-button),
+  .itemActions > :global(.icon-button)[aria-expanded=true] {
+    opacity: 1;
+  }
+}
+
+.itemActions > p {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 4;
+  width: 230px;
+  padding: 12px;
+  border: 1px solid var(--red);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.loadMore {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--accent-text);
+}
+
+.railEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px 12px;
+  font-size: 12px;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.railError {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--red-text);
+  line-height: 1.8;
+}
+
+.railError button {
+  text-decoration: underline;
+}
+
+@media (max-width: 1100px) and (min-width: 801px) {
+  .frame {
+    --list-width: 245px;
+  }
+}
+
+@media (max-width: 800px) {
+  .frame, .frame[data-collapsed=true] {
+    --rail-control-height: 44px;
+    --rail-inset: 16px;
+    --list-heading-inset: 60px;
+    --conversation-title-inset: 60px;
+    display: block;
+  }
+
+  .frame[data-can-create=true], .frame[data-collapsed=true][data-can-create=true] {
+    --conversation-title-inset: 68px;
+  }
+
+  .frameAside, .frameContent {
+    height: 100%;
+  }
+
+  .frame .frameAside {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    border-right: 0;
+    background: var(--bg);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-24px);
+    transition: transform 240ms var(--motion-ease), opacity 160ms var(--motion-ease), visibility 0s 240ms;
+  }
+
+  .frame[data-show-list=true] .frameAside {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    transition-delay: 0s, 80ms, 0s;
+  }
+
+  .frameContent {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    transition: transform 240ms var(--motion-ease), opacity 140ms var(--motion-ease) 100ms, visibility 0s;
+  }
+
+  .frame[data-show-list=true] .frameContent {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(20px);
+    transition-delay: 0s, 0s, 240ms;
+  }
+
+  .listActions :global(.icon-button) {
+    top: 4px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .frame .newConversation {
+    top: 4px;
+    right: 12px;
+    left: auto;
+    width: 108px;
+    height: 44px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 160ms var(--motion-ease), transform 180ms var(--motion-ease), background-color 180ms ease, visibility 0s 240ms;
+  }
+
+  .frame[data-show-list=true] .newConversation {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 80ms, 60ms, 0s;
+  }
+
+  .frame .newConversation > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .frame[data-can-toggle=false] {
+    --list-heading-inset: 17px;
+  }
+
+  .rail {
+    width: 100%;
+  }
+
+  .filterTools :global(.search-input > .icon-button) {
+    width: 44px;
+    height: 44px;
+  }
+
+  .railFilters > :global(.select-control) {
+    grid-column: 1 / -1;
+  }
+
+  .itemActions > :global(.icon-button) {
+    width: 44px;
+    height: 44px;
+    opacity: 1;
+  }
+
+  .itemActions {
+    top: 0;
+  }
+
+  .itemActions > :global(.icon-button)::before {
+    inset: 8px;
+  }
+
+  .railList {
+    padding: 10px 12px 22px;
+  }
+
+  .conversationLink {
+    gap: 8px;
+    padding: 8px 14px;
+  }
+
+  .conversationLink > strong {
+    line-height: 28px;
+  }
+
+  .conversationItem[data-manageable=true] .conversationLink > strong {
+    padding-right: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame, .frame .frameAside, .frame .frameContent, .frame .newConversation, .listToggle svg > path:last-child,
+  .listActions :global(.icon-button), .conversationItem, .itemActions > :global(.icon-button), .itemActions > :global(.icon-button)::before {
+    transition: none;
+  }
+}
+
+@media (max-width: 800px) and (hover: none) {
+  .listActions :global(.icon-button):hover:not(:active):not([aria-expanded=true]) {
+    color: var(--secondary);
+    background: transparent;
+  }
+}

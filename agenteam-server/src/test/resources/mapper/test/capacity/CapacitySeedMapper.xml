@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.capacity.CapacitySeedMapper">
+  <update id="createNumbers">
+    CREATE TEMPORARY TABLE capacity_number (n INT PRIMARY KEY)
+  </update>
+  <update id="createItems">
+    CREATE TEMPORARY TABLE capacity_item LIKE capacity_number
+  </update>
+  <insert id="seedMembersAppUser">
+    INSERT INTO app_user (id, username, username_normalized, password_hash, display_name)
+    SELECT CONCAT(#{values.prefix}, 'user_', n), CONCAT(#{values.prefix}, 'user_', n), CONCAT(#{values.prefix}, 'user_',
+    n), #{values.password}, CONCAT('容量成员', n)
+    FROM capacity_number WHERE n &lt;= 99
+  </insert>
+  <insert id="seedMembersUserPreference">
+    INSERT INTO user_preference (user_id) SELECT CONCAT(#{values.prefix}, 'user_', n) FROM capacity_number WHERE n &lt;=
+    99
+  </insert>
+  <insert id="seedMembersEnterpriseMember">
+    INSERT INTO enterprise_member (enterprise_id, user_id, display_name, joined_at, updated_at)
+    SELECT #{values.enterprise}, CONCAT(#{values.prefix}, 'user_', n), CONCAT('容量成员', n), CURRENT_TIMESTAMP(3),
+    CURRENT_TIMESTAMP(3) FROM capacity_number WHERE n &lt;= 99
+  </insert>
+  <insert id="seedMembersSysUserRole">
+    INSERT INTO sys_user_role (enterprise_id, user_id, role_id, created_at)
+    SELECT #{values.enterprise}, CONCAT(#{values.prefix}, 'user_', n), #{values.role}, CURRENT_TIMESTAMP(3) FROM
+    capacity_number WHERE n &lt;= 99
+  </insert>
+  <insert id="seedResourcesResource">
+    INSERT INTO resource (id, enterprise_id, kind, name, subtype, description, owner_user_id, next_version_no)
+    SELECT CONCAT(#{values.prefix}, 'agent_', n), #{values.enterprise}, 'agent', CONCAT('容量员工', n), 'chat',
+    '由测试程序生成的员工介绍', #{values.admin}, 2
+    FROM capacity_number WHERE n BETWEEN #{values.first} AND 999
+  </insert>
+  <insert id="seedResourcesResourceDraft">
+    INSERT INTO resource_draft (enterprise_id, resource_id, config_json, config_hash, updated_by)
+    SELECT #{values.enterprise}, CONCAT(#{values.prefix}, 'agent_', n), #{values.config}, #{values.hash},
+    #{values.admin} FROM capacity_number WHERE n BETWEEN #{values.first} AND 999
+  </insert>
+  <insert id="seedResourcesResourceVersion">
+    INSERT INTO resource_version (id, enterprise_id, resource_id, version_no, name, description, config_json,
+    config_hash, release_note, published_by, published_at)
+    SELECT CONCAT(#{values.prefix}, 'version_', n), #{values.enterprise}, CONCAT(#{values.prefix}, 'agent_', n), 1,
+    CONCAT('容量员工', n), '由测试程序生成的员工介绍',
+    #{values.config}, #{values.hash}, '容量验收', #{values.admin}, CURRENT_TIMESTAMP(3) FROM capacity_number WHERE n
+    BETWEEN #{values.first} AND 999
+  </insert>
+  <update id="seedResourcesResource2">
+    UPDATE resource SET published_version_id = CONCAT(#{values.prefix}, 'version_', SUBSTRING_INDEX(id, '_', -1)) WHERE
+    enterprise_id = #{values.enterprise} AND id LIKE CONCAT(#{values.prefix}, 'agent_%')
+  </update>
+  <insert id="seedResourcesAgentListing">
+    INSERT INTO agent_listing (enterprise_id, agent_id, listed, hire_policy, updated_by, created_at, updated_at)
+    SELECT #{values.enterprise}, CONCAT(#{values.prefix}, 'agent_', n), TRUE, 'automatic', #{values.admin},
+    CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
+    FROM capacity_number WHERE n BETWEEN #{values.first} AND 999
+  </insert>
+  <insert id="seedResourcesAgentHire">
+    INSERT INTO agent_hire (id, enterprise_id, user_id, agent_id, hired_at, last_used_at)
+    SELECT CONCAT(#{values.prefix}, 'hire_', n), #{values.enterprise}, CONCAT(#{values.prefix}, 'user_', n),
+    #{values.agent}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
+    FROM capacity_number WHERE n &lt;= 99
+  </insert>
+  <insert id="seedResourcesAgentHire2">
+    INSERT INTO agent_hire (id, enterprise_id, user_id, agent_id, hired_at, last_used_at)
+    SELECT CONCAT(#{values.prefix}, 'hire_admin'), #{values.enterprise}, #{values.admin}, #{values.agent},
+    CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
+    WHERE NOT EXISTS (SELECT 1 FROM agent_hire WHERE enterprise_id = #{values.enterprise} AND user_id = #{values.admin}
+    AND agent_id = #{values.agent})
+  </insert>
+  <insert id="seedResourcesResourceGrant">
+    INSERT INTO resource_grant (id, enterprise_id, resource_id, subject_type, subject_id, capability, created_by,
+    created_at)
+    SELECT UUID(), #{values.enterprise}, id, 'enterprise', #{values.enterprise}, #{values.capability}, #{values.admin},
+    CURRENT_TIMESTAMP(3) FROM resource
+    WHERE enterprise_id = #{values.enterprise}
+  </insert>
+  <insert id="seedConversationsAgentConversation">
+    INSERT INTO agent_conversation (id, enterprise_id, user_id, agent_id, agent_version_id, hire_id, title, created_at,
+    updated_at)
+    SELECT CONCAT(#{values.prefix}, 'conversation_', person.n, '_', item.n), #{values.enterprise},
+    IF(person.n = 100, #{values.admin}, CONCAT(#{values.prefix}, 'user_', person.n)), #{values.agent},
+    #{values.version}, h.id, CONCAT('容量历史对话', item.n),
+    TIMESTAMPADD(SECOND, -item.n, CURRENT_TIMESTAMP(3)), TIMESTAMPADD(SECOND, -item.n, CURRENT_TIMESTAMP(3))
+    FROM capacity_number person CROSS JOIN capacity_item item JOIN agent_hire h ON h.enterprise_id =
+    #{values.enterprise}
+    AND h.user_id = IF(person.n = 100, #{values.admin}, CONCAT(#{values.prefix}, 'user_', person.n)) AND h.agent_id =
+    #{values.agent}
+    WHERE person.n &lt;= 100
+  </insert>
+  <insert id="seedConversationsAgentMessage">
+    INSERT INTO agent_message (id, enterprise_id, conversation_id, role, content, status, blocks_json, context_json,
+    created_at, updated_at)
+    SELECT CONCAT(#{values.messageRole}, '_', id), enterprise_id, id, #{values.messageRole}, '这是一条由容量验收程序生成的历史消息。',
+    'completed', JSON_ARRAY(), JSON_ARRAY(), created_at, updated_at
+    FROM agent_conversation WHERE enterprise_id = #{values.enterprise}
+  </insert>
+  <insert id="seedKnowledgeKnowledgeDocument">
+    INSERT INTO knowledge_document (id, enterprise_id, resource_id, name, file_id, active_file_id, active_generation,
+    last_generation, status, chunk_count, processed_at)
+    SELECT CONCAT(#{values.prefix}, 'document_', n), #{values.enterprise}, CONCAT(#{values.prefix}, 'knowledge'),
+    CONCAT('容量资料', n, '.txt'),
+    CONCAT(#{values.prefix}, 'file_', n), CONCAT(#{values.prefix}, 'file_', n), 1, 1, 'ready', 1000,
+    CURRENT_TIMESTAMP(3) FROM capacity_number WHERE n &lt;= 100
+  </insert>
+  <insert id="seedKnowledgeKnowledgeChunk">
+    INSERT INTO knowledge_chunk (id, enterprise_id, document_id, file_id, generation, ordinal, locator_json,
+    content_text, content_hash, created_at, search_terms)
+    SELECT CONCAT(#{values.prefix}, 'chunk_', document.n, '_', item.n), #{values.enterprise}, CONCAT(#{values.prefix},
+    'document_', document.n), CONCAT(#{values.prefix}, 'file_', document.n),
+    1, item.n, JSON_OBJECT('section', CONCAT('第', item.n, '段')), #{values.text}, SHA2(#{values.text}, 256),
+    CURRENT_TIMESTAMP(3), #{values.terms}
+    FROM capacity_number document CROSS JOIN capacity_item item WHERE document.n &lt;= 100
+  </insert>
+  <select id="minimumConversationsPerMember" resultType="int">
+    SELECT MIN(total) FROM (SELECT COUNT(*) AS total FROM agent_conversation WHERE enterprise_id = #{enterprise} GROUP
+    BY user_id) counts
+  </select>
+  <update id="setBufferPool">SET GLOBAL innodb_buffer_pool_size = #{bytes}</update>
+</mapper>

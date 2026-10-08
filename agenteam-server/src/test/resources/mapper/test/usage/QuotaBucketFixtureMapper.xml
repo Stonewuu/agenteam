@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.usage.QuotaBucketFixtureMapper">
+  <select
+    id="conversationManagementApiPreviewsStayOutOfTheNormalListAndExpireWithoutDeletingUsageOrOtherConversationsObject"
+    resultType="Integer">
+    SELECT SUM(used_count) FROM quota_bucket WHERE enterprise_id = #{args[0]}
+  </select>
+  <select id="executionApiTestSupportReservedObject" resultType="Integer">
+    SELECT COALESCE(SUM(reserved_count), 0) FROM quota_bucket WHERE enterprise_id = #{args[0]}
+  </select>
+  <select id="scheduleRetryApiUsedObject" resultType="Integer">
+    SELECT COALESCE(SUM(used_count), 0) FROM quota_bucket WHERE enterprise_id = #{args[0]}
+  </select>
+</mapper>

@@ -1,0 +1,44 @@
+.counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.counts dt {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.counts dd {
+  margin: 6px 0 0;
+  font-size: 18px;
+}
+
+.fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.choice span {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .counts {
+    gap: 14px;
+    padding: 14px;
+  }
+}

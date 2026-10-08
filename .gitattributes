@@ -1,0 +1,9 @@
+/agenteam-server/mvnw text eol=lf
+*.cmd text eol=crlf
+/deploy/configure.sh text eol=lf
+/deploy/container/*.sh text eol=lf
+/deploy/nginx/*.sh text eol=lf
+/deploy/sandbox/bin/* text eol=lf
+
+# 数据库迁移已执行的内容必须原样保存，禁止不同机器自动转换换行。
+agenteam-server/src/main/resources/db/schema/*.sql -text

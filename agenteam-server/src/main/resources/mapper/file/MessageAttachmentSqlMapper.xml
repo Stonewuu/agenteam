@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.file.MessageAttachmentSqlMapper">
+  <delete id="removeConversationAttachments">
+    DELETE a FROM message_attachment a JOIN agent_message m ON m.enterprise_id = a.enterprise_id AND m.id = a.message_id
+    WHERE m.enterprise_id = #{enterprise} AND m.conversation_id = #{conversation}
+  </delete>
+  <update id="expireDetachedFiles">
+    UPDATE file_object f SET expires_at = #{now}, updated_at = #{now}
+    WHERE f.enterprise_id = #{enterprise} AND f.id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    AND f.purpose = 'attachment'
+    AND NOT EXISTS (SELECT 1 FROM message_attachment a WHERE a.enterprise_id = f.enterprise_id AND a.file_id = f.id)
+    AND NOT EXISTS (SELECT 1 FROM workspace_project_file p WHERE p.enterprise_id = f.enterprise_id AND p.file_id = f.id)
+  </update>
+</mapper>

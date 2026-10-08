@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.http.ApiRequestFixtureMapper">
+  <select id="memoryApiRepeatedWritesOnlyStoreReferencesAndDeletedContentCannotBeReadFromOldRequestsList"
+          resultType="String">
+    SELECT COALESCE(response_json, '') FROM api_request WHERE enterprise_id = #{args[0]}
+  </select>
+  <select id="modelManagementApiAdministratorsManageProvidersModelsAndPlaintextKeysThroughTheApiObject"
+          resultType="Integer">
+    SELECT COUNT(*) FROM api_request WHERE enterprise_id = #{args[0]} AND LOCATE('first-model-key', response_json) &gt;
+    0
+  </select>
+  <select id="pluginCheckApiCredentialsAreEncryptedRotatedAtNextConnectionAndProtectedByPublishedReferencesObject"
+          resultType="Integer">
+    SELECT COUNT(*) FROM api_request WHERE enterprise_id = #{args[0]} AND (LOCATE(#{args[1]}, response_json) &gt; 0 OR
+    LOCATE(#{args[2]}, response_json) &gt; 0)
+  </select>
+</mapper>

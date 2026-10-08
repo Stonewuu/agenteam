@@ -1,0 +1,259 @@
+name: ${COMPOSE_PROJECT_NAME:-agenteam}
+
+x-application-build: &application-build
+  context: ..
+  dockerfile: deploy/Dockerfile.source
+  target: application
+
+x-sandbox-limits: &sandbox-limits
+  AGENTEAM_SANDBOX_IMAGE: ${SANDBOX_IMAGE:-agenteam/sandbox-office:local}
+  AGENTEAM_SANDBOX_MEMORY_MB: ${SANDBOX_MEMORY_MB:-2048}
+  AGENTEAM_SANDBOX_WORKSPACE_MB: ${SANDBOX_WORKSPACE_MB:-512}
+  AGENTEAM_SANDBOX_TEMPORARY_MB: ${SANDBOX_TEMPORARY_MB:-256}
+  AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT: ${SANDBOX_MAXIMUM_CONCURRENT:-2}
+  AGENTEAM_SANDBOX_TIMEOUT_SECONDS: ${SANDBOX_TIMEOUT_SECONDS:-1800}
+  AGENTEAM_SANDBOX_IDLE_SECONDS: ${SANDBOX_IDLE_SECONDS:-900}
+  AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS: ${SANDBOX_IDLE_SCAN_SECONDS:-30}
+  AGENTEAM_SANDBOX_USAGE_STALE_SECONDS: ${SANDBOX_USAGE_STALE_SECONDS:-60}
+  AGENTEAM_SANDBOX_STOP_SECONDS: ${SANDBOX_STOP_SECONDS:-10}
+  AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS: ${SANDBOX_MAXIMUM_RUNNING_CONTAINERS:-4}
+  AGENTEAM_SANDBOX_NETWORK: none
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-docker.io/library/mysql:8.4.11}
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: agenteam
+      MYSQL_USER: agenteam
+      MYSQL_PASSWORD: ${DB_PASSWORD:?请先运行配置初始化脚本}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?请先运行配置初始化脚本}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql --protocol=tcp -h127.0.0.1 -u\"$$MYSQL_USER\" \"$$MYSQL_DATABASE\" -e 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [application]
+
+  redis:
+    image: ${REDIS_IMAGE:-docker.io/library/redis:7.4.9-alpine}
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?请先运行配置初始化脚本}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [application]
+
+  storage-init:
+    image: ${APP_IMAGE:-agenteam/backend:local}
+    build: *application-build
+    user: "0:0"
+    entrypoint: ["sh", "-eu", "-c"]
+    command:
+      - |
+        chown 10001:10001 /app-data /user-workspaces /executor-data
+    volumes:
+      - app-data:/app-data
+      - user-workspaces:/user-workspaces
+      - executor-data:/executor-data
+    network_mode: none
+    restart: "no"
+
+  sandbox-image:
+    image: ${SANDBOX_IMAGE:-agenteam/sandbox-office:local}
+    build:
+      context: ./sandbox
+    command: ["true"]
+    network_mode: none
+    read_only: true
+    restart: "no"
+
+  backend:
+    image: ${APP_IMAGE:-agenteam/backend:local}
+    build: *application-build
+    restart: unless-stopped
+    environment:
+      <<: *sandbox-limits
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-container}
+      AGENTEAM_BIND_ADDRESS: 0.0.0.0
+      AGENTEAM_STORAGE_ROOT: /var/lib/agenteam
+      AGENTEAM_USER_WORKSPACES_ROOT: /var/lib/agenteam-projects
+      AGENTEAM_DB_URL: "jdbc:mariadb://mysql:3306/agenteam?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&preserveInstants=true"
+      AGENTEAM_DB_USERNAME: agenteam
+      AGENTEAM_DB_PASSWORD: ${DB_PASSWORD:?请先运行配置初始化脚本}
+      AGENTEAM_REDIS_HOST: redis
+      AGENTEAM_REDIS_PORT: 6379
+      AGENTEAM_REDIS_PASSWORD: ${REDIS_PASSWORD:?请先运行配置初始化脚本}
+      AGENTEAM_PUBLIC_ORIGIN: ${PUBLIC_URL:-http://localhost:8088}
+      AGENTEAM_NOTIFICATION_ACTIONS_ENABLED: ${NOTIFICATION_ACTIONS_ENABLED:-true}
+      AGENTEAM_SCHEDULE_ACTION_WORKER_ENABLED: ${SCHEDULE_ACTION_WORKER_ENABLED:-true}
+      AGENTEAM_CHANNEL_DELIVERY_WORKER_ENABLED: ${CHANNEL_DELIVERY_WORKER_ENABLED:-true}
+      AGENTEAM_TRUSTED_PROXIES: ${NETWORK_PREFIX:-172.29.44}.10/32
+      AGENTEAM_SANDBOX_BACKEND: remote
+      AGENTEAM_SANDBOX_REMOTE_URL: http://127.0.0.1:8092/
+      AGENTEAM_SANDBOX_REMOTE_TOKEN: ${SANDBOX_TOKEN:?请先运行配置初始化脚本}
+      AGENTEAM_SETUP_CREDENTIAL: ${SETUP_CREDENTIAL:?请先运行配置初始化脚本}
+      AGENTEAM_MAIL_HOST: ${MAIL_HOST:-}
+      AGENTEAM_MAIL_PORT: ${MAIL_PORT:-587}
+      AGENTEAM_MAIL_USERNAME: ${MAIL_USERNAME:-}
+      AGENTEAM_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      AGENTEAM_MAIL_FROM: ${MAIL_FROM:-}
+      AGENTEAM_ALLOWED_PRIVATE_ORIGINS: ${ALLOWED_PRIVATE_ORIGINS:-}
+      AGENTEAM_FILE_SCAN_ENABLED: ${AGENTEAM_FILE_SCAN_ENABLED:-false}
+      AGENTEAM_FILE_SCAN_HOST: ${AGENTEAM_FILE_SCAN_HOST:-}
+      AGENTEAM_FILE_SCAN_PORT: ${AGENTEAM_FILE_SCAN_PORT:-3310}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70.0
+    volumes:
+      - app-data:/var/lib/agenteam
+      - user-workspaces:/var/lib/agenteam-projects
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "4", "http://127.0.0.1:9091/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: ${BACKEND_MEMORY:-2g}
+    networks: [application]
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  sandbox-executor:
+    container_name: ${COMPOSE_PROJECT_NAME:-agenteam}-sandbox-executor
+    image: ${EXECUTOR_IMAGE:-agenteam/sandbox-server:local}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.source
+      target: sandbox-server
+    restart: unless-stopped
+    # 使用同一主机网络空间中的回环地址，不放宽独立执行接口的地址校验。
+    network_mode: service:backend
+    environment:
+      <<: *sandbox-limits
+      AGENTEAM_EXECUTOR_CONTAINER: ${COMPOSE_PROJECT_NAME:-agenteam}-sandbox-executor
+      AGENTEAM_SANDBOX_REMOTE_TOKEN: ${SANDBOX_TOKEN:?请先运行配置初始化脚本}
+      AGENTEAM_SANDBOX_BIND_ADDRESS: 127.0.0.1
+      AGENTEAM_SANDBOX_PORT: 8092
+      AGENTEAM_SANDBOX_SERVER_ROOT: /var/lib/agenteam-executor
+      AGENTEAM_SANDBOX_LOCAL_MOUNT_ROOT: /var/lib/agenteam-executor
+      AGENTEAM_USER_WORKSPACES_ROOT: /var/lib/agenteam-projects
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70.0
+    volumes:
+      - executor-data:/var/lib/agenteam-executor
+      - user-workspaces:/var/lib/agenteam-projects
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      backend:
+        condition: service_started
+        restart: true
+      sandbox-image:
+        condition: service_completed_successfully
+      storage-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$$(curl --silent --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8092/executions/health)\" = 401"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop: [ALL]
+    # 启动时切换到后端相同账号；Java 进程和模型命令容器均以非管理员身份运行。
+    cap_add: [SETUID, SETGID]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    pids_limit: 128
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-agenteam/frontend:local}
+    build:
+      context: ../agenteam-web
+    restart: unless-stopped
+    environment:
+      AGENT_BACKEND_URL: http://backend:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    networks: [application]
+
+  nginx:
+    image: ${GATEWAY_IMAGE:-docker.io/library/nginx:1.30.5-alpine}
+    # 使用官方镜像，项目配置通过只读文件挂载；直接启动项目脚本，避免基础镜像检查无用的默认站点。
+    entrypoint: ["sh", "/etc/agenteam/start-nginx.sh"]
+    command: ["nginx", "-g", "daemon off;"]
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8088}
+      TRUSTED_EDGE_PROXIES: ${TRUSTED_EDGE_PROXIES:-}
+    volumes:
+      - type: bind
+        source: ./nginx/15-agenteam-config.sh
+        target: /etc/agenteam/start-nginx.sh
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./nginx/default.conf.template
+        target: /etc/nginx/agenteam.conf.template
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./nginx/api.conf
+        target: /etc/nginx/agenteam-api.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      sandbox-executor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/nginx-health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      application:
+        ipv4_address: ${NETWORK_PREFIX:-172.29.44}.10
+
+networks:
+  application:
+    ipam:
+      config:
+        - subnet: ${NETWORK_PREFIX:-172.29.44}.0/24
+
+volumes:
+  mysql-data:
+  redis-data:
+  app-data:
+  user-workspaces:
+  executor-data:

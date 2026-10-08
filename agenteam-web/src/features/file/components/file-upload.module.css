@@ -1,0 +1,83 @@
+.picker {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.picker > button {
+  justify-self: start;
+}
+
+.files {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.compact .files {
+  max-height: 190px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.files li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border, #e4e4e7);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.name {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.name strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.name span {
+  font-size: 12px;
+  color: var(--muted-foreground, #71717a);
+}
+
+.name p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.remove {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.remove:hover {
+  background: var(--surface-soft);
+}
+
+.remove:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.remove:disabled {
+  cursor: default;
+  opacity: .45;
+}

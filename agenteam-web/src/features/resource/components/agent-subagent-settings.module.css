@@ -1,0 +1,29 @@
+.settings {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 20px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.settings > legend {
+  padding: 0 12px 0 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.dynamic {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}

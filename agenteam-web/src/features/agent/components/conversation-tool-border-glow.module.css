@@ -1,0 +1,110 @@
+/* 改编自 React Bits Border Glow，许可见 conversation-tool-border-glow.LICENSE。 */
+.frame {
+  --tool-glow-rgb: 111 131 205;
+  --tool-border-opacity: var(--tool-light-border-opacity);
+  --tool-glow-opacity: var(--tool-light-opacity);
+  --tool-glow-core-light: var(--tool-light-core-light);
+  --tool-glow-purple: var(--tool-light-purple);
+  --tool-glow-pink: var(--tool-light-pink);
+  --tool-glow-blue: var(--tool-light-blue);
+  --tool-glow-gold: var(--tool-light-gold);
+  --tool-border-gradient: radial-gradient(at 80% 55%, var(--tool-glow-purple) 0, transparent 50%),
+  radial-gradient(at 69% 34%, var(--tool-glow-pink) 0, transparent 50%),
+  radial-gradient(at 8% 6%, var(--tool-glow-blue) 0, transparent 50%),
+  radial-gradient(at 41% 38%, var(--tool-glow-purple) 0, transparent 50%),
+  radial-gradient(at 86% 85%, var(--tool-glow-gold) 0, transparent 50%),
+  radial-gradient(at 82% 18%, var(--tool-glow-blue) 0, transparent 50%),
+  linear-gradient(var(--tool-glow-purple), var(--tool-glow-purple));
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+/* 渐变只绘制在外沿，正文仍使用当前主题的实色背景。 */
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--tool-border-gradient) border-box;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.frame[data-active]::before {
+  opacity: var(--tool-border-opacity);
+}
+
+.edgeLight {
+  position: absolute;
+  inset: calc(-1 * var(--tool-glow-padding) - 1px);
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* 减少动效或图形绘制不可用时，保留静态的柔和边缘。 */
+.edgeLight::before {
+  content: "";
+  position: absolute;
+  inset: var(--tool-glow-padding);
+  border-radius: inherit;
+  opacity: calc(.35 * var(--tool-glow-intensity));
+  mask-image: conic-gradient(from 45deg, transparent 0deg, #000 60deg, #000 180deg, transparent 240deg, transparent 360deg);
+  box-shadow: inset 0 0 0 var(--tool-glow-edge-width) rgb(var(--tool-glow-rgb)),
+  inset 0 0 calc(12px * var(--tool-glow-scale)) rgb(var(--tool-glow-rgb) / .3),
+  inset 0 0 calc(26px * var(--tool-glow-scale)) rgb(var(--tool-glow-rgb) / .16),
+  0 0 calc(4px * var(--tool-glow-scale)) 1px rgb(var(--tool-glow-rgb) / .55),
+  0 0 calc(14px * var(--tool-glow-scale)) 3px rgb(var(--tool-glow-rgb) / .4),
+  0 0 calc(24px * var(--tool-glow-scale)) 5px rgb(var(--tool-glow-rgb) / .25);
+}
+
+.edgeLight > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.edgeLight[data-rendered]::before {
+  display: none;
+}
+
+.edgeLight[data-static-top]::before {
+  mask-image: linear-gradient(to right, transparent 10%, #000 60%, #000 80%, transparent),
+  linear-gradient(to bottom, #000, transparent calc(26px * var(--tool-glow-scale)));
+  mask-composite: intersect;
+}
+
+:global([data-theme="dark"]) .frame {
+  --tool-glow-rgb: 255 232 195;
+  --tool-border-opacity: var(--tool-dark-border-opacity);
+  --tool-glow-opacity: var(--tool-dark-opacity);
+  --tool-glow-core-light: var(--tool-dark-core-light);
+  --tool-glow-purple: var(--tool-dark-purple);
+  --tool-glow-pink: var(--tool-dark-pink);
+  --tool-glow-blue: var(--tool-dark-blue);
+  --tool-glow-gold: var(--tool-dark-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame::before {
+    transition: none;
+  }
+
+  .edgeLight:not([data-static-top]) > canvas {
+    display: none;
+  }
+
+  .edgeLight[data-rendered]:not([data-static-top])::before {
+    display: block;
+  }
+}
+
+@media (forced-colors: active) {
+  .frame::before, .edgeLight {
+    display: none;
+  }
+}

@@ -1,0 +1,110 @@
+/* 工作空间的提示放在顶栏下方，避开搜索、账户入口和底部操作区。 */
+[data-slot="toast-viewport"] {
+  --toast-top-offset: 16px;
+  z-index: 1600;
+  top: max(var(--toast-top-offset), calc(env(safe-area-inset-top) + 12px));
+  right: 16px;
+  bottom: auto;
+  left: 16px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  margin-inline: auto;
+}
+
+body:has(.app-shell) [data-slot="toast-viewport"] {
+  --toast-top-offset: var(--topbar-height);
+}
+
+[data-slot="toast"] {
+  border-color: var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  box-shadow: var(--menu-shadow);
+}
+
+[data-slot="toast-content"] {
+  gap: 11px;
+  padding: 14px;
+}
+
+[data-slot="toast-title"] {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+[data-slot="toast-description"] {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+
+[data-slot="toast-icon"] {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  background: var(--slate-soft);
+  color: var(--slate-text);
+}
+
+[data-slot="toast"][data-type="success"] [data-slot="toast-icon"] {
+  background: var(--mint-soft);
+  color: var(--mint-text);
+}
+
+[data-slot="toast"][data-type="error"] [data-slot="toast-icon"] {
+  background: var(--red-soft);
+  color: var(--red-text);
+}
+
+[data-slot="toast"][data-type="warning"] [data-slot="toast-icon"] {
+  background: var(--amber-soft);
+  color: var(--amber-text);
+}
+
+[data-slot="toast-close"] {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--secondary);
+}
+
+[data-slot="toast-close"]:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+[data-slot="toast-action"] {
+  border-color: var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  [data-slot="toast-viewport"] {
+    width: calc(100vw - 32px);
+  }
+
+  [data-slot="toast-close"] {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="toast"], [data-slot="toast-content"] {
+    transition-duration: .01ms;
+  }
+}

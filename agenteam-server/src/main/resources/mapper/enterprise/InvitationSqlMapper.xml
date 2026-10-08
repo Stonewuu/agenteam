@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.enterprise.InvitationSqlMapper">
+  <select id="listInvitations" resultType="com.stonewu.agenteam.model.enterprise.entity.InvitationQueryRow">
+    SELECT i.*, m.display_name AS inviter_name FROM enterprise_invitation i
+    JOIN enterprise_member m ON m.enterprise_id = i.enterprise_id AND m.user_id = i.created_by
+    WHERE i.enterprise_id = #{scope.enterpriseId} AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+      <property name="scopePath" value="scope"/>
+      <property name="ownerColumn" value="i.created_by"/>
+      <property name="enterpriseColumn" value="i.enterprise_id"/>
+    </include>
+    AND (LOCATE(#{query}, COALESCE(i.email, '')) > 0 OR LOCATE(#{query}, COALESCE(i.display_name, '')) > 0)
+    <if test="after != null">
+      AND (i.created_at &lt; #{after.time} OR (i.created_at = #{after.time} AND i.id &lt; #{after.id}))
+    </if>
+    ORDER BY i.created_at DESC, i.id DESC LIMIT #{limit}
+  </select>
+  <select id="lockEnterpriseInvitation" resultType="com.stonewu.agenteam.model.enterprise.entity.InvitationQueryRow">
+    SELECT * FROM enterprise_invitation WHERE enterprise_id = #{enterpriseId} AND id = #{id} FOR UPDATE
+  </select>
+</mapper>

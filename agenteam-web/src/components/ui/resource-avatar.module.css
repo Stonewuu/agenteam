@@ -1,0 +1,110 @@
+.avatar {
+  --resource-avatar-bg: #efebf6;
+  --resource-avatar-fg: #746094;
+}
+
+.avatar:global(.tiny) {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.purple {
+  --resource-avatar-bg: #efebf6;
+  --resource-avatar-fg: #746094;
+}
+
+.pink {
+  --resource-avatar-bg: #f7e9ee;
+  --resource-avatar-fg: #a95c79;
+}
+
+.blue {
+  --resource-avatar-bg: #e5eff8;
+  --resource-avatar-fg: #467cab;
+}
+
+.amber {
+  --resource-avatar-bg: #f7efdb;
+  --resource-avatar-fg: #9c7839;
+}
+
+.mint {
+  --resource-avatar-bg: #e5f2e9;
+  --resource-avatar-fg: #50876a;
+}
+
+.teal {
+  --resource-avatar-bg: #e1f0ef;
+  --resource-avatar-fg: #3e8582;
+}
+
+.coral {
+  --resource-avatar-bg: #fae9e2;
+  --resource-avatar-fg: #b87055;
+}
+
+.indigo {
+  --resource-avatar-bg: #e9ecf8;
+  --resource-avatar-fg: #6374ae;
+}
+
+.plum {
+  --resource-avatar-bg: #f1e8f2;
+  --resource-avatar-fg: #976797;
+}
+
+.slate {
+  --resource-avatar-bg: #eaf0f1;
+  --resource-avatar-fg: #627d84;
+}
+
+:global([data-theme="dark"]) .purple {
+  --resource-avatar-bg: #352e45;
+  --resource-avatar-fg: #c0a6e1;
+}
+
+:global([data-theme="dark"]) .pink {
+  --resource-avatar-bg: #432e39;
+  --resource-avatar-fg: #df9cb5;
+}
+
+:global([data-theme="dark"]) .blue {
+  --resource-avatar-bg: #293b49;
+  --resource-avatar-fg: #92bddf;
+}
+
+:global([data-theme="dark"]) .amber {
+  --resource-avatar-bg: #433b29;
+  --resource-avatar-fg: #d9bb79;
+}
+
+:global([data-theme="dark"]) .mint {
+  --resource-avatar-bg: #293f33;
+  --resource-avatar-fg: #9dc5aa;
+}
+
+:global([data-theme="dark"]) .teal {
+  --resource-avatar-bg: #263d3e;
+  --resource-avatar-fg: #8dc6c1;
+}
+
+:global([data-theme="dark"]) .coral {
+  --resource-avatar-bg: #44332c;
+  --resource-avatar-fg: #dfa78f;
+}
+
+:global([data-theme="dark"]) .indigo {
+  --resource-avatar-bg: #30364b;
+  --resource-avatar-fg: #a9b8e9;
+}
+
+:global([data-theme="dark"]) .plum {
+  --resource-avatar-bg: #3e3041;
+  --resource-avatar-fg: #c9a2cd;
+}
+
+:global([data-theme="dark"]) .slate {
+  --resource-avatar-bg: #303b3e;
+  --resource-avatar-fg: #a7bec5;
+}

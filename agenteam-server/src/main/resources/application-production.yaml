@@ -1,0 +1,66 @@
+server:
+  # 生产环境必须明确提供服务连接；应用密钥沿用通用配置或持久密钥文件。
+  address: "${AGENTEAM_BIND_ADDRESS:127.0.0.1}"
+  port: "${AGENTEAM_PORT:8080}"
+  servlet:
+    session:
+      cookie:
+        secure: "true"
+        http-only: "true"
+        same-site: "lax"
+  # 只信任部署时指定的代理。代理必须覆盖转发头，不能拼接客户端提供的值。
+  forward-headers-strategy: "native"
+  tomcat:
+    remoteip:
+      remote-ip-header: "X-Forwarded-For"
+      protocol-header: "X-Forwarded-Proto"
+      internal-proxies: "${AGENTEAM_TRUSTED_PROXIES}"
+      trusted-proxies: ""
+spring:
+  datasource:
+    url: "${AGENTEAM_DB_URL}"
+    username: "${AGENTEAM_DB_USERNAME}"
+    password: "${AGENTEAM_DB_PASSWORD}"
+  data:
+    redis:
+      host: "${AGENTEAM_REDIS_HOST}"
+      port: "${AGENTEAM_REDIS_PORT}"
+      password: "${AGENTEAM_REDIS_PASSWORD}"
+  session:
+    redis:
+      namespace: "${AGENTEAM_SESSION_NAMESPACE:agenteam:production:session}"
+  mail:
+    host: "${AGENTEAM_MAIL_HOST}"
+    port: "${AGENTEAM_MAIL_PORT:587}"
+    username: "${AGENTEAM_MAIL_USERNAME}"
+    password: "${AGENTEAM_MAIL_PASSWORD}"
+    properties:
+      mail:
+        smtp:
+          auth: "true"
+          starttls:
+            enable: "true"
+            required: "true"
+          ssl:
+            checkserveridentity: "true"
+agenteam:
+  web:
+    # 仅用于生成邀请和找回密码等邮件链接，不限制浏览器的访问域名或端口。
+    public-base-url: "${AGENTEAM_PUBLIC_ORIGIN}"
+  auth:
+    setup-credential: "${AGENTEAM_SETUP_CREDENTIAL:}"
+  mail:
+    from: "${AGENTEAM_MAIL_FROM}"
+springdoc:
+  api-docs:
+    enabled: "false"
+  swagger-ui:
+    enabled: "false"
+operations:
+  metrics:
+    # 管理端口不经过面向用户的代理，仅供本机或部署指定的运维网络采集。
+    enabled: "${AGENTEAM_OPERATIONS_METRICS_ENABLED:true}"
+management:
+  server:
+    port: "${AGENTEAM_MANAGEMENT_PORT:9091}"
+    address: "${AGENTEAM_MANAGEMENT_ADDRESS:127.0.0.1}"

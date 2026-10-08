@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.auth.IdentityRetentionSqlMapper">
+  <update id="expireInvitations">
+    UPDATE enterprise_invitation SET status = 'expired', pending_email = NULL, revision = revision + 1, updated_at =
+    #{now}
+    WHERE enterprise_id = #{enterprise} AND status = 'pending' AND expires_at &lt;= #{now} LIMIT 500
+  </update>
+  <select id="expiredTokenIds" resultType="String">
+    SELECT id FROM auth_token WHERE expires_at &lt;= #{boundary} OR consumed_at &lt;= #{boundary}
+    ORDER BY id LIMIT 500 FOR UPDATE SKIP LOCKED
+  </select>
+  <select id="expiredRequestIds" resultType="String">
+    SELECT id FROM api_request WHERE status = 'completed' AND expires_at &lt;= #{now}
+    ORDER BY id LIMIT 500 FOR UPDATE SKIP LOCKED
+  </select>
+  <select id="expiredMailIds" resultType="String">
+    SELECT id FROM background_job WHERE kind = 'mail' AND status IN ('completed', 'failed', 'cancelled') AND updated_at
+    &lt;= #{boundary}
+    AND NOT EXISTS (SELECT 1 FROM enterprise_invitation i WHERE i.enterprise_id = background_job.enterprise_id
+    AND background_job.dedupe_key LIKE CONCAT('mail:invitation:', i.id, ':%') AND i.status = 'pending' AND i.expires_at
+    > #{now})
+    ORDER BY id LIMIT 500 FOR UPDATE SKIP LOCKED
+  </select>
+</mapper>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.support.TestDatabaseAdministrationMapper">
+  <update id="createDatabase">CREATE DATABASE `${database.value}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci
+  </update>
+  <update id="dropDatabase">DROP DATABASE `${database.value}`</update>
+  <select id="countTables" resultType="int">SELECT COUNT(*) FROM information_schema.tables WHERE table_schema =
+    DATABASE()
+  </select>
+  <select id="countColumns" resultType="int">
+    SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = #{table}
+  </select>
+  <select id="countColumn" resultType="int">
+    SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = #{table} AND
+    column_name = #{column}
+  </select>
+  <select id="countForeignKeys" resultType="int">
+    SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND constraint_type =
+    'FOREIGN KEY'
+  </select>
+  <select id="version" resultType="string">SELECT VERSION()</select>
+  <update id="rejectPreferenceCreation">
+    ALTER TABLE user_preference ADD CONSTRAINT reject_test_user CHECK (user_id &lt;&gt; 'rejected-user')
+  </update>
+  <update id="rejectRunJobCreation">
+    CREATE TRIGGER p03_fail_run_job BEFORE INSERT ON background_job FOR EACH ROW
+    BEGIN IF NEW.kind = 'run' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '执行测试主动拒绝任务保存'; END IF; END
+  </update>
+  <update id="allowRunJobCreation">DROP TRIGGER p03_fail_run_job</update>
+  <select id="waitingForEnterpriseLock" resultType="int">
+    SELECT COUNT(*) FROM performance_schema.data_lock_waits w
+    JOIN performance_schema.data_locks l ON l.ENGINE_LOCK_ID = w.REQUESTING_ENGINE_LOCK_ID
+    WHERE l.OBJECT_SCHEMA = DATABASE() AND l.OBJECT_NAME = 'enterprise'
+  </select>
+  <select id="environment" resultType="java.util.LinkedHashMap">
+    SELECT @@version AS version, @@innodb_buffer_pool_size AS bufferPoolBytes, @@max_connections AS maximumConnections
+  </select>
+  <select id="storageEnvironment" resultType="java.util.LinkedHashMap">
+    SELECT @@version AS version, @@innodb_buffer_pool_size AS bufferPoolBytes
+  </select>
+  <select id="lockEnterprise" resultType="string">SELECT id FROM enterprise WHERE id = #{id} FOR UPDATE</select>
+  <select id="lockRequest" resultType="string">SELECT id FROM api_request WHERE id = #{id} FOR UPDATE</select>
+</mapper>

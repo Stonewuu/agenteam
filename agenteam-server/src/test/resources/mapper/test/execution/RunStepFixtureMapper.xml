@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.execution.RunStepFixtureMapper">
+  <select id="workflowExecutionApiEntryWorkflowPersistsActualMappedResultWithoutCallingAModelObject"
+          resultType="String">
+    SELECT output_json FROM run_step WHERE run_id = #{args[0]} AND JSON_UNQUOTE(JSON_EXTRACT(workflow_json, '$.nodeId'))
+    = 'work'
+  </select>
+  <select id="workflowExecutionApiDirectReadNodeUsesTheActualPublishedToolAndItsExistingCallRecordObject"
+          resultType="Integer">
+    SELECT COUNT(*) FROM run_step WHERE run_id = #{args[0]} AND status = 'completed' AND
+    JSON_UNQUOTE(JSON_EXTRACT(workflow_json, '$.nodeId')) = 'work'
+  </select>
+  <select id="workflowPreviewApiInvalidFinalReferencesAndOversizedTextFailTheEndNodeBeforePublishingAnyResultObject"
+          resultType="String">
+    SELECT status FROM run_step WHERE run_id = #{args[0]} AND JSON_UNQUOTE(JSON_EXTRACT(workflow_json, '$.nodeId')) =
+    'end'
+  </select>
+</mapper>

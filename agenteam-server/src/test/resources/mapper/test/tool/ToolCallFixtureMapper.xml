@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.tool.ToolCallFixtureMapper">
+  <select
+    id="scheduleRetryApiRetryReexecutesReadOnlyToolsWithTheSameProviderCallIdWithoutReusingFailedAttemptStateObject"
+    resultType="Integer">
+    SELECT COUNT(DISTINCT attempt_id) FROM tool_call WHERE run_id = #{args[0]}
+  </select>
+  <select
+    id="scheduleRetryApiRetryReexecutesReadOnlyToolsWithTheSameProviderCallIdWithoutReusingFailedAttemptStateObject16"
+    resultType="Integer">
+    SELECT COUNT(DISTINCT step_id) FROM tool_call WHERE run_id = #{args[0]}
+  </select>
+  <select
+    id="scheduleRetryApiRetryReexecutesReadOnlyToolsWithTheSameProviderCallIdWithoutReusingFailedAttemptStateObject17"
+    resultType="Integer">
+    SELECT COUNT(DISTINCT framework_call_id) FROM tool_call WHERE run_id = #{args[0]}
+  </select>
+  <select
+    id="scheduleRetryApiRetryReexecutesReadOnlyToolsWithTheSameProviderCallIdWithoutReusingFailedAttemptStateObject18"
+    resultType="Integer">
+    SELECT COUNT(*) FROM tool_call t JOIN run_step s ON s.id = t.step_id WHERE t.run_id = #{args[0]} AND t.attempt_id
+    &lt;&gt; s.attempt_id
+  </select>
+  <select
+    id="workflowExecutionApiParallelNodeAgentsResumeTheirOwnToolConfirmationsWithTheSameFrameworkCallIdentifierObject"
+    resultType="Integer">
+    SELECT COUNT(DISTINCT framework_session_id) FROM tool_call WHERE run_id = #{args[0]}
+  </select>
+</mapper>

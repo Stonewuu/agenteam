@@ -1,0 +1,187 @@
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.summary > span:last-child, .label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.summary :global(.avatar) {
+  flex-shrink: 0;
+}
+
+.selected {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.selected:empty {
+  display: none;
+}
+
+.selectedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding-block: 5px;
+}
+
+.selectedRow > button {
+  flex-shrink: 0;
+}
+
+.add {
+  justify-self: start;
+  align-self: flex-start;
+}
+
+:global(.agenteam-dialog) .dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: min(480px, calc(100dvh - 240px));
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.dialogBody > input {
+  flex-shrink: 0;
+}
+
+.results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  transition: background-color 150ms ease;
+}
+
+.option + .option {
+  margin-top: 8px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.choice > :global(.avatar) {
+  flex-shrink: 0;
+}
+
+.option .version {
+  width: 106px;
+  min-width: 106px;
+  min-height: 36px;
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.option[data-selected="true"] {
+  background: var(--surface-hover);
+}
+
+.option > :global(.avatar) {
+  flex-shrink: 0;
+}
+
+.identity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.identity strong {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.identity small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--secondary);
+}
+
+.identity > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pagination {
+  flex-shrink: 0;
+}
+
+.pagination:empty {
+  display: none;
+}
+
+.count {
+  margin-right: auto;
+  color: var(--secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .option {
+    padding: 10px 8px;
+    gap: 8px;
+  }
+
+  .choice {
+    gap: 8px;
+  }
+
+  .identity strong {
+    font-size: 13px;
+  }
+
+  .option .version {
+    width: 96px;
+    min-width: 96px;
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+
+  .selectedRow {
+    gap: 8px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}

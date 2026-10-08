@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.edition.InstallationMapper">
+  <select id="lockInstallation" resultType="com.stonewu.agenteam.model.edition.entity.InstallationRow">
+    SELECT id, installation_id, edition, initial_enterprise_id, initialized_at, updated_at, revision
+    FROM agenteam_installation WHERE id = 1 FOR UPDATE
+  </select>
+</mapper>

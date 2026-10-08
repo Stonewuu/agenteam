@@ -1,0 +1,348 @@
+:root {
+  --motion-enter-duration: 180ms;
+  --motion-exit-duration: 130ms;
+  --motion-tab-duration: 240ms;
+  --motion-content-duration: 160ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.agenteam-positioner {
+  z-index: 1200;
+}
+
+.agenteam-popup {
+  transform-origin: var(--transform-origin);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: none;
+  transition: opacity var(--motion-enter-duration) var(--motion-ease),
+  transform var(--motion-enter-duration) var(--motion-ease);
+}
+
+.agenteam-popup[data-starting-style],
+.agenteam-popup[data-ending-style] {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+}
+
+.agenteam-popup[data-ending-style] {
+  transition-duration: var(--motion-exit-duration);
+  pointer-events: none;
+}
+
+.agenteam-popup[data-side="top"][data-starting-style],
+.agenteam-popup[data-side="top"][data-ending-style] {
+  transform: translateY(4px) scale(0.97);
+}
+
+.select-trigger [data-slot="select-icon"],
+.select-trigger > svg,
+.enterprise-trigger > svg:last-child,
+.account-trigger > svg:last-child {
+  transition: rotate var(--motion-enter-duration) var(--motion-ease);
+}
+
+.select-trigger[data-popup-open] > svg,
+.select-trigger[data-popup-open] [data-slot="select-icon"],
+.enterprise-trigger[data-popup-open] > svg:last-child,
+.account-trigger[data-popup-open] > svg:last-child {
+  rotate: 180deg;
+}
+
+.select-option,
+.agenteam-menu [data-slot="dropdown-menu-item"] {
+  transition: background-color 120ms ease,
+  color 120ms ease;
+}
+
+.agenteam-menu {
+  min-width: 188px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: var(--available-height);
+  padding: var(--menu-padding);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--menu-radius);
+  box-shadow: var(--menu-shadow);
+  outline: none;
+}
+
+.agenteam-menu.enterprise-menu {
+  width: 280px;
+}
+
+.agenteam-menu [data-slot="dropdown-menu-item"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: var(--menu-item-radius);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  outline: none;
+}
+
+.agenteam-menu
+[data-slot="dropdown-menu-item"]
++ [data-slot="dropdown-menu-item"] {
+  margin-top: 2px;
+}
+
+.agenteam-menu [data-slot="dropdown-menu-item"][data-highlighted] {
+  background: var(--surface-hover);
+}
+
+.agenteam-menu [data-variant="destructive"] {
+  color: var(--red-text);
+}
+
+.agenteam-menu [data-variant="destructive"][data-highlighted] {
+  background: var(--red-soft);
+}
+
+.agenteam-menu small {
+  display: block;
+  color: var(--secondary);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.agenteam-menu [data-slot="dropdown-menu-separator"] {
+  height: 1px;
+  margin: 5px 6px;
+  background: var(--border-light);
+}
+
+.agenteam-tabs-root {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.agenteam-tabs-root .tabs {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  gap: 5px;
+  padding: 4px;
+  width: fit-content;
+  height: auto;
+  max-width: 100%;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  justify-content: flex-start;
+}
+
+.tabs-indicator {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: var(--active-tab-width);
+  height: var(--active-tab-height);
+  transform: translate(var(--active-tab-left), var(--active-tab-top));
+  border-radius: inherit;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.045);
+  transition: transform var(--motion-tab-duration) var(--motion-ease),
+  width var(--motion-tab-duration) var(--motion-ease),
+  height var(--motion-tab-duration) var(--motion-ease);
+  pointer-events: none;
+}
+
+.agenteam-tabs-root .agenteam-tab-trigger {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  height: auto;
+  min-height: 36px;
+  padding: 8px 19px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--motion-enter-duration) ease;
+}
+
+.agenteam-tabs-root .agenteam-tab-trigger::after {
+  content: none;
+}
+
+.agenteam-tabs-root .agenteam-tab-trigger[data-active] {
+  background: transparent;
+  box-shadow: none;
+  color: var(--accent-text);
+}
+
+.agenteam-tabs-root .agenteam-tab-trigger:focus-visible {
+  outline: 1px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.agenteam-tabs-root .tabs-navigation {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  padding: 0;
+  background: transparent;
+  border-radius: var(--input-radius);
+}
+
+.agenteam-tabs-root .tabs-navigation .agenteam-tab-trigger {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 17px;
+}
+
+.agenteam-tabs-root .tabs-navigation .tabs-indicator {
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+
+.agenteam-tabs-root[data-orientation="horizontal"] .tabs-navigation {
+  flex-direction: row;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+}
+
+.agenteam-tabs-root[data-orientation="horizontal"]
+.tabs-navigation
+.agenteam-tab-trigger {
+  width: auto;
+  padding: 10px 14px;
+}
+
+.agenteam-tabs-root .agenteam-tab-trigger .tab-prefix {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.agenteam-tabs-root .agenteam-tab-trigger .tab-count {
+  margin: 0;
+  font-size: 11px;
+}
+
+.settings-nav .agenteam-tabs-root {
+  width: 100%;
+}
+
+.editor-sections .agenteam-tabs-root {
+  width: 100%;
+}
+
+.editor-sections .tabs-navigation .agenteam-tab-trigger {
+  padding: 13px 15px;
+}
+
+input[data-slot="input"] {
+  height: auto;
+  min-height: 44px;
+}
+
+.search-input input[data-slot="input"] {
+  min-height: 0;
+  height: auto;
+}
+
+.agenteam-backdrop {
+  --dialog-enter-duration: 240ms;
+  --dialog-exit-duration: 180ms;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--overlay);
+  backdrop-filter: none;
+  opacity: 1;
+  animation: none;
+  transition: opacity var(--dialog-enter-duration) var(--motion-ease);
+}
+
+.agenteam-backdrop[data-starting-style],
+.agenteam-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.agenteam-dialog {
+  --dialog-enter-duration: 260ms;
+  --dialog-exit-duration: 180ms;
+  position: fixed;
+  z-index: 1010;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  gap: 0;
+  padding: 0;
+  translate: none;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  animation: none;
+  transition: opacity var(--dialog-enter-duration) var(--motion-ease),
+  transform var(--dialog-enter-duration) var(--motion-ease);
+}
+
+.agenteam-dialog.modal {
+  max-width: calc(100vw - 40px);
+}
+
+.agenteam-dialog[data-starting-style],
+.agenteam-dialog[data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + 12px)) scale(0.97);
+}
+
+.agenteam-dialog[data-ending-style],
+.agenteam-backdrop[data-ending-style] {
+  transition-duration: var(--dialog-exit-duration);
+}
+
+.agenteam-dialog.drawer {
+  top: 0;
+  left: auto;
+  right: 0;
+  width: min(520px, 100vw);
+  max-height: 100dvh;
+  transform: translateX(0);
+}
+
+.agenteam-dialog.drawer.large {
+  width: min(760px, 100vw);
+}
+
+.agenteam-dialog.drawer[data-starting-style],
+.agenteam-dialog.drawer[data-ending-style] {
+  opacity: 0;
+  transform: translateX(32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details::details-content,
+  .agenteam-popup,
+  .agenteam-backdrop,
+  .agenteam-dialog,
+  .tabs-indicator,
+  .agenteam-tab-trigger,
+  .select-trigger > svg,
+  .select-trigger [data-slot="select-icon"],
+  .enterprise-trigger > svg:last-child,
+  .account-trigger > svg:last-child {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -1,0 +1,34 @@
+FROM eclipse-temurin:21-jdk-jammy AS build
+WORKDIR /build/agenteam-server
+COPY LICENSE /build/LICENSE
+COPY NOTICE /build/NOTICE
+COPY agenteam-server/.mvn/ .mvn/
+COPY agenteam-server/mvnw agenteam-server/pom.xml ./
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+COPY agenteam-server/agenteam-tool-api/src/main/ agenteam-tool-api/src/main/
+COPY agenteam-server/src/main/ src/main/
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B --no-transfer-progress -Dmaven.test.skip=true package
+
+FROM docker:29-cli AS docker-client
+FROM eclipse-temurin:21-jre-jammy AS application
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 agenteam \
+    && useradd --uid 10001 --gid 10001 --no-create-home agenteam
+COPY --from=build /build/agenteam-server/target/agenteam-*-exec.jar /app/agenteam.jar
+COPY --from=build /build/LICENSE /usr/share/licenses/agenteam/agenteam/LICENSE
+COPY --from=build /build/NOTICE /usr/share/licenses/agenteam/agenteam/NOTICE
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/agenteam.jar"]
+
+FROM application AS sandbox-server
+USER root
+ENV HOME=/tmp
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=docker-client /usr/local/bin/docker /usr/local/bin/docker
+COPY deploy/container/sandbox-entrypoint.sh /app/sandbox-entrypoint.sh
+RUN sed -i 's/\r$//' /app/sandbox-entrypoint.sh
+ENTRYPOINT ["sh", "/app/sandbox-entrypoint.sh"]

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.schedule.ScheduleSqlMapper">
+  <select id="findScheduledTaskLocked" resultType="com.stonewu.agenteam.model.schedule.entity.ScheduleQueryRow">
+    SELECT s.*, h.agent_id, v.name AS agent_name, v.version_no AS agent_version_no, v.config_json AS agent_config_json
+    FROM scheduled_task s LEFT JOIN agent_hire h ON h.enterprise_id = s.enterprise_id AND h.user_id = s.owner_user_id AND
+    h.id = s.hire_id
+    LEFT JOIN resource_version v ON v.enterprise_id = s.enterprise_id AND v.id = s.agent_version_id
+    WHERE s.enterprise_id = #{enterprise} AND s.owner_user_id = #{user} AND s.id = #{id}
+    <if test="!includeDeleted">AND s.deleted_at IS NULL</if>
+    FOR UPDATE
+  </select>
+</mapper>

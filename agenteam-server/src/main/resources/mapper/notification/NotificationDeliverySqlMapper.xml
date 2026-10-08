@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.notification.NotificationDeliverySqlMapper">
+  <insert id="enqueueBackgroundJob">
+    INSERT INTO background_job (id, enterprise_id, owner_user_id, kind, dedupe_key, payload_json, available_at,
+    created_at, updated_at)
+    VALUES (#{value}, #{enterprise}, #{user}, 'notification', #{value2}, #{value3}, #{availableAt}, #{now}, #{now}) ON
+    DUPLICATE KEY UPDATE id = background_job.id
+  </insert>
+  <select id="deliverBackgroundJob" resultType="com.stonewu.agenteam.model.background.entity.BackgroundJobRow">
+    SELECT payload_json, created_at FROM background_job WHERE id = #{id} AND enterprise_id = #{enterprise} AND owner_user_id =
+    #{user} AND kind = 'notification' AND status = 'queued'
+    FOR UPDATE
+  </select>
+</mapper>

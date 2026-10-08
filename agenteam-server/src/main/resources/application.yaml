@@ -1,0 +1,200 @@
+spring:
+  application:
+    name: "agenteam"
+  config:
+    import: "optional:file:./.agenteam/local.properties"
+  datasource:
+    # 模型与提供方密钥通过企业管理维护；每次执行按固定配置创建 AgentScope 实例。
+    # 会话完整快照、执行状态和连续事件保存在 MySQL。
+    url: "${AGENTEAM_DB_URL:jdbc:mariadb://localhost:43306/agenteam?createDatabaseIfNotExist=true&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&preserveInstants=true}"
+    username: "${AGENTEAM_DB_USERNAME:root}"
+    password: "${AGENTEAM_DB_PASSWORD:123456}"
+    driver-class-name: "org.mariadb.jdbc.Driver"
+    hikari:
+      connection-init-sql: "SET time_zone = '+00:00'"
+      data-source-properties:
+        connectionTimeZone: "+00:00"
+        forceConnectionTimeZoneToSession: "true"
+        preserveInstants: "true"
+        allowLocalInfile: "false"
+        # 默认数据库位于独立私有网络，保留加密连接；外部数据库应配置 verify-full 和可信证书。
+        sslMode: "trust"
+  sql:
+    init:
+      mode: "never"
+      encoding: "UTF-8"
+  flyway:
+    # 初始结构与后续变更按版本执行，已有数据库保留业务数据。
+    locations: "classpath:db/schema"
+    baseline-on-migrate: "false"
+    clean-disabled: "true"
+    validate-on-migrate: "true"
+    validate-migration-naming: "true"
+  data:
+    redis:
+      # Redis Stream（近期事件存储）支持按会话连续序号补发，完整消息保存在 MySQL。
+      host: "${AGENTEAM_REDIS_HOST:localhost}"
+      port: "${AGENTEAM_REDIS_PORT:46379}"
+      password: "${AGENTEAM_REDIS_PASSWORD:123456}"
+  session:
+    timeout: "12h"
+  mvc:
+    async:
+      # 事件连接由自身心跳和授权检查管理，不在固定时间切断仍有输出的连接。
+      request-timeout: "0"
+  jackson:
+    deserialization:
+      # 未定义字段不能被静默忽略，避免前后端对同一次修改产生不同理解。
+      fail-on-unknown-properties: "true"
+  mail:
+    properties:
+      mail:
+        smtp:
+          # 邮件网络调用有明确超时，调试输出保持关闭。
+          connectiontimeout: "5000"
+          timeout: "5000"
+          writetimeout: "5000"
+          starttls:
+            enable: "true"
+            required: "true"
+          ssl:
+            checkserveridentity: "true"
+        debug: "false"
+execution:
+  user-workspaces-root: "${AGENTEAM_USER_WORKSPACES_ROOT:${agenteam.storage.root:.agenteam}/user-workspaces}"
+  user-workspaces-host-root: "${AGENTEAM_USER_WORKSPACES_HOST_ROOT:}"
+  workspace-root: "${AGENTEAM_EXECUTION_WORKSPACE_ROOT:${agenteam.storage.root}/workspaces}"
+  state-root: "${AGENTEAM_EXECUTION_STATE_ROOT:${agenteam.storage.root}/states}"
+  # 工作文件与加密运行状态分开保存；沙盒仅适用于同一节点的本地 Docker 服务。
+  workspace-files-root: "${AGENTEAM_WORKSPACE_FILES_ROOT:${agenteam.storage.root}/workspace-files}"
+  workspace:
+    retention-days: "${AGENTEAM_WORKSPACE_RETENTION_DAYS:30}"
+    retention-enabled: "${AGENTEAM_WORKSPACE_RETENTION_ENABLED:true}"
+  sandbox:
+    enabled: "${AGENTEAM_SANDBOX_ENABLED:true}"
+    image: "${AGENTEAM_SANDBOX_IMAGE:agenteam/sandbox-office:local}"
+    backend: "${AGENTEAM_SANDBOX_BACKEND:docker}"
+    remote-url: "${AGENTEAM_SANDBOX_REMOTE_URL:}"
+    remote-token: "${AGENTEAM_SANDBOX_REMOTE_TOKEN:}"
+    temporary-mb: "${AGENTEAM_SANDBOX_TEMPORARY_MB:256}"
+    maximum-concurrent: "${AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT:2}"
+    local-mount-root: "${AGENTEAM_SANDBOX_LOCAL_MOUNT_ROOT:}"
+    host-mount-root: "${AGENTEAM_SANDBOX_HOST_MOUNT_ROOT:}"
+    network: "${AGENTEAM_SANDBOX_NETWORK:none}"
+    workspace-mb: "${AGENTEAM_SANDBOX_WORKSPACE_MB:512}"
+    file-mb: "${AGENTEAM_SANDBOX_FILE_MB:20}"
+    maximum-files: "${AGENTEAM_SANDBOX_MAXIMUM_FILES:2000}"
+    memory-mb: "${AGENTEAM_SANDBOX_MEMORY_MB:2048}"
+    cpus: "${AGENTEAM_SANDBOX_CPUS:1}"
+    process-limit: "${AGENTEAM_SANDBOX_PROCESS_LIMIT:64}"
+    # 单次文件读写与沙盒命令的时间上限，单位为秒；助手整次执行时间在助手的执行设置中配置。
+    timeout-seconds: "${AGENTEAM_SANDBOX_TIMEOUT_SECONDS:1800}"
+    idle-seconds: "${AGENTEAM_SANDBOX_IDLE_SECONDS:900}"
+    idle-scan-seconds: "${AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS:30}"
+    usage-stale-seconds: "${AGENTEAM_SANDBOX_USAGE_STALE_SECONDS:60}"
+    stop-seconds: "${AGENTEAM_SANDBOX_STOP_SECONDS:10}"
+    maximum-running-containers: "${AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS:4}"
+  events:
+    # 旧格式消息增量按小批次自动合并；关闭时只停止历史转换，新输出仍使用合并存储。
+    history-compaction-enabled: "${AGENTEAM_EVENT_HISTORY_COMPACTION_ENABLED:true}"
+    live-enabled: "${AGENTEAM_LIVE_EVENTS_ENABLED:true}"
+agenteam:
+  schedule:
+    notification-actions-enabled: "${AGENTEAM_NOTIFICATION_ACTIONS_ENABLED:true}"
+    action-worker-enabled: "${AGENTEAM_SCHEDULE_ACTION_WORKER_ENABLED:true}"
+  notification:
+    channel-worker-enabled: "${AGENTEAM_CHANNEL_DELIVERY_WORKER_ENABLED:true}"
+  storage:
+    # 本机配置只保存部署路径，容器和服务重建时继续使用同一持久目录。
+    root: "${AGENTEAM_STORAGE_ROOT:.agenteam}"
+  security:
+    # 缺少密钥时自动生成并保存，后续启动复用；显式配置在所有启动环境中优先。
+    request-signing-key: "${AGENTEAM_REQUEST_SIGNING_KEY:}"
+    encryption-keys: "${AGENTEAM_ENCRYPTION_KEYS:}"
+    active-encryption-key: "${AGENTEAM_ACTIVE_ENCRYPTION_KEY:1}"
+    keys-file: "${AGENTEAM_SECURITY_KEYS_FILE:${agenteam.storage.root}/security/application-keys.properties}"
+mybatis-plus:
+  # 数据库语句按业务模块放入对应映射文件，其余读取设置由公共配置类统一维护。
+  mapper-locations: "classpath*:/mapper/**/*.xml"
+server:
+  servlet:
+    session:
+      # 登录会话存入 Redis，浏览器只通过 HttpOnly Cookie 携带会话编号。
+      timeout: "12h"
+      cookie:
+        http-only: "true"
+        same-site: "lax"
+tools:
+  results:
+    # 所有 KB 按 1024 字节计算；模型直接返回量与页面展开后的可读全文无关。
+    inline-kb: "${AGENTEAM_TOOL_INLINE_KB:32}"
+    large-context-inline-kb: "${AGENTEAM_TOOL_LARGE_CONTEXT_INLINE_KB:64}"
+    save-kb: "${AGENTEAM_TOOL_SAVE_KB:16}"
+    preview-kb: "${AGENTEAM_TOOL_PREVIEW_KB:2}"
+    read-kb: "${AGENTEAM_TOOL_READ_KB:8}"
+    read-lines: "${AGENTEAM_TOOL_READ_LINES:200}"
+    batch-multiplier: "${AGENTEAM_TOOL_BATCH_MULTIPLIER:2}"
+    max-file-mb: "${AGENTEAM_TOOL_MAX_FILE_MB:20}"
+logging:
+  level:
+    io:
+      # 保留框架警告和错误，便于结合应用执行编号排查；不启用请求与响应的调试日志。
+      agentscope: "WARN"
+      # 保留远程连接和对象存储的警告与错误，页面仍只返回平台定义的提示。
+      modelcontextprotocol: "WARN"
+    software:
+      amazon:
+        awssdk: "WARN"
+network:
+  # 内网连接由部署管理员逐个配置完整协议、主机和端口，以逗号分隔；默认不开放。
+  allowed-private-origins: "${AGENTEAM_ALLOWED_PRIVATE_ORIGINS:}"
+files:
+  storage: "${AGENTEAM_FILE_STORAGE:auto}"
+  root: "${AGENTEAM_FILES_ROOT:${agenteam.storage.root}/files}"
+  s3:
+    endpoint: "${AGENTEAM_S3_ENDPOINT:}"
+    region: "${AGENTEAM_S3_REGION:us-east-1}"
+    bucket: "${AGENTEAM_S3_BUCKET:}"
+    prefix: "${AGENTEAM_S3_PREFIX:agenteam/}"
+    access-key-id: "${AGENTEAM_S3_ACCESS_KEY_ID:}"
+    secret-access-key: "${AGENTEAM_S3_SECRET_ACCESS_KEY:}"
+    path-style: "${AGENTEAM_S3_PATH_STYLE:true}"
+  scan:
+    # 暂时关闭病毒扫描；恢复时同时启用开关并配置地址，文件处理队列始终保留。
+    enabled: "${AGENTEAM_FILE_SCAN_ENABLED:false}"
+    host: "${AGENTEAM_FILE_SCAN_HOST:}"
+    port: "${AGENTEAM_FILE_SCAN_PORT:3310}"
+exports:
+  enabled: "${AGENTEAM_EXPORTS_ENABLED:true}"
+data:
+  mysql:
+    allowed-origins: "${AGENTEAM_DATA_MYSQL_ALLOWED_ORIGINS:}"
+    ssl-mode: "${AGENTEAM_DATA_MYSQL_SSL_MODE:VERIFY_IDENTITY}"
+operations:
+  metrics:
+    # 运维采集默认关闭网络入口；生产环境使用独立管理端口。
+    enabled: "${AGENTEAM_OPERATIONS_METRICS_ENABLED:false}"
+management:
+  server:
+    port: "-1"
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus"
+      discovery:
+        enabled: "false"
+  endpoint:
+    health:
+      show-details: "never"
+      show-components: "never"
+  metrics:
+    use-global-registry: "false"
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: "true"
+      slo:
+        http:
+          server:
+            requests: "100ms,300ms,500ms,800ms,1s,2s,5s"

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.RunSqlMapper">
+  <select id="findAgentRunLocked" resultType="com.stonewu.agenteam.model.execution.entity.RunQueryRow">
+    SELECT * FROM agent_run WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+  <update id="startAgentRun">
+    UPDATE agent_run SET status = 'running', lease_version = #{lease}, next_attempt_at = NULL, started_at =
+    COALESCE(started_at, #{now}), active_segment_started_at = #{now}, updated_at = #{now}
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status = 'queued' AND cancel_requested_at IS NULL
+  </update>
+  <update id="startRunAttempt">
+    UPDATE run_attempt SET status = 'running', started_at = COALESCE(started_at, #{now}) WHERE enterprise_id =
+    #{enterpriseId} AND run_id = #{id} AND attempt_no = #{currentAttemptNo}
+  </update>
+  <update id="retryAgentRun">
+    UPDATE agent_run SET status = 'queued', current_attempt_no = current_attempt_no + 1, output_message_id = #{output},
+    next_attempt_at = #{available}, queued_at = #{available}, execution_phase = 'between_steps', error_code = NULL,
+    error_message = NULL,
+    active_millis = active_millis + IF(active_segment_started_at IS NULL, 0, GREATEST(0, TIMESTAMPDIFF(MICROSECOND,
+    active_segment_started_at, #{now}) DIV 1000)),
+    active_segment_started_at = NULL, updated_at = #{now}, has_step_errors = TRUE
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status = 'running' AND current_attempt_no =
+    #{currentAttemptNo} AND current_attempt_no &lt; max_attempts AND cancel_requested_at IS NULL
+  </update>
+  <update id="finishAgentRun">
+    UPDATE agent_run SET status = #{status}, error_code = #{code}, error_message = #{message}, finished_at = #{now},
+    updated_at = #{now}, next_attempt_at = NULL,
+    active_millis = active_millis + IF(active_segment_started_at IS NULL, 0, GREATEST(0, TIMESTAMPDIFF(MICROSECOND,
+    active_segment_started_at, #{now}) DIV 1000)),
+    active_segment_started_at = NULL,
+    has_step_errors = EXISTS (SELECT 1 FROM run_step s WHERE s.enterprise_id = agent_run.enterprise_id AND s.run_id =
+    agent_run.id AND s.status = 'failed')
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status IN
+    ('queued','running','waiting_approval','cancelling')
+  </update>
+</mapper>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.tool.ToolCallSqlMapper">
+  <select id="hasWorkspaceFiles" resultType="boolean">
+    SELECT EXISTS (
+    SELECT 1 FROM tool_call t JOIN agent_run r ON r.enterprise_id = t.enterprise_id AND r.id = t.run_id
+    WHERE t.enterprise_id = #{enterprise} AND t.actor_user_id = #{user} AND r.user_id = #{user}
+    AND r.conversation_id = #{conversation} AND t.framework_session_id = #{session}
+    AND t.resource_kind IN ('agent', 'workflow')
+    AND ((t.status IN ('succeeded','failed') AND JSON_EXTRACT(t.result_redacted_json, '$.workspaceVersion') IS NOT NULL)
+    OR (t.status = 'unknown' AND t.operation_class != 'read' AND t.submitted_at IS NOT NULL))
+    )
+  </select>
+  <select id="findToolCallLocked" resultType="com.stonewu.agenteam.model.tool.entity.ToolCallQueryRow">
+    SELECT * FROM tool_call WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+  <select id="forArtifactToolCall" resultType="com.stonewu.agenteam.model.tool.entity.ToolCallQueryRow">
+    SELECT * FROM tool_call WHERE enterprise_id = #{enterprise} AND run_id = #{run} AND resource_id = #{resource} AND
+    status IN ('succeeded','failed','cancelled')
+    AND JSON_UNQUOTE(JSON_EXTRACT(result_redacted_json, '$.fileId')) = #{file} ORDER BY created_at, id LIMIT 1
+  </select>
+  <select id="sourceResultsForContextToolCall" resultType="com.stonewu.agenteam.model.tool.entity.ToolCallQueryRow">
+    SELECT t.* FROM tool_call t JOIN (
+    SELECT id FROM agent_run WHERE enterprise_id = #{enterpriseId} AND conversation_id = #{conversationId} AND user_id =
+    #{userId}
+    ORDER BY created_at DESC, id DESC LIMIT #{recentRuns}
+    ) recent ON recent.id = t.run_id
+    WHERE t.enterprise_id = #{enterpriseId}
+    AND (t.resource_kind IN ('knowledge','data') OR (t.resource_kind IN ('agent','workflow') AND t.tool_name IN
+    ('read_file','grep_files','list_files','write_file','edit_file','execute','export_file','read_agent_spawn_result','read_agent_send_result','read_workflow_result')))
+    AND t.status IN ('succeeded','failed')
+    ORDER BY t.created_at, t.id
+  </select>
+  <insert id="prepareToolCall">
+    INSERT INTO tool_call (id, enterprise_id, run_id, attempt_id, step_id, actor_user_id, resource_id, resource_kind,
+    resource_version_id, plugin_tool_id,
+    tool_name, operation_id, framework_call_id, framework_session_id, operation_class, argument_hash, request_hash,
+    request_encrypted_json, request_redacted_json, lease_version, created_at, updated_at)
+    VALUES (#{id}, #{enterpriseId}, #{id2}, (SELECT id FROM run_attempt WHERE enterprise_id = #{enterpriseId} AND run_id
+    = #{id2} AND attempt_no = #{currentAttemptNo}), #{step}, #{userId}, #{resourceId}, #{resourceKind},
+    #{resourceVersionId}, #{pluginToolId}, #{value}, #{id}, #{call}, #{session}, #{value2}, #{argumentHash},
+    #{requestHash}, #{value3}, #{value4}, #{leaseVersion}, #{now}, #{now})
+  </insert>
+  <select id="previouslyRejectedToolCall" resultType="Boolean">
+    SELECT EXISTS (SELECT 1 FROM tool_call t JOIN run_approval a ON a.enterprise_id = t.enterprise_id AND a.tool_call_id
+    = t.id
+    WHERE t.enterprise_id = #{enterpriseId} AND t.run_id = #{id} AND t.resource_id = #{resource}
+    AND t.resource_version_id &lt;=&gt; #{version} AND t.plugin_tool_id &lt;=&gt; #{tool} AND t.tool_name = #{name}
+    AND t.argument_hash = #{arguments} AND a.status = 'rejected')
+  </select>
+  <update id="failAbandonedManualReadsToolCall">
+    UPDATE tool_call SET status = 'failed', error_code = 'DATA_QUERY_INTERRUPTED', error_summary = '查询进程已中断，未取得可用结果。',
+    finished_at = #{now}, updated_at = #{now}, duration_ms = GREATEST(0, TIMESTAMPDIFF(MICROSECOND, started_at, #{now})
+    DIV 1000)
+    WHERE run_id IS NULL AND resource_kind = 'data' AND status = 'running' AND started_at &lt; #{before}
+  </update>
+  <update id="startToolCall">
+    UPDATE tool_call SET status = 'running', lease_version = #{lease}, started_at = COALESCE(started_at, #{now}),
+    updated_at = #{now}
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status IN ('prepared','waiting_approval')
+  </update>
+  <update id="submittedToolCall">
+    UPDATE tool_call SET submitted_at = COALESCE(submitted_at, #{now}), attempt_count = attempt_count + 1, updated_at =
+    #{now}
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status = 'running' AND lease_version = #{lease}
+  </update>
+  <update id="finishToolCall">
+    UPDATE tool_call SET status = #{status}, result_encrypted_json = #{value}, result_redacted_json = #{value2},
+    error_code = #{code}, error_summary = #{error},
+    finished_at = #{now}, duration_ms = IF(#{status} = 'unknown', NULL, IF(started_at IS NULL, 0, GREATEST(0,
+    TIMESTAMPDIFF(MICROSECOND, started_at, #{now}) DIV 1000))), updated_at = #{now}
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status IN ('prepared','waiting_approval','running') AND
+    lease_version = #{leaseVersion}
+  </update>
+</mapper>

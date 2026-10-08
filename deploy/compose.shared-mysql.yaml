@@ -1,0 +1,13 @@
+# 在保留当前 MySQL 服务及数据卷的部署中追加此文件，为另一套部署提供数据库连接。
+services:
+  mysql:
+    networks:
+      application:
+      shared-database:
+        aliases:
+          - agenteam-shared-mysql
+
+networks:
+  shared-database:
+    external: true
+    name: ${SHARED_DATABASE_NETWORK:?请先创建专用共享数据库网络并填写名称}

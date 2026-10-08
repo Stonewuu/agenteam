@@ -1,0 +1,19 @@
+{
+  "printWidth": 120,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "endOfLine": "lf",
+  "embeddedLanguageFormatting": "off",
+  "overrides": [
+    {
+      "files": "*.xml",
+      "options": {
+        "tabWidth": 4,
+        "xmlWhitespaceSensitivity": "strict"
+      }
+    }
+  ]
+}

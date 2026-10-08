@@ -1,0 +1,30 @@
+.control {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.row > span {
+  font-size: 11px;
+}
+
+.action {
+  min-height: 34px;
+  padding: 6px 13px;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .action {
+    min-height: 44px;
+  }
+}

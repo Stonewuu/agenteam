@@ -1,0 +1,127 @@
+.link, .name {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: var(--accent-text);
+  text-align: left;
+}
+
+.link > svg {
+  flex-shrink: 0;
+}
+
+.link > span, .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link:hover {
+  background: var(--accent-soft);
+}
+
+.link:focus-visible, .imageButton:focus-visible, .download:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.image {
+  min-width: 0;
+  max-width: 460px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.imageButton {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border-radius: 7px;
+  overflow: visible;
+  cursor: zoom-in;
+}
+
+.image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
+.imageError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 80px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.imageError button {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+}
+
+.size {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--secondary);
+}
+
+.download {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--secondary);
+}
+
+.download:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .link {
+    min-height: 44px;
+  }
+
+  .download {
+    width: 44px;
+    height: 44px;
+  }
+
+  .imageError button {
+    min-height: 44px;
+  }
+}

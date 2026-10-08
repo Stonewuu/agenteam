@@ -1,0 +1,327 @@
+.detail {
+  max-width: 1120px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.overview {
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.overviewHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.overviewLabel, .metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.overviewLabel strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.scheduleFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.scheduleFacts > div {
+  display: grid;
+  gap: 9px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-light);
+  border-radius: 13px;
+  padding: 17px 19px;
+  min-width: 0;
+}
+
+.scheduleFacts dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.scheduleFacts dd {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.scheduleFacts small {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.detailsGrid, .confirmationGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.stack {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+}
+
+.confirmHeading {
+  margin-bottom: 18px;
+}
+
+.confirmHeading h2 {
+  font-size: 20px;
+}
+
+.message {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  line-height: 1.85;
+  font-size: 14px;
+}
+
+.message h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.message > div {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow-y: auto;
+  color: var(--secondary);
+}
+
+.recipients {
+  display: grid;
+  gap: 0;
+}
+
+.recipient {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 11px;
+  padding-block: 12px;
+}
+
+.recipient:first-child {
+  padding-top: 0;
+}
+
+.recipient:last-child {
+  padding-bottom: 0;
+}
+
+.recipient + .recipient {
+  border-top: 1px solid var(--border-light);
+}
+
+.personIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-hover);
+  color: var(--secondary);
+}
+
+.recipient > div {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.recipient strong {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.channels > span {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.channels small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.timeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.timeList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary);
+}
+
+.timeList li:first-child {
+  color: var(--accent-text);
+  font-weight: 600;
+  padding-top: 0;
+}
+
+.timeList li + li {
+  border-top: 1px solid var(--border-light);
+}
+
+.timeList li:last-child {
+  padding-bottom: 0;
+}
+
+.timeList time {
+  flex: 1;
+}
+
+.timeList small {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.history {
+  margin-top: 30px;
+  display: grid;
+  gap: 16px;
+}
+
+.occurrence {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface);
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.occurrenceHeading, .occurrenceFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.occurrenceHeading h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.occurrenceFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  margin: 0;
+}
+
+.occurrenceFacts dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.occurrenceFacts dd {
+  margin: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: var(--amber-text);
+  background: var(--amber-soft);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.reason svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.occurrenceFooter {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+@media (max-width: 800px) {
+  .detailsGrid, .confirmationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .scheduleFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .overview, .occurrence {
+    padding: 18px;
+  }
+}

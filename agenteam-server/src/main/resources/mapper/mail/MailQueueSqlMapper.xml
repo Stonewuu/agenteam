@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.mail.MailQueueSqlMapper">
+  <select id="latestInvitationBackgroundJob" resultType="com.stonewu.agenteam.model.mail.entity.MailQueueQueryRow">
+    SELECT id,payload_json FROM background_job WHERE enterprise_id = #{enterpriseId} AND kind = 'mail' AND dedupe_key
+    LIKE #{value}
+    ORDER BY dedupe_key DESC LIMIT 1
+  </select>
+  <select id="invitationRetryAfterBackgroundJob" resultType="com.stonewu.agenteam.model.mail.entity.MailQueueQueryRow">
+    SELECT COUNT(*) AS amount, MIN(created_at) AS oldest FROM background_job
+    WHERE enterprise_id = #{enterpriseId} AND kind = 'mail' AND dedupe_key LIKE #{value} AND created_at &gt; #{time}
+  </select>
+</mapper>

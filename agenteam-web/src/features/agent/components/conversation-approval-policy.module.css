@@ -1,0 +1,139 @@
+.trigger {
+  --policy-label-width: 24px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: calc(var(--policy-label-width) + 62px);
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  transition: width 180ms var(--motion-ease), color 160ms ease, background-color 160ms ease;
+}
+
+.trigger svg {
+  flex-shrink: 0;
+}
+
+.trigger:hover:not(:disabled), .trigger[aria-expanded=true] {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.trigger[data-policy=full_access] {
+  color: var(--accent-text);
+}
+
+.trigger[data-policy=auto_approve] {
+  color: var(--accent-text);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.trigger:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+.label {
+  overflow: hidden;
+}
+
+.measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: max-content;
+}
+
+.menu {
+  width: 288px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.option {
+  min-height: 62px;
+  padding: 10px 30px 10px 12px;
+  gap: 10px;
+  border-radius: 9px;
+}
+
+.option .optionIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--secondary);
+}
+
+.optionText {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.option strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.option small {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: normal;
+}
+
+@media (max-width: 680px) {
+  .trigger {
+    height: 44px;
+  }
+}
+
+@container (max-width: 480px) {
+  .trigger {
+    width: 38px;
+    padding: 0;
+  }
+
+  .trigger > svg:first-child {
+    width: 19px;
+    height: 19px;
+  }
+
+  .label, .chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 680px) {
+  @container (max-width: 480px) {
+    .trigger {
+      width: 44px;
+    }
+
+    .trigger > svg:first-child {
+      width: 17px;
+      height: 17px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

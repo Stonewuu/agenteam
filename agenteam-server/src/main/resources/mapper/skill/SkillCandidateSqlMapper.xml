@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.skill.SkillCandidateSqlMapper">
+  <sql id="skillFields">
+    SELECT r.id AS resource_id, v.id AS version_id, v.name, v.description, v.published_at,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS color
+    FROM resource r JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.resource_id = r.id
+  </sql>
+  <sql id="page">
+    <if test="cursor != null">
+      AND (v.published_at &lt; #{cursor.time} OR (v.published_at = #{cursor.time} AND v.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY v.published_at DESC, v.id DESC LIMIT #{limit}
+  </sql>
+  <select id="inputSkills" resultType="com.stonewu.agenteam.model.skill.entity.SkillCandidateQueryRow">
+    <include refid="skillFields"/>
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND v.status = 'available'
+    AND LOCATE(#{query}, v.name) > 0 AND v.id IN
+    <foreach collection="allowedVersions" item="id" open="(" separator="," close=")">#{id}</foreach>
+    <include refid="page"/>
+  </select>
+  <select id="workspaceSkills" resultType="com.stonewu.agenteam.model.skill.entity.SkillCandidateQueryRow">
+    <include refid="skillFields"/>
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="skills"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND v.status = 'available'
+    AND LOCATE(#{query}, v.name) > 0 AND JSON_EXTRACT(v.config_json, '$.showInWorkspace') = TRUE
+    AND EXISTS (SELECT 1 FROM resource_dependency d
+    JOIN resource a ON a.enterprise_id = d.enterprise_id AND a.published_version_id = d.parent_version_id
+    JOIN resource_version av ON av.enterprise_id = a.enterprise_id AND av.id = a.published_version_id AND av.status =
+    'available'
+    JOIN agent_hire h ON h.enterprise_id = a.enterprise_id AND h.agent_id = a.id AND h.user_id = #{user} AND h.status =
+    'active'
+    WHERE d.enterprise_id = v.enterprise_id AND d.dependency_version_id = v.id AND d.binding_key = 'skillVersionIds'
+    AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="agents"/>
+      <property name="alias" value="a"/>
+    </include>
+    )
+    <include refid="page"/>
+  </select>
+  <select id="skillEmployees" resultType="String">
+    SELECT r.id FROM resource r
+    JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.id = r.published_version_id AND v.status =
+    'available'
+    JOIN agent_hire h ON h.enterprise_id = r.enterprise_id AND h.agent_id = r.id AND h.user_id = #{user} AND h.status =
+    'active'
+    JOIN resource_dependency d ON d.enterprise_id = v.enterprise_id AND d.parent_version_id = v.id
+    AND d.dependency_version_id = #{skillVersion} AND d.binding_key = 'skillVersionIds'
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="scope"/>
+      <property name="alias" value="r"/>
+    </include>
+    <if test="after != null">AND r.id > #{after}</if>
+    ORDER BY r.id LIMIT 100
+  </select>
+</mapper>

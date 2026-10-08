@@ -1,0 +1,682 @@
+.presentation, .sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.modeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 5px;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--secondary);
+  background: transparent;
+  font-size: 11px;
+}
+
+.modeButton:hover, .modeButton[aria-pressed="true"] {
+  background: var(--surface-soft);
+  color: var(--accent-text);
+}
+
+.modeButton:focus-visible, .more:focus-visible, .tableScroll:focus-visible, .raw:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.modeIconButton {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.modeTooltipPositioner {
+  z-index: 60;
+}
+
+.modeTooltip {
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 6px 9px;
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  color: var(--text);
+  box-shadow: 0 3px 12px rgb(0 0 0 / .08);
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 1;
+  transition: opacity 150ms ease;
+}
+
+.modeTooltip[data-starting-style], .modeTooltip[data-ending-style] {
+  opacity: 0;
+}
+
+.additional {
+  min-width: 0;
+}
+
+.payloadSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+}
+
+.payloadSection + .payloadSection {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.payloadHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+}
+
+.payloadHeading h5 {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.copyButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: opacity var(--motion-content-duration) ease, color 150ms ease, background-color 150ms ease;
+}
+
+.copyButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.copyButton:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.copyButton[data-copy-state="copied"] {
+  color: var(--mint-text);
+}
+
+.copyButton[data-copy-state="copying"] {
+  color: var(--accent-text);
+  cursor: wait;
+}
+
+.overview {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.overviewFields {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  min-width: 0;
+}
+
+.overviewField {
+  display: grid;
+  grid-template-columns: minmax(64px, 88px) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.overviewField dt {
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+
+.overviewField dd {
+  min-width: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.overviewField dt, .overviewField dd, .overviewText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.overviewField[data-error] dd {
+  color: var(--red-text);
+}
+
+.overviewText, .overviewRaw {
+  min-width: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.overviewRaw {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font: 12px/1.65 ui-monospace, Consolas, monospace;
+}
+
+.overviewMore {
+  min-width: 0;
+  margin-top: 6px;
+}
+
+.overviewMore > :global([data-slot="collapsible-trigger"]) {
+  min-height: 28px;
+  padding: 3px 0;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.fullDetails {
+  min-width: 0;
+  max-height: 480px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-light);
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+
+.fullDetails > .readable, .fullDetails > .raw {
+  padding: 0;
+}
+
+.fullDetails:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.payloadSection .contentNotice {
+  min-height: 32px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.surface {
+  min-width: 0;
+  margin-top: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-soft) 65%, var(--surface));
+  overflow: hidden;
+}
+
+.readable {
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.raw {
+  max-height: 400px;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  color: var(--secondary);
+  font: 12px/1.75 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.readable[hidden], .raw[hidden] {
+  display: none;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: minmax(64px, 100px) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding-block: 7px;
+  min-width: 0;
+}
+
+.field:first-child {
+  padding-top: 0;
+}
+
+.field:last-child {
+  padding-bottom: 0;
+}
+
+.field + .field {
+  border-top: 1px solid var(--border-light);
+}
+
+.field > dt {
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+
+.field > dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+}
+
+.field .field {
+  grid-template-columns: minmax(58px, 85px) minmax(0, 1fr);
+}
+
+.field[data-complex] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.text {
+  display: block;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.text:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.richText {
+  max-height: 360px;
+  overflow: auto;
+  min-width: 0;
+}
+
+.richText:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.markdown {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.markdown :global(p) {
+  margin-block: 0 9px;
+}
+
+.markdown :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown :global(h1), .markdown :global(h2), .markdown :global(h3), .markdown :global(h4), .markdown :global(h5), .markdown :global(h6) {
+  margin-block: 12px 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.markdown :global(ul), .markdown :global(ol) {
+  margin-block: 7px;
+  padding-left: 20px;
+}
+
+.markdown :global(ul) {
+  list-style-type: disc;
+}
+
+.markdown :global(ol) {
+  list-style-type: decimal;
+}
+
+.markdown :global(a) {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.markdown :global([data-streamdown="inline-code"]) {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  font-size: 11px;
+}
+
+.markdown :global([data-streamdown="code-block"]), .markdown :global([data-streamdown="table-wrapper"]) {
+  max-width: 100%;
+  margin-block: 10px;
+  overflow: auto;
+}
+
+.markdown :global([data-streamdown="code-block-body"]) {
+  overflow-x: auto;
+}
+
+.markdown :global(pre) {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.empty {
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.additional {
+  margin-top: 9px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border-light);
+}
+
+.additional > :global([data-slot="collapsible-trigger"]) {
+  min-height: 28px;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.additional .fields {
+  padding-top: 8px;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.items {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding-left: 19px;
+}
+
+.items > li {
+  min-width: 0;
+  padding-left: 3px;
+}
+
+.items > li::marker {
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.items .fields {
+  padding: 9px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.tableScroll {
+  width: 100%;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  background: var(--surface);
+}
+
+.table th, .table td {
+  min-width: 90px;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-soft);
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.more {
+  justify-self: start;
+  min-height: 30px;
+  margin-top: 6px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--accent-text);
+  background: transparent;
+  font-size: 12px;
+}
+
+.more:hover {
+  background: var(--accent-soft);
+}
+
+.contentNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 12px 14px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.contentNotice > button {
+  min-height: 30px;
+  padding: 3px 8px;
+  color: var(--accent-text);
+}
+
+.continuousContent {
+  min-width: 0;
+}
+
+.textViewport {
+  height: 400px;
+  max-width: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+
+.textViewport:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.continuousText {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--text);
+  font: 12px/1.75 ui-monospace, Consolas, monospace;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.readerStatus {
+  padding: 5px 14px;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.readerActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+}
+
+.readerActions form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.readerActions input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.readerActions button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.readerActions a {
+  flex: 0 0 auto;
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.readerActions > span {
+  flex-basis: 100%;
+  min-width: 0;
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .readerActions form {
+    flex-basis: 100%;
+  }
+
+  .readerActions input, .readerActions button, .readerActions a {
+    min-height: 44px;
+  }
+
+  .readerActions a {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .modeButton, .more, .overviewMore > :global([data-slot="collapsible-trigger"]), .additional > :global([data-slot="collapsible-trigger"]) {
+    min-height: 44px;
+  }
+
+  .modeIconButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .copyButton {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .overviewField {
+    grid-template-columns: minmax(56px, 72px) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .readable, .raw {
+    padding: 10px;
+  }
+
+  .field:not([data-complex]), .field .field:not([data-complex]) {
+    grid-template-columns: minmax(54px, 76px) minmax(0, 1fr);
+    gap: 9px;
+  }
+}
+
+@media (hover: none) {
+  .modeIconButton:hover:not(:active):not([aria-pressed="true"]) {
+    background: transparent;
+    color: var(--muted);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .copyButton {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .payloadHeading:hover .copyButton, .payloadHeading:focus-within .copyButton, .copyButton[data-copy-state="copying"], .copyButton[data-copy-state="copied"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modeTooltip, .copyButton {
+    transition: none;
+  }
+}

@@ -1,0 +1,259 @@
+.content, .list, .retry {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.record {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface);
+}
+
+.heading, .meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  width: 100%;
+}
+
+.heading {
+  justify-content: space-between;
+}
+
+.heading strong, .content p {
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.meta > span, .reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.panelHeader, .recordFooter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.panelHeader {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.panelHeader > button:last-child {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.panelNavigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.panelNavigation h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.deliverySection {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 24px;
+}
+
+.deliverySection .record {
+  box-shadow: none;
+  background: var(--surface-soft);
+  border-color: var(--border-light);
+}
+
+.recordFooter {
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+}
+
+.page {
+  max-width: 960px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.notice {
+  padding: 28px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.noticeIcon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-radius: 13px;
+}
+
+.notice h2 {
+  margin: 20px 0 12px;
+  font-size: 24px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.notice .body {
+  margin-top: 24px;
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.noticeActions {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-light);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  margin: 8px 0 0;
+}
+
+.facts dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.reason {
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--amber-soft);
+  color: var(--amber-text);
+  font-size: 12px;
+  line-height: 1.7;
+  width: 100%;
+}
+
+.reason svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.timeline {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.attempt {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 14px;
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.attempt:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 32px;
+  bottom: 3px;
+  border-left: 1px solid var(--border);
+}
+
+.attemptNumber {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--secondary);
+  font-size: 12px;
+  background: var(--surface-hover);
+  border-radius: 50%;
+}
+
+.attempt article {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.attempt .heading strong {
+  font-size: 13px;
+}
+
+.attemptSummary {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.retry {
+  border-top: 1px solid var(--border-light);
+  padding-top: 18px;
+  justify-items: start;
+}
+
+.content p {
+  margin: 0;
+}
+
+.confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .notice, .record, .deliverySection {
+    padding: 20px;
+  }
+
+  .notice h2 {
+    font-size: 21px;
+  }
+  .content button {
+    min-height: 44px;
+  }
+}

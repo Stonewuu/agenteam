@@ -1,0 +1,24 @@
+.outer {
+  min-width: 0;
+  overflow: clip;
+}
+
+.outer[data-measured] {
+  transition: height 200ms var(--motion-ease);
+}
+
+.inner {
+  display: flow-root;
+  min-width: 0;
+}
+
+/* 包含焦点轮廓的实际高度也参与测量，外层负边距保持表单原有对齐。 */
+.controlSpace {
+  padding: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outer[data-measured] {
+    transition: none;
+  }
+}

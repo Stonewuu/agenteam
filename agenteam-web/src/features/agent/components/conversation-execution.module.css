@@ -1,0 +1,355 @@
+.flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.flow > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.standaloneStep {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.stepLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.stepLine > svg {
+  flex-shrink: 0;
+}
+
+.stepLine > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.stepLine > .state {
+  margin-left: 2px;
+}
+
+.stepSummary {
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.block {
+  min-width: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 46%, transparent);
+}
+
+.block > :global([data-slot="collapsible-trigger"]), .thinkingTrigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 43px;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+}
+
+.block > :global([data-slot="collapsible-trigger"])::-webkit-details-marker {
+  display: none;
+}
+
+.block > :global([data-slot="collapsible-trigger"]):focus-visible, .thinkingTrigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.block > :global([data-slot="collapsible-trigger"]) strong, .thinkingTrigger strong {
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.block > :global([data-slot="collapsible-trigger"]) > svg, .thinkingTrigger > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--motion-ease);
+}
+
+.block[data-open] > :global([data-slot="collapsible-trigger"]) > svg, .thinkingTrigger[aria-expanded="true"] > svg {
+  transform: rotate(0);
+}
+
+.blockIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.state {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.state[data-state=failed] {
+  color: var(--red-text);
+}
+
+.state[data-state=waiting_approval] {
+  color: var(--amber-text);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  padding: 0 12px 12px;
+}
+
+.block[data-open] > .body {
+  animation: execution-open 160ms ease-out;
+}
+
+.body:empty {
+  display: none;
+}
+
+.groupItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.groupItem + .groupItem {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.thinking {
+  min-width: 0;
+  color: var(--secondary);
+}
+
+.thinkingTrigger {
+  width: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.thinkingTrigger > svg {
+  transition-duration: 220ms;
+}
+
+.block[data-kind="thinking"] {
+  border-color: transparent;
+  background: transparent;
+}
+
+.block[data-kind="thinking"] .thinkingTrigger {
+  min-height: 32px;
+  padding: 4px 8px;
+  color: var(--secondary);
+}
+
+.fileToolGroup {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fileToolGroupTitle {
+  padding: 2px 10px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.fileToolGroupItems {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.thinkingPanel {
+  height: var(--collapsible-panel-height);
+  overflow: hidden;
+  opacity: 1;
+  transition: height 220ms var(--motion-ease), opacity 180ms ease-out;
+}
+
+.thinkingPanel[data-starting-style], .thinkingPanel[data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+
+.thinkingScroll {
+  max-height: min(320px, 40dvh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+
+.thinkingScroll[data-scrollable] {
+  overscroll-behavior-y: contain;
+}
+
+.thinkingScroll:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.children {
+  min-width: 0;
+  margin-left: 5px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.children .children {
+  margin-left: 0;
+  padding-left: 8px;
+}
+
+.children .children .children {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.children .block {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.children .block > :global([data-slot="collapsible-trigger"]), .children .thinkingTrigger {
+  padding-inline: 0;
+}
+
+.children .body {
+  padding-inline: 0;
+}
+
+.children :global([aria-label="操作确认"]) {
+  min-width: 0;
+  margin-block: 8px;
+  padding: 14px;
+}
+
+.approvalNotice {
+  padding: 12px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.approvalNotice button {
+  margin-left: 8px;
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.recovery {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-left: 38px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.recovery p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.recovery button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.recovery button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+@keyframes execution-open {
+  from {
+    opacity: .4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .block > :global([data-slot="collapsible-trigger"]), .thinkingTrigger {
+    min-height: 44px;
+    padding-inline: 10px;
+  }
+
+  .body {
+    padding-inline: 10px;
+  }
+
+  .children {
+    margin-left: 0;
+    padding-left: 7px;
+  }
+
+  .recovery {
+    margin-left: 0;
+  }
+
+  .recovery button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block > :global([data-slot="collapsible-trigger"]) > svg, .thinkingTrigger > svg, .thinkingPanel {
+    transition: none;
+  }
+
+  .block[data-open] > .body {
+    animation: none;
+  }
+}
+
+.executionTrigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .block[data-kind="thinking"] .thinkingTrigger {
+    min-height: 44px;
+  }
+}

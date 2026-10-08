@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.source.ApiSourceFixtureMapper">
+  <update id="createTable">
+    CREATE TABLE p05_source_rows (id BIGINT UNSIGNED PRIMARY KEY, amount DECIMAL(65,30) NOT NULL, title VARCHAR(80) NOT
+    NULL, enabled BOOLEAN NOT NULL)
+  </update>
+  <update id="dropTable">DROP TABLE p05_source_rows</update>
+</mapper>

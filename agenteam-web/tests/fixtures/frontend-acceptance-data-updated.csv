@@ -1,0 +1,3 @@
+record_code,category,amount,occurred_on,note
+QA-U01,更新后,30.75,2026-09-17,字段更新验收
+QA-U02,更新后,8.25,2026-09-17,旧查询刷新验收

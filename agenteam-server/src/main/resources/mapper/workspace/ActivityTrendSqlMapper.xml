@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.workspace.ActivityTrendSqlMapper">
+  <!-- 时区偏移由服务端按实际规则计算，不依赖 MySQL 的命名时区表。 -->
+  <select id="countActivities" resultType="com.stonewu.agenteam.model.workspace.entity.ActivityCountRow">
+    SELECT activity_date AS date, category, SUM(activity_count) AS count
+    FROM (
+    SELECT DATE_FORMAT(TIMESTAMPADD(SECOND, #{offsetSeconds}, created_at), '%Y-%m-%d') AS activity_date,
+    'conversations' AS category,
+    COUNT(*) AS activity_count
+    FROM agent_run
+    WHERE enterprise_id = #{enterpriseId} AND user_id = #{userId}
+    AND created_at &gt;= #{start} AND created_at &lt; #{end}
+    AND mode IN ('interactive', 'preview')
+    GROUP BY activity_date, category
+    UNION ALL
+    SELECT DATE_FORMAT(TIMESTAMPADD(SECOND, #{offsetSeconds}, created_at), '%Y-%m-%d') AS activity_date,
+    CASE
+    WHEN action IN ('schedule.create', 'schedule.update', 'schedule.enabled', 'schedule.upgrade', 'schedule.delete',
+    'schedule.run') THEN 'schedules'
+    WHEN action IN ('todo.create', 'todo.update', 'todo.status', 'todo.transfer', 'todo.delete') THEN 'todos'
+    ELSE 'employees'
+    END AS category,
+    COUNT(*) AS activity_count
+    FROM audit_event
+    WHERE enterprise_id = #{enterpriseId} AND actor_user_id = #{userId}
+    AND created_at &gt;= #{start} AND created_at &lt; #{end} AND result = 'success'
+    AND (
+    (action IN ('schedule.create', 'schedule.update', 'schedule.enabled', 'schedule.upgrade', 'schedule.delete',
+    'schedule.run')
+    AND JSON_UNQUOTE(JSON_EXTRACT(detail_redacted_json, '$.userActivity')) = 'true')
+    OR action IN ('todo.create', 'todo.update', 'todo.status', 'todo.transfer', 'todo.delete',
+    'agent.hire.request', 'agent.hire.create', 'agent.hire.status', 'agent.hire.decision', 'agent.hire.withdraw')
+    )
+    GROUP BY activity_date, category
+    ) activities
+    GROUP BY activity_date, category
+    ORDER BY activity_date, category
+  </select>
+</mapper>

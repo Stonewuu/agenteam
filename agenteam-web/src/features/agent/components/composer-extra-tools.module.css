@@ -1,0 +1,32 @@
+.tools {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.menu {
+  min-width: 176px;
+  padding: 6px;
+  border-radius: 14px;
+}
+
+.menu :global([data-slot="dropdown-menu-item"]) {
+  min-height: 44px;
+  padding: 8px 12px;
+  gap: 10px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+
+@media (max-width: 680px) {
+  .tools :global(.icon-button) {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .tools :global(.icon-button) > svg {
+    width: 17px;
+    height: 17px;
+  }
+}

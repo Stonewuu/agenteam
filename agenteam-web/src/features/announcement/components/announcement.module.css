@@ -1,0 +1,373 @@
+.dialog:global(.agenteam-dialog) {
+  --announcement-tone: var(--secondary);
+  --dialog-padding: 28px;
+  width: 620px;
+  border-color: color-mix(in srgb, var(--announcement-tone) 16%, var(--border));
+  box-shadow: 0 28px 80px rgb(24 20 16 / .18), 0 6px 20px rgb(24 20 16 / .06);
+}
+
+.dialog.info {
+  --announcement-tone: #3169b7;
+}
+
+:global([data-theme="dark"]) .dialog.info {
+  --announcement-tone: #9cbde9;
+}
+
+.dialog.danger {
+  --announcement-tone: var(--red-text);
+}
+
+.dialog :global(.modal-header) {
+  position: relative;
+  align-items: flex-start;
+  padding-block: 28px 22px;
+  border-bottom: 0;
+}
+
+.dialog :global(.modal-header)::after {
+  content: "";
+  position: absolute;
+  left: var(--dialog-padding);
+  right: var(--dialog-padding);
+  bottom: 0;
+  border-bottom: 1px solid var(--border-light);
+  pointer-events: none;
+}
+
+.dialog :global(.modal-heading) {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog :global(.modal-header h2) {
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.45;
+  letter-spacing: -.3px;
+  text-wrap: pretty;
+}
+
+.dialog :global(.modal-header .icon-button) {
+  margin-top: 1px;
+}
+
+.dialogMetadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 12px;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dialogLevel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--announcement-tone) 24%, var(--border-light));
+  border-radius: 6px;
+  color: var(--announcement-tone);
+  font-weight: 550;
+}
+
+.publishedAt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.publishedAt > svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.publisher {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.publisher > svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.publisher > span {
+  overflow-wrap: anywhere;
+}
+
+.dialog :global(.modal-body) {
+  padding-block: 26px 30px;
+}
+
+.dialog .article h1 {
+  font-size: 20px;
+}
+
+.dialog .article h2 {
+  font-size: 18px;
+}
+
+.dialog .article h3 {
+  font-size: 16px;
+}
+
+.dialog .article :is(h1, h2, h3) {
+  font-weight: 600;
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+
+.dialog .article :is(ul, ol) {
+  padding-left: 1.7em;
+  margin-block: 16px;
+}
+
+.dialog .article li {
+  padding-left: 3px;
+}
+
+.dialog .article li + li {
+  margin-top: 6px;
+}
+
+.dialog .article li::marker {
+  color: var(--secondary);
+  font-size: .9em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialog .article blockquote {
+  margin-block: 22px 4px;
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--border);
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.dialog .article blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.dialog :global(.modal-footer) {
+  position: relative;
+  padding-block: 18px;
+  border-top: 0;
+}
+
+.dialog :global(.modal-footer)::before {
+  content: "";
+  position: absolute;
+  left: var(--dialog-padding);
+  right: var(--dialog-padding);
+  top: 0;
+  border-top: 1px solid var(--border-light);
+  pointer-events: none;
+}
+
+.dismissButton {
+  min-height: 40px;
+  padding: 9px 17px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--secondary);
+  background: transparent;
+  transition: background-color 180ms var(--motion-ease), border-color 180ms var(--motion-ease);
+}
+
+.dismissButton:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--input-border-hover);
+}
+
+.metadata {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--secondary);
+  font-size: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.scopeIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.readButton {
+  background: var(--nav-selected);
+  color: var(--nav-on-selected);
+  min-height: 40px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.interactiveCard {
+  position: relative;
+  transition: border-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
+}
+
+.interactiveCard:hover {
+  border-color: color-mix(in srgb, var(--secondary) 35%, var(--border));
+  box-shadow: 0 3px 12px rgb(24 20 16 / .04);
+}
+
+.interactiveCard:has(.cardOpen:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.cardOpen {
+  position: static;
+}
+
+.cardOpen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.cardReadAction {
+  position: relative;
+  z-index: 1;
+}
+
+.cardContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardTitle {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  display: block;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.preview {
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+
+.enterprisePicker {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+  max-width: 540px;
+}
+
+.dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  background: #d13b43;
+  border-radius: 50%;
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .toolbar > * {
+    max-width: 100%;
+  }
+
+  .dialog:global(.agenteam-dialog) {
+    --dialog-padding: 20px;
+  }
+
+  .dialog :global(.modal-header) {
+    padding-block: 20px 18px;
+  }
+
+  .dialog :global(.modal-header h2) {
+    font-size: 18px;
+  }
+
+  .dialog :global(.modal-body) {
+    padding-block: 20px 24px;
+  }
+
+  .dialogMetadata {
+    gap: 8px 12px;
+    margin-top: 12px;
+  }
+
+  .dialog .article h1 {
+    font-size: 19px;
+  }
+
+  .readButton, .dismissButton {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interactiveCard, .dismissButton {
+    transition: none;
+  }
+}

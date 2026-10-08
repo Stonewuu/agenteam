@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.notification.NotificationChannelDeliveryMapper">
+    <select id="lock" resultType="com.stonewu.agenteam.model.notification.entity.NotificationChannelDeliveryRow">
+        SELECT * FROM notification_delivery
+        WHERE enterprise_id = #{enterprise} AND id = #{id}
+        FOR UPDATE
+    </select>
+    <!-- 状态与版本同时推进，并保留历史请求可能已被接受的事实。 -->
+    <update id="cancelWaiting">
+        UPDATE notification_delivery d
+        SET d.status = CASE WHEN EXISTS (
+            SELECT 1 FROM notification_delivery_attempt a
+            WHERE a.enterprise_id = d.enterprise_id AND a.delivery_id = d.id AND a.outcome IN ('unknown', 'started')
+        ) THEN 'unknown' ELSE 'cancelled' END,
+            d.next_attempt_at = NULL, d.last_error_code = 'CHANNEL_CANCELLED',
+            d.last_error_summary = CASE WHEN d.status = 'unknown'
+                THEN '接收设置或接入已变化，后续发送已停止；此前请求可能已被平台接受。'
+                ELSE '接收设置或接入已变化，后续发送已停止。' END,
+            d.revision = d.revision + 1, d.updated_at = #{now}
+        WHERE d.enterprise_id = #{enterprise} AND d.status IN ('pending', 'retry_wait')
+        <if test="connection != null">AND d.connection_id = #{connection}</if>
+        <if test="binding != null">AND d.binding_id = #{binding}</if>
+        <if test="user != null">AND d.recipient_user_id = #{user}</if>
+        <if test="occurrence != null">
+            AND EXISTS (SELECT 1 FROM notification n WHERE n.enterprise_id = d.enterprise_id
+                AND n.id = d.notification_id AND n.source_occurrence_id = #{occurrence})
+        </if>
+        <if test="category != null">
+            AND d.delivery_reason = 'automatic' AND EXISTS (
+                SELECT 1 FROM notification n WHERE n.enterprise_id = d.enterprise_id
+                AND n.id = d.notification_id AND n.category = #{category}
+            )
+        </if>
+    </update>
+    <update id="cancelStoppedJobs">
+        UPDATE background_job j INNER JOIN notification_delivery d
+            ON d.enterprise_id = j.enterprise_id AND d.active_job_id = j.id
+        SET j.status = 'cancelled', j.lease_owner = NULL, j.lease_until = NULL, j.heartbeat_at = NULL,
+            j.error_code = d.last_error_code, j.error_summary = d.last_error_summary, j.updated_at = #{now}
+        WHERE j.enterprise_id = #{enterprise} AND j.kind = 'channel_delivery' AND j.status IN ('queued', 'leased')
+            AND d.status IN ('cancelled', 'unknown')
+    </update>
+</mapper>

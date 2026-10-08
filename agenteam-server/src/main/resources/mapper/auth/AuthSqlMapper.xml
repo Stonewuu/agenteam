@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.auth.AuthSqlMapper">
+  <select id="superAdminInitialized" resultType="boolean">
+    SELECT CASE WHEN EXISTS (SELECT 1 FROM system_super_admin_lock WHERE id = 1)
+    OR EXISTS (SELECT 1 FROM app_user WHERE is_super_admin = TRUE) THEN 1 ELSE 0 END
+  </select>
+  <select id="lockUser" resultType="com.stonewu.agenteam.model.user.entity.AppUserRow">
+    SELECT * FROM app_user WHERE id = #{userId} FOR UPDATE
+  </select>
+  <update id="replacePassword">
+    UPDATE app_user SET password_hash = #{newHash}, password_changed_at = #{now},
+    session_version = session_version + 1, revision = revision + 1, updated_at = #{now}
+    WHERE id = #{userId} AND BINARY password_hash = BINARY #{expectedHash}
+    AND session_version = #{expectedSessionVersion} AND status = 'active'
+  </update>
+  <update id="invalidateUnusedTokens">
+    UPDATE auth_token SET expires_at = LEAST(expires_at, #{now}) WHERE user_id = #{userId} AND consumed_at IS NULL
+  </update>
+  <select id="initializedByAnother" resultType="boolean">
+    SELECT CASE WHEN EXISTS (SELECT 1 FROM system_super_admin_lock WHERE id = 1 AND user_id &lt;> #{candidateUserId})
+    OR EXISTS (SELECT 1 FROM app_user WHERE is_super_admin = TRUE AND id &lt;> #{candidateUserId}) THEN 1 ELSE 0 END
+  </select>
+  <select id="activeMemberCount" resultType="int">
+    SELECT COUNT(*) FROM enterprise_member member
+    JOIN enterprise e ON e.id = member.enterprise_id
+    JOIN app_user u ON u.id = member.user_id
+    WHERE member.user_id = #{userId} AND member.enterprise_id = #{enterpriseId} AND BINARY e.id = BINARY #{enterpriseId}
+    AND member.status = 'active' AND e.status = 'active' AND u.status = 'active'
+  </select>
+</mapper>

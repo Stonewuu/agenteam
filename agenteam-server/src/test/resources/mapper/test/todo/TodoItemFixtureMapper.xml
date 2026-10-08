@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.todo.TodoItemFixtureMapper">
+  <select id="todoApiConcurrentTransferAndTeamDepartureCannotLeaveAnOpenTodoOwnedOutsideItsTeamObject"
+          resultType="Integer">
+    SELECT COUNT(*) FROM todo_item t WHERE t.enterprise_id = #{args[0]} AND t.status IN ('pending', 'in_progress') AND
+    t.team_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM enterprise_team_member m WHERE m.enterprise_id = t.enterprise_id AND m.team_id =
+    t.team_id AND m.user_id = t.owner_user_id)
+  </select>
+</mapper>

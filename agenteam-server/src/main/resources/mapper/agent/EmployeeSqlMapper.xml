@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.agent.EmployeeSqlMapper">
+  <sql id="fields">SELECT r.id, r.status AS resource_status, v.name, v.description, v.status AS version_status,
+    (om.status = 'active' AND ou.status = 'active') AS owner_active,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.businessRole')) AS business_role,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS color,
+    JSON_EXTRACT(v.config_json, '$.publicExamples') AS examples,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.welcomeMessage')) AS welcome_message,
+    JSON_EXTRACT(v.config_json, '$.suggestedQuestions') AS suggested_questions,
+    JSON_EXTRACT(v.config_json, '$.skillVersionIds') AS skill_versions,
+    (JSON_EXTRACT(v.config_json, '$.attachmentsEnabled') = TRUE) AS attachments_enabled,
+    (JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.agentType')) = 'workflow'
+    OR (mp.enabled = TRUE AND provider.enabled = TRUE)) AS model_available,
+    h.id AS hire_id, h.revision AS hire_revision, a.id AS application_id, a.revision AS application_revision,
+    CASE WHEN h.status IN ('active','paused') THEN h.status WHEN a.id IS NOT NULL THEN 'pending' ELSE COALESCE(h.status,
+    'none') END AS hire_status,
+    l.listed, (l.hire_policy = 'approval') AS requires_approval,
+  </sql>
+  <sql id="relations">FROM resource r JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.resource_id =
+    r.id AND v.id = r.published_version_id
+    JOIN enterprise_member om ON om.enterprise_id = r.enterprise_id AND om.user_id = r.owner_user_id
+    JOIN app_user ou ON ou.id = om.user_id
+    LEFT JOIN agent_listing l ON l.enterprise_id = r.enterprise_id AND l.agent_id = r.id
+    LEFT JOIN model_profile mp ON mp.enterprise_id = v.enterprise_id AND mp.id =
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.modelProfileId'))
+    LEFT JOIN model_provider provider ON provider.enterprise_id = mp.enterprise_id AND provider.id = mp.provider_id
+    LEFT JOIN agent_hire h ON h.enterprise_id = r.enterprise_id AND h.agent_id = r.id AND h.user_id = #{user}
+    LEFT JOIN agent_hire_request a ON a.enterprise_id = r.enterprise_id AND a.agent_id = r.id AND a.user_id = #{user}
+    AND a.pending_marker = 1 AND a.expires_at &gt; #{now}
+  </sql>
+  <sql id="mineTime">CASE WHEN h.status IN ('active','paused') THEN COALESCE(h.last_used_at, h.hired_at) WHEN a.id IS
+    NOT NULL THEN a.created_at ELSE h.hired_at END
+  </sql>
+  <sql id="position">
+    <choose>
+      <when test="mine">
+        <include refid="mineTime"/>
+      </when>
+      <otherwise>v.published_at</otherwise>
+    </choose>
+  </sql>
+  <select id="listEmployees" resultType="com.stonewu.agenteam.model.agent.entity.EmployeeQueryRow">
+    <include refid="fields"/>
+    <include refid="position"/>
+    AS position_time
+    <include refid="relations"/>
+    WHERE r.enterprise_id = #{enterprise} AND r.kind = 'agent' AND r.deleted_at IS NULL AND LOCATE(#{query}, v.name) > 0
+    AND
+    <choose>
+      <when test="mine">(h.id IS NOT NULL OR a.id IS NOT NULL)</when>
+      <otherwise>(
+        <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+          <property name="scopePath" value="market"/>
+          <property name="alias" value="r"/>
+        </include>
+        AND l.listed = TRUE AND v.status = 'available')
+      </otherwise>
+    </choose>
+    <foreach collection="tags" item="tag">
+      AND EXISTS (SELECT 1 FROM resource_tag rt JOIN tag t ON t.enterprise_id = rt.enterprise_id AND t.id = rt.tag_id
+      WHERE rt.enterprise_id = r.enterprise_id AND rt.resource_id = r.id AND rt.tag_id = #{tag} AND t.deleted_at IS
+      NULL)
+    </foreach>
+    <if test="cursor != null">
+      AND (
+      <include refid="position"/> &lt; #{cursor.time}
+      OR (
+      <include refid="position"/>
+      = #{cursor.time} AND r.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY position_time DESC, r.id DESC LIMIT #{limit}
+  </select>
+  <select id="findEmployee" resultType="com.stonewu.agenteam.model.agent.entity.EmployeeQueryRow">
+    <include refid="fields"/>v.published_at AS position_time
+    <include refid="relations"/>
+    WHERE r.enterprise_id = #{enterprise} AND r.id = #{id} AND r.kind = 'agent'
+    AND ((h.id IS NOT NULL OR a.id IS NOT NULL) OR (
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="market"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND l.listed = TRUE AND v.status = 'available'))
+  </select>
+  <select id="recentEmployees" resultType="com.stonewu.agenteam.model.agent.entity.EmployeeQueryRow">
+    <include refid="fields"/>
+    <include refid="mineTime"/>
+    AS position_time
+    <include refid="relations"/>
+    WHERE
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+      <property name="scopePath" value="usage"/>
+      <property name="alias" value="r"/>
+    </include>
+    AND h.status = 'active' AND v.status = 'available'
+    AND (JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.agentType')) = 'workflow' OR (mp.enabled = TRUE AND
+    provider.enabled = TRUE))
+    ORDER BY (h.last_used_at IS NOT NULL) DESC, h.last_used_at DESC, h.hired_at DESC, r.id DESC LIMIT 3
+  </select>
+</mapper>

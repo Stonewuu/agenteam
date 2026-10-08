@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.usage.QuotaReconciliationSqlMapper">
+  <select id="differencesQuotaBucket" resultType="com.stonewu.agenteam.model.usage.entity.QuotaReconciliationQueryRow">
+    SELECT b.id, b.used_count, b.reserved_count,
+    COALESCE(SUM(CASE WHEN e.state = 'consumed' THEN e.quantity ELSE 0 END), 0) AS actual_used,
+    COALESCE(SUM(CASE WHEN e.state = 'reserved' THEN e.quantity ELSE 0 END), 0) AS actual_reserved
+    FROM quota_bucket b LEFT JOIN quota_entry e ON e.enterprise_id = b.enterprise_id AND e.bucket_id = b.id
+    WHERE b.enterprise_id = #{enterprise} GROUP BY b.id, b.used_count, b.reserved_count
+    HAVING b.used_count &lt;&gt; actual_used OR b.reserved_count &lt;&gt; actual_reserved ORDER BY b.id
+  </select>
+</mapper>

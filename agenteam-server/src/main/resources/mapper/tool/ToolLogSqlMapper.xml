@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.tool.ToolLogSqlMapper">
+  <sql id="fields">t.id, t.run_id, t.actor_user_id, m.display_name, t.tool_name, t.status, t.operation_class,
+    t.duration_ms, t.error_summary, t.created_at, r.mode AS run_source, r.conversation_id
+  </sql>
+  <sql id="relations">
+    FROM tool_call t JOIN enterprise_member m ON m.enterprise_id = t.enterprise_id AND m.user_id = t.actor_user_id
+    LEFT JOIN agent_run r ON r.enterprise_id = t.enterprise_id AND r.id = t.run_id
+  </sql>
+  <select id="listCalls" resultType="com.stonewu.agenteam.model.tool.entity.ToolLogQueryRow">
+    SELECT<include refid="fields"/>,
+    <choose>
+      <when test="detailScope != null">
+        <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+          <property name="scopePath" value="detailScope"/>
+          <property name="ownerColumn" value="t.actor_user_id"/>
+          <property name="enterpriseColumn" value="t.enterprise_id"/>
+        </include>
+      </when>
+      <otherwise>FALSE</otherwise>
+    </choose>
+    AS can_view_details
+    <include refid="relations"/>
+    WHERE t.enterprise_id = #{enterprise}
+    <foreach collection="scopes" item="scope">AND
+      <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+        <property name="scopePath" value="scope"/>
+        <property name="ownerColumn" value="t.actor_user_id"/>
+        <property name="enterpriseColumn" value="t.enterprise_id"/>
+      </include>
+    </foreach>
+    AND t.created_at >= #{range.from} AND t.created_at &lt;= #{range.to}
+    AND (LOCATE(#{filter.query}, t.tool_name) > 0 OR LOCATE(#{filter.query}, m.display_name) > 0)
+    <if test="filter.actorUserId != null">AND t.actor_user_id = #{filter.actorUserId}</if>
+    <if test="filter.status != null">AND t.status = #{filter.status}</if>
+    <if test="filter.source != null">AND r.mode = #{filter.source}</if>
+    <if test="cursor != null">
+      AND (t.created_at &lt; #{cursor.time} OR (t.created_at = #{cursor.time} AND t.id &lt; #{cursor.id}))
+    </if>
+    ORDER BY t.created_at DESC, t.id DESC LIMIT #{limit}
+  </select>
+  <select id="callDetails" resultType="com.stonewu.agenteam.model.tool.entity.ToolLogQueryRow">
+    SELECT<include refid="fields"/>, TRUE AS can_view_details, t.request_redacted_json, t.result_redacted_json
+    <include refid="relations"/>
+    WHERE t.enterprise_id = #{enterprise} AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+      <property name="scopePath" value="viewScope"/>
+      <property name="ownerColumn" value="t.actor_user_id"/>
+      <property name="enterpriseColumn" value="t.enterprise_id"/>
+    </include>
+    AND
+    <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.owner">
+      <property name="scopePath" value="detailScope"/>
+      <property name="ownerColumn" value="t.actor_user_id"/>
+      <property name="enterpriseColumn" value="t.enterprise_id"/>
+    </include>
+    AND t.id = #{id}
+  </select>
+</mapper>

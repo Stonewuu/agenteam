@@ -1,0 +1,63 @@
+groups:
+  - name: agenteam-platform
+    rules:
+      - alert: AgenteamQueueWaiting
+        expr: agenteam_background_oldest_seconds > 120
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "后台可执行任务等待超过两分钟"
+          description: "检查任务领取进程、数据库连接与当前执行数量。尚未到重试时间的任务不计入等待时长。"
+      - alert: AgenteamEventDispatchDelayed
+        expr: agenteam_events_oldest_seconds > 30
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "已保存事件超过三十秒仍未分发"
+          description: "检查事件分发进程和 Redis 连接，保留 MySQL 中已保存的事件。"
+      - alert: AgenteamRequestFailureRate
+        expr: (sum(rate(http_server_requests_seconds_count{job="agenteam",status=~"5.."}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{job="agenteam"}[5m])), 0.001) > 0.05) and (sum(increase(http_server_requests_seconds_count{job="agenteam"}[5m])) >= 100)
+        labels:
+          severity: warning
+        annotations:
+          summary: "最近五分钟服务错误率超过百分之五"
+          description: "该窗口至少有一百次请求。按路由模板检查失败来源，不记录请求正文或认证信息。"
+      - alert: AgenteamUnknownToolResult
+        expr: agenteam_tools_unknown > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "存在结果尚未确认的工具调用"
+          description: "核对目标系统和原操作编号；不要通过重复发送来猜测操作是否成功。"
+      - alert: AgenteamQuotaDifference
+        expr: increase(agenteam_quota_differences_total[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "用量核对发现并修正了次数差异"
+          description: "检查同一时段的次数核对日志与执行条目，计数只包含事务已提交的修正。"
+      - alert: AgenteamQuotaCheckFailed
+        expr: increase(agenteam_quota_checks_total{result="failure"}[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "用量核对未能完成"
+          description: "检查数据库和核对日志，系统将在后续轮次重试。"
+      - alert: AgenteamCollectionUnavailable
+        expr: (agenteam_metrics_collection_available == 0) or (time() - agenteam_metrics_last_success_seconds > 45)
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "业务运行状态暂时无法采集"
+          description: "旧数量已撤下，检查采集日志和数据库；不要把不可用数值当作零。"
+      - alert: AgenteamMetricsEndpointUnavailable
+        expr: up{job="agenteam"} == 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "管理端口无法读取"
+          description: "检查后端进程、管理端口与采集器之间的连接。"

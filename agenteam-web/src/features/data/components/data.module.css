@@ -1,0 +1,216 @@
+.panel {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 24px;
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.collections {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.collections li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.collection {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+  min-width: 160px;
+  overflow-wrap: anywhere;
+}
+
+.collection strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.collection span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.fieldset > legend {
+  padding: 0 0 10px;
+  font-weight: 600;
+}
+
+.fieldset > button {
+  justify-self: start;
+}
+
+.tableScroll {
+  width: 100%;
+  overflow: auto;
+  max-height: 440px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overscroll-behavior: contain;
+}
+
+.fields, .results {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  text-align: left;
+}
+
+.fields th, .results th {
+  font-weight: 500;
+  padding: 12px;
+  background: var(--surface-soft);
+  white-space: nowrap;
+}
+
+.fields td, .results td {
+  padding: 9px 12px;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.fields input:not([type=checkbox]) {
+  min-width: 150px;
+}
+
+.fields select {
+  min-width: 140px;
+}
+
+.fields input[type=checkbox] {
+  width: 17px;
+  height: 17px;
+  margin: 12px 14px;
+}
+
+.rowActions {
+  display: flex;
+  gap: 5px;
+}
+
+.rowActions button {
+  min-height: 36px;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.results td {
+  min-width: 100px;
+  max-width: 420px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.emptyValue {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.choices label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.condition {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(110px, .8fr) minmax(140px, 1.4fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.condition > button {
+  min-height: 42px;
+}
+
+@media (max-width: 640px) {
+  .condition {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .condition > textarea, .condition > input {
+    grid-column: 1 / -1;
+  }
+}
+
+.panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: 22px;
+}
+
+.collectionSelect {
+  width: min(320px, 100%);
+}
+
+.tableScroll {
+  border-radius: 16px;
+}
+
+.fields th, .results th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.fields :global(.agenteam-select) {
+  min-width: 140px;
+}
+
+@media (max-width: 600px) {
+  .collectionSelect {
+    width: 100%;
+  }
+
+  .condition {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .condition > * {
+    min-width: 0;
+  }
+
+  .condition > button {
+    justify-self: start;
+  }
+}

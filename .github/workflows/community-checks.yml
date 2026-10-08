@@ -1,0 +1,73 @@
+name: Community checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 公共贡献只使用本仓库的读取权限，不引用商业仓库、私有发布凭据或签发密钥。
+permissions:
+  contents: read
+
+concurrency:
+  group: community-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: agenteam-server/pom.xml
+      - name: 构建共有办公沙箱
+        run: docker build --tag agenteam/sandbox-office:local deploy/sandbox
+      - name: 社区后端完整测试
+        working-directory: agenteam-server
+        run: sh ./mvnw -B --no-transfer-progress clean test
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: 准备固定的前端包管理器
+        run: corepack enable && corepack prepare pnpm@11.15.1 --activate
+      - name: 安装固定依赖
+        working-directory: agenteam-web
+        run: pnpm install --frozen-lockfile
+      - name: 检查、类型与生产构建
+        working-directory: agenteam-web
+        run: |
+          pnpm lint
+          pnpm exec next typegen
+          pnpm exec tsc --noEmit
+          pnpm build
+      - name: 共有入口与功能检查
+        working-directory: agenteam-web
+        run: |
+          pnpm test:i18n
+          pnpm test:navigation
+          pnpm test:channel-auth
+          pnpm test:schedule-actions
+          pnpm test:resource-deletion
+          pnpm test:conversation
+      - name: 镜像输入与文件范围检查
+        run: node --test scripts/release/community-backend.test.mjs scripts/release/image-inputs.test.mjs scripts/release/source-archive-inputs.test.mjs scripts/release/mysql-compose.test.mjs

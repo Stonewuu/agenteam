@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.file.FileSqlMapper">
+  <select id="findFileObjectLocked" resultType="com.stonewu.agenteam.model.file.entity.FileQueryRow">
+    SELECT * FROM file_object WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+  <delete id="removeDeletedFileText">
+    DELETE t FROM file_text t JOIN file_object f ON f.enterprise_id = t.enterprise_id AND f.id = t.file_id WHERE
+    f.enterprise_id = #{enterpriseId} AND f.id = #{id} AND f.status = 'deleted'
+  </delete>
+  <delete id="removeDeletedFileDataProfile">
+    DELETE t FROM file_data_profile t JOIN file_object f ON f.enterprise_id = t.enterprise_id AND f.id = t.file_id WHERE
+    f.enterprise_id = #{enterpriseId} AND f.id = #{id} AND f.status = 'deleted'
+  </delete>
+  <delete id="removeDeletedFileDataRow">
+    DELETE t FROM file_data_row t JOIN file_object f ON f.enterprise_id = t.enterprise_id AND f.id = t.file_id WHERE
+    f.enterprise_id = #{enterpriseId} AND f.id = #{id} AND f.status = 'deleted'
+  </delete>
+</mapper>

@@ -1,0 +1,15 @@
+{
+  "可以关闭此窗口，稍后查看上次导出。": "You can close this window and check your latest export later.",
+  "如需文件，请重新导出。": "Export again if you need the file.",
+  "导出": "Export",
+  "导出已取消": "Export canceled",
+  "开始导出": "Start export",
+  "排队中": "Queued",
+  "文件已生成": "File ready",
+  "文件已过期": "File expired",
+  "无法读取此导出。": "Unable to load this export.",
+  "未能完成导出": "Export failed",
+  "查看上次导出": "View latest export",
+  "正在导出": "Exporting",
+  "重新导出": "Export again"
+}

@@ -1,0 +1,61 @@
+rule_files:
+  - agenteam-alerts.example.yml
+evaluation_interval: 15s
+tests:
+  # 等待未达到两分钟时不能报警。
+  - interval: 15s
+    input_series:
+      - series: 'agenteam_background_oldest_seconds{instance="worker-one",kind="run"}'
+        values: '119x12'
+    promql_expr_test:
+      - expr: 'ALERTS{alertname="AgenteamQueueWaiting",alertstate="firing"}'
+        eval_time: 2m
+        exp_samples: [ ]
+  # 达到规定等待时间后，实际持续三十秒才转为告警。
+  - interval: 15s
+    input_series:
+      - series: 'agenteam_background_oldest_seconds{instance="worker-one",kind="run"}'
+        values: '121x12'
+    promql_expr_test:
+      - expr: 'ALERTS{alertname="AgenteamQueueWaiting",alertstate="firing"}'
+        eval_time: 15s
+        exp_samples: [ ]
+      - expr: 'ALERTS{alertname="AgenteamQueueWaiting",alertstate="firing"}'
+        eval_time: 1m
+        exp_samples:
+          - labels: 'ALERTS{alertname="AgenteamQueueWaiting",alertstate="firing",instance="worker-one",kind="run",severity="warning"}'
+            value: 1
+  # 错误比例高但不足一百次请求时，不把少量请求当作规定窗口。
+  - interval: 15s
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="agenteam",status="200"}'
+        values: '0+3x20'
+      - series: 'http_server_requests_seconds_count{job="agenteam",status="500"}'
+        values: '0+1x20'
+    promql_expr_test:
+      - expr: 'ALERTS{alertname="AgenteamRequestFailureRate",alertstate="firing"}'
+        eval_time: 5m
+        exp_samples: [ ]
+  - interval: 15s
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="agenteam",status="200"}'
+        values: '0+14x20'
+      - series: 'http_server_requests_seconds_count{job="agenteam",status="500"}'
+        values: '0+1x20'
+    promql_expr_test:
+      - expr: 'ALERTS{alertname="AgenteamRequestFailureRate",alertstate="firing"}'
+        eval_time: 5m
+        exp_samples:
+          - labels: 'ALERTS{alertname="AgenteamRequestFailureRate",alertstate="firing",severity="warning"}'
+            value: 1
+  # 未取得一轮业务状态时，即使服务端口可读取也要提示采集失败。
+  - interval: 15s
+    input_series:
+      - series: 'agenteam_metrics_collection_available{instance="worker-one"}'
+        values: '0x8'
+    promql_expr_test:
+      - expr: 'ALERTS{alertname="AgenteamCollectionUnavailable",alertstate="firing"}'
+        eval_time: 1m
+        exp_samples:
+          - labels: 'ALERTS{alertname="AgenteamCollectionUnavailable",alertstate="firing",instance="worker-one",severity="warning"}'
+            value: 1

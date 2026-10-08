@@ -1,0 +1,152 @@
+{
+  "wecom.token": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "access_token": "test-wecom-application-token",
+    "expires_in": 3600
+  },
+  "wecom.application": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "agentid": 1000001,
+    "name": "测试通知应用",
+    "allow_userinfos": {
+      "user": [
+        {
+          "userid": "member_001"
+        }
+      ]
+    }
+  },
+  "wecom.identity": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "userid": "member_001"
+  },
+  "wecom.externalIdentity": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "openid": "test-openid",
+    "external_userid": "test-external-user"
+  },
+  "wecom.invalidCode": {
+    "errcode": 40029,
+    "errmsg": "invalid code"
+  },
+  "wecom.accepted": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "invaliduser": "",
+    "invalidparty": "",
+    "invalidtag": "",
+    "msgid": "test-wecom-message"
+  },
+  "wecom.invalidRecipient": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "invaliduser": "member_001",
+    "invalidparty": "",
+    "invalidtag": "",
+    "msgid": "test-wecom-message"
+  },
+  "wecom.unlicensedRecipient": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "unlicenseduser": "member_001",
+    "msgid": "test-wecom-message"
+  },
+  "wecom.allInvalid": {
+    "errcode": 81013,
+    "errmsg": "user & party & tag all invalid"
+  },
+  "wecom.rateLimit": {
+    "errcode": 45009,
+    "errmsg": "api freq out of limit"
+  },
+  "wecom.expiredToken": {
+    "errcode": 42001,
+    "errmsg": "access_token expired"
+  },
+  "feishu.token": {
+    "code": 0,
+    "msg": "ok",
+    "tenant_access_token": "test-feishu-application-token",
+    "expire": 1800
+  },
+  "feishu.tenant": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "tenant": {
+        "name": "测试飞书企业",
+        "display_id": "FTEST0001",
+        "tenant_tag": 0,
+        "tenant_key": "test-feishu-tenant"
+      }
+    }
+  },
+  "feishu.userToken": {
+    "code": 0,
+    "access_token": "test-feishu-user-token",
+    "expires_in": 3600,
+    "token_type": "Bearer",
+    "scope": ""
+  },
+  "feishu.identity": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "name": "测试成员",
+      "open_id": "ou_test_member",
+      "union_id": "on_test_member",
+      "tenant_key": "test-feishu-tenant"
+    }
+  },
+  "feishu.expiredCode": {
+    "code": 20004,
+    "error": "invalid_grant",
+    "error_description": "The authorization code has expired."
+  },
+  "feishu.accepted": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "message_id": "om_test_message",
+      "msg_type": "text",
+      "create_time": "1790560000000",
+      "update_time": "1790560000000",
+      "deleted": false,
+      "updated": false,
+      "chat_id": "oc_test_chat",
+      "sender": {
+        "id": "cli_test_application",
+        "id_type": "app_id",
+        "sender_type": "app",
+        "tenant_key": "test-feishu-tenant"
+      },
+      "body": {
+        "content": "{\"text\":\"测试通知\"}"
+      }
+    }
+  },
+  "feishu.unavailableRecipient": {
+    "code": 230013,
+    "msg": "Bot has NO availability to this user."
+  },
+  "feishu.permissionDenied": {
+    "code": 230027,
+    "msg": "Lack of necessary permissions."
+  },
+  "feishu.userDisabledMessages": {
+    "code": 230053,
+    "msg": "The user has stopped the bot from sending messages."
+  },
+  "feishu.rateLimit": {
+    "code": 99991400,
+    "msg": "request trigger frequency limit"
+  },
+  "feishu.expiredToken": {
+    "code": 99991663,
+    "msg": "Invalid access token for authorization."
+  }
+}

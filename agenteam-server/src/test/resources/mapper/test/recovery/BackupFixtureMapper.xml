@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.recovery.BackupFixtureMapper">
+  <update id="rotateLog">FLUSH BINARY LOGS</update>
+  <resultMap id="logPosition" type="com.stonewu.agenteam.model.test.recovery.BackupLogPosition">
+    <constructor>
+      <arg column="File" javaType="string"/>
+      <arg column="Position" javaType="_long"/>
+    </constructor>
+  </resultMap>
+  <select id="position" resultMap="logPosition">SHOW BINARY LOG STATUS</select>
+  <select id="logFiles" resultType="string">SHOW BINARY LOGS</select>
+  <select id="logBase" resultType="string">SELECT @@log_bin_basename</select>
+  <select id="bufferPoolSize" resultType="long">SELECT @@innodb_buffer_pool_size</select>
+  <select id="tables" resultType="string">
+    SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name
+  </select>
+  <select id="primaryKeys" resultType="string">
+    SELECT column_name FROM information_schema.key_column_usage
+    WHERE table_schema = DATABASE() AND table_name = #{table} AND constraint_name = 'PRIMARY' ORDER BY ordinal_position
+  </select>
+  <select id="columns" resultType="string">
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = #{table} ORDER BY ordinal_position
+  </select>
+  <select id="scan" resultType="java.util.LinkedHashMap" resultSetType="FORWARD_ONLY" fetchSize="1">
+    SELECT * FROM `${scan.table}` ORDER BY
+    <foreach collection="scan.keys" item="key" separator=",">`${key}`</foreach>
+  </select>
+</mapper>

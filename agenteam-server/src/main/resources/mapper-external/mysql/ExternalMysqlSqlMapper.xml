@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.data.mysql.ExternalMysqlSqlMapper">
+  <select id="readGrants" resultType="string">SHOW GRANTS FOR CURRENT_USER</select>
+  <select id="findTables" resultType="string">
+    SELECT TABLE_NAME FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = #{database} AND TABLE_NAME = #{table} AND TABLE_TYPE IN ('BASE TABLE','VIEW')
+  </select>
+  <resultMap id="column" type="com.stonewu.agenteam.model.data.entity.MysqlColumnRow">
+    <constructor>
+      <arg column="COLUMN_NAME" javaType="string"/>
+      <arg column="DATA_TYPE" javaType="string"/>
+      <arg column="COLUMN_TYPE" javaType="string"/>
+      <arg column="IS_NULLABLE" javaType="string"/>
+      <arg column="NUMERIC_PRECISION" javaType="java.lang.Integer"/>
+      <arg column="NUMERIC_SCALE" javaType="java.lang.Integer"/>
+    </constructor>
+  </resultMap>
+  <select id="readColumns" resultMap="column">
+    SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, NUMERIC_PRECISION, NUMERIC_SCALE
+    FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = #{database} AND TABLE_NAME = #{table} ORDER BY ORDINAL_POSITION
+  </select>
+  <sql id="conditionValue">
+    <choose>
+      <when test="condition.field.definition.valueType == 'integer'">CAST(${condition.field.identifier} AS
+        DECIMAL(65,0))
+      </when>
+      <when test="condition.field.definition.valueType == 'decimal'">CAST(${condition.field.identifier} AS
+        DECIMAL(65,30))
+      </when>
+      <when test="condition.field.definition.valueType == 'boolean'">(CASE WHEN ${condition.field.identifier} IS NULL
+        THEN NULL WHEN ${condition.field.identifier} = 0 THEN 0 ELSE 1 END)
+      </when>
+      <when test="condition.field.definition.valueType == 'date'">DATE_FORMAT(${condition.field.identifier},
+        '%Y-%m-%d')
+      </when>
+      <when test="condition.field.definition.valueType == 'datetime'">DATE_FORMAT(${condition.field.identifier},
+        '%Y-%m-%dT%H:%i:%s.%f000Z')
+      </when>
+      <when test="condition.field.definition.valueType == 'object'">(CASE WHEN JSON_TYPE(${condition.field.identifier})
+        = 'NULL' THEN NULL ELSE ${condition.field.identifier} END)
+      </when>
+      <otherwise>CAST(CAST(${condition.field.identifier} AS CHAR CHARACTER SET utf8mb4) AS BINARY)</otherwise>
+    </choose>
+  </sql>
+  <sql id="orderValue">
+    <choose>
+      <when test="order.field.definition.valueType == 'integer'">CAST(${order.field.identifier} AS DECIMAL(65,0))</when>
+      <when test="order.field.definition.valueType == 'decimal'">CAST(${order.field.identifier} AS DECIMAL(65,30))
+      </when>
+      <when test="order.field.definition.valueType == 'boolean'">(CASE WHEN ${order.field.identifier} IS NULL THEN NULL
+        WHEN ${order.field.identifier} = 0 THEN 0 ELSE 1 END)
+      </when>
+      <when test="order.field.definition.valueType == 'date'">DATE_FORMAT(${order.field.identifier}, '%Y-%m-%d')</when>
+      <when test="order.field.definition.valueType == 'datetime'">DATE_FORMAT(${order.field.identifier},
+        '%Y-%m-%dT%H:%i:%s.%f000Z')
+      </when>
+      <when test="order.field.definition.valueType == 'object'">(CASE WHEN JSON_TYPE(${order.field.identifier}) = 'NULL'
+        THEN NULL ELSE ${order.field.identifier} END)
+      </when>
+      <otherwise>CAST(CAST(${order.field.identifier} AS CHAR CHARACTER SET utf8mb4) AS BINARY)</otherwise>
+    </choose>
+  </sql>
+
+  <sql id="conditions">
+    <foreach collection="query.conditions" item="condition">
+      AND
+      <choose>
+        <when test="condition.operator == 'is_null'">
+          <include refid="conditionValue"/>
+          <choose>
+            <when test="condition.isNull">IS NULL</when>
+            <otherwise>IS NOT NULL</otherwise>
+          </choose>
+        </when>
+        <when test="condition.operator == 'contains'">
+          LOCATE(#{condition.value},<include refid="conditionValue"/>) &gt; 0
+        </when>
+        <when test="condition.operator == 'in'">
+          <include refid="conditionValue"/>
+          IN
+          <foreach collection="condition.values" item="value" open="(" close=")" separator=",">
+            <choose>
+              <when test="condition.field.definition.valueType == 'object'">CAST(#{value} AS JSON)</when>
+              <otherwise>#{value}</otherwise>
+            </choose>
+          </foreach>
+        </when>
+        <otherwise>
+          <include refid="conditionValue"/>
+          <choose>
+            <when test="condition.operator == 'eq'">=</when>
+            <when test="condition.operator == 'ne'">&lt;&gt;</when>
+            <when test="condition.operator == 'gt'">&gt;</when>
+            <when test="condition.operator == 'gte'">&gt;=</when>
+            <when test="condition.operator == 'lt'">&lt;</when>
+            <when test="condition.operator == 'lte'">&lt;=</when>
+          </choose>
+          <choose>
+            <when test="condition.field.definition.valueType == 'object'">CAST(#{condition.value} AS JSON)</when>
+            <otherwise>#{condition.value}</otherwise>
+          </choose>
+        </otherwise>
+      </choose>
+    </foreach>
+  </sql>
+
+  <sql id="totalLength">
+    (<foreach collection="query.fields" item="lengthField" separator=" + ">
+    COALESCE(OCTET_LENGTH(${lengthField.identifier}), 0)</foreach>)
+  </sql>
+  <resultMap id="dataRow" type="java.util.LinkedHashMap" autoMapping="true">
+    <result property="too_large" column="too_large" javaType="boolean"/>
+  </resultMap>
+  <!-- 名称已逐项核对实际库表，并由 DataQueryParameters 单独引用；只在此处展开标识符。 -->
+  <!-- MariaDB 驱动使用正数启用分批读取，每次只保留一行供字节预算检查。 -->
+  <select id="readRows" resultMap="dataRow" resultSetType="FORWARD_ONLY" fetchSize="1">
+    <bind name="rowLimit" value="query.plan.limit + 1"/>
+    SELECT /*+ MAX_EXECUTION_TIME(${queryBudget.remainingMillis()}) */
+    <foreach collection="query.fields" item="field" index="index" separator=",">
+      IF(
+      <include refid="totalLength"/> &gt; #{byteBudget}, NULL,
+      <choose>
+        <when test="field.definition.valueType == 'boolean'">
+          CASE WHEN ${field.identifier} IS NULL THEN NULL WHEN ${field.identifier} = 0 THEN 'false' ELSE 'true' END
+        </when>
+        <when test="field.definition.valueType == 'datetime'">DATE_FORMAT(${field.identifier},
+          '%Y-%m-%dT%H:%i:%s.%f000Z')
+        </when>
+        <otherwise>CAST(${field.identifier} AS CHAR CHARACTER SET utf8mb4)</otherwise>
+      </choose>
+      ) AS v${index}
+    </foreach>
+    ,
+    <include refid="totalLength"/> &gt; #{byteBudget} AS too_large
+    FROM ${query.database}.${query.table}
+    WHERE 1 = 1
+    <include refid="conditions"/>
+    <if test="!query.order.isEmpty()">
+      ORDER BY
+      <foreach collection="query.order" item="order" separator=",">
+        <include refid="orderValue"/>
+        <choose>
+          <when test="order.ascending">ASC</when>
+          <otherwise>DESC</otherwise>
+        </choose>
+      </foreach>
+    </if>
+    LIMIT #{rowLimit} OFFSET #{query.plan.offset}
+  </select>
+</mapper>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.knowledge.KnowledgeDocumentSqlMapper">
+  <select id="findFileObjectLocked" resultType="com.stonewu.agenteam.model.knowledge.entity.KnowledgeDocumentQueryRow">
+    SELECT d.*, (SELECT f.size_bytes FROM file_object f WHERE f.enterprise_id = d.enterprise_id AND f.id = d.file_id) AS
+    file_size_bytes FROM knowledge_document d WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+  <select id="referencesReadableFileKnowledgeDocument" resultType="Integer">
+    SELECT COUNT(*) FROM knowledge_document d WHERE d.enterprise_id = #{enterprise} AND d.resource_id = #{resource} AND
+    d.deleted_at IS NULL
+    AND (d.file_id = #{file} OR d.active_file_id = #{file} OR EXISTS (SELECT 1 FROM knowledge_chunk c
+    WHERE c.enterprise_id = d.enterprise_id AND c.document_id = d.id AND c.file_id = #{file} AND c.generation &lt;=
+    d.active_generation))
+  </select>
+  <update id="reprocessKnowledgeDocument">
+    UPDATE knowledge_document SET pending_generation = last_generation + 1, last_generation = last_generation + 1,
+    status = 'queued', error_code = NULL, error_summary = NULL, revision = revision + 1, updated_at = #{now} WHERE
+    enterprise_id = #{enterpriseId} AND id = #{id}
+  </update>
+  <update id="completeKnowledgeDocument">
+    UPDATE knowledge_document SET active_file_id = file_id, active_generation = pending_generation, pending_generation =
+    0,
+    status = 'ready', chunk_count = #{count}, page_count = #{pages}, error_code = NULL, error_summary = NULL,
+    processed_at = #{now},
+    revision = revision + 1, updated_at = #{now} WHERE enterprise_id = #{enterpriseId} AND id = #{id}
+  </update>
+</mapper>

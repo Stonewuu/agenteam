@@ -1,0 +1,62 @@
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+map $http_upgrade $agenteam_connection {
+    default upgrade;
+    '' '';
+}
+
+include /etc/nginx/agenteam-realip.conf;
+
+# 授权回调携带一次性授权码，访问日志只保留方法和路径。
+log_format agenteam_request '$request_id $remote_addr [$time_local] "$request_method $uri $server_protocol" $status $body_bytes_sent $request_time';
+
+server {
+    listen 80;
+    server_name _;
+    client_max_body_size 20m;
+    client_body_timeout 60s;
+    access_log /var/log/nginx/access.log agenteam_request;
+    set $agenteam_backend http://backend:8080;
+    set $agenteam_frontend http://frontend:3000;
+    set $agenteam_scheme ${AGENTEAM_PUBLIC_SCHEME};
+
+    location = /nginx-health {
+        access_log off;
+        return 204;
+    }
+
+    include /etc/nginx/agenteam-api.conf;
+
+    # 包括页面深层地址、字体、公开图片、/_next/static 和 Next.js 页面流。
+    location / {
+        proxy_pass $agenteam_frontend$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Port "";
+        proxy_set_header X-Forwarded-By "";
+        proxy_set_header X-Real-IP "";
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $agenteam_scheme;
+        proxy_set_header Forwarded "";
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $agenteam_connection;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+    }
+}
+
+# 分端口模式的独立接口入口；没有映射此端口时仅在容器内存在。
+server {
+    listen 81;
+    server_name _;
+    client_max_body_size 20m;
+    client_body_timeout 60s;
+    access_log /var/log/nginx/access.log agenteam_request;
+    set $agenteam_backend http://backend:8080;
+    set $agenteam_scheme ${AGENTEAM_PUBLIC_SCHEME};
+    include /etc/nginx/agenteam-api.conf;
+    location / {
+        return 404;
+    }
+}

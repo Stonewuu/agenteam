@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.http.ApiRequestMapper">
+  <resultMap id="request" type="com.stonewu.agenteam.model.http.entity.StoredApiRequest">
+    <constructor>
+      <idArg column="id" javaType="String"/>
+      <arg column="request_hash" javaType="String"/>
+      <arg column="status" javaType="String"/>
+      <arg column="http_status" javaType="java.lang.Integer"/>
+      <arg column="response_json" javaType="String"/>
+    </constructor>
+  </resultMap>
+  <select id="findLocked" resultMap="request">
+    SELECT id, request_hash, status, http_status, response_json FROM api_request
+    WHERE user_id = #{userId} AND scope_key = #{scope} AND operation_key = #{operationHash} AND request_key = #{keyHash}
+    FOR UPDATE
+  </select>
+</mapper>

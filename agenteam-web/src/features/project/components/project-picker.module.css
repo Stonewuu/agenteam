@@ -1,0 +1,175 @@
+.control {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  width: var(--project-width, auto);
+  max-width: min(260px, 70vw);
+  border: 0;
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 12px;
+  border-radius: 8px;
+  transition: background-color 200ms var(--motion-ease), width 200ms var(--motion-ease);
+}
+
+.measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: max-content;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.trigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trigger svg {
+  flex-shrink: 0;
+}
+
+.trigger:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 1px;
+}
+
+.browser, .form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search > :first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.search button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(48vh, 390px);
+  overflow-y: auto;
+  min-height: 64px;
+  margin: -6px;
+  padding: 6px;
+  scroll-padding: 6px;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  transition: background-color 200ms var(--motion-ease), border-color 200ms var(--motion-ease);
+}
+
+.project:hover:not(:disabled), .project[aria-pressed="true"] {
+  background: var(--surface-hover);
+  border-color: var(--border);
+}
+
+.project > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.project strong {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.project small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.project svg {
+  flex-shrink: 0;
+}
+
+.notice {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.error {
+  margin: 0;
+  color: var(--red-text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.textButton {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px 8px;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .trigger, .textButton {
+    min-height: 44px;
+  }
+
+  .search {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger, .project {
+    transition: none;
+  }
+}

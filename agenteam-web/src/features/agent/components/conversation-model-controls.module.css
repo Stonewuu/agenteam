@@ -1,0 +1,165 @@
+.trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+  width: var(--model-width, auto);
+  max-width: 230px;
+  height: 38px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  transition: width 200ms var(--motion-ease), background-color 200ms var(--motion-ease);
+}
+
+.trigger:hover:not(:disabled), .trigger[data-popup-open] {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 1px;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.effort {
+  flex-shrink: 0;
+}
+
+.trigger > svg {
+  flex-shrink: 0;
+}
+
+.measure {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.menu {
+  width: max-content;
+  min-width: 0;
+  max-width: min(280px, calc(100vw - 24px - var(--reasoning-space, 0px)));
+  padding: 6px;
+  border-radius: 12px;
+  transition: max-width 200ms var(--motion-ease);
+}
+
+.shiftPosition {
+  transition: left 200ms var(--motion-ease), right 200ms var(--motion-ease), transform 200ms var(--motion-ease);
+}
+
+.submenu {
+  width: max-content;
+  min-width: 0;
+  max-width: min(200px, calc(100vw - 24px));
+  padding: 6px;
+  border-radius: 12px;
+}
+
+.menu .option, .submenu .option {
+  min-height: 32px;
+  padding: 5px 10px;
+  gap: 8px;
+  font-size: 13px;
+  border-radius: 7px;
+}
+
+.submenu .option {
+  padding-right: 30px;
+}
+
+.optionText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.optionText small {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.error {
+  margin: 8px 4px 0;
+  font-size: 12px;
+  color: var(--red-text);
+  line-height: 1.6;
+}
+
+.error button {
+  min-height: 32px;
+  padding: 2px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+@container (max-width: 600px) {
+  .trigger {
+    max-width: 170px;
+  }
+}
+
+@container (max-width: 480px) {
+  .trigger {
+    max-width: 130px;
+  }
+}
+
+@media (max-width: 680px) {
+  .trigger {
+    flex: 0 1 auto;
+    min-width: 44px;
+    max-width: min(130px, 100%);
+    height: 44px;
+    padding-inline: 3px;
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .measure {
+    gap: 3px;
+  }
+
+  .trigger > svg, .measure > svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .menu .option, .submenu .option, .error button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger, .menu, .shiftPosition {
+    transition: none;
+  }
+
+  .menu, .submenu {
+    animation: none;
+  }
+}

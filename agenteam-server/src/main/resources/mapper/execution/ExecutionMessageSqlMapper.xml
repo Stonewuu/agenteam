@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.ExecutionMessageSqlMapper">
+  <select id="historyMessages" resultType="com.stonewu.agenteam.model.execution.entity.ExecutionMessageQueryRow">
+    SELECT m.*, f.value AS feedback FROM agent_message m
+    JOIN agent_conversation c ON c.enterprise_id = m.enterprise_id AND c.id = m.conversation_id
+    LEFT JOIN message_feedback f ON f.enterprise_id = m.enterprise_id AND f.message_id = m.id AND f.user_id = c.user_id
+    WHERE m.enterprise_id = #{enterprise} AND m.conversation_id = #{conversation}
+    <if test="beforeTime != null">
+      AND (m.created_at, CASE WHEN m.role = 'user' THEN 0 ELSE 1 END, m.id) &lt; (#{beforeTime}, #{beforeRole},
+      #{beforeId})
+    </if>
+    ORDER BY m.created_at DESC, CASE WHEN m.role = 'user' THEN 0 ELSE 1 END DESC, m.id DESC LIMIT #{limit}
+  </select>
+  <insert id="feedbackMessageFeedback2">
+    INSERT INTO message_feedback (enterprise_id, user_id, message_id, value, comment, created_at, updated_at) VALUES
+    (#{enterprise}, #{user}, #{message}, #{value}, #{comment}, #{now}, #{now})
+    ON DUPLICATE KEY UPDATE value = VALUES(value), comment = VALUES(comment), updated_at = VALUES(updated_at)
+  </insert>
+</mapper>

@@ -1,0 +1,24 @@
+.frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: inherit;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.content {
+  display: flow-root;
+  gap: inherit;
+  align-self: start;
+  min-width: 0;
+  min-height: 0;
+}
+
+.frame[data-content-layout="stack"] > .content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 外层和内容层均保持可见溢出，阴影、聚焦外环不受尺寸动画裁切。 */

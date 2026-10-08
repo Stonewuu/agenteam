@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.project.WorkspaceProjectFileSqlMapper">
+  <!-- 与附件清理锁住同一批文件行，防止文件刚被清理又登记到项目。 -->
+  <select id="lockReadyInputs" resultType="string">
+    SELECT id FROM file_object WHERE enterprise_id = #{enterprise} AND owner_user_id = #{user}
+    AND purpose = 'attachment' AND status = 'ready' AND deleted_at IS NULL
+    AND (expires_at IS NULL OR expires_at &gt; #{now}) AND id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    ORDER BY id FOR UPDATE
+  </select>
+</mapper>

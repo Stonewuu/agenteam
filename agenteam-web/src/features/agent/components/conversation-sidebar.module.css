@@ -1,0 +1,372 @@
+.sidebar {
+  position: relative;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border-left: 0 solid var(--border);
+  opacity: 0;
+  visibility: hidden;
+  background: var(--surface);
+  transition: flex-basis var(--conversation-layout-duration, 220ms) var(--motion-ease), width var(--conversation-layout-duration, 220ms) var(--motion-ease), opacity 160ms ease, visibility 0s var(--conversation-layout-duration, 220ms);
+}
+
+.sidebar[data-open=true] {
+  flex-basis: var(--conversation-sidebar-width, 360px);
+  width: var(--conversation-sidebar-width, 360px);
+  border-left-width: 1px;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* 全宽面板直接跟随父区域；列表收起时不再对每次测量到的宽度重复启动过渡。 */
+.layout[data-sidebar-full=true]:not([data-sidebar-resizing=true]):not([data-sidebar-settling=true]) .sidebar[data-open=true] {
+  flex-basis: 100%;
+  width: 100%;
+}
+
+.layout {
+  position: relative;
+  --conversation-file-heading-inset: max(14px, calc(var(--conversation-title-inset, 0px) - var(--conversation-area-width, 1200px) + var(--conversation-sidebar-width, 360px)));
+}
+
+.layout [data-conversation-main] {
+  transition: opacity 180ms ease, visibility 0s;
+}
+
+.layout[data-sidebar-full=true] [data-conversation-main] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 0s 180ms;
+}
+
+/* 完全隐藏后跳过正文排版，开始拖动或恢复对话时立即恢复。 */
+.layout[data-sidebar-full=true]:not([data-sidebar-resizing=true]):not([data-sidebar-settling=true]) [data-conversation-main] {
+  content-visibility: hidden;
+}
+
+.layout[data-sidebar-resizing=true] [data-conversation-main] {
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+}
+
+/* 拖动时对话低于最小宽度才裁切；松开是否收起另按最小宽度的一半判断。 */
+.layout:is([data-sidebar-resizing=true], [data-sidebar-settling=true]) [data-conversation-main] > * {
+  width: 100%;
+  min-width: max(400px, calc(var(--conversation-area-width, 1200px) * 0.2));
+}
+
+.layout[data-sidebar-resizing=true] .sidebar {
+  transition: none;
+  user-select: none;
+}
+
+.layout[data-sidebar-resizing=true] .heading {
+  transition: none;
+}
+
+.contents {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.toggleSpace {
+  flex: 0 0 32px;
+  width: 32px;
+}
+
+.sharedToggle {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  right: var(--shell-gutter, 22px);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  transition: right 220ms var(--motion-ease), background-color 160ms ease;
+}
+
+.layout[data-sidebar-open=true]:not([data-sidebar-compact=true]) .sharedToggle {
+  right: 10px;
+}
+
+.sharedToggle[aria-expanded=false] svg path:last-child {
+  transform: scaleX(-1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sharedToggle svg path:last-child {
+  transition: transform 180ms var(--motion-ease);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.restoreConversation {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.layout[data-sidebar-full=true] .restoreConversation {
+  display: inline-flex;
+}
+
+.layout[data-sidebar-full=true] .tabList {
+  margin-right: auto;
+}
+
+.resizeHandle {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 3;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.resizeHandle::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: transparent;
+  transition: background-color 140ms ease;
+}
+
+.resizeHandle:hover::after, .resizeHandle:focus-visible::after, .layout[data-sidebar-resizing=true] .resizeHandle::after {
+  background: var(--accent-text);
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 10px 0 var(--conversation-file-heading-inset, 14px);
+  border-bottom: 1px solid var(--border);
+  transition: padding-left var(--conversation-layout-duration, 220ms) var(--motion-ease);
+}
+
+.heading > :global(.icon-button) {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  color: var(--secondary);
+}
+
+.tabList {
+  display: flex;
+  flex: 1;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  min-height: 51px;
+  padding: 0;
+  border-radius: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.tabItem {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.tabItem[data-closable] {
+  max-width: 200px;
+}
+
+.tabItem[data-closable] .tab {
+  flex: 1;
+  min-width: 0;
+  padding-right: 28px;
+}
+
+.tab span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeTab {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 30px;
+  min-width: 26px;
+  padding: 0;
+  transform: translateY(-50%);
+  border-radius: 6px;
+  color: var(--secondary);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.closeTab:hover, .closeTab:focus-visible {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.closeTab:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  height: auto;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+.tab[data-active] {
+  color: var(--accent-text);
+}
+
+.tab::after {
+  bottom: 0;
+  height: 2px;
+  background: var(--accent-text);
+}
+
+.panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+:global(.agenteam-dialog) .mobileBody {
+  display: flex;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.mobileBody .contents {
+  width: 100%;
+  min-height: 0;
+}
+
+:global(.agenteam-dialog.drawer):has(.mobileBody) {
+  width: min(460px, 100%);
+  max-width: 100%;
+}
+
+.mobileBody .heading {
+  min-height: 52px;
+  padding-left: 16px;
+}
+
+.mobileBody .tab {
+  min-height: 44px;
+}
+
+.mobileBody .closeTab {
+  width: 44px;
+  height: 44px;
+}
+
+.mobileBody .tabItem[data-closable] .tab {
+  padding-right: 46px;
+}
+
+/* 切换会话直接恢复初始布局，只有用户主动展开、收起和拖动才执行过渡。 */
+.layout[data-sidebar-reset=true] .sidebar,
+.layout[data-sidebar-reset=true] [data-conversation-main],
+.layout[data-sidebar-reset=true] .heading,
+.layout[data-sidebar-reset=true] .sharedToggle {
+  transition: none;
+}
+
+@media (max-width: 800px) {
+  .toggleSpace {
+    flex-basis: 44px;
+    width: 44px;
+  }
+
+  .layout .sharedToggle {
+    top: 4px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    color: var(--secondary);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .layout .sharedToggle:hover, .layout .sharedToggle:active {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
+  .layout .sharedToggle:focus-visible {
+    outline: 2px solid var(--input-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 800px) and (hover: none) {
+  .layout .sharedToggle:hover:not(:active) {
+    color: var(--secondary);
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .heading, .closeTab, .layout [data-conversation-main] {
+    transition: none;
+  }
+}

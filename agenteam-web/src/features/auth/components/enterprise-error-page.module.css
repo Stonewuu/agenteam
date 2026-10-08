@@ -1,0 +1,132 @@
+.page {
+  display: flex;
+  min-height: 100dvh;
+  padding: 32px 24px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.content {
+  width: min(100%, 440px);
+  margin: auto;
+}
+
+.card {
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -.4px;
+}
+
+.message {
+  margin: 10px 0 24px;
+  color: var(--secondary);
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 24px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--accent-action);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.retry:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.alternatives {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-light);
+  text-align: left;
+}
+
+.label {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.accountActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 12px;
+}
+
+.accountAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--secondary-on-bg);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.accountAction:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.actionError {
+  margin: 8px 0 0;
+  color: var(--red-text);
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 24px 16px;
+  }
+
+  .card {
+    padding: 28px 22px;
+  }
+
+  .title {
+    font-size: 21px;
+  }
+}

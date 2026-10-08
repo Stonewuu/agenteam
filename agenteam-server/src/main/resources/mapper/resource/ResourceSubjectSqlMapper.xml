@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.resource.ResourceSubjectSqlMapper">
+  <sql id="active">
+    s.status = 'active' AND u.status = 'active'
+  </sql>
+  <select id="listSubjects" resultType="com.stonewu.agenteam.model.resource.entity.ResourceSubjectQueryRow">
+    SELECT s.user_id AS id, s.display_name AS name,
+    (<include refid="active"/>) AS active, s.created_at
+    FROM enterprise_member s JOIN app_user u ON u.id = s.user_id
+    WHERE s.enterprise_id = #{enterprise} AND LOCATE(#{query}, s.display_name) > 0
+    <if test="selected == null or ownerPermission != null">AND
+      <include refid="active"/>
+    </if>
+    <if test="ownerPermission != null">
+      AND EXISTS (SELECT 1 FROM sys_user_role ur
+      JOIN sys_role role_value ON role_value.enterprise_id = ur.enterprise_id AND role_value.id = ur.role_id
+      JOIN sys_role_permission rp ON rp.enterprise_id = role_value.enterprise_id AND rp.role_id = role_value.id
+      WHERE ur.enterprise_id = s.enterprise_id AND ur.user_id = s.user_id AND role_value.status = 'active'
+      AND role_value.deleted_at IS NULL AND rp.permission_code = #{ownerPermission})
+    </if>
+    <if test="selected != null">
+      AND s.user_id IN
+      <foreach collection="selected" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </if>
+    <if test="cursor != null">
+      AND (s.created_at &lt; #{cursor.time} OR (s.created_at = #{cursor.time} AND
+      s.user_id &lt; #{cursor.id}))
+    </if>
+    ORDER BY s.created_at DESC, s.user_id DESC LIMIT #{limit}
+  </select>
+</mapper>

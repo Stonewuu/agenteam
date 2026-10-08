@@ -1,0 +1,153 @@
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.card[data-state="pending"] {
+  background: color-mix(in srgb, var(--amber-soft) 45%, var(--surface));
+  border-color: color-mix(in srgb, var(--amber) 50%, var(--border));
+}
+
+.card[data-state="pending"] header > span {
+  color: var(--amber-text);
+}
+
+.card header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.card header > span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.card p {
+  margin: 0;
+}
+
+.target {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.card :global([data-slot="collapsible-trigger"]) {
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.inline p {
+  margin: 0;
+}
+
+.inline .target {
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.inline :global([data-slot="collapsible-trigger"]) {
+  min-height: 28px;
+  padding-block: 4px;
+  cursor: pointer;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.inline :global([data-slot="collapsible-trigger"]):focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.inline .expires {
+  margin-top: 6px;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.description {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.notice {
+  color: var(--amber-text);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.actions .reasonToggle {
+  margin-left: auto;
+  padding-inline: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.reasonToggle:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.reasonToggle:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.decision {
+  color: var(--secondary);
+}
+
+.inline[data-state="rejected"] .decision, .inline[data-state="expired"] .decision, .inline[data-state="revoked"] .decision {
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 600px) {
+  .actions button, .inline :global([data-slot="collapsible-trigger"]) {
+    min-height: 44px;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+
+  .actions .reasonToggle {
+    flex: 0 0 auto;
+  }
+}

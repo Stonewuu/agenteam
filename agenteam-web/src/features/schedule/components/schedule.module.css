@@ -1,0 +1,548 @@
+.header, .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.toolbar input {
+  max-width: 360px;
+}
+
+.list {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  min-width: 0;
+}
+
+.card h2, .card h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.card a {
+  color: inherit;
+  text-underline-offset: 4px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 20px 0;
+}
+
+.facts div {
+  min-width: 0;
+}
+
+.facts dt {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.inputText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.85;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.days label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.times {
+  padding-left: 24px;
+  line-height: 2;
+  font-variant-numeric: tabular-nums;
+}
+
+.section {
+  margin-top: 28px;
+}
+
+.section h2 {
+  font-size: 20px;
+}
+
+.formDivider {
+  border-top: 1px solid var(--border-light);
+  margin-top: 8px;
+  padding-top: 20px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+@media (max-width: 800px) {
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .card {
+    padding: 18px;
+  }
+
+  .facts {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+  }
+}
+
+.page {
+  width: 100%;
+  max-width: var(--workspace-content-width, 1180px);
+  margin-inline: auto;
+}
+
+.scheduleGrid, .loadingCards > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 20px;
+}
+
+.scheduleCard {
+  container: schedule-card / inline-size;
+  padding: 22px 22px 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgb(30 24 18 / .025);
+}
+
+.cardHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.cardHeading > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 5px 0 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.timezone {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.scheduleIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.planTitle {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.planTitle:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.planTitle:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.taskSummary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 17px 0 0;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.scheduleCard .facts {
+  grid-template-columns: 1fr;
+  padding: 14px 16px;
+  background: var(--surface-soft);
+  border-radius: 12px;
+  margin: 20px 0;
+  gap: 13px;
+}
+
+.scheduleCard .facts > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.scheduleCard .facts dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 11px;
+  margin-bottom: 0;
+}
+
+.scheduleCard .facts dd {
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.result[data-state="empty"], .result[data-state="cancelled"], .result[data-state="skipped"] {
+  color: var(--muted);
+}
+
+.result[data-state="completed"] {
+  color: var(--mint-text);
+}
+
+.result[data-state="failed"], .result[data-state="blocked"] {
+  color: var(--red-text);
+}
+
+.result[data-state="waiting_approval"] {
+  color: var(--amber-text);
+}
+
+.pauseReason {
+  margin: 0 0 16px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--amber-soft);
+  color: var(--amber-text);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.scheduleCard footer {
+  border-top: 1px solid var(--border-light);
+  padding: 10px 0;
+  margin-top: auto;
+}
+
+.compactActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.enableAction {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 9px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.actionButtons {
+  max-width: 100%;
+  margin-left: auto;
+  gap: 6px;
+}
+
+.actionButtons > button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.actionButtons > :global(.icon-button) {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.compactActions .runButton {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent-text);
+}
+
+.toolbar > div:last-child {
+  margin-left: auto;
+}
+
+.toolbar :global(.search-input) {
+  width: 240px;
+}
+
+.planTable {
+  min-width: 1120px;
+}
+
+.planTable .planTitle {
+  font-size: 14px;
+}
+
+.planNameCell {
+  min-width: 210px;
+  max-width: 320px;
+}
+
+.tableSummary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 320px;
+  margin-top: 6px;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.tablePauseReason {
+  max-width: 320px;
+  margin-top: 7px;
+  color: var(--amber-text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.nextRunCell {
+  min-width: 145px;
+  font-variant-numeric: tabular-nums;
+}
+
+.planActionsCell {
+  width: 330px;
+  min-width: 330px;
+}
+
+.planTable .result {
+  white-space: nowrap;
+}
+
+.editorGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  align-items: start;
+}
+
+.timePreview {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+}
+
+.detailActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-light);
+}
+
+.timePreview h3 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.timePreview .times {
+  padding-left: 20px;
+  font-size: 12px;
+}
+
+.timePreview p {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.section > h2 {
+  font-size: 17px;
+}
+
+@media (max-width: 700px) {
+  .editorGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .timePreview {
+    position: static;
+  }
+
+  .toolbar > div:last-child {
+    width: 100%;
+  }
+
+  .toolbar :global(.search-input) {
+    flex: 1;
+    width: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .scheduleCard {
+    padding: 18px 16px 0;
+  }
+
+  .scheduleCard .facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin: 18px 0;
+  }
+
+  .scheduleCard .facts > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .scheduleCard .facts dt {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+
+  .scheduleCard .facts dd {
+    text-align: right;
+  }
+
+  .compactActions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .actionButtons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .actionButtons > button {
+    min-height: 44px;
+    padding: 8px;
+  }
+
+  .actionButtons > :global(.icon-button) {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 440px) {
+  .actionButtons > button:not(:global(.icon-button)) > svg {
+    display: none;
+  }
+}
+
+@container schedule-card (max-width: 420px) {
+  .scheduleCard .facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .scheduleCard .facts > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .scheduleCard .facts dt {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+
+  .scheduleCard .facts dd {
+    text-align: right;
+  }
+
+  .actionButtons {
+    width: 100%;
+  }
+}
+
+.card {
+  box-shadow: var(--shadow);
+}

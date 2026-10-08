@@ -1,0 +1,37 @@
+.actions {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.actions:empty {
+  display: none;
+}
+
+.actions > a, .actions > button {
+  min-height: 44px;
+  border-radius: 12px;
+  transition: background-color 180ms ease, opacity 180ms ease;
+}
+
+.primary {
+  flex: 1 1 auto;
+}
+
+.more {
+  flex: 0 0 44px;
+  padding: 0;
+}
+
+.actions[aria-busy="true"] {
+  opacity: .55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions > a, .actions > button {
+    transition: none;
+  }
+}

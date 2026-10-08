@@ -1,0 +1,3 @@
+com.stonewu.agenteam.configuration.edition.CommunityEditionAutoConfiguration
+com.stonewu.agenteam.configuration.edition.CommunityEnterpriseAutoConfiguration
+com.stonewu.agenteam.configuration.edition.CommunityUsageAutoConfiguration

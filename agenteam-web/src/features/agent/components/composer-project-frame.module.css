@@ -1,0 +1,138 @@
+.frame {
+  --project-reveal: 38px;
+  --project-control: 32px;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding-top: var(--project-reveal);
+}
+
+/* 感应区域固定在整个上沿，不跟随卡片和箭头移动。 */
+.projectHover {
+  position: absolute;
+  z-index: 0;
+  inset: -8px 0 auto;
+  height: calc(var(--project-reveal) + 8px);
+}
+
+.project {
+  position: absolute;
+  inset: 8px 20px auto;
+  min-width: 0;
+  height: calc(var(--project-reveal) + 24px);
+  padding: 2px 12px 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  background: var(--surface-soft);
+  transform: translateY(calc(var(--project-reveal) - 14px));
+  clip-path: inset(0 0 calc(var(--project-reveal) + 10px) 0 round 14px 14px 0 0);
+  transition: transform 200ms var(--motion-ease), clip-path 200ms var(--motion-ease);
+  transition-delay: 120ms;
+}
+
+.projectHover:hover .project, .projectHover:focus-within .project, .projectHover:has(button[aria-expanded="true"]) .project, .projectHover[data-saving="true"] .project {
+  transform: translateY(0);
+  clip-path: inset(0 0 24px 0 round 14px 14px 0 0);
+  transition-delay: 0ms;
+}
+
+.projectHover[data-always-visible="true"] .project {
+  transform: translateY(0);
+  clip-path: inset(0 0 24px 0 round 14px 14px 0 0);
+  transition-delay: 0ms;
+}
+
+.project > div {
+  flex-wrap: nowrap;
+  height: var(--project-control);
+}
+
+.project button[aria-haspopup="dialog"] {
+  min-height: var(--project-control);
+  height: var(--project-control);
+  max-width: 100%;
+  text-align: left;
+}
+
+.project button > svg {
+  pointer-events: none;
+}
+
+.surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.error {
+  margin: 8px 4px 0;
+  color: var(--red-text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.error button {
+  min-height: 32px;
+  padding: 2px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .project {
+    transform: none;
+    clip-path: inset(0 0 24px 0 round 14px 14px 0 0);
+  }
+}
+
+@media (max-width: 680px), (hover: none), (pointer: coarse) {
+  .frame {
+    --project-reveal: 50px;
+    --project-control: 44px;
+  }
+}
+
+@media (max-width: 680px) {
+  .project {
+    inset-inline: 12px;
+    padding-inline: 8px;
+  }
+
+  .project button[aria-haspopup="dialog"] {
+    font-size: 11px;
+    gap: 5px;
+  }
+
+  .project button > svg:first-child {
+    width: 14px;
+    height: 14px;
+  }
+
+  .error button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .project {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+}

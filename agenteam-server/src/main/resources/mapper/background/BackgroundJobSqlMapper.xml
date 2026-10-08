@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper">
+  <select id="claimFileWorkEnterprise" resultType="String">
+    SELECT e.id FROM enterprise e WHERE EXISTS (SELECT 1 FROM background_job j WHERE j.enterprise_id = e.id
+    AND j.kind = #{kind} AND j.available_at &lt;= #{now} AND (j.status = 'queued' OR (j.status = 'leased' AND
+    j.lease_until &lt;= #{now})))
+    AND (SELECT COUNT(*) FROM background_job busy WHERE busy.enterprise_id = e.id
+    AND busy.kind IN ('file_scan', 'document_parse') AND busy.status = 'leased' AND busy.lease_until &gt; #{now}) &lt; 2
+    ORDER BY e.id LIMIT 1 FOR UPDATE SKIP LOCKED
+  </select>
+  <select id="claimBackgroundJob" resultType="com.stonewu.agenteam.model.background.entity.BackgroundJobQueryRow">
+    SELECT id, enterprise_id, owner_user_id, kind, payload_json, attempt_count, max_attempts, lease_version
+    FROM background_job WHERE kind = #{kind} AND available_at &lt;= #{now}
+    AND (status = 'queued' OR (status = 'leased' AND lease_until &lt;= #{now})) AND (#{enterprise} IS NULL OR
+    enterprise_id = #{enterprise})
+    ORDER BY available_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+  </select>
+  <select id="lockOwnedBackgroundJob" resultType="String">
+    SELECT id FROM background_job WHERE id = #{id} AND status = 'leased' AND lease_owner = #{leaseOwner} AND
+    lease_version = #{leaseVersion} AND lease_until &gt; #{now} FOR UPDATE
+  </select>
+</mapper>

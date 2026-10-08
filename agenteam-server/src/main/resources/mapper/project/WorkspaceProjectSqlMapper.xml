@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.project.WorkspaceProjectSqlMapper">
+  <!-- 使用带锁读取看到刚刚完成的并发创建结果，避免项目目录互相包含。 -->
+  <select id="conflictingDirectory" resultType="string">
+    SELECT id FROM workspace_project WHERE workspace_id = #{workspace}
+    AND (directory_key IN
+    <foreach collection="parents" item="path" open="(" close=")" separator=",">#{path}</foreach>
+    OR directory_key LIKE #{prefix} ESCAPE '=')
+    LIMIT 1 FOR UPDATE
+  </select>
+</mapper>

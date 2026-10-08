@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.workspace.WorkspaceSearchSqlMapper">
+  <select id="searchEmployees" resultType="com.stonewu.agenteam.model.workspace.entity.WorkspaceSearchQueryRow">
+    SELECT r.id, LEFT(v.name, 100) AS name, LEFT(v.description, 500) AS description,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon, JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS
+    color
+    FROM resource r JOIN resource_version v ON v.enterprise_id = r.enterprise_id AND v.resource_id = r.id AND v.id =
+    r.published_version_id
+    LEFT JOIN agent_listing l ON l.enterprise_id = r.enterprise_id AND l.agent_id = r.id
+    LEFT JOIN agent_hire h ON h.enterprise_id = r.enterprise_id AND h.agent_id = r.id AND h.user_id = #{user}
+    WHERE r.enterprise_id = #{enterprise} AND r.kind = 'agent' AND r.deleted_at IS NULL AND LOCATE(#{query}, v.name) > 0
+    AND ((#{mine} AND h.status IN ('active','paused'))
+    <if test="market != null">OR (
+      <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+        <property name="scopePath" value="market"/>
+        <property name="alias" value="r"/>
+      </include>
+      AND l.listed = TRUE AND v.status = 'available')
+    </if>
+    )
+    ORDER BY v.published_at DESC, r.id DESC LIMIT 10
+  </select>
+  <select id="searchResources" resultType="com.stonewu.agenteam.model.workspace.entity.WorkspaceSearchQueryRow">
+    SELECT r.id, LEFT(r.name, 100) AS name, LEFT(r.description, 500) AS description, r.kind,
+    JSON_UNQUOTE(JSON_EXTRACT(d.config_json, '$.icon')) AS icon, JSON_UNQUOTE(JSON_EXTRACT(d.config_json, '$.color')) AS
+    color
+    FROM resource r LEFT JOIN resource_draft d ON d.enterprise_id = r.enterprise_id AND d.resource_id = r.id WHERE
+    <foreach collection="scopes" item="scope" open="(" separator=" OR " close=")">(
+      <include refid="com.stonewu.agenteam.mapper.permission.ResourceScopeSqlMapper.visible">
+        <property name="scopePath" value="scope"/>
+        <property name="alias" value="r"/>
+      </include>
+      )
+    </foreach>
+    AND LOCATE(#{query}, r.name) > 0 ORDER BY r.updated_at DESC, r.id DESC LIMIT 10
+  </select>
+  <select id="conversationsAgentConversation"
+          resultType="com.stonewu.agenteam.model.workspace.entity.WorkspaceSearchQueryRow">
+    SELECT c.id, LEFT(c.title, 100) AS name,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon, JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS
+    color
+    FROM agent_conversation c LEFT JOIN resource_version v ON v.enterprise_id = c.enterprise_id AND v.id =
+    c.agent_version_id
+    WHERE c.enterprise_id = #{enterprise} AND c.user_id = #{user} AND c.mode = 'normal' AND c.status IN
+    ('active','archived')
+    AND LOCATE(#{query}, c.title) &gt; 0 ORDER BY c.updated_at DESC, c.id DESC LIMIT 10
+  </select>
+</mapper>

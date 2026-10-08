@@ -1,0 +1,279 @@
+.shell {
+  display: flex;
+  height: 100dvh;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 232px;
+  flex: 0 0 232px;
+  padding: 26px 18px 18px;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 8px;
+  margin-bottom: 32px;
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brandMark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 20px;
+}
+
+.returnLink {
+  padding: 10px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.area {
+  padding: 12px 10px 0;
+  margin: 12px 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.navigation {
+  display: grid;
+  gap: 6px;
+}
+
+.navigation a, .destinations a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-decoration: none;
+  transition: background-color 220ms, color 220ms;
+}
+
+.navigation a:hover, .destinations a:hover, .returnLink:hover {
+  background: var(--surface-soft);
+  color: var(--foreground);
+}
+
+.navigation a[aria-current="page"], .destinations a[aria-current="true"] {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  font-weight: 600;
+}
+
+.destinations {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 34px;
+}
+
+.destinations a:last-child {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.destinations span {
+  font-size: 12px;
+}
+
+.main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  flex: 0 0 auto;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.location {
+  flex: 1;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.location span {
+  padding: 0 10px;
+}
+
+.location strong {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notification {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--foreground);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.account select {
+  max-width: 230px;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px;
+  color: var(--foreground);
+  background: var(--card);
+  font-size: 13px;
+}
+
+.account button, .menu {
+  min-height: 42px;
+  border: 0;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  background: transparent;
+  cursor: pointer;
+}
+
+.content {
+  min-height: 0;
+  overflow: auto;
+  padding: 36px clamp(20px, 4vw, 64px) 60px;
+  animation: page-appear 280ms ease-out;
+}
+
+.error {
+  padding: 12px 28px;
+  color: var(--danger, #b73249);
+}
+
+.menu {
+  display: none;
+}
+
+.mobileNavigation {
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+
+.mobileNavigation .brand {
+  display: none;
+}
+
+.shell a:focus-visible, .shell button:focus-visible, .shell select:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@keyframes page-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 850px) {
+  .sidebar {
+    display: none;
+  }
+
+  .menu {
+    display: block;
+    font-size: 20px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  .location {
+    display: none;
+  }
+
+  .account {
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  .account select {
+    max-width: min(230px, 54vw);
+    min-height: 44px;
+  }
+
+  .account button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .content {
+    padding: 24px 16px 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none;
+  }
+
+  .navigation a, .destinations a {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .account {
+    flex: 1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .account select {
+    flex: 1 1 100px;
+    min-width: 0;
+    max-width: 100%;
+  }
+}

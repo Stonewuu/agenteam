@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.RunCheckpointSqlMapper">
+  <insert id="saveRunCheckpoint">
+    INSERT INTO run_checkpoint (enterprise_id, run_id, checkpoint_no, lease_version, state_json, framework_state_key,
+    state_hash, updated_at)
+    VALUES (#{enterpriseId}, #{runId}, 1, #{version}, #{value}, #{stateKey}, #{value2}, #{now})
+    ON DUPLICATE KEY UPDATE checkpoint_no = checkpoint_no + IF(state_hash = VALUES(state_hash), 0, 1),
+    lease_version = VALUES(lease_version), state_json = VALUES(state_json), framework_state_key =
+    VALUES(framework_state_key),
+    state_hash = VALUES(state_hash), updated_at = VALUES(updated_at)
+  </insert>
+</mapper>

@@ -1,0 +1,32 @@
+.background {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 48%, color-mix(in srgb, var(--accent) 5%, var(--surface)));
+}
+
+.background > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: .34;
+  filter: blur(10px) saturate(.35);
+  transform: scale(1.12);
+}
+
+:global([data-theme="dark"]) .background > canvas {
+  opacity: .12;
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .background > canvas {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .background {
+    background: Canvas;
+  }
+}

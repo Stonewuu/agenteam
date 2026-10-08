@@ -1,0 +1,86 @@
+spring:
+  datasource:
+    # 测试默认拒绝连接任何业务依赖；需要数据库的测试必须显式注入隔离服务。
+    url: "jdbc:mariadb://127.0.0.1:1/agenteam"
+    driver-class-name: "org.mariadb.jdbc.Driver"
+    username: "unconfigured_test"
+    password: "unconfigured_test"
+    hikari:
+      connection-timeout: "1000"
+      connection-init-sql: "SET time_zone = '+00:00'"
+      data-source-properties:
+        connectionTimeZone: "+00:00"
+        forceConnectionTimeZoneToSession: "true"
+        preserveInstants: "true"
+        allowLocalInfile: "false"
+  sql:
+    init:
+      mode: "never"
+  flyway:
+    locations: "classpath:db/schema"
+    baseline-on-migrate: "false"
+    clean-disabled: "true"
+    validate-on-migrate: "true"
+  data:
+    redis:
+      host: "127.0.0.1"
+      port: "1"
+      password: ""
+  main:
+    banner-mode: "off"
+data:
+  query-recovery:
+    enabled: "false"
+execution:
+  worker:
+    enabled: "false"
+  events:
+    worker-enabled: "false"
+    live-enabled: "false"
+  workspace-files-root: "target/test-workspace-files"
+  user-workspaces-root: "target/test-user-workspaces"
+  workspace-preview-root: "target/test-file-preview"
+  workspace:
+    retention-enabled: "false"
+agenteam:
+  maintenance:
+    worker-enabled: "false"
+  demo:
+    worker-enabled: "false"
+logging:
+  level:
+    com:
+      icegreen:
+        greenmail:
+          user:
+            UserManager: "WARN"
+    io:
+      agentscope: "OFF"
+      modelcontextprotocol: "OFF"
+files:
+  inspection:
+    enabled: "false"
+  retention:
+    enabled: "false"
+  root: "target/test-files"
+  parser:
+    sandbox-enabled: "false"
+exports:
+  enabled: "false"
+operations:
+  metrics:
+    enabled: "false"
+management:
+  server:
+    port: "-1"
+  metrics:
+    use-global-registry: "false"
+  prometheus:
+    metrics:
+      export:
+        enabled: "false"
+knowledge:
+  processing:
+    enabled: "false"
+  retention:
+    enabled: "false"

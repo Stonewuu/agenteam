@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.RunApprovalSqlMapper">
+  <select id="findRunApprovalLocked" resultType="com.stonewu.agenteam.model.execution.entity.RunApprovalQueryRow">
+    SELECT * FROM run_approval WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+</mapper>

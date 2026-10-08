@@ -1,0 +1,31 @@
+server:
+  # 恢复备份后先检查数据、文件和外部操作，所有后台领取与清理保持关闭。
+  address: "127.0.0.1"
+management:
+  server:
+    address: "127.0.0.1"
+execution:
+  worker:
+    enabled: "false"
+  events:
+    worker-enabled: "false"
+agenteam:
+  mail:
+    worker-enabled: "false"
+  maintenance:
+    worker-enabled: "false"
+files:
+  inspection:
+    enabled: "false"
+  retention:
+    enabled: "false"
+knowledge:
+  processing:
+    enabled: "false"
+  retention:
+    enabled: "false"
+exports:
+  enabled: "false"
+data:
+  query-recovery:
+    enabled: "false"

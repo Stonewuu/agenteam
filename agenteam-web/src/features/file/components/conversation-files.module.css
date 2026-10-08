@@ -1,0 +1,397 @@
+.browser, .preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.listHeading, .previewHeading {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.listHeading > span {
+  flex: 1;
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listHeading :global(.icon-button), .previewHeading :global(.icon-button) {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.fileList {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+}
+
+.fileList ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.fileRow .fileItem {
+  flex: 1;
+  width: auto;
+}
+
+.filePreviewAction {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 36px;
+  min-width: 34px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--secondary);
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.filePreviewAction:hover, .filePreviewAction:focus-visible {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.filePreviewAction:focus-visible, .openPreview:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.openPreview {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  color: var(--accent-text);
+  font-size: 12px;
+  transition: background-color 180ms ease;
+}
+
+.openPreview:hover {
+  background: var(--accent-soft);
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  padding: 10px 9px;
+  border-radius: 9px;
+  text-align: left;
+  color: var(--text);
+}
+
+.fileItem:hover, .fileItem:focus-visible {
+  background: var(--surface-hover);
+}
+
+.fileItem:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+}
+
+.fileItem > svg, .fileIcon {
+  flex-shrink: 0;
+  color: var(--secondary);
+}
+
+.fileIcon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 30px;
+}
+
+.fileName {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.fileName small {
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.loadMore {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 8px;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.empty {
+  margin: 0;
+  padding: 28px 18px;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.error {
+  display: grid;
+  gap: 8px;
+  margin: 12px;
+  padding: 12px;
+  color: var(--red-text);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.error button {
+  justify-self: start;
+  color: var(--accent-text);
+}
+
+.previewTitle {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.previewTitle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.previewTitle span {
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.filePath {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 14px;
+  color: var(--secondary);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.previewBody {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.textReader {
+  min-width: 0;
+  min-height: 100%;
+}
+
+.viewModes {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.viewModes button {
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 7px;
+  color: var(--secondary);
+  font-size: 12px;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.viewModes button[aria-pressed=true] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.plainText {
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font: 12px/1.8 ui-monospace, Consolas, monospace;
+}
+
+.markdown {
+  min-width: 0;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.markdown :global(p) {
+  margin-block: 0 12px;
+}
+
+.markdown :global(pre) {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre;
+}
+
+.markdown :global(h1) {
+  font-size: 22px;
+}
+
+.markdown :global(h2) {
+  font-size: 19px;
+}
+
+.markdown :global(h3) {
+  font-size: 16px;
+}
+
+.markdown :global(ul), .markdown :global(ol) {
+  padding-left: 22px;
+}
+
+.markdown :global(table) {
+  width: 100%;
+}
+
+.markdown :global([data-streamdown=code-block]) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.htmlPreview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  border: 0;
+  background: #fff;
+  color-scheme: normal;
+}
+
+.imagePreview {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  padding: 16px;
+}
+
+.imagePreview img {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.mediaPreview {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mediaPreview video, .mediaPreview audio {
+  width: 100%;
+  max-width: 100%;
+}
+
+.mediaPreview video {
+  max-height: 65vh;
+  border-radius: 8px;
+  background: #161616;
+}
+
+.pdfPreview {
+  display: block;
+  width: 100%;
+  min-height: 560px;
+  height: 100%;
+  border: 0;
+  background: var(--surface);
+}
+
+@media (max-width: 600px) {
+  .listHeading :global(.icon-button), .previewHeading :global(.icon-button) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    flex-basis: 44px;
+  }
+
+  .viewModes button, .loadMore, .error button {
+    min-height: 44px;
+  }
+
+  .filePreviewAction {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .openPreview {
+    min-height: 44px;
+    padding-inline: 6px;
+  }
+
+  .listHeading, .previewHeading {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filePreviewAction, .openPreview, .viewModes button {
+    transition: none;
+  }
+}

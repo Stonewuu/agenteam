@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.ConversationSqlMapper">
+  <sql id="conversationFields">SELECT c.*, COALESCE(v.name, r.name, '') AS agent_name,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS agent_icon,
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS agent_color
+    FROM agent_conversation c
+    JOIN resource r ON r.enterprise_id = c.enterprise_id AND r.id = COALESCE(c.agent_id, c.preview_resource_id)
+    LEFT JOIN resource_version v ON v.enterprise_id = c.enterprise_id AND v.id = c.agent_version_id
+  </sql>
+  <select id="findConversation" resultType="com.stonewu.agenteam.model.execution.entity.ConversationQueryRow">
+    <choose>
+      <when test="lock">SELECT c.*, '' AS agent_name FROM agent_conversation c</when>
+      <otherwise>
+        <include refid="conversationFields"/>
+      </otherwise>
+    </choose>
+    WHERE c.enterprise_id = #{enterprise} AND c.user_id = #{user} AND c.id = #{id}
+    <if test="lock">FOR UPDATE</if>
+  </select>
+  <select id="listConversations" resultType="com.stonewu.agenteam.model.execution.entity.ConversationQueryRow">
+    <include refid="conversationFields"/>
+    WHERE c.enterprise_id = #{enterprise} AND c.user_id = #{user} AND c.status = #{status} AND c.mode = 'normal'
+    <if test="favorite != null">AND c.favorite = #{favorite}</if>
+    <if test="agentId != null">AND c.agent_id = #{agentId}</if>
+    <if test="query != ''">AND LOCATE(#{query}, c.title) > 0</if>
+    <if test="status == 'deleted'">AND c.deleted_at > #{oldestDeleted}</if>
+    <if test="after != null">
+      AND (c.updated_at &lt; #{after.time} OR (c.updated_at = #{after.time} AND c.id &lt; #{after.id}))
+    </if>
+    ORDER BY c.updated_at DESC, c.id DESC LIMIT #{limit}
+  </select>
+</mapper>

@@ -1,0 +1,106 @@
+.section {
+  margin: 28px 0;
+  display: grid;
+  gap: 16px;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.heading h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+}
+
+.card > span {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.card strong {
+  font-size: 14px;
+}
+
+.card span span {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.card:hover {
+  border-color: var(--primary);
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.employees {
+  display: grid;
+  gap: 12px;
+}
+
+.employees button {
+  display: grid;
+  text-align: left;
+  gap: 8px;
+}
+
+.selections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.selection {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: var(--surface-soft);
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.selection button {
+  border: 0;
+  padding: 2px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

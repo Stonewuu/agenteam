@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.edition.InstallationPreflightMapper">
+  <select id="tableNames" resultType="string">
+    SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+  </select>
+  <select id="snapshot" resultType="com.stonewu.agenteam.model.edition.entity.InstallationPreflightRow">
+    SELECT
+      (SELECT COUNT(*) FROM agenteam_installation) AS record_count,
+      i.installation_id, i.edition, i.initial_enterprise_id,
+      (SELECT COUNT(*) FROM enterprise) AS enterprise_count,
+      (SELECT COUNT(*) FROM system_super_admin_lock) AS administrator_count,
+      (SELECT COUNT(*) FROM app_user) AS user_count,
+      (SELECT COUNT(*) FROM enterprise e WHERE e.id = i.initial_enterprise_id) AS initial_enterprise_count
+    FROM (SELECT 1 AS id) singleton
+    LEFT JOIN agenteam_installation i ON i.id = singleton.id
+  </select>
+</mapper>

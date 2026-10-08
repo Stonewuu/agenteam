@@ -1,0 +1,116 @@
+.toggle {
+  --view-option-size: 34px;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-shrink: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.toggle::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  left: 4px;
+  width: var(--view-option-size);
+  height: var(--view-option-size);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 220ms var(--motion-ease);
+}
+
+.toggle[data-view="list"]::before {
+  transform: translateX(100%);
+}
+
+.toggle button {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--view-option-size);
+  height: var(--view-option-size);
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--secondary);
+  transition: color 220ms var(--motion-ease);
+}
+
+.toggle button[aria-pressed="true"] {
+  color: var(--accent-text);
+}
+
+.toggle button:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.tableFrame {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* 外框保留阴影，滚动区域为首尾控件的焦点轮廓预留空间。 */
+.tableScroll {
+  max-width: 100%;
+  padding: 6px;
+  border-radius: inherit;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.tableScroll:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 3px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  color: var(--secondary);
+  background: var(--surface-soft);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.table th, .table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-soft) 45%, transparent);
+}
+
+@media (max-width: 680px) {
+  .toggle {
+    --view-option-size: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle::before, .toggle button {
+    transition: none;
+  }
+}

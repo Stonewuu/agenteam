@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.RunJobSqlMapper">
+  <select id="claimBackgroundJob" resultType="String">
+    SELECT id FROM background_job WHERE kind = 'run' AND status = 'queued' AND available_at &lt;= #{now}
+    ORDER BY available_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+  </select>
+  <select id="claimBackgroundJob3" resultType="com.stonewu.agenteam.model.execution.entity.RunJobQueryRow">
+    SELECT id, enterprise_id, owner_user_id, JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.runId')) AS run_id,
+    lease_owner, lease_version, lease_until FROM background_job WHERE id = #{id}
+  </select>
+  <select id="validBackgroundJobLocked" resultType="String">
+    SELECT id FROM background_job WHERE id = #{id} AND enterprise_id = #{enterpriseId} AND owner_user_id = #{userId} AND
+    kind = 'run'
+    AND status = 'leased' AND lease_owner = #{owner} AND lease_version = #{version} AND lease_until &gt; #{now}
+    FOR UPDATE
+  </select>
+  <select id="expiredBackgroundJob" resultType="com.stonewu.agenteam.model.execution.entity.RunJobQueryRow">
+    SELECT id, enterprise_id, owner_user_id, JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.runId')) AS run_id,
+    lease_owner, lease_version, lease_until FROM background_job
+    WHERE kind = 'run' AND status = 'leased' AND lease_until &lt;= #{now} ORDER BY lease_until, id LIMIT #{limit}
+  </select>
+  <select id="expiredAndLockedBackgroundJob" resultType="String">
+    SELECT id FROM background_job WHERE id = #{id} AND status = 'leased' AND lease_owner = #{owner}
+    AND lease_version = #{version} AND lease_until &lt;= #{now} FOR UPDATE
+  </select>
+  <select id="lastEventBatchBackgroundJob" resultType="com.stonewu.agenteam.model.execution.entity.RunJobQueryRow">
+    SELECT id, JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.lastEventBatchId')) AS last_event_batch_id,
+    JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.lastEventBatchHash')) AS last_event_batch_hash
+    FROM background_job WHERE id = #{id}
+  </select>
+  <update id="savedEventBatchBackgroundJob">
+    UPDATE background_job SET payload_json = JSON_SET(payload_json, '$.lastEventBatchId', #{id}, '$.lastEventBatchHash',
+    #{hash})
+    WHERE id = #{id2} AND lease_version = #{version}
+  </update>
+  <select id="queuedBeforeBackgroundJob" resultType="com.stonewu.agenteam.model.execution.entity.RunJobQueryRow">
+    SELECT id, enterprise_id, owner_user_id, JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.runId')) AS run_id
+    FROM background_job WHERE kind = 'run' AND status = 'queued' AND available_at &lt;= #{boundary} ORDER BY
+    available_at, id LIMIT #{limit}
+  </select>
+</mapper>

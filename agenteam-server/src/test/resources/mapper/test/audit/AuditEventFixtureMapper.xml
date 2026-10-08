@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.audit.AuditEventFixtureMapper">
+  <select id="modelManagementApiAdministratorsManageProvidersModelsAndPlaintextKeysThroughTheApiObject"
+          resultType="Integer">
+    SELECT COUNT(*) FROM audit_event WHERE enterprise_id = #{args[0]} AND LOCATE('first-model-key',
+    detail_redacted_json) &gt; 0
+  </select>
+  <select id="pluginCheckApiCredentialsAreEncryptedRotatedAtNextConnectionAndProtectedByPublishedReferencesObject"
+          resultType="Integer">
+    SELECT COUNT(*) FROM audit_event WHERE enterprise_id = #{args[0]} AND (LOCATE(#{args[1]}, detail_redacted_json) &gt;
+    0 OR LOCATE(#{args[2]}, detail_redacted_json) &gt; 0)
+  </select>
+</mapper>

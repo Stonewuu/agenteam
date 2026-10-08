@@ -1,0 +1,36 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* 组合构建只扫描应用源码，避免把生成目录中的缓存当作样式来源。 */
+@source "../../";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent-action);
+  --color-primary-foreground: var(--on-accent);
+  --color-secondary: var(--surface-hover);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-hover);
+  --color-muted-foreground: var(--secondary);
+  --color-accent: var(--surface-hover);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--red-text);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--input-border-focus);
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: var(--input-radius);
+  --radius-xl: 20px;
+  --font-sans: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+}

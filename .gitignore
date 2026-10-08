@@ -1,0 +1,50 @@
+# 本机构建输出与依赖
+/.build/
+/.codegraph/
+**/target/
+**/target-*/
+**/node_modules/
+**/.next/
+**/.next-*/
+**/.test-build/
+**/build/
+**/out/
+**/coverage/
+*.tsbuildinfo
+*.log
+*.class
+*.jar
+**/__pycache__/
+*.pyc
+
+# 编辑器与操作系统文件
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*~
+.DS_Store
+Thumbs.db
+
+# 文档演示视频
+/media/**/*.mp4
+/media/**/*.webm
+/media/**/*.mov
+
+# 运行数据、密钥和本机部署配置
+**/.agenteam/
+**/.agentscope/
+**/_sweep.marker
+**/.env
+**/.env.*
+!**/.env.example
+/deploy/data/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# 开发规则保存在父目录，开发服务器可能自动生成以下文件
+AGENTS.md
+CLAUDE.md

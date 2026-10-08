@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.source.DatabaseAccountFixtureMapper">
+  <update id="create">CREATE USER '${account.username}'@'%' IDENTIFIED BY #{account.password}</update>
+  <update id="drop">DROP USER IF EXISTS '${account.username}'@'%'</update>
+  <update id="allowDatabaseRead">GRANT SELECT ON `${account.database}`.* TO '${account.username}'@'%'</update>
+  <update id="allowDatabaseWrite">GRANT SELECT, INSERT, UPDATE, DELETE ON `${account.database}`.* TO
+    '${account.username}'@'%'
+  </update>
+  <update id="allowApiTableRead">GRANT SELECT ON `${account.database}`.p05_source_rows TO '${account.username}'@'%'
+  </update>
+</mapper>

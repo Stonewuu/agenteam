@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.knowledge.KnowledgeRetentionSqlMapper">
+  <update id="removeBackgroundJob">
+    UPDATE background_job SET status = 'cancelled', lease_until = NULL, lease_owner = NULL, updated_at = #{now}
+    WHERE enterprise_id = #{enterpriseId} AND kind = 'document_parse' AND status IN ('queued', 'leased')
+    AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.documentId')) = #{id}
+  </update>
+  <delete id="removeKnowledgeChunk2">
+    DELETE FROM knowledge_chunk WHERE enterprise_id = #{enterpriseId} AND document_id = #{id} ORDER BY id LIMIT 500
+  </delete>
+  <update id="releaseUnreferencedFileFileObject">
+    UPDATE file_object f SET expires_at = #{now}, updated_at = #{now} WHERE f.enterprise_id = #{enterprise} AND
+    f.purpose = 'knowledge'
+    AND f.id = #{file} AND NOT EXISTS (SELECT 1 FROM knowledge_document d
+    WHERE d.enterprise_id = f.enterprise_id AND (d.file_id = f.id OR d.active_file_id = f.id))
+    AND NOT EXISTS (SELECT 1 FROM knowledge_chunk c WHERE c.enterprise_id = f.enterprise_id AND c.file_id = f.id)
+  </update>
+</mapper>

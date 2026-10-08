@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.data.DataCollectionSqlMapper">
+  <select id="availableCollections" resultType="com.stonewu.agenteam.model.data.entity.DataCollectionQueryRow">
+    SELECT c.* FROM data_collection c
+    JOIN data_generation g ON g.enterprise_id = c.enterprise_id AND g.collection_id = c.id AND g.generation =
+    c.active_generation
+    WHERE c.enterprise_id = #{enterprise} AND c.resource_id = #{resource} AND c.status = 'active' AND g.source_hash =
+    #{sourceHash}
+    AND EXISTS (SELECT 1 FROM data_field f WHERE f.enterprise_id = c.enterprise_id AND f.collection_id = c.id AND
+    f.generation = c.active_generation AND f.readable = TRUE)
+    <if test="position != null">AND (c.updated_at &lt; #{position.time} OR (c.updated_at = #{position.time} AND c.id
+      &lt; #{position.id}))
+    </if>
+    ORDER BY c.updated_at DESC, c.id DESC LIMIT #{limit}
+  </select>
+  <select id="findDataCollectionLocked" resultType="com.stonewu.agenteam.model.data.entity.DataCollectionQueryRow">
+    SELECT * FROM data_collection WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+</mapper>

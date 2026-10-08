@@ -1,0 +1,175 @@
+.inputs {
+  display: grid;
+  gap: 16px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.actions p {
+  margin: 0 0 0 auto;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.comparison, .single {
+  display: grid;
+  gap: 20px;
+  margin: 18px 0 0;
+}
+
+.comparison {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.result {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.result > header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.resultContent {
+  display: grid;
+  gap: 16px;
+  padding-top: 20px;
+}
+
+.compareToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.compareToggle strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.compareToggle p {
+  margin: 5px 0 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.testInput {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.modelSelect {
+  max-width: 100%;
+  min-width: 145px;
+}
+
+.result .modelOptions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 12px;
+}
+
+.modelField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.empty {
+  padding: 55px 12px;
+  text-align: center;
+}
+
+.empty > span {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 18px;
+  border-radius: 20px;
+  background: var(--surface-hover);
+  color: var(--secondary);
+}
+
+.empty h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.result header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.result header div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.result h3 {
+  width: 100%;
+  margin: 0;
+  font-size: 16px;
+}
+
+.result header span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.input {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface-soft);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.output {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 680px) {
+  .comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .actions p {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .result {
+    padding: 16px;
+  }
+}

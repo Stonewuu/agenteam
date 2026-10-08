@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.announcement.AnnouncementReadMapper">
+  <insert id="saveRead">
+    INSERT INTO announcement_read (announcement_id, user_id, content_version, read_at) VALUES
+    <foreach collection="rows" item="row" separator=",">
+      (#{row.announcementId}, #{row.userId}, #{row.contentVersion}, #{row.readAt})
+    </foreach>
+    ON DUPLICATE KEY UPDATE read_at = announcement_read.read_at
+  </insert>
+</mapper>

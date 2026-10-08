@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.data.FileDataQuerySqlMapper">
+  <sql id="conditionValue">
+    (CASE WHEN JSON_TYPE(JSON_EXTRACT(r.values_json, CONCAT('$[', #{condition.field.definition.ordinal}, ']'))) = 'NULL'
+    THEN NULL ELSE
+    <choose>
+      <when test="condition.field.definition.valueType == 'integer'">CAST(JSON_UNQUOTE(JSON_EXTRACT(r.values_json,
+        CONCAT('$[', #{condition.field.definition.ordinal}, ']'))) AS DECIMAL(65,0))
+      </when>
+      <when test="condition.field.definition.valueType == 'decimal'">CAST(JSON_UNQUOTE(JSON_EXTRACT(r.values_json,
+        CONCAT('$[', #{condition.field.definition.ordinal}, ']'))) AS DECIMAL(65,30))
+      </when>
+      <when test="condition.field.definition.valueType == 'boolean'">CASE JSON_UNQUOTE(JSON_EXTRACT(r.values_json,
+        CONCAT('$[', #{condition.field.definition.ordinal}, ']'))) WHEN 'true' THEN 1 ELSE 0 END
+      </when>
+      <when test="condition.field.definition.valueType == 'object'">JSON_EXTRACT(r.values_json, CONCAT('$[',
+        #{condition.field.definition.ordinal}, ']'))
+      </when>
+      <otherwise>JSON_UNQUOTE(JSON_EXTRACT(r.values_json, CONCAT('$[', #{condition.field.definition.ordinal}, ']')))
+        COLLATE utf8mb4_0900_bin
+      </otherwise>
+    </choose>
+    END)
+  </sql>
+  <sql id="orderValue">
+    (CASE WHEN JSON_TYPE(JSON_EXTRACT(r.values_json, CONCAT('$[', #{order.field.definition.ordinal}, ']'))) = 'NULL'
+    THEN NULL ELSE
+    <choose>
+      <when test="order.field.definition.valueType == 'integer'">CAST(JSON_UNQUOTE(JSON_EXTRACT(r.values_json,
+        CONCAT('$[', #{order.field.definition.ordinal}, ']'))) AS DECIMAL(65,0))
+      </when>
+      <when test="order.field.definition.valueType == 'decimal'">CAST(JSON_UNQUOTE(JSON_EXTRACT(r.values_json,
+        CONCAT('$[', #{order.field.definition.ordinal}, ']'))) AS DECIMAL(65,30))
+      </when>
+      <when test="order.field.definition.valueType == 'boolean'">CASE JSON_UNQUOTE(JSON_EXTRACT(r.values_json,
+        CONCAT('$[', #{order.field.definition.ordinal}, ']'))) WHEN 'true' THEN 1 ELSE 0 END
+      </when>
+      <when test="order.field.definition.valueType == 'object'">JSON_EXTRACT(r.values_json, CONCAT('$[',
+        #{order.field.definition.ordinal}, ']'))
+      </when>
+      <otherwise>JSON_UNQUOTE(JSON_EXTRACT(r.values_json, CONCAT('$[', #{order.field.definition.ordinal}, ']'))) COLLATE
+        utf8mb4_0900_bin
+      </otherwise>
+    </choose>
+    END)
+  </sql>
+
+  <sql id="conditions">
+    <foreach collection="query.conditions" item="condition">
+      AND
+      <choose>
+        <when test="condition.operator == 'is_null'">
+          <include refid="conditionValue"/>
+          <choose>
+            <when test="condition.isNull">IS NULL</when>
+            <otherwise>IS NOT NULL</otherwise>
+          </choose>
+        </when>
+        <when test="condition.operator == 'contains'">
+          LOCATE(#{condition.value},<include refid="conditionValue"/>) &gt; 0
+        </when>
+        <when test="condition.operator == 'in'">
+          <include refid="conditionValue"/>
+          IN
+          <foreach collection="condition.values" item="value" open="(" close=")" separator=",">
+            <choose>
+              <when test="condition.field.definition.valueType == 'object'">CAST(#{value} AS JSON)</when>
+              <otherwise>#{value}</otherwise>
+            </choose>
+          </foreach>
+        </when>
+        <otherwise>
+          <include refid="conditionValue"/>
+          <choose>
+            <when test="condition.operator == 'eq'">=</when>
+            <when test="condition.operator == 'ne'">&lt;&gt;</when>
+            <when test="condition.operator == 'gt'">&gt;</when>
+            <when test="condition.operator == 'gte'">&gt;=</when>
+            <when test="condition.operator == 'lt'">&lt;</when>
+            <when test="condition.operator == 'lte'">&lt;=</when>
+          </choose>
+          <choose>
+            <when test="condition.field.definition.valueType == 'object'">CAST(#{condition.value} AS JSON)</when>
+            <otherwise>#{condition.value}</otherwise>
+          </choose>
+        </otherwise>
+      </choose>
+    </foreach>
+  </sql>
+
+  <select id="readRows" resultType="java.util.LinkedHashMap" resultSetType="FORWARD_ONLY">
+    <bind name="rowLimit" value="query.plan.limit + 1"/>
+    SELECT /*+ MAX_EXECUTION_TIME(${queryBudget.remainingMillis()}) */
+    <foreach collection="query.fields" item="field" index="index" separator=",">
+      CAST(JSON_EXTRACT(r.values_json, CONCAT('$[', #{field.definition.ordinal}, ']')) AS CHAR CHARACTER SET utf8mb4) AS
+      v${index}
+    </foreach>
+    FROM data_record r
+    WHERE r.enterprise_id = #{query.plan.collection.enterpriseId} AND r.collection_id = #{query.plan.collection.id}
+    AND r.generation = #{query.plan.generation}
+    <include refid="conditions"/>
+    ORDER BY
+    <foreach collection="query.order" item="order">
+      <include refid="orderValue"/>
+      <choose>
+        <when test="order.ascending">ASC</when>
+        <otherwise>DESC</otherwise>
+      </choose>
+      ,
+    </foreach>
+    r.row_no ASC LIMIT #{rowLimit} OFFSET #{query.plan.offset}
+  </select>
+</mapper>

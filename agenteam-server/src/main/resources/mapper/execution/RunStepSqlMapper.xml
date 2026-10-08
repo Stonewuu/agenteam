@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.RunStepSqlMapper">
+  <insert id="saveRunStep">
+    INSERT INTO run_step (id, enterprise_id, run_id, attempt_id, parent_step_id, step_key, kind, title,
+    display_order, status, input_json, output_json, public_summary, workflow_json, lease_version, started_at,
+    finished_at, created_at, updated_at)
+    VALUES (#{id}, #{enterpriseId}, #{id2}, #{attemptId}, #{parentStepId}, #{id}, #{kind}, #{title}, #{displayOrder},
+    #{status}, COALESCE(#{value}, JSON_OBJECT()), #{value2}, #{publicSummary}, #{value3}, #{leaseVersion}, #{value4},
+    #{value5}, #{now}, #{now})
+    ON DUPLICATE KEY UPDATE status = VALUES(status), output_json = COALESCE(VALUES(output_json), output_json),
+    input_json = IF(#{value6}, input_json, VALUES(input_json)), public_summary = VALUES(public_summary), finished_at =
+    VALUES(finished_at), updated_at = VALUES(updated_at)
+  </insert>
+</mapper>

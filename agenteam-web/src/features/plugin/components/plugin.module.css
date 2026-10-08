@@ -1,0 +1,183 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.toolbar input {
+  width: min(360px, 100%);
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  color: var(--muted-foreground);
+  font-weight: 500;
+  background: var(--surface-soft);
+}
+
+.table th, .table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.secondary {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.tools {
+  display: grid;
+  gap: 10px;
+}
+
+.tool {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  align-items: flex-start;
+}
+
+.tool input {
+  margin-top: 4px;
+  accent-color: var(--primary);
+}
+
+.tool p {
+  margin: 6px 0 0;
+}
+
+.toolContent {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.heading h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.section {
+  display: grid;
+  gap: 16px;
+  margin: 28px 0;
+}
+
+.section h3 {
+  margin: 0;
+}
+
+.picker {
+  display: grid;
+  gap: 10px;
+}
+
+.picker button {
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .table th, .table td {
+    padding: 12px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+}
+
+.toolbar > :global(.search-input) {
+  width: min(360px, 100%);
+}
+
+.logFilters {
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.logFilters > label {
+  width: 150px;
+}
+
+.logFilters > :global(.search-input) {
+  width: 245px;
+  margin-left: auto;
+}
+
+.tool {
+  display: block;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.toolHeading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolHeading > :global(.badge) {
+  margin-left: auto;
+}
+
+.toolToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 16px;
+  padding-top: 12px;
+  font-size: 12px;
+}
+
+.tool strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .table {
+    min-width: 640px;
+  }
+
+  .toolbar > :global(.search-input) {
+    width: 100%;
+  }
+}

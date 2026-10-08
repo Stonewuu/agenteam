@@ -1,0 +1,140 @@
+.trigger {
+  position: relative;
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  width: var(--employee-picker-width, max-content);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 4px 11px 4px 5px;
+  border: 1px solid var(--hero-border);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  transition: width 180ms var(--motion-ease);
+}
+
+.content, .measure {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.content {
+  width: 100%;
+  overflow: hidden;
+}
+
+.measure {
+  position: absolute;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.content :global(.avatar.small), .measure :global(.avatar.small) {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.content .placeholderAvatar, .measure .placeholderAvatar {
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--secondary) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--secondary) 8%, transparent);
+}
+
+.content > svg, .measure > svg {
+  flex-shrink: 0;
+}
+
+.name {
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.trigger[data-compact] .content .name {
+  display: none;
+}
+
+.loadingName {
+  display: block;
+  flex-shrink: 0;
+  background: var(--hero-border);
+  animation: employee-loading 1.4s ease-in-out infinite;
+}
+
+.loadingName {
+  width: 32px;
+  height: 12px;
+  border-radius: 4px;
+}
+
+@keyframes employee-loading {
+  50% {
+    opacity: .45;
+  }
+}
+
+@media (max-width: 680px) {
+  .trigger {
+    min-height: 44px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .content, .measure {
+    gap: 6px;
+  }
+}
+
+/* 点击范围保持 44 像素，头像与胶囊底色缩小，窄屏优先为文字和主要操作留空间。 */
+@media (max-width: 680px) {
+  .trigger {
+    isolation: isolate;
+    padding-inline: 5px;
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .trigger::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 5px -1px;
+    border: 1px solid var(--hero-border);
+    border-radius: inherit;
+    background: var(--accent-soft);
+  }
+
+  .content, .measure {
+    gap: 5px;
+  }
+
+  .content :global(.avatar.small), .measure :global(.avatar.small) {
+    width: 22px;
+    height: 22px;
+  }
+
+  .content > svg, .measure > svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+
+  .loadingName {
+    animation: none;
+  }
+}

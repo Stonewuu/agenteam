@@ -1,0 +1,15 @@
+**/node_modules/**
+**/target/**
+**/target-*/**
+**/.next/**
+**/.next-*/**
+**/.test-build/**
+**/build/**
+**/out/**
+**/coverage/**
+**/pnpm-lock.yaml
+**/package-lock.json
+**/next-env.d.ts
+**/db/schema/**
+**/public/licenses/**
+media/**

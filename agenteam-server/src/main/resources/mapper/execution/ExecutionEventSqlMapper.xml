@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.ExecutionEventSqlMapper">
+  <select id="appendAgentEvent" resultType="Long">
+    SELECT sequence_no FROM agent_event WHERE run_id = #{id} ORDER BY sequence_no DESC LIMIT 1 FOR UPDATE
+  </select>
+  <select id="lastForConversation" resultType="com.stonewu.agenteam.model.execution.entity.AgentEventRow">
+    SELECT * FROM agent_event WHERE enterprise_id = #{enterprise} AND conversation_id = #{conversation}
+    ORDER BY conversation_sequence DESC LIMIT 1 FOR UPDATE
+  </select>
+  <!-- 同一查询读取编号范围内的行和跨过范围末尾的第一行，避免加载大量暂时不需要的合并正文。 -->
+  <select id="readWindow" resultType="com.stonewu.agenteam.model.execution.entity.AgentEventRow">
+    (SELECT * FROM agent_event
+    WHERE enterprise_id = #{enterprise} AND conversation_id = #{conversation}
+    AND conversation_sequence &gt; #{after} AND conversation_sequence &lt;= #{boundary})
+    UNION ALL
+    (SELECT * FROM agent_event
+    WHERE enterprise_id = #{enterprise} AND conversation_id = #{conversation}
+    AND conversation_sequence &gt; #{boundary}
+    ORDER BY conversation_sequence LIMIT 1)
+    ORDER BY conversation_sequence LIMIT #{limit}
+  </select>
+  <update id="publishedThroughAgentEvent">
+    UPDATE agent_event SET stream_id = CONCAT(conversation_sequence, '-0'), published_at = #{now}
+    WHERE enterprise_id = #{enterprise} AND conversation_id = #{conversation} AND conversation_sequence &lt;=
+    #{sequence} AND published_at IS NULL
+  </update>
+  <delete id="removeExpiredAgentEvent">
+    DELETE FROM agent_event WHERE event_id IN (
+    SELECT event_id FROM (SELECT e.event_id FROM agent_event e
+    JOIN agent_run r ON r.enterprise_id = e.enterprise_id AND r.id = e.run_id
+    WHERE r.finished_at &lt; #{boundary} AND r.status IN ('completed','failed','cancelled') LIMIT 1000) expired_events)
+  </delete>
+  <select id="pendingConversationsAgentEvent"
+          resultType="com.stonewu.agenteam.model.execution.entity.ExecutionEventQueryRow">
+    SELECT enterprise_id, conversation_id FROM agent_event WHERE published_at IS NULL
+    GROUP BY enterprise_id, conversation_id ORDER BY MIN(created_at) LIMIT #{limit}
+  </select>
+</mapper>

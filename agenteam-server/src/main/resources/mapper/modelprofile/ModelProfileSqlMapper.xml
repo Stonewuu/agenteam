@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.modelprofile.ModelProfileSqlMapper">
+  <select id="inUseResourceDraft" resultType="Boolean">
+    SELECT EXISTS (SELECT 1 FROM resource_draft WHERE enterprise_id = #{enterprise} AND JSON_SEARCH(config_json, 'one',
+    #{id}, NULL, '$**.modelProfileId') IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM resource_version WHERE enterprise_id = #{enterprise} AND JSON_SEARCH(config_json, 'one',
+    #{id}, NULL, '$**.modelProfileId') IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM agent_run WHERE enterprise_id = #{enterprise} AND JSON_SEARCH(execution_config_json, 'one',
+    #{id}, NULL, '$**.modelProfileId') IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM agent_conversation WHERE enterprise_id = #{enterprise} AND model_profile_id = #{id})
+  </select>
+</mapper>

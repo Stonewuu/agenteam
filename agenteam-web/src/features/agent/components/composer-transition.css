@@ -1,0 +1,71 @@
+:root[data-composer-navigation] [data-composer-part="surface"] {
+  view-transition-name: agenteam-composer-surface;
+}
+
+:root[data-composer-navigation] [data-composer-part="text"] {
+  view-transition-name: agenteam-composer-text;
+}
+
+:root[data-composer-navigation] [data-composer-part="employee"] {
+  view-transition-name: agenteam-composer-employee;
+}
+
+:root[data-composer-navigation] [data-composer-part="tools"] {
+  view-transition-name: agenteam-composer-tools;
+}
+
+:root[data-composer-navigation] [data-composer-part="model"] {
+  view-transition-name: agenteam-composer-model;
+}
+
+:root[data-composer-navigation] [data-composer-part="policy"] {
+  view-transition-name: agenteam-composer-policy;
+}
+
+:root[data-composer-navigation] [data-composer-part="submit"] {
+  view-transition-name: agenteam-composer-submit;
+}
+
+:root[data-composer-navigation] [data-composer-part="project"] {
+  view-transition-name: agenteam-composer-project;
+}
+
+:root[data-composer-navigation] [data-composer-part] {
+  view-transition-class: composer-morph;
+}
+
+::view-transition-group(.composer-morph),
+::view-transition-group(agenteam-composer-surface), ::view-transition-group(agenteam-composer-text),
+::view-transition-group(agenteam-composer-employee), ::view-transition-group(agenteam-composer-tools),
+::view-transition-group(agenteam-composer-model), ::view-transition-group(agenteam-composer-policy),
+::view-transition-group(agenteam-composer-submit), ::view-transition-group(agenteam-composer-project) {
+  animation-duration: 300ms;
+  animation-timing-function: var(--motion-ease, cubic-bezier(.22, 1, .36, 1));
+}
+
+::view-transition-old(.composer-morph), ::view-transition-new(.composer-morph) {
+  animation-duration: 240ms;
+  animation-timing-function: ease-out;
+  height: 100%;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(agenteam-composer-text), ::view-transition-new(agenteam-composer-text) {
+  object-fit: none;
+  object-position: top left;
+}
+
+/* 截图中包含输入框的外沿阴影，不能在过渡图层中再次裁切。 */
+:root[data-composer-navigation]::view-transition {
+  pointer-events: none;
+}
+
+:root[data-composer-navigation]::view-transition-group(root) {
+  animation-duration: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.composer-morph), ::view-transition-old(.composer-morph), ::view-transition-new(.composer-morph) {
+    animation-duration: 0s;
+  }
+}
