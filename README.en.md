@@ -13,16 +13,19 @@
 </p>
 
 <p align="center">
-  <a href="#workspace">Workspace</a> ·
-  <a href="#conversations">AI employees</a> ·
-  <a href="#enterprise-messaging">WeCom &amp; Feishu</a> ·
-  <a href="#schedules">To-dos &amp; schedules</a> ·
-  <a href="#quick-start"><strong>Quick start</strong></a>
+  <a href="#features">Features</a> ·
+  <a href="#quick-start"><strong>Quick start</strong></a> ·
+  <a href="#development">Development</a> ·
+  <a href="#license">License</a>
 </p>
 
 **AgenTeam is an open-source, self-hosted multi-agent collaboration platform that brings AI employees into your team's everyday work.**
 
 Combine models, knowledge, skills, and tools into AI employees. Run conversational tasks, work with files, coordinate to-dos, and connect your team through WeCom and Feishu. Organize work by project so you can return to its conversations, context, and results.
+
+<a id="features"></a>
+
+## Features
 
 | What you want to do | What AgenTeam provides |
 | --- | --- |
@@ -35,7 +38,7 @@ Combine models, knowledge, skills, and tools into AI employees. Run conversation
 
 <a id="workspace"></a>
 
-## Organize your work around projects
+### Workspace
 
 Create a project, choose an AI employee, and start a task. Conversations, project files, and to-dos stay together so work is easy to resume.
 
@@ -43,13 +46,13 @@ Create a project, choose an AI employee, and start a task. Conversations, projec
 
 <a id="conversations"></a>
 
-## Work with AI employees
+### AI employees and conversations
 
 Describe your goal in natural language and let an AI employee work with its knowledge and tools. Continue the conversation, bring in subagents, and approve key actions. Preview and download generated files, then reuse them in later tasks within the same project.
 
 <a href="media/readme/screenshots/en/conversation.jpg"><img src="media/readme/screenshots/en/conversation.jpg" width="100%" alt="An AI employee conversation with tools and file results" /></a>
 
-## Build reusable capabilities
+### Capabilities
 
 Manage agents, skills, plugins, knowledge bases, and data sources in one place. Publish versions, list agents, and grant resource access to your team. Connect OpenAI-compatible model services and MCP (Model Context Protocol) tools.
 
@@ -57,7 +60,7 @@ Administrators manage organization details, members, teams, roles, model service
 
 <a id="enterprise-messaging"></a>
 
-## Connect WeCom and Feishu
+### WeCom and Feishu
 
 - **Accounts and sign-in:** Link an existing AgenTeam account and sign in with a WeCom or Feishu identity.
 - **Work notifications:** Receive task completion messages, approval requests, and to-do assignments.
@@ -70,7 +73,7 @@ Administrators manage organization details, members, teams, roles, model service
 
 <a id="schedules"></a>
 
-## Keep tasks moving and plans on schedule
+### To-dos and schedules
 
 Assign owners, due dates, and priorities to personal and team to-dos. Schedule agent work or notifications, preview upcoming runs, pause plans, and review execution history.
 
@@ -85,18 +88,31 @@ Assign owners, due dates, and priorities to personal and team to-dos. Schedule a
 
 ## Quick start
 
-**For a server installation, use the 0.2.0 images on Docker Hub.** The deployment package includes service configuration and setup tools. Follow the [Docker deployment guide](docs/deployment/images.md) for the complete installation steps.
+### Option 1: Ask an AI agent to deploy
 
-To run from source, prepare Git, Docker, and Docker Compose. On Windows, use Docker Desktop in Linux container mode.
+Send the following to an agent that can run commands on your computer or server:
 
-### 1. Get the project
+```text
+Please deploy this project for me: https://github.com/Stonewuu/agenteam
+Read the deployment documentation and check the current environment first. After deployment, tell me the access URL and initial setup steps.
+```
+
+### Option 2: Deploy with Docker images
+
+**For a server installation, use the latest released images on Docker Hub.** The deployment package includes service configuration and setup tools. Follow the [Docker deployment guide](docs/deployment/images.md) for the complete installation steps.
+
+### Option 3: Deploy from source
+
+Prepare Git, Docker, and Docker Compose. On Windows, use Docker Desktop in Linux container mode.
+
+#### 1. Get the project
 
 ```sh
 git clone https://github.com/Stonewuu/agenteam.git
 cd agenteam/deploy
 ```
 
-### 2. Generate configuration
+#### 2. Generate configuration
 
 Linux / macOS:
 
@@ -112,12 +128,14 @@ Windows PowerShell:
 
 The setup tool creates `.env` with generated database passwords, service credentials, and a setup credential. Existing configuration is preserved.
 
-### 3. Start and begin working
+#### 3. Start the services
 
 ```sh
 docker compose config --quiet
 docker compose up -d --build --wait --wait-timeout 300
 ```
+
+#### 4. Complete the initial setup
 
 Open **[http://localhost:8088](http://localhost:8088)** and complete the setup:
 
@@ -127,19 +145,28 @@ Open **[http://localhost:8088](http://localhost:8088)** and complete the setup:
 
 For public access, configure HTTPS for your domain and set `PUBLIC_URL`. Connect a mail service to use email verification, password recovery, and invitations. See the [configuration example](deploy/.env.example) and [Nginx reverse proxy example](examples/deployment/nginx.production.example.conf).
 
+<a id="development"></a>
+
 ## Development and contributions
 
 AgenTeam uses Java 21, Spring Boot 4, AgentScope 2, Next.js 16, and React 19. MySQL stores business data, while Redis handles sessions and live conversation data.
 
-<details>
-<summary><strong>Local development</strong></summary>
+### Development environment
 
-Prepare Java 21, Node.js 24, pnpm 11.15.1, and Docker. Generate `deploy/.env` as described above, then start dependencies from `deploy`:
+Prepare Java 21, Node.js 24, pnpm 11.15.1, and Docker. Generate `deploy/.env` as described above.
+
+### Run locally
+
+#### 1. Start dependencies
+
+Start dependencies from `deploy`:
 
 ```sh
 docker compose -f compose.yaml -f compose.dev.yaml up -d mysql redis
 docker build -t agenteam/sandbox-office:local sandbox
 ```
+
+#### 2. Start the backend
 
 In `agenteam-server`, set `AGENTEAM_DB_USERNAME=agenteam`. Set `AGENTEAM_DB_PASSWORD` to the `DB_PASSWORD` value from `.env`, and `AGENTEAM_REDIS_PASSWORD` to its `REDIS_PASSWORD` value. Start the backend:
 
@@ -148,6 +175,8 @@ In `agenteam-server`, set `AGENTEAM_DB_USERNAME=agenteam`. Set `AGENTEAM_DB_PASS
 ```
 
 Use `.\mvnw.cmd spring-boot:run` in Windows PowerShell. Default ports are `43306` for MySQL, `46379` for Redis, and `8080` for the backend.
+
+#### 3. Start the frontend
 
 In another terminal, enter `agenteam-web`:
 
@@ -159,11 +188,13 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000). `AGENT_BACKEND_URL` defaults to `http://localhost:8080`.
 
+### Checks and contributions
+
 Run checks appropriate to your change: `./mvnw test` for the backend, and `pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build` for the frontend. Additional scripts are listed in [package.json](agenteam-web/package.json).
 
-</details>
+Share suggestions and report problems through [Issues](https://github.com/Stonewuu/agenteam/issues), or open a pull request to improve the product and its documentation. See the [contribution guide](CONTRIBUTING.en.md).
 
-Share suggestions and report problems through [Issues](https://github.com/Stonewuu/agenteam/issues), or open a pull request to improve the product and its documentation. See the [contribution guide](CONTRIBUTING.md).
+<a id="license"></a>
 
 ## License
 
