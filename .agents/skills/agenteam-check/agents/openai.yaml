@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgenTeam 改动检查"
+  short_description: "按实际改动选择必要检查，核对版本、数据库脚本、构建与公开资料"
+  default_prompt: "使用 $agenteam-check 检查当前改动，只执行与改动有关的必要验证，并说明是否可以合并。"
