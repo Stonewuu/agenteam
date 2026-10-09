@@ -36,6 +36,10 @@
 | 安排周期性工作 | 一次性、每日、每周和每月计划，自动执行任务或发送通知。 |
 | 接入现有协作工具 | 企业微信与飞书账号绑定、平台登录和个人通知。 |
 
+### 演示视频
+
+[![点击播放演示视频（1080p）](https://stonewuu.github.io/Stonewuu/agenteam/agenteam-promo-cover.jpg)](https://stonewuu.github.io/Stonewuu/agenteam/agenteam-promo.mp4)
+
 <a id="workspace"></a>
 
 ### 工作台
