@@ -1,8 +1,8 @@
-# 使用社区镜像部署
+# 使用 Docker 镜像部署 AgenTeam
 
-社区版从 Docker Hub 的 `stonewuu` 账号取得镜像，首次初始化后只保留一个企业。旧完整版本及已经升级过的商业数据库应按商业迁移流程处理，不能直接换成社区镜像启动。
+AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过 Docker Hub 的 `stonewuu` 账号获取镜像，即可在自己的服务器上部署工作空间。
 
-本页对应准备中的 0.2.0。正式安装前，以该版本的完整发布记录及镜像可取得性为准；当前本机开发镜像不代表已经公开发布。已验证的镜像平台为 `linux/amd64`（64 位 x86 Linux）。
+本文使用 0.2.0 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
 
 ## 镜像清单
 
@@ -14,7 +14,7 @@
 | 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.2.0` |
 | 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.2.0` |
 
-部署包包含本版本的 Compose（多容器服务配置）文件、入口代理配置和初始化工具。服务器运行这些镜像不需要克隆源码，也不需要商业仓库凭据。
+部署包包含本版本的 Compose（多容器服务配置）文件、入口代理配置和初始化工具。使用部署包即可完成服务器安装。
 
 ## 提取部署文件
 
@@ -35,7 +35,7 @@ python3 configure-server.py --domain app.example.com
 ## 配置入口并启动
 
 1. 为实际域名准备 HTTPS（加密网页连接）证书，按生成的 `agenteam.nginx.conf` 配置服务器的 Nginx（入口代理）。容器服务默认只监听本机 `127.0.0.1:8088`，由这个入口接收外部请求。
-2. 核对 `.env` 中的 `PUBLIC_URL`、监听端口、可信代理及资源限制。配置邮件服务后，找回密码、邮箱验证和邮件邀请才能实际发送；启用 `container,production` 环境时补齐其要求的邮件与代理配置。
+2. 核对 `.env` 中的 `PUBLIC_URL`、监听端口、可信代理及资源配置。配置邮件服务后，找回密码、邮箱验证和邮件邀请才能实际发送；启用 `container,production` 环境时补齐其要求的邮件与代理配置。
 3. 保持数据库、应用和文件使用同一套持久卷，执行配置检查及启动：
 
 ```sh
@@ -43,7 +43,7 @@ docker compose config --quiet
 docker compose up -d --no-build --wait --wait-timeout 300
 ```
 
-访问实际域名，使用 `.env` 中的初始化凭据创建管理员和初始企业，再配置模型并开始使用。企业微信、飞书的应用及绑定步骤见 [企业消息说明](enterprise-messaging.md)，它们不需要商业激活。
+访问实际域名，使用 `.env` 中的初始化凭据创建管理员和初始企业，再配置模型并开始使用。企业微信、飞书的应用及绑定步骤见 [企业消息说明](enterprise-messaging.md)。
 
 ## 数据库与连接驱动
 
@@ -67,7 +67,7 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 更新前保存数据库、Redis 持久数据、应用与用户文件、工作目录、配置和加密密钥，并保留原镜像内容摘要。下载新版本部署包时使用新的空目录，将原运行配置和数据卷关系逐项带入；不要重新生成密码或对旧数据库重新初始化。
 
-本产品五类镜像使用同一个明确版本。升级商业版时保留原部署编号、初始企业、账号、绑定与密钥，并按商业迁移说明操作。已有商业库不能直接降级为社区库。
+更新时保持五类 AgenTeam 镜像使用同一版本，并保留原账号、资源、任务、平台绑定及应用密钥。已有部署按当前版本对应的升级步骤操作。
 
 ## 查看软件许可与第三方声明
 
@@ -75,6 +75,6 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 解出的部署包在 `licenses/agenteam/LICENSE` 保存公共项目许可，`licenses/third-party/README.md` 提供第三方原文索引。后端、前端、执行器和办公镜像内的对应目录为 `/usr/share/licenses/agenteam/`。可以使用 `docker cp` 从已创建的容器取得文件；查看声明不需要启动应用或连接数据库。
 
-正式发布后，从 [0.2.0 第三方源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.2.0/third-party-sources.json) 取得本版本附件清单。索引列出对应镜像、下载地址、字节数及 SHA-256（文件内容摘要）；下载后使用 `sha256sum <附件文件>` 核对摘要再保存。附件包含相关第三方原源码、原始补丁及构建资料，各组件继续适用其原有许可。
+从 [0.2.0 第三方源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.2.0/third-party-sources.json) 取得本版本附件清单。索引列出对应镜像、下载地址、字节数及 SHA-256（文件内容摘要）；下载后使用 `sha256sum <附件文件>` 核对摘要再保存。附件包含相关第三方原源码、原始补丁及构建资料，各组件继续适用其原有许可。
 
-以上地址是本版本的发布目标，当前尚未发布。正式安装前，同时核对 [两版完成记录](https://github.com/Stonewuu/agenteam/releases/download/v0.2.0/release-batch.json) 中列出的镜像及源码附件；只有下载入口可用且内容一致，才是完整交付。
+镜像、安装说明和第三方资料统一使用明确的版本号，便于部署维护及后续更新。

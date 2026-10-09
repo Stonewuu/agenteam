@@ -1,12 +1,12 @@
 # AgenTeam 部署文件
 
-本目录从当前版本的部署镜像提取，不包含实际数据库密码、客户许可证或签发私钥。先阅读 [本版本安装说明](docs/deployment/images.md)，再在服务器运行 `python3 configure-server.py --domain 实际域名` 创建首次配置。
+本目录提供当前版本的服务配置、初始化工具和安装说明。先阅读 [本版本安装说明](docs/deployment/images.md)，再在服务器运行 `python3 configure-server.py --domain 实际域名` 创建首次配置。
 
 安装程序不会覆盖已有密码。升级旧部署前，按维护说明保存数据库、文件、配置和原镜像；保留原服务名称与数据卷关系。同机运行多套独立部署时，首次启动前修改各自的项目名、端口及网络配置。
 
-[企业微信与飞书说明](docs/deployment/enterprise-messaging.md)适用于两个版本。商业部署包另附 `docs/licensing/` 中的激活和维护说明。
+通过[企业微信与飞书说明](docs/deployment/enterprise-messaging.md)连接企业应用、成员账号与工作通知。
 
-`licenses/agenteam/LICENSE` 只适用于公共 AgenTeam 源代码。商业扩展及第三方组件分别保留其原许可；不能把公共许可理解为对所有打包内容统一授权。正式交付以该版本的许可资料及整批发布记录为准。
+AgenTeam 源代码的许可见 `licenses/agenteam/LICENSE`。第三方组件保留各自的版权与许可，原文及索引随部署包提供。
 
 ## 两套部署共用一个 MySQL 实例
 
@@ -22,7 +22,7 @@ CREATE USER 'agenteam_community'@'%' IDENTIFIED BY '替换为新部署配置中�
 GRANT ALL PRIVILEGES ON agenteam_community.* TO 'agenteam_community'@'%';
 ```
 
-只授予新库范围内的权限，不授予全局权限或转授权权限。原商业账号同样只访问原业务库；在独立验证中确认两个账号不能读取对方数据库。上述语句仅用于新库，不对旧库重新初始化。
+只授予新库范围内的权限，不授予全局权限或转授权权限。原部署账号同样只访问原业务库；在独立验证中确认两个账号不能读取对方数据库。上述语句仅用于新库，不对旧库重新初始化。
 
 4. 在新部署的空目录生成配置，再调整以下项目。`DB_PASSWORD` 必须与上一步新账号密码一致，其他密钥继续使用新生成的值。
 
