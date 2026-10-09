@@ -5,6 +5,7 @@ import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {useT} from "@/lib/i18n/locale-provider";
 
 import {Button} from "@/components/ui/button";
+import {AnimatedHeight} from "@/components/ui/animated-height";
 
 import Link from "next/link";
 import {useId, useState} from "react";
@@ -12,6 +13,7 @@ import {IconAlertCircle, IconLogout, IconRefresh, IconSettings} from "@/componen
 import {editionClientExtension} from "@/features/edition/client-extension";
 import {errorMessage} from "@/lib/http/api-client";
 import type {IdentityUser} from "../types/identity";
+import ui from "@/components/ui/surface.module.css";
 import styles from "./enterprise-error-page.module.css";
 
 type EnterpriseErrorPageProps = {
@@ -33,6 +35,7 @@ export function EnterpriseErrorPage({
                                     }: EnterpriseErrorPageProps) {
   const uiText = useT();
   const titleId = useId();
+  const messageId = useId();
   const EnterpriseSelection = editionClientExtension.enterpriseSelection;
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
@@ -55,25 +58,39 @@ export function EnterpriseErrorPage({
 
   return <main className={styles.page}>
     <div className={styles.content}>
-      <section className={styles.card} aria-labelledby={titleId}>
-        <span className={styles.symbol}><IconAlertCircle size={28} variant="Bulk"/></span>
-        <h1 id={titleId} className={styles.title}>{uiText("页面暂时无法打开")}</h1>
-        <p className={styles.message} role="alert">{message}</p>
-        <Button type="button" className={styles.retry} disabled={signingOut} onClick={onRetry}>
-          <IconRefresh size={18}/>{uiText("重新加载")}</Button>
-        {alternatives.length > 0 && EnterpriseSelection && user?.capabilities.includes("enterprise.switch") &&
-          <EnterpriseSelection enterprises={alternatives} selectedId="" disabled={signingOut} onSelect={onSwitchEnterprise}/>}
+      <section className={styles.card} aria-labelledby={titleId} aria-describedby={messageId}>
+        <div className={styles.body}>
+          <header className={styles.intro}>
+            <span className={styles.symbol} aria-hidden="true"><IconAlertCircle size={24} variant="Bulk"/></span>
+            <div className={styles.copy}>
+              <h1 id={titleId} className={styles.title}>{uiText("页面暂时无法打开")}</h1>
+              <p id={messageId} className={styles.message} role="alert">{message}</p>
+            </div>
+          </header>
+          <div className={styles.actions}>
+            {alternatives.length > 0 && EnterpriseSelection && user?.capabilities.includes("enterprise.switch") &&
+              <div className={styles.alternatives}>
+                <EnterpriseSelection enterprises={alternatives} selectedId="" disabled={signingOut}
+                                     onSelect={onSwitchEnterprise}/>
+              </div>}
+            <Button type="button" className={`${ui.primary} ${styles.retry}`} disabled={signingOut} onClick={onRetry}>
+              <IconRefresh size={18}/>{uiText("重新加载")}
+            </Button>
+          </div>
+        </div>
+        <nav className={styles.accountActions} aria-label={uiText("账号操作")}>
+          {user ? <>
+            <Link className={styles.accountAction} href="/settings"><IconSettings size={16}/>{uiText("个人设置")}</Link>
+            <Button type="button" className={styles.accountAction} disabled={signingOut} onClick={() => void leave()}>
+              <IconLogout size={16}/>{signingOut ? uiText("正在退出…") : uiText("退出登录")}
+            </Button>
+          </> : <Link className={styles.accountAction} href="/login">{uiText("返回登录")}</Link>}
+        </nav>
       </section>
-      <nav className={styles.accountActions} aria-label={uiText("账号操作")}>
-        {user ? <>
-          <Link className={styles.accountAction} href="/settings"><IconSettings size={16}/>{uiText("个人设置")}</Link>
-          <Button type="button" className={styles.accountAction} disabled={signingOut} onClick={() => void leave()}>
-            <IconLogout size={16}/>{signingOut ? uiText("正在退出…") : uiText("退出登录")}
-          </Button>
-        </> : <Link className={styles.accountAction} href="/login">{uiText("返回登录")}</Link>}
-      </nav>
-      {signOutError &&
-        <p className={styles.actionError} role="alert">{localizeUiMessage(signOutError ?? "", uiText)}</p>}
+      <AnimatedHeight>
+        {signOutError &&
+          <p className={styles.actionError} role="alert">{localizeUiMessage(signOutError ?? "", uiText)}</p>}
+      </AnimatedHeight>
     </div>
   </main>;
 }
