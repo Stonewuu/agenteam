@@ -203,3 +203,11 @@ pnpm dev
 ## 开源许可
 
 AgenTeam 使用 [Apache-2.0 开源许可证](LICENSE)。Copyright © 2026 stonewu，版权声明见 [NOTICE](NOTICE)。第三方组件保留各自的版权与许可，相关资料见 [第三方声明](docs/releases/third-party.md)。
+
+## 致谢
+
+感谢以下开源项目与社区：
+
+- [AgentScope-Java](https://github.com/agentscope-ai/agentscope-java)：基于 Java 的智能体开发框架，支持多智能体协作。
+- [shadcn/ui](https://ui.shadcn.com/)：可复制、定制和扩展的开源界面组件集合。
+- [LINUX DO 论坛](https://linux.do/)
