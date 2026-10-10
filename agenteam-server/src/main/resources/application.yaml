@@ -78,6 +78,8 @@ execution:
     remote-token: "${AGENTEAM_SANDBOX_REMOTE_TOKEN:}"
     temporary-mb: "${AGENTEAM_SANDBOX_TEMPORARY_MB:256}"
     maximum-concurrent: "${AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT:2}"
+    capacity-root: "${AGENTEAM_SANDBOX_CAPACITY_ROOT:}"
+    cgroup-parent: "${AGENTEAM_SANDBOX_CGROUP_PARENT:}"
     local-mount-root: "${AGENTEAM_SANDBOX_LOCAL_MOUNT_ROOT:}"
     host-mount-root: "${AGENTEAM_SANDBOX_HOST_MOUNT_ROOT:}"
     network: "${AGENTEAM_SANDBOX_NETWORK:none}"
@@ -86,7 +88,7 @@ execution:
     maximum-files: "${AGENTEAM_SANDBOX_MAXIMUM_FILES:2000}"
     memory-mb: "${AGENTEAM_SANDBOX_MEMORY_MB:2048}"
     cpus: "${AGENTEAM_SANDBOX_CPUS:1}"
-    process-limit: "${AGENTEAM_SANDBOX_PROCESS_LIMIT:64}"
+    process-limit: "${AGENTEAM_SANDBOX_PROCESS_LIMIT:128}"
     # 单次文件读写与沙盒命令的时间上限，单位为秒；助手整次执行时间在助手的执行设置中配置。
     timeout-seconds: "${AGENTEAM_SANDBOX_TIMEOUT_SECONDS:1800}"
     idle-seconds: "${AGENTEAM_SANDBOX_IDLE_SECONDS:900}"
@@ -129,7 +131,6 @@ tools:
     # 所有 KB 按 1024 字节计算；模型直接返回量与页面展开后的可读全文无关。
     inline-kb: "${AGENTEAM_TOOL_INLINE_KB:32}"
     large-context-inline-kb: "${AGENTEAM_TOOL_LARGE_CONTEXT_INLINE_KB:64}"
-    save-kb: "${AGENTEAM_TOOL_SAVE_KB:16}"
     preview-kb: "${AGENTEAM_TOOL_PREVIEW_KB:2}"
     read-kb: "${AGENTEAM_TOOL_READ_KB:8}"
     read-lines: "${AGENTEAM_TOOL_READ_LINES:200}"

@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node --max-old-space-size=128 /opt/agenteam/browser/browser-cli.cjs "$@"

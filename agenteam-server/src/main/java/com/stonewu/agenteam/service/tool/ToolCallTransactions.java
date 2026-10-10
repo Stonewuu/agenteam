@@ -130,6 +130,8 @@ public class ToolCallTransactions {
                 "content", "工具参数不符合已发布的要求，本次操作没有执行。请按工具定义修正参数后继续。"));
             calls.finish(prepared, "failed", encryption.encrypt(result, resultBinding(prepared)), result,
                 argumentFailure.code(), argumentFailure.getReason(), clock.instant());
+        } else if (!binding.readOnly() && calls.hasUncertainWrite(run, binding, arguments)) {
+            rejectUnknown(prepared);
         } else if (!binding.readOnly() && calls.previouslyRejected(run, binding, arguments)) {
             reject(prepared);
         }
@@ -164,11 +166,15 @@ public class ToolCallTransactions {
         var call = calls.framework(run, session, use.getId())
             .orElseThrow(() -> new IllegalStateException("工具参数尚未固定保存"));
         verify(call, binding, json.tree(use.getInput()));
-        if (call.status().equals("unknown")) {
+        if (call.status().equals("unknown") && call.resultEncrypted() == null) {
             throw unknown();
         }
-        if (List.of("succeeded", "failed", "cancelled").contains(call.status()) && call.resultEncrypted() != null) {
+        if (List.of("succeeded", "failed", "cancelled", "unknown").contains(call.status()) && call.resultEncrypted() != null) {
             return call;
+        }
+        if (!binding.readOnly() && calls.hasUncertainWrite(run, binding, call.argumentHash(), call.id())) {
+            rejectUnknown(call);
+            return calls.find(call.enterpriseId(), call.id(), false).orElseThrow();
         }
         requireApproval(run, call);
         if (!call.readOnly() && call.status().equals("running") && call.submittedAt() != null && queries.canQuery(
@@ -229,7 +235,7 @@ public class ToolCallTransactions {
             return false;
         }
         boolean unknown = !call.readOnly() && call.submittedAt() != null;
-        JsonNode result = json.tree(Map.of("isError", true, "content",
+        JsonNode result = json.tree(Map.of("isError", true, "code", unknown ? "TOOL_RESULT_UNKNOWN" : code, "content",
             List.of(Map.of("type", "text", "text", unknown ? unknown().getReason() : message))));
         calls.finish(call, unknown ? "unknown" : "failed", encryption.encrypt(result, resultBinding(call)), result,
             unknown ? "TOOL_RESULT_UNKNOWN" : code, unknown ? unknown().getReason() : message, clock.instant());
@@ -259,6 +265,12 @@ public class ToolCallTransactions {
         var result = json.tree(Map.of("isError", true, "content", "用户已拒绝本次操作，未发送请求。"));
         calls.finish(call, "cancelled", encryption.encrypt(result, resultBinding(call)), result, "TOOL_USER_REJECTED",
             "用户已拒绝本次操作，未发送请求。", clock.instant());
+    }
+
+    private void rejectUnknown(ToolCallRecord call) {
+        var result = json.tree(Map.of("isError", true, "code", "TOOL_RESULT_UNKNOWN", "content", unknown().getReason()));
+        calls.finish(call, "failed", encryption.encrypt(result, resultBinding(call)), result,
+            "TOOL_RESULT_UNKNOWN", unknown().getReason(), clock.instant());
     }
 
     private RunRecord current(JobLease lease, ExecutionToolBinding binding) {
@@ -310,6 +322,7 @@ public class ToolCallTransactions {
     }
 
     public static ApiException unknown() {
-        return new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN", "无法确认操作结果，请先到目标系统核对。");
+        return new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN",
+            "操作可能已经执行，但暂时无法确认结果。请先查询目标系统，不能重复提交相同操作；可以继续其他步骤并向用户说明未确认的部分。");
     }
 }

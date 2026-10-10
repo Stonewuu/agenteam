@@ -65,16 +65,9 @@ public final class ToolResultContent {
         reference.put("sizeBytes", Utf8Text.size(content)).put("rawSizeBytes", size)
             .put("totalLines", content.isEmpty() ? 0 : content.chars().filter(cp -> cp == '\n').count() + 1);
         String preview = Utf8Text.prefix(content, previewBytes);
-        int lines = 0, end = 0;
-        for (; end < preview.length(); end++) {
-            if (preview.charAt(end) == '\n' && ++lines == 20) {
-                end++;
-                break;
-            }
-        }
-        reference.put("content", preview.substring(0, end));
+        reference.put("content", preview);
         reference.put("previewStartLine", content.isEmpty() ? 0 : 1)
-            .put("previewEndOffset", Utf8Text.size(preview.substring(0, end)));
+            .put("previewEndOffset", Utf8Text.size(preview));
         if (reference.path("previewEndOffset").asInt() < reference.path("sizeBytes").asInt()) {
             reference.put("nextCursor", TextFileDocument.continuation(reference.path("revision").asText(),
                 reference.path("previewEndOffset").asInt(), reference.path("totalLines").asInt()));
@@ -83,22 +76,6 @@ public final class ToolResultContent {
             reference.put("sourceUrl", Utf8Text.prefix(value.path("url").asText(), 2048));
         }
         return reference;
-    }
-
-    public static void retainAuthorization(JsonNode value, ObjectNode target, String kind, String toolName) {
-        if (kind.equals("knowledge") && value.path("citations").isArray()) {
-            target.set("citations", value.path("citations").deepCopy());
-        }
-        if (kind.equals("data")) {
-            var fields = target.putArray("dataFields");
-            for (var field : value.path("fields")) {
-                fields.addObject().put("name", field.path("name").asText())
-                    .put("sensitive", field.path("sensitive").asBoolean());
-            }
-            if (toolName.equals("data_collections")) {
-                target.set("items", value.path("items").deepCopy());
-            }
-        }
     }
 
     /**

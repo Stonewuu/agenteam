@@ -43,7 +43,7 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
 
     public DockerWorkspaceRunner(WorkspaceSettings settings, DockerWorkspaceCommands docker,
                                  SandboxRuntimeSettings runtime) {
-        this(settings, docker, runtime, new SandboxCapacity(runtime.maximumConcurrent()));
+        this(settings, docker, runtime, new SandboxCapacity(runtime));
     }
 
     @Autowired
@@ -193,8 +193,12 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
 
     private List<String> startup(String name, String network, int memoryMb, int cpus, List<String> flags) {
         var arguments = new ArrayList<>(List.of("run", "--detach", "--name", name, "--workdir=/workspace",
-            "--network=" + network, "--memory=" + memoryMb * 1024L * 1024, "--cpus=" + cpus,
+            "--network=" + network, "--memory=" + memoryMb * 1024L * 1024,
+            "--memory-swap=" + memoryMb * 1024L * 1024, "--cpus=" + cpus,
             "--env=HOME=/tmp", "--env=LANG=C.UTF-8"));
+        if (!runtime.cgroupParent().isBlank()) {
+            arguments.add("--cgroup-parent=" + runtime.cgroupParent());
+        }
         for (String proxy : List.of("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy",
             "all_proxy", "no_proxy")) {
             arguments.add("--env=" + proxy + "=");

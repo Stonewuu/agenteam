@@ -119,7 +119,8 @@ public class SourceToolResultAccessService {
             var raw = encryption.decrypt(call.requestEncrypted(),
                 "tool-request:" + actor.enterpriseId() + ":" + call.id(), JsonNode.class).path("arguments");
             data.authorizeResult(actor, call.resourceId(), DataApiService.queryInput(raw),
-                result.path(result.path("truncated").asBoolean() ? "dataFields" : "fields"));
+                // 数据查询自身也会标记截断；旧文件引用才使用单独保存的字段权限。
+                result.path(result.has("fields") ? "fields" : "dataFields"));
         } else if (call.resourceKind().equals("data") && call.toolName().equals("data_collections")) {
             for (var collection : result.path("items")) {
                 var names = new ArrayList<String>();

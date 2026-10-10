@@ -4,10 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
-import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import com.stonewu.agenteam.model.file.entity.PreparedGeneratedFile;
-import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -57,28 +55,4 @@ public class GeneratedFileService {
         return files.find(file.enterpriseId(), file.id(), false).orElseThrow();
     }
 
-    public PreparedGeneratedFile toolResult(RunRecord run, ExecutionToolBinding binding, JsonNode redacted) {
-        return toolResult(run, binding, redacted, 20 * 1024 * 1024);
-    }
-
-    public PreparedGeneratedFile toolResult(RunRecord run, ExecutionToolBinding binding, JsonNode redacted,
-                                            int maxBytes) {
-        return toolResult(run, binding, redacted, maxBytes, null);
-    }
-
-    public PreparedGeneratedFile toolResult(RunRecord run, ExecutionToolBinding binding, JsonNode redacted,
-                                            int maxBytes, String callId) {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("文件写入不能占用数据库事务");
-        }
-        try {
-            byte[] bytes = json.writerWithDefaultPrettyPrinter().writeValueAsBytes(redacted);
-            var saved = storage.write(run.enterpriseId(), new ByteArrayInputStream(bytes), maxBytes);
-            return new PreparedGeneratedFile(callId == null ? UUID.randomUUID().toString() : callId, run.enterpriseId(),
-                run.userId(), binding.resourceId(), binding.resourceVersionId(), run.id(),
-                "artifact", "工具结果.json", "application/json", saved.key(), saved.size(), saved.sha256());
-        } catch (Exception failure) {
-            throw new IllegalStateException("工具结果文件无法保存", failure);
-        }
-    }
 }

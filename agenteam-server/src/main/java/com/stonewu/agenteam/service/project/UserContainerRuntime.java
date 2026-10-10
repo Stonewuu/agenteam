@@ -203,6 +203,9 @@ public class UserContainerRuntime {
                 "--label=agenteam_user_root=" + deploymentScope(),
                 "--label=com.stonewu.agenteam.user-workspace=" + location.workspaceId(),
                 "--label=" + UserContainerOwnership.LABEL + "=" + UserContainerOwnership.scope(storagePath(location))));
+        if (!runtime.cgroupParent().isBlank()) {
+            arguments.add("--cgroup-parent=" + runtime.cgroupParent());
+        }
         for (String proxy : List.of("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy",
             "all_proxy", "no_proxy")) {
             arguments.add("--env=" + proxy + "=");

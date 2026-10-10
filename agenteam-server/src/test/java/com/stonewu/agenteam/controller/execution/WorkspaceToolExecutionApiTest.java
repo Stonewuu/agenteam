@@ -19,14 +19,17 @@ import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.file.FileInspectionWorker;
 import com.stonewu.agenteam.service.file.FileRetentionService;
 import com.stonewu.agenteam.service.project.ProjectMetadataService;
+import com.stonewu.agenteam.service.project.ProjectPaths;
 import com.stonewu.agenteam.service.project.ProjectSandboxUsageService;
 import com.stonewu.agenteam.service.project.ProjectWorkspaceLayout;
 import com.stonewu.agenteam.service.project.ProjectWorkspaceStore;
+import com.stonewu.agenteam.service.workspace.SandboxContainerCleanup;
 import com.stonewu.agenteam.support.FileScanTestServer;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import com.stonewu.agenteam.support.ModelProfileFixture;
 import com.sun.net.httpserver.HttpExchange;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -58,6 +61,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
     private static final FileScanTestServer SCANNER = new FileScanTestServer();
+    private static final Path USER_WORKSPACES = Path.of("target/workspace-api", "users-" + UUID.randomUUID());
+    @Autowired
+    private SandboxContainerCleanup containerCleanup;
     @Autowired
     private RunMapper runs;
     @Autowired
@@ -83,6 +89,7 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         properties.add("execution.workspace-files-root", () -> "target/workspace-api/files");
         properties.add("execution.workspace-root", () -> "target/workspace-api/framework");
         properties.add("execution.state-root", () -> "target/workspace-api/states");
+        properties.add("execution.user-workspaces-root", USER_WORKSPACES::toString);
         properties.add("files.scan.host", () -> "127.0.0.1");
         properties.add("files.scan.port", SCANNER::port);
     }
@@ -91,6 +98,12 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
     void closeEnvironment() throws Exception {
         SCANNER.close();
         ENVIRONMENT.close();
+    }
+
+    @AfterEach
+    void removeTestContainer() {
+        // 每次运行使用独立根目录，结束时只删除本用例登记的命令容器。
+        containerCleanup.removeUserContainer(ProjectPaths.workspaceId(enterprise, admin), Duration.ofSeconds(15));
     }
 
     @Test
@@ -266,9 +279,10 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         modelResponse = exchange -> {
             var input = json.readTree(exchange.getRequestBody());
             switch (step.getAndIncrement()) {
-                case 0 ->
+                case 0 -> tool(exchange, "start-sandbox", "execute", Map.of("command", "true", "timeout_seconds", 15));
+                case 1 ->
                     tool(exchange, "slow-command", "execute", Map.of("command", "printf '已开始处理'; sleep 30", "timeout_seconds", 6));
-                case 1 -> {
+                case 2 -> {
                     timeout.set(result(input, "slow-command"));
                     tool(exchange, "alternative", "write_file", Map.of("path", "outputs/alternative.txt", "content", "已改用文件工具完成。"));
                 }
@@ -284,11 +298,11 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         assertEquals(124, timeout.get().path("exitCode").asInt());
         assertEquals("已开始处理", timeout.get().path("stdout").asText());
         assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
-        assertEquals(List.of("failed", "succeeded"), calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
+        assertEquals(List.of("succeeded", "failed", "succeeded"), calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
     }
 
     @Test
-    void usesUploadedInputsAndSavedToolReferencesWithoutLosingSourceAccessChecks() throws Exception {
+    void usesUploadedInputsDirectlyWithoutLosingSourceAccessChecks() throws Exception {
         String profile = models.saveProfiles(List.of(new ModelProfileFixture(enterprise, admin, "workspace-model", 1, "工作文件模型",
             "openai", "test-model", "http://127.0.0.1:" + modelServer.getAddress().getPort() + "/v1", "WORKSPACE_TEST_SECRET",
             new ModelCapabilities(true, true, 8192, 262144, List.of("text")), true)), key -> "isolated-workspace-secret").getFirst();
@@ -300,15 +314,18 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         String file = upload(original), path = "inputs/" + file + "/source.txt";
         var step = new AtomicInteger();
         var exported = new AtomicReference<String>();
-        var reference = new AtomicReference<String>();
+        var fragment = new AtomicReference<String>();
         modelResponse = exchange -> {
             var input = json.readTree(exchange.getRequestBody());
             switch (step.getAndIncrement()) {
                 case 0 -> tool(exchange, "input-read", "read_file", Map.of("path", path));
                 case 1 -> {
-                    reference.set(result(input, "input-read").path("_toolResultFile").path("path").asText());
-                    String command = "python - <<'PY'\nfrom pathlib import Path\nfull = Path('" + path + "').read_text()\nfragment = Path('" + reference.get() + "').read_text()\nassert full.startswith(fragment)\nPath('outputs/copied.txt').write_text(full)\nPY";
-                    tool(exchange, "input-process", "execute", Map.of("command", command, "result_paths", List.of(reference.get()), "timeout_seconds", 15));
+                    assertFalse(result(input, "input-read").has("_toolResultFile"));
+                    fragment.set(result(input, "input-read").path("content").asText());
+                    String command = "python - <<'PY'\nfrom pathlib import Path\nfull = Path('" + path
+                        + "').read_text()\nassert full.startswith(" + json.writeValueAsString(fragment.get())
+                        + ")\nPath('outputs/copied.txt').write_text(full)\nPY";
+                    tool(exchange, "input-process", "execute", Map.of("command", command, "timeout_seconds", 15));
                 }
                 case 2 -> tool(exchange, "input-export", "export_file", Map.of("path", "outputs/copied.txt"));
                 default -> {
@@ -322,7 +339,9 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         input.putArray("attachmentIds").add(file);
         var accepted = data(write(base() + "/conversations", Map.of("agentId", agent, "approvalPolicy", "auto_approve", "input", input), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         finish(accepted.path("runId").asText());
-        assertTrue(reference.get().startsWith("tool-results/"));
+        assertFalse(fragment.get().isEmpty());
+        assertTrue(original.startsWith(fragment.get()));
+        assertEquals(1, files.forRun(enterprise, accepted.path("runId").asText()).size(), "仅显式导出的文件生成附件");
         assertEquals(original, download(exported.get()));
         files.deleted(files.find(enterprise, file, false).orElseThrow(), Instant.now());
         mvc.perform(get(base() + "/files/" + exported.get() + "/download").cookie(cookie)).andExpect(status().isNotFound());

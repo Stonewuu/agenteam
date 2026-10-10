@@ -11,7 +11,7 @@ import io.agentscope.core.message.*;
 import java.util.*;
 
 /**
- * 只缩短已经有完整文件的旧结果，最近一轮原文和调用对应关系保持不变。
+ * 只缩短已有完整保存记录的旧结果，最近一轮原文和调用对应关系保持不变。
  */
 public final class ToolResultHistory {
     private ToolResultHistory() {

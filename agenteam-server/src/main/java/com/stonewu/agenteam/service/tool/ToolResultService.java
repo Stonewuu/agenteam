@@ -3,23 +3,22 @@ package com.stonewu.agenteam.service.tool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
-import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolPayloadMapper;
 import com.stonewu.agenteam.mapper.tool.ToolResultContent;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.file.entity.PreparedGeneratedFile;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
-import com.stonewu.agenteam.service.file.GeneratedFileService;
 import com.stonewu.agenteam.service.file.Utf8Text;
+import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workspace.WorkspaceToolDefinitions;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * 只向模型和页面交付移除秘密后的内容，大结果保存为原成员可读取的附件。
+ * 脱敏后的完整结果保存在调用记录中，模型直接接收正文，不自动生成结果附件。
  */
 @Service
 public class ToolResultService {
@@ -27,37 +26,15 @@ public class ToolResultService {
     }
 
     private final ToolPayloadMapper payloads;
-    private final GeneratedFileService files;
-    private final ResourceJson json;
     private final ToolResultSettings settings;
 
-    public ToolResultService(ToolPayloadMapper payloads, GeneratedFileService files, ResourceJson json,
-                             ToolResultSettings settings) {
+    public ToolResultService(ToolPayloadMapper payloads, ToolResultSettings settings) {
         this.payloads = payloads;
-        this.files = files;
-        this.json = json;
         this.settings = settings;
     }
 
     public ToolResultSettings settings() {
         return settings;
-    }
-
-    /**
-     * 较大的已保存调用记录提供稳定引用，旧读取片段也可缩短，不额外生成附件。
-     */
-    public Prepared referenceForHistory(String callId, Prepared prepared, int maximum) {
-        var value = prepared.modelResult();
-        if (prepared.file() != null || !value.isObject() || value.has(ToolResultContent.REFERENCE)
-            || Utf8Text.size(value.toString()) <= settings.previewBytes() * 2) {
-            return prepared;
-        }
-        var reference = ToolResultContent.reference(callId, null, prepared.redacted(),
-            Utf8Text.size(prepared.redacted().toPrettyString()), 0);
-        ObjectNode withReference = value.deepCopy();
-        withReference.set(ToolResultContent.REFERENCE, reference);
-        return Utf8Text.size(withReference.toString()) <= maximum ? new Prepared(withReference, prepared.redacted(),
-            null) : prepared;
     }
 
     public Prepared prepare(RunRecord run, ExecutionToolBinding binding, JsonNode result, List<String> secrets) {
@@ -68,6 +45,10 @@ public class ToolResultService {
                             String callId, int maximumBytes) {
         JsonNode safe = payloads.redact(result, binding.definition().redactPaths(), secrets);
         int size = Utf8Text.size(safe.toString());
+        if (size > settings.maxFileBytes()) {
+            throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "TOOL_RESULT_TOO_LARGE",
+                "工具返回内容超过保存上限，请缩小查询范围或使用分页后继续。");
+        }
         if (WorkspaceToolDefinitions.handles(binding) && WorkspaceToolDefinitions.READ_TOOLS.contains(
             binding.definition().name())) {
             if (size > maximumBytes) {
@@ -75,22 +56,16 @@ public class ToolResultService {
             }
             return new Prepared(safe, safe, null);
         }
-        if (size <= settings.saveBytes() && size <= maximumBytes) {
+        if (size <= maximumBytes) {
             return new Prepared(safe, safe, null);
         }
-        var file = files.toolResult(run, binding, safe, settings.maxFileBytes(), callId);
-        var reference = ToolResultContent.reference(callId == null ? file.id() : callId, file.id(), safe, file.size(),
-            settings.previewBytes());
-        ObjectNode stored = reference.deepCopy();
-        ToolResultContent.retainAuthorization(safe, stored, binding.resourceKind(), binding.definition().name());
-        if (size <= maximumBytes) {
-            ObjectNode withReference = safe.isObject() ? safe.deepCopy() : (ObjectNode) json.tree(
-                Map.of("result", safe));
-            withReference.set(ToolResultContent.REFERENCE, reference);
-            return new Prepared(Utf8Text.size(withReference.toString()) <= maximumBytes ? withReference : safe, stored,
-                file);
+        if (callId == null) {
+            throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "TOOL_RESULT_TOO_LARGE",
+                "工具返回内容过多，请缩小查询范围后继续。");
         }
-        return new Prepared(ToolResultContent.fitReference(reference, maximumBytes), stored, file);
+        // 路径按需读取已有调用记录，不创建文件；尽量利用本轮空间直接提供原文。
+        var reference = ToolResultContent.reference(callId, null, safe, size, maximumBytes);
+        return new Prepared(ToolResultContent.fitReference(reference, maximumBytes), safe, null);
     }
 
     /**
@@ -108,7 +83,7 @@ public class ToolResultService {
         }
         var reference = ToolResultContent.reference(call.id(),
             stored == null ? null : stored.path("fileId").asText(null), result,
-            Utf8Text.size(result.toString()), settings.previewBytes());
+            Utf8Text.size(result.toString()), maximumBytes);
         return ToolResultContent.fitReference(reference, maximumBytes);
     }
 }

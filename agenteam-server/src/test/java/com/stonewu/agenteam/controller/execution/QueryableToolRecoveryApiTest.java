@@ -110,7 +110,7 @@ class QueryableToolRecoveryApiTest extends ExecutionApiTestSupport {
             worker.poll();
             await(() -> terminal(run));
         }
-        assertEquals("failed", state(run));
+        assertEquals("completed", state(run));
         assertCall(run, "unknown", 1, 1);
         write(base() + "/runs/" + run + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
         try (var restarted = new RunWorker(lifecycle, tasks)) {
@@ -118,6 +118,38 @@ class QueryableToolRecoveryApiTest extends ExecutionApiTestSupport {
         }
         assertEquals(1, REMOTE.writes.get());
         assertEquals(1, REMOTE.queries.get());
+    }
+
+    @Test
+    void uncertainWriteIsReturnedToTheModelAndDuplicateSubmissionIsBlocked() throws Exception {
+        var accepted = waiting("unknown", 10);
+        String run = accepted.path("runId").asText();
+        var turn = new AtomicInteger();
+        modelResponse = exchange -> {
+            var request = json.readTree(exchange.getRequestBody());
+            assertTrue(request.toString().contains("TOOL_RESULT_UNKNOWN"));
+            if (turn.getAndIncrement() == 0) {
+                frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "duplicate-write",
+                    "type", "function", "function", Map.of("name", modelTool(request, "write_record"),
+                        "arguments", "{\"text\":\"查询恢复使用的原始正文\"}")))), "tool_calls");
+            } else {
+                frame(exchange, Map.of("content", "已保留未确认的操作结果，请核对目标系统；其余步骤已处理。"), "stop");
+            }
+        };
+        approve(run);
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> terminal(run));
+        }
+        assertEquals("completed", state(run), () -> diagnostic(run));
+        assertEquals(2, turn.get());
+        assertEquals(1, REMOTE.writes.get());
+        assertEquals(1, REMOTE.queries.get());
+        var calls = databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>()
+            .eq(ToolCallRow::getRunId, run));
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> "TOOL_RESULT_UNKNOWN".equals(call.getErrorCode())));
+        assertEquals(1, count("run_approval"), "不确定的同参写入不能再次申请确认或发送");
     }
 
     @Test

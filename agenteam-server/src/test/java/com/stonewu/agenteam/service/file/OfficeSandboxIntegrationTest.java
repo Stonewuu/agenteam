@@ -33,8 +33,8 @@ class OfficeSandboxIntegrationTest {
 
     @Test
     void createsReadsRecalculatesRendersAndKeepsFilesAcrossContainers() throws Exception {
-        var settings = new WorkspaceSettings(directory.toString(), "agenteam/sandbox-office:local", true, 128, 20, 2000, 1536, 1, 64, 180, "none");
-        var runner = new DockerWorkspaceRunner(settings, new DockerWorkspaceCommands(), new SandboxRuntimeSettings(256, 2, "", ""));
+        var settings = new WorkspaceSettings(directory.toString(), "agenteam/sandbox-office:local", true, 128, 20, 2000, 512, 1, 128, 180, "none");
+        var runner = new DockerWorkspaceRunner(settings, new DockerWorkspaceCommands(), new SandboxRuntimeSettings(64, 1, "", ""));
         Path source = directory.resolve("source");
         for (String area : List.of("inputs", "tool-results", "work", "outputs")) {
             Files.createDirectories(source.resolve(area));

@@ -239,7 +239,7 @@ class PluginToolExecutionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void oversizedResultCreatesRestrictedAttachmentAndDisablingSourceBlocksOldDownload() throws Exception {
+    void oversizedResultUsesCallStorageAndDisablingSourceBlocksReading() throws Exception {
         String plugin = plugin();
         content = "资料".repeat(300000);
         var requests = new AtomicReference<String>();
@@ -256,16 +256,17 @@ class PluginToolExecutionApiTest extends ExecutionApiTestSupport {
                 fixtureRow.put("error_message", fixtureValues.get("error_message"));
                 return fixtureRow;
             }).toList()).toString());
-            String file = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(FileSqlMapper.class).selectList(new LambdaQueryWrapper<FileObjectRow>().select(FileObjectRow::getId).eq(FileObjectRow::getEnterpriseId, (enterprise)).eq(FileObjectRow::getRunId, (run))).stream().map(fixtureRecord -> fixtureRecord.getId()).toList());
-            var details = json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().select(ToolCallRow::getResultRedactedJson).eq(ToolCallRow::getRunId, (run))).stream().map(fixtureRecord -> fixtureRecord.getResultRedactedJson()).toList()));
-            assertTrue(details.path("truncated").asBoolean());
-            assertEquals(file, details.path("fileId").asText());
-            assertTrue(requests.get().contains("tool-results/" + file + "/content.txt"), "模型必须收到可继续读取的真实文件路径");
+            assertTrue(files.forRun(enterprise, run).isEmpty(), "工具结果不应生成附件");
+            var call = databaseAccess.mapper(ToolCallSqlMapper.class).selectOne(new LambdaQueryWrapper<ToolCallRow>()
+                .eq(ToolCallRow::getRunId, run));
+            var details = json.readTree(call.getResultRedactedJson());
+            assertEquals(content, details.path("content").asText());
+            assertFalse(details.has("fileId"));
+            assertTrue(requests.get().contains("tool-results/" + call.getId() + "/content.txt"), "超大结果可从调用记录继续读取");
             var snapshot = data(mvc.perform(get(base() + "/conversations/" + accepted.path("conversationId").asText()).cookie(cookie)).andExpect(status().isOk()).andReturn());
-            assertTrue(snapshot.toString().contains("\"type\":\"attachment\""));
+            assertFalse(snapshot.toString().contains("\"type\":\"attachment\""));
             schemas.validate("ConversationSnapshot", snapshot);
-            var download = data(mvc.perform(get(base() + "/files/" + file + "/download").cookie(cookie)).andExpect(status().isOk()).andReturn());
-            String url = download.path("url").asText();
+            String url = base() + "/runs/" + run + "/steps/" + call.getStepId() + "/tool-content/download";
             var pending = mvc.perform(get(url).cookie(cookie)).andReturn();
             var response = mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn();
             assertTrue(response.getResponse().getContentAsByteArray().length > 1024 * 1024);
@@ -313,13 +314,11 @@ class PluginToolExecutionApiTest extends ExecutionApiTestSupport {
             await(() -> terminal(run));
             assertEquals("completed", state(run));
         }
-        var file = files.forRun(enterprise, run).getFirst();
-        Path path = Path.of("target/p04-plugin-execution-files").resolve(file.storageKey()).toAbsolutePath();
-        assertTrue(Files.exists(path));
+        assertTrue(files.forRun(enterprise, run).isEmpty());
+        assertTrue(count("tool_call") > 0);
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
         previewRetention.clean();
         previewRetention.clean();
-        assertFalse(Files.exists(path));
         assertEquals(0, count("tool_call"));
         assertEquals(0, count("run_checkpoint"));
         assertEquals(0, count("agent_run"));

@@ -97,10 +97,6 @@ public class DelegatedToolResultService {
                 safe, Utf8Text.size(safe.toPrettyString()), 0);
             String sanitized = ToolResultContent.text(safe);
             displayed = Utf8Text.size(sanitized) <= maximum ? sanitized : format(reference, header, maximum);
-            var withReference = displayed + "\n\n完整结果：" + reference;
-            if (Utf8Text.size(sanitized) <= maximum && Utf8Text.size(withReference) <= maximum) {
-                displayed = withReference;
-            }
             var saved = json.tree(Map.of("content", displayed, ToolResultContent.REFERENCE, reference));
             transactions.complete(lease, call.id(), new ToolResultService.Prepared(saved, stored, prepared.file()),
                 result.getState() == ToolResultState.ERROR ? "DELEGATED_RESULT_FAILED" : null,

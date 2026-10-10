@@ -1,0 +1,9 @@
+[Unit]
+Description=AgenTeam 沙盒总内存限制
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=576M
+MemoryMax=640M
+MemorySwapMax=0
+TasksMax=512

@@ -19,6 +19,17 @@ public final class AgentContextBudget {
             throw new ApiException(HttpStatus.CONFLICT, "MODEL_PROFILE_UNAVAILABLE",
                 "当前模型没有可确认的上下文上限，请联系维护者。");
         }
+        if (estimatedTokens(input) > maximum) {
+            throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_CONTEXT_LIMIT",
+                "本次对话内容过长，请缩短输入或新建对话后重试。");
+        }
+    }
+
+    public static boolean needsResultCompaction(ModelCallInput input) {
+        return estimatedTokens(input) > input.model().getContextWindowSize() * 0.8;
+    }
+
+    private static long estimatedTokens(ModelCallInput input) {
         long output = 0;
         if (input.options() != null) {
             if (input.options().getMaxTokens() != null) {
@@ -31,9 +42,6 @@ public final class AgentContextBudget {
         long messages = TokenCounterUtil.calculateToken(input.messages());
         long tools = (long) Math.ceil(JsonUtils.getJsonCodec().toJson(input.tools()).length() / 2.5);
         // 估算不能替代模型实际分词，但不能将中文字节数直接当成模型输入数量。
-        if (messages + tools + output + 256 > maximum) {
-            throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_CONTEXT_LIMIT",
-                "本次对话内容过长，请缩短输入或新建对话后重试。");
-        }
+        return messages + tools + output + 256;
     }
 }

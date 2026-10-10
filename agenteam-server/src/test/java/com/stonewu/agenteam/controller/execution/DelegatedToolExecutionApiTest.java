@@ -86,7 +86,7 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
                     toolCalls(exchange, List.of(tool(0, "child-find-tail", modelTool(input, "grep_files"), Map.of("path", path.get(), "pattern", "末尾答案", "before", 0, "after", 0))));
                 }
                 case 2 -> {
-                    assertTrue(modelTextForCall(input, "large-child").getBytes(StandardCharsets.UTF_8).length <= 2048, "历史委派结果只保留可重新读取的引用");
+                    assertTrue(modelTextForCall(input, "large-child").getBytes(StandardCharsets.UTF_8).length <= 32 * 1024, "容量充足时保留此前收到的结果");
                     var found = modelResultForCall(input, "child-find-tail");
                     assertEquals(1, found.path("matches").size());
                     toolCalls(exchange, List.of(tool(0, "child-read-tail", modelTool(input, "read_file"), Map.of("path", path.get(), "cursor", found.path("matches").get(0).path("readCursor").asText()))));
@@ -103,7 +103,7 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
         var stored = databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getRunId, accepted.path("runId").asText()));
         assertEquals(3, stored.size());
         assertTrue(stored.stream().allMatch(call -> call.getStatus().equals("succeeded")));
-        assertEquals(1, databaseAccess.mapper(FileSqlMapper.class).selectCount(new LambdaQueryWrapper<FileObjectRow>().eq(FileObjectRow::getRunId, accepted.path("runId").asText())));
+        assertEquals(0, databaseAccess.mapper(FileSqlMapper.class).selectCount(new LambdaQueryWrapper<FileObjectRow>().eq(FileObjectRow::getRunId, accepted.path("runId").asText())));
         var original = stored.stream().filter(call -> call.getToolName().equals("read_agent_spawn_result")).findFirst().orElseThrow();
         String url = base() + "/runs/" + accepted.path("runId").asText() + "/steps/" + original.getStepId() + "/tool-content/download";
         var pending = mvc.perform(get(url).cookie(cookie)).andReturn();

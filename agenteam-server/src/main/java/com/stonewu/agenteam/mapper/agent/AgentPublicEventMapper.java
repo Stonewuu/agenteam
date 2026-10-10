@@ -9,6 +9,7 @@ import com.stonewu.agenteam.model.agent.entity.AgentEventRecord;
 import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
+import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.model.execution.response.ContentBlock.ToolBlockDetails;
 import com.stonewu.agenteam.model.execution.response.RunStepView;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
@@ -227,7 +228,8 @@ public final class AgentPublicEventMapper {
         ContentBlock block = blocks.get(key);
         if (block == null) {
             String name = event.toolCallName() == null ? "tool" : event.toolCallName();
-            block = newBlock(key, "tool", parent, "子智能体", id("tool-step:" + session + ":" + call), "pending",
+            String label = Set.of("agent_spawn", "agent_send").contains(name) ? "子智能体" : "工具调用";
+            block = newBlock(key, "tool", parent, label, id("tool-step:" + session + ":" + call), "pending",
                 new ToolBlockDetails(call, name, null, "", "", "running", "pending"));
             replace(changes, block);
         }
@@ -266,11 +268,12 @@ public final class AgentPublicEventMapper {
             .equals("__fragment__") ? tool.name() : event.toolCallName();
         var updated = new ContentBlock(block.id(), block.type(), block.parentBlockId(), block.displayOrder(),
             next(block.revision()), "", status, block.stepId(), null, null, null, block.label(),
-            new ToolBlockDetails(call, name, null, publicInput(input),
-                status.equals("failed") ? "子任务未完成，请查看已保存的部分结果。" : publicResult(result), callStatus,
+            new ToolBlockDetails(call, name, null, AgentToolTextMapper.input(json, input),
+                status.equals("failed") && Set.of("agent_spawn", "agent_send").contains(name)
+                    ? "子任务未完成，请查看已保存的部分结果。" : AgentToolTextMapper.result(json, result), callStatus,
                 resultStatus));
         replace(changes, updated);
-        step(changes, block.stepId(), id("agent:" + session), "tool", "子智能体", status, event, null);
+        step(changes, block.stepId(), id("agent:" + session), "tool", block.label(), status, event, null);
     }
 
     private void platformTool(AgentEventRecord event, String session, String parent, String key,
@@ -310,7 +313,11 @@ public final class AgentPublicEventMapper {
             resultStatus = status;
         }
         String input = record == null ? "" : ToolPayloadPreview.value(record.requestRedacted());
-        String output = record == null || record.resultRedacted() == null ? "" : sourceKind == null && record.resultRedacted()
+        if (record == null && event.eventType().equals("TOOL_RESULT_TEXT_DELTA")) {
+            toolOutputs.put(key, Utf8Text.prefix(toolOutputs.getOrDefault(key, "")
+                + (event.mergedDelta() == null ? "" : event.mergedDelta()), 2048));
+        }
+        String output = record == null || record.resultRedacted() == null ? AgentToolTextMapper.result(json, toolOutputs.getOrDefault(key, "")) : sourceKind == null && record.resultRedacted()
             .path("truncated").asBoolean(false) ? record.resultRedacted().path("content")
             .asText() : ToolPayloadPreview.value(record.resultRedacted());
         if ((record != null && "TOOL_USER_REJECTED".equals(record.errorCode())) || "DENIED".equals(event.state())) {
@@ -459,39 +466,6 @@ public final class AgentPublicEventMapper {
     private ApiException outputLimit() {
         return new ApiException(HttpStatus.CONFLICT, "EXECUTION_OUTPUT_LIMIT",
             "本次输出已达到允许的长度，请缩小任务范围后重试。");
-    }
-
-    private String publicInput(String value) {
-        try {
-            var input = json.readTree(value);
-            if (input == null || !input.isObject()) {
-                return "";
-            }
-            return input.has("task") ? input.path("task").asText() : input.path("message").asText();
-        } catch (Exception incomplete) {
-            return "";
-        }
-    }
-
-    private String publicResult(String value) {
-        if (value.startsWith("\"")) {
-            try {
-                var decoded = json.readTree(value);
-                if (!decoded.isTextual()) {
-                    return "";
-                }
-                value = decoded.textValue();
-            } catch (Exception incomplete) {
-                return "";
-            }
-        }
-        String result = value.replaceFirst(
-            "(?s)^(?:(?:agent_key|agent_id|session_id|task_id|status):[^\\r\\n]*(?:\\r?\\n|$))+", "").stripLeading();
-        if (List.of("agent_key:", "agent_id:", "session_id:", "task_id:", "status:").stream()
-            .anyMatch(header -> header.startsWith(result))) {
-            return "";
-        }
-        return result.replaceFirst("^reply:\\s*", "");
     }
 
     private String publicLabel(String value) {

@@ -12,6 +12,7 @@ import io.agentscope.core.middleware.ActingInput;
 import io.agentscope.core.middleware.AgentInput;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.middleware.ModelCallInput;
+import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Flux;
@@ -19,6 +20,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -128,24 +131,68 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
     @Override
     public Flux<AgentEvent> onActing(Agent agent, RuntimeContext context, ActingInput input,
                                      Function<ActingInput, Flux<AgentEvent>> next) {
-        boolean child = !rootSession.equals(context.getSessionId());
-        for (var call : input.toolCalls()) {
-            if (tools != null && tools.allowed(agent, call.getName(), child)) {
-                continue;
-            }
-            if (child || subagentIds.isEmpty() || !Set.of("agent_spawn", "agent_send").contains(call.getName())
-                || (call.getName().equals("agent_spawn") && !subagentIds.contains(call.getInput().get("agent_id")))) {
-                return Flux.error(new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                    "当前任务不能使用所请求的工具。"));
-            }
-        }
         var keys = input.toolCalls().stream().map(call -> context.getSessionId() + ":" + call.getId()).toList();
         return check(context, keys, 0, "tools").thenMany(Flux.deferContextual(subscriber -> {
-            if (tools != null) {
-                tools.prepare(agent, context, input, subscriber.getOrDefault(SubagentToolEvents.PARENT_CALL, null));
+            var rejected = new LinkedHashMap<ToolUseBlock, RuntimeException>();
+            var allowed = new ArrayList<ToolUseBlock>();
+            boolean child = !rootSession.equals(context.getSessionId());
+            for (var use : input.toolCalls()) {
+                try {
+                    if (allowed(agent, use, child)) {
+                        allowed.add(use);
+                    } else {
+                        rejected.put(use, new ApiException(HttpStatus.CONFLICT, "TOOL_UNAVAILABLE",
+                            "当前任务没有这个工具或助手。本次调用没有执行，请使用已提供的工具继续。"));
+                    }
+                } catch (RuntimeException error) {
+                    if (ToolFailureRecovery.terminal(error)) {
+                        throw error;
+                    }
+                    rejected.put(use, error);
+                }
             }
-            return next.apply(input);
+            var ready = new ActingInput(List.copyOf(allowed));
+            try {
+                if (tools != null && !allowed.isEmpty()) {
+                    ready = tools.prepare(agent, context, ready,
+                        subscriber.getOrDefault(SubagentToolEvents.PARENT_CALL, null), rejected::put);
+                }
+            } catch (RuntimeException error) {
+                if (ToolFailureRecovery.terminal(error)) {
+                    throw error;
+                }
+                allowed.forEach(use -> rejected.put(use, error));
+                ready = new ActingInput(List.of());
+            }
+            rejected.forEach((use, error) -> ToolFailureRecovery.observe(agent, context, subscriber,
+                ToolFailureRecovery.result(lease == null ? rootSession : lease.runId(), context.getSessionId(), use, error),
+                use, event -> stamp(event, context)));
+            var executing = ready;
+            return executing.toolCalls().isEmpty() ? Flux.empty() : Flux.defer(() -> next.apply(executing))
+                .onErrorResume(Exception.class, error -> {
+                    if (ToolFailureRecovery.terminal(error)) {
+                        return Flux.error(error);
+                    }
+                    // 框架的权限检查也可能抛出工具错误；补齐观察结果后继续下一轮，不重新执行本轮工具。
+                    for (var use : executing.toolCalls()) {
+                        ToolFailureRecovery.observe(agent, context, subscriber,
+                            ToolFailureRecovery.result(lease == null ? rootSession : lease.runId(), context.getSessionId(), use, error),
+                            use, event -> stamp(event, context));
+                    }
+                    return Flux.empty();
+                });
         })).map(event -> stamp(event, context));
+    }
+
+    private boolean allowed(Agent agent, ToolUseBlock call, boolean child) {
+        if (call.getName() == null) {
+            return false;
+        }
+        if (tools != null && tools.allowed(agent, call.getName(), child)) {
+            return true;
+        }
+        return !child && !subagentIds.isEmpty() && Set.of("agent_spawn", "agent_send").contains(call.getName())
+            && (!call.getName().equals("agent_spawn") || subagentIds.contains(call.getInput().get("agent_id")));
     }
 
     public void cancel() {

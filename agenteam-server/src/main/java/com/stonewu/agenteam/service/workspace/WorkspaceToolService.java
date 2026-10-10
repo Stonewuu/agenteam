@@ -296,7 +296,7 @@ public class WorkspaceToolService {
             response.put("content",
                 "命令超过允许时间，已停止并保留实际输出与工作文件。请先检查已有文件，再缩小命令范围或改用其他方法继续。");
         }
-        int bytes = Math.max(4, Math.min(1024, (maximum - 400) / 12));
+        int bytes = Math.max(4, maximum - 512);
         for (var entry : Map.of("stdout", command.stdoutPath(), "stderr", command.stderrPath()).entrySet()) {
             if (!files.exists(RuntimeContext.empty(), entry.getValue())) {
                 response.remove(entry.getKey() + "Path");
@@ -304,13 +304,28 @@ public class WorkspaceToolService {
             }
             Path path = files.resolve(entry.getValue(), false);
             try (var input = Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS)) {
-                byte[] content = input.readNBytes(bytes);
-                String preview = new String(content, 0, Utf8Text.boundary(content, content.length),
+                byte[] content = input.readNBytes(bytes + 1);
+                String preview = new String(content, 0, Utf8Text.boundary(content, Math.min(bytes, content.length)),
                     StandardCharsets.UTF_8);
                 response.put(entry.getKey(), Utf8Text.prefix(preview, bytes))
-                    .put(entry.getKey() + "Bytes", Files.size(path));
+                    .put(entry.getKey() + "Bytes", Files.size(path)).put(entry.getKey() + "Truncated", false);
             } catch (IOException failure) {
                 throw WorkspacePaths.io(failure);
+            }
+        }
+        // 以实际序列化长度分配输出，普通命令无需为了读取正文再次调用文件工具。
+        while (Utf8Text.size(response.toString()) > maximum) {
+            String field = Utf8Text.size(response.path("stdout").asText()) >= Utf8Text.size(response.path("stderr").asText())
+                ? "stdout" : "stderr";
+            String value = response.path(field).asText();
+            if (value.isEmpty()) {
+                break;
+            }
+            response.put(field, Utf8Text.prefix(value, Utf8Text.size(value) / 2));
+        }
+        for (String field : List.of("stdout", "stderr")) {
+            if (response.has(field)) {
+                response.put(field + "Truncated", Utf8Text.size(response.path(field).asText()) < response.path(field + "Bytes").asLong());
             }
         }
         return response;

@@ -29,7 +29,7 @@ class WorkspaceFileReaderTest {
         for (int index = 0; index < 25; index++) {
             files.write(RuntimeContext.empty(), "work/file-" + String.format("%02d", index) + ".txt", "第一行🙂\n内容\n最后一行：答案" + index);
         }
-        var reader = new WorkspaceFileReader(json, new ToolResultSettings(32, 64, 16, 2, 8, 200, 2, 20));
+        var reader = new WorkspaceFileReader(json, new ToolResultSettings(32, 64, 2, 8, 200, 2, 20));
         var query = new ObjectMapper().createObjectNode().put("path", "work").put("limit", 20);
         var page = reader.read(files, "saved-version", "list_files", query, 8192);
         assertEquals(20, page.path("items").size());

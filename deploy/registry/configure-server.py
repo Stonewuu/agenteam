@@ -52,6 +52,8 @@ def main():
         "SANDBOX_USAGE_STALE_SECONDS": "60",
         "SANDBOX_STOP_SECONDS": "10",
         "SANDBOX_TIMEOUT_SECONDS": "1800",
+        "SANDBOX_NETWORK": "none",
+        "SANDBOX_PROCESS_LIMIT": "128",
         "MAIL_HOST": "",
         "MAIL_PORT": "587",
         "MAIL_USERNAME": "",

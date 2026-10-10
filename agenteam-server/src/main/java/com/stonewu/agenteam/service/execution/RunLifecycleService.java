@@ -418,7 +418,8 @@ public class RunLifecycleService {
         for (var call : toolCalls.forRun(run.enterpriseId(), run.id())) {
             boolean unknown = call.status().equals("unknown") || (!call.readOnly() && call.status()
                 .equals("running") && call.submittedAt() != null);
-            if (unknown) {
+            // 已交回模型的不确定结果属于工具自身；模型完成最终答复后，不再把整个运行改判失败。
+            if (unknown && !(status.equals("completed") && call.status().equals("unknown") && call.resultEncrypted() != null)) {
                 status = "failed";
                 code = "TOOL_RESULT_UNKNOWN";
                 message = "无法确认操作结果，请先到目标系统核对。";

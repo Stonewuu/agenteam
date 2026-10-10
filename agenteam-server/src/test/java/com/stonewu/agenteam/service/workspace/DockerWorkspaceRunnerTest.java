@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -62,6 +63,26 @@ class DockerWorkspaceRunnerTest {
             assertEquals("不可修改的已保存内容", Files.readString(source.resolve("work/original.txt")));
         }
         assertEquals("", containers(), "调用结束后不能留有后台容器");
+    }
+
+    @Test
+    void configuredSharedCapacityBlocksCommandsAcrossRunnerInstances() throws Exception {
+        var runtime = new SandboxRuntimeSettings(64, 1, "", "", directory.resolve("capacity").toString(), "");
+        var runner = new DockerWorkspaceRunner(settings(), docker, runtime);
+        var source = source();
+        try (var control = new ToolCallControl(() -> {
+        })) {
+            try (var occupied = new SandboxCapacity(runtime).acquire(Duration.ofSeconds(5), control)) {
+                var failure = assertThrows(ApiException.class, () -> runner.execute(source, directory.resolve("blocked"),
+                    directory, "blocked", "true", "work", Duration.ofMillis(150), control));
+                assertEquals("SANDBOX_QUEUE_TIMEOUT", failure.code());
+                assertEquals("", containers(), "等待共享名额期间不能启动命令容器");
+            }
+            var result = runner.execute(source, directory.resolve("result"), directory, "released", "true", "work",
+                Duration.ofSeconds(15), control);
+            assertEquals(0, result.exitCode());
+        }
+        assertEquals("", containers());
     }
 
     @Test

@@ -6,7 +6,7 @@ import {readThirdPartyInputs, verifyThirdPartyInputs} from "./third-party-inputs
 const productImages = {backend: "APP_IMAGE", frontend: "FRONTEND_IMAGE", executor: "EXECUTOR_IMAGE",
   office: "SANDBOX_IMAGE", deployment: "DEPLOYMENT_IMAGE"};
 const deploymentFiles = ["compose.yaml", "compose.registry.yaml", "compose.single.yaml",
-  "compose.shared-mysql.yaml", "compose.external-mysql.yaml",
+  "compose.shared-mysql.yaml", "compose.external-mysql.yaml", "compose.low-memory.yaml", "agenteam-sandboxes.slice",
   "registry/configure-server.py", "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/README.md",
   "nginx/15-agenteam-config.sh", "nginx/default.conf.template", "nginx/api.conf"];
 const frontendFiles = ["Dockerfile", ".dockerignore", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
@@ -198,12 +198,13 @@ export function createImageInputs({community, productRoot = community, frontend,
   }
   save("frontend", [...webNames.map((name) => [name, resolve(frontend, name)]), ...licenseEntries(productDocuments)]);
   const office = resolve(community, "deploy/sandbox");
-  save("office", [...[...officeFiles, ...sourceTree(office, "office"), ...sourceTree(office, "bin")]
+  save("office", [...[...officeFiles, ...sourceTree(office, "office"), ...sourceTree(office, "browser"), ...sourceTree(office, "bin")]
     .map((name) => [name, resolve(office, name)]), ...licenseEntries(sharedDocuments)]);
   save("deployment", [...deploymentFiles.map((name) => [name, resolve(community, "deploy", name)]),
     ["registry/release.env", releaseFile],
     ["docs/deployment/images.md", resolve(productRoot, "docs/deployment/images.md")],
     ["docs/deployment/enterprise-messaging.md", resolve(community, "docs/deployment/enterprise-messaging.md")],
+    ["docs/deployment/web-browsing.md", resolve(community, "docs/deployment/web-browsing.md")],
     ...licenseEntries(productDocuments),
     ...edition === "pro" ? ["maintenance.md", "license-file.md"].map((name) =>
       [`docs/licensing/${name}`, resolve(productRoot, "docs/licensing", name)]) : []]);

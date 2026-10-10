@@ -80,7 +80,10 @@ def collect(image, output):
 set --
 for path in /etc/os-release /var/lib/dpkg/status /usr/share/doc/*/copyright \
   /usr/share/common-licenses/* /opt/java/openjdk/release /opt/java/openjdk/legal \
-  /usr/local/LICENSE /usr/local/lib/python*/LICENSE.txt /usr/share/licenses/node/LICENSE; do
+  /usr/local/LICENSE /usr/local/lib/python*/LICENSE.txt /usr/share/licenses/node/LICENSE \
+  /opt/agenteam/browser-versions.json /opt/agenteam/browsers/*/*/ABOUT \
+  /opt/agenteam/browsers/*/LICENSE* /opt/agenteam/browsers/*/COPYING* \
+  /opt/agenteam/browsers/*/*/LICENSE* /opt/agenteam/browsers/*/*/COPYING*; do
   if [ -f "$path" ] || [ -d "$path" ]; then
     set -- "$@" "$path"
   fi

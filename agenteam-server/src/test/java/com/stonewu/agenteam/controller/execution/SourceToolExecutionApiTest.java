@@ -265,7 +265,7 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
         var stored = databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getRunId, accepted.path("runId").asText()));
         assertEquals(4, stored.size());
         assertTrue(stored.stream().allMatch(call -> call.getStatus().equals("succeeded")));
-        assertEquals(1, databaseAccess.mapper(FileSqlMapper.class).selectCount(new LambdaQueryWrapper<FileObjectRow>().eq(FileObjectRow::getRunId, accepted.path("runId").asText())), "读取和搜索不能反复生成新附件");
+        assertEquals(0, databaseAccess.mapper(FileSqlMapper.class).selectCount(new LambdaQueryWrapper<FileObjectRow>().eq(FileObjectRow::getRunId, accepted.path("runId").asText())), "工具结果、读取和搜索均不应生成附件");
         assertEquals(0, count("run_approval"));
         var original = stored.stream().filter(call -> call.getToolName().equals("data_query")).findFirst().orElseThrow();
         String contentUrl = base() + "/runs/" + accepted.path("runId").asText() + "/steps/" + original.getStepId() + "/tool-content";
@@ -321,9 +321,11 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
         };
         var accepted = submit("读取资料数据");
         finish(accepted);
-        String file = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(FileSqlMapper.class).selectList(new LambdaQueryWrapper<FileObjectRow>().select(FileObjectRow::getId).eq(FileObjectRow::getEnterpriseId, (enterprise)).eq(FileObjectRow::getRunId, (accepted.path("runId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getId()).toList());
-        var download = data(mvc.perform(get(base() + "/files/" + file + "/download").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        String url = download.path("url").asText();
+        assertEquals(0, databaseAccess.mapper(FileSqlMapper.class).selectCount(new LambdaQueryWrapper<FileObjectRow>()
+            .eq(FileObjectRow::getRunId, accepted.path("runId").asText())));
+        var call = databaseAccess.mapper(ToolCallSqlMapper.class).selectOne(new LambdaQueryWrapper<ToolCallRow>()
+            .eq(ToolCallRow::getRunId, accepted.path("runId").asText()).eq(ToolCallRow::getToolName, "data_query"));
+        String url = base() + "/runs/" + accepted.path("runId").asText() + "/steps/" + call.getStepId() + "/tool-content/download";
         var pending = mvc.perform(get(url).cookie(cookie)).andReturn();
         var response = mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn();
         assertTrue(response.getResponse().getContentAsByteArray().length > 16000);

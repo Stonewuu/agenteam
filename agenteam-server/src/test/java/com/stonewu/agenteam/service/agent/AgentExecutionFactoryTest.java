@@ -31,6 +31,8 @@ import com.stonewu.agenteam.service.tool.ToolExecutionService;
 import com.stonewu.agenteam.service.user.UserLanguageService;
 import com.stonewu.agenteam.service.workspace.WorkspaceToolDefinitions;
 import io.agentscope.core.event.AgentStartEvent;
+import io.agentscope.core.event.AgentResultEvent;
+import io.agentscope.core.event.ToolResultEndEvent;
 import io.agentscope.core.event.TextBlockDeltaEvent;
 import io.agentscope.core.message.*;
 import io.agentscope.core.model.ChatResponse;
@@ -128,7 +130,7 @@ class AgentExecutionFactoryTest {
         var preparedCall = mock(ToolCallRecord.class);
         when(preparedCall.status()).thenReturn("prepared");
         when(transactions.prepare(any(), any(), any(), any(), any())).thenReturn(preparedCall);
-        when(toolExecution.resultSettings()).thenReturn(new ToolResultSettings(32, 64, 16, 2, 8, 200, 2, 20));
+        when(toolExecution.resultSettings()).thenReturn(new ToolResultSettings(32, 64, 2, 8, 200, 2, 20));
         var availableVersions = mock(ResourceVersionMapper.class);
         when(availableVersions.available(any(), any())).thenAnswer(invocation -> Set.copyOf(invocation.<List<String>>getArgument(1)));
         when(toolExecution.invoke(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any())).thenReturn(json.createObjectNode().put("text", "已查询自己的资料库"));
@@ -144,8 +146,13 @@ class AgentExecutionFactoryTest {
             if (mode.equals("disabled") || mode.equals("unknown")) {
                 var expected = mode.equals("disabled") ? Set.<String>of() : Set.of("agent_spawn", "agent_send");
                 assertEquals(supportsTools ? withFileTools(expected, true) : expected, Set.copyOf(execution.agent().getToolkit().getToolNames()));
-                var error = assertThrows(RuntimeException.class, () -> execution.agent().streamEvents(new UserMessage("父请求"), execution.context()).collectList().block(Duration.ofSeconds(10)));
-                assertTrue(error.getMessage().contains("当前任务不能使用所请求的工具"));
+                var rejected = execution.agent().streamEvents(new UserMessage("父请求"), execution.context()).collectList().block(Duration.ofSeconds(10));
+                assertEquals(2, rejected.stream().filter(ToolResultEndEvent.class::isInstance)
+                    .map(ToolResultEndEvent.class::cast).filter(event -> event.getState() == ToolResultState.ERROR).count());
+                assertTrue(rejected.stream().filter(AgentResultEvent.class::isInstance).map(AgentResultEvent.class::cast)
+                    .anyMatch(event -> event.getResult().getTextContent().equals("父结果")));
+                assertTrue(execution.children().isEmpty());
+                execution.tools().requireSuccessful();
                 return;
             }
             assertEquals(withFileTools(Set.of("agent_spawn", "agent_send"), true), Set.copyOf(execution.agent().getToolkit().getToolNames()));

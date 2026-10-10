@@ -20,6 +20,7 @@ import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolResultState;
+import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.middleware.ActingInput;
 import io.agentscope.core.middleware.ModelCallInput;
 import io.agentscope.core.permission.PermissionContextState;
@@ -37,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.function.BiConsumer;
 
 /**
  * 父子智能体各用自己的固定工具范围；子任务只注册已验证的只读工具。
@@ -55,7 +57,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
     private final Duration timeout;
     private final long startedAt = System.nanoTime();
     private final AtomicBoolean stopped = new AtomicBoolean();
-    private final AtomicReference<ApiException> failure = new AtomicReference<>();
+    private final AtomicReference<RuntimeException> failure = new AtomicReference<>();
     private final Set<AtomicReference<ToolCallControl>> active = ConcurrentHashMap.newKeySet();
     private final Map<String, String> sessions = new ConcurrentHashMap<>();
     private final Set<String> externalNames = ConcurrentHashMap.newKeySet();
@@ -123,7 +125,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                             List.of(TextBlock.builder().text(compact).build()), result.getMetadata(),
                             result.getState()));
                     }
-                } else if (size > Math.min(limit, execution.resultSettings().previewBytes() * 2)) {
+                } else if (size > limit) {
                     replacements.put(result.getId(),
                         execution.delegatedResult(run, lease, context.getSessionId(), latest.get(result.getId()),
                             result, limit));
@@ -131,19 +133,21 @@ public final class ExecutionToolRuntime implements AutoCloseable {
             }
         }
         var normalized = ToolResultHistory.replaceLatest(input.messages(), replacements);
+        var bounded = new ModelCallInput(normalized, input.tools(), input.options(), input.model());
+        boolean shorten = AgentContextBudget.needsResultCompaction(bounded);
         var keep = ToolResultHistory.latestCalls(input.messages());
         int maximum = execution.resultSettings().previewBytes();
         var state = RuntimeContext.resolveAgentState(context, agent);
         if (state != null) {
             var mutable = state.contextMutable();
-            var compact = ToolResultHistory.shorten(ToolResultHistory.replaceLatest(mutable, replacements), keep, json,
-                maximum);
+            var replaced = ToolResultHistory.replaceLatest(mutable, replacements);
+            var compact = shorten ? ToolResultHistory.shorten(replaced, keep, json, maximum) : replaced;
             for (int i = 0; i < mutable.size(); i++) {
                 mutable.set(i, compact.get(i));
             }
         }
-        return new ModelCallInput(ToolResultHistory.shorten(normalized, keep, json, maximum), input.tools(),
-            input.options(), input.model());
+        return shorten ? new ModelCallInput(ToolResultHistory.shorten(normalized, keep, json, maximum), input.tools(),
+            input.options(), input.model()) : bounded;
     }
 
     public boolean allowed(Agent agent, String name, boolean child) {
@@ -194,23 +198,35 @@ public final class ExecutionToolRuntime implements AutoCloseable {
         }
     }
 
-    public void prepare(Agent agent, RuntimeContext context, ActingInput input, String parentCall) {
+    public ActingInput prepare(Agent agent, RuntimeContext context, ActingInput input, String parentCall,
+                               BiConsumer<ToolUseBlock, RuntimeException> rejected) {
         requireActive();
         String session = context.getSessionId();
         sessions.put(parentCall == null ? session : session + ":" + parentCall, session);
         sharedResults.put(session, WorkspaceResultGrants.from(context));
         int maximum = ToolResultBudget.perCall(execution.resultSettings(), contextWindows.getOrDefault(session, 0),
             input.toolCalls().size());
+        var ready = new ArrayList<ToolUseBlock>();
         for (var use : input.toolCalls()) {
-            var binding = agentBindings.getOrDefault(agent, Map.of()).get(use.getName());
-            if (binding != null) {
-                var call = transactions.prepare(lease, binding, session, parentCall, use);
-                if (call.status().equals("failed") && "TOOL_ARGUMENTS_INVALID".equals(call.errorCode())) {
-                    invalidArguments.add(binding.alias() + ":" + json.hash(json.tree(use.getInput())));
+            try {
+                var binding = agentBindings.getOrDefault(agent, Map.of()).get(use.getName());
+                if (binding != null) {
+                    var call = transactions.prepare(lease, binding, session, parentCall, use);
+                    if (call.status().equals("failed") && Set.of("TOOL_ARGUMENTS_INVALID", "TOOL_RESULT_UNKNOWN")
+                        .contains(call.errorCode() == null ? "" : call.errorCode())) {
+                        invalidArguments.add(binding.alias() + ":" + json.hash(json.tree(use.getInput())));
+                    }
+                    resultLimits.put(session + ":" + use.getId(), maximum);
                 }
-                resultLimits.put(session + ":" + use.getId(), maximum);
+                ready.add(use);
+            } catch (RuntimeException error) {
+                if (ToolFailureRecovery.terminal(error)) {
+                    throw error;
+                }
+                rejected.accept(use, error);
             }
         }
+        return new ActingInput(List.copyOf(ready));
     }
 
     public ToolCallRecord find(String source, String call) {
@@ -316,10 +332,14 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                             .state(
                                 result.path("isError").asBoolean(false) ? ToolResultState.ERROR : ToolResultState.SUCCESS)
                             .build();
-                    }).subscribeOn(Schedulers.boundedElastic()).doOnError(error -> {
-                        failure.compareAndSet(null, error instanceof ApiException known ? known :
-                            new ApiException(HttpStatus.CONFLICT, "TOOL_EXECUTION_FAILED",
-                                "本次工具调用无法继续，已保存结果仍可查看。"));
+                    }).subscribeOn(Schedulers.boundedElastic()).onErrorResume(Exception.class, error -> {
+                        if (ToolFailureRecovery.terminal(error) && (!cancelled.get() || stopped.get())) {
+                            failure.compareAndSet(null, error instanceof RuntimeException runtime ? runtime
+                                : new IllegalStateException("工具执行被中断", error));
+                            return Mono.error(error);
+                        }
+                        return Mono.just(ToolFailureRecovery.result(run.id(), param.getRuntimeContext().getSessionId(),
+                            param.getToolUseBlock(), error));
                     }).doOnCancel(() -> {
                         cancelled.set(true);
                         var control = cancellation.get();

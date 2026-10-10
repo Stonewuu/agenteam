@@ -1,0 +1,56 @@
+# 4 GB 测试主机配置：相同 Docker 主机上的站点必须共用下面的名额卷和资源分组。
+# 启用前安装 agenteam-sandboxes.slice，并创建 agenteam-sandbox-capacity 卷；参见部署说明。
+x-low-memory-sandbox: &low-memory-sandbox
+  AGENTEAM_SANDBOX_MEMORY_MB: "512"
+  AGENTEAM_SANDBOX_WORKSPACE_MB: "128"
+  AGENTEAM_SANDBOX_TEMPORARY_MB: "64"
+  AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT: "1"
+  AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS: "2"
+  AGENTEAM_SANDBOX_IDLE_SECONDS: "30"
+  AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS: "10"
+  AGENTEAM_SANDBOX_PROCESS_LIMIT: "128"
+
+services:
+  storage-init:
+    command:
+      - chown 10001:10001 /app-data /user-workspaces /executor-data /sandbox-capacity
+    volumes:
+      - sandbox-capacity:/sandbox-capacity
+
+  backend:
+    environment:
+      <<: *low-memory-sandbox
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0
+    mem_limit: 512m
+    memswap_limit: 512m
+
+  sandbox-executor:
+    environment:
+      <<: *low-memory-sandbox
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0
+      AGENTEAM_SANDBOX_CAPACITY_ROOT: /var/lib/agenteam-capacity
+      AGENTEAM_SANDBOX_CGROUP_PARENT: agenteam-sandboxes.slice
+    volumes:
+      - sandbox-capacity:/var/lib/agenteam-capacity
+    mem_limit: 160m
+    memswap_limit: 160m
+
+  frontend:
+    environment:
+      NODE_OPTIONS: --max-old-space-size=96
+    mem_limit: 160m
+    memswap_limit: 160m
+
+  redis:
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --maxmemory 48mb --maxmemory-policy noeviction"]
+    mem_limit: 64m
+    memswap_limit: 64m
+
+  nginx:
+    mem_limit: 32m
+    memswap_limit: 32m
+
+volumes:
+  sandbox-capacity:
+    name: agenteam-sandbox-capacity
+    external: true

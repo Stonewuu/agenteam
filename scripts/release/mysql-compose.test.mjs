@@ -64,3 +64,31 @@ test("连接共享数据库的部署不启动第二个 MySQL，缓存文件及�
   assert.notEqual(client.networks.application.ipam.config[0].subnet, provider.networks.application.ipam.config[0].subnet);
   assert.notEqual(client.services.nginx.ports[0].published, provider.services.nginx.ports[0].published);
 });
+
+test("低内存双站点共享执行名额，保留独立用户文件且常驻服务与沙盒总上限可放入四 GB 主机", () => {
+  const provider = configuration(["compose.shared-mysql.yaml", "compose.low-memory.yaml"], "provider");
+  const client = configuration(["compose.external-mysql.yaml", "compose.low-memory.yaml"], "client");
+  let combined = 640 * 1024 * 1024 + Number(provider.services.mysql.mem_limit);
+  for (const site of [provider, client]) {
+    for (const name of ["backend", "frontend", "sandbox-executor", "redis", "nginx"]) {
+      assert.ok(site.services[name].mem_limit > 0);
+      combined += Number(site.services[name].mem_limit);
+    }
+    for (const name of ["backend", "sandbox-executor"]) {
+      const environment = site.services[name].environment;
+      assert.equal(environment.AGENTEAM_SANDBOX_MEMORY_MB, "512");
+      assert.equal(environment.AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT, "1");
+    }
+    const executor = site.services["sandbox-executor"];
+    assert.equal(executor.environment.AGENTEAM_SANDBOX_CAPACITY_ROOT, "/var/lib/agenteam-capacity");
+    assert.equal(executor.environment.AGENTEAM_SANDBOX_CGROUP_PARENT, "agenteam-sandboxes.slice");
+    assert.ok(executor.volumes.some((volume) => volume.source === "sandbox-capacity"
+      && volume.target === "/var/lib/agenteam-capacity"));
+    assert.ok(site.services["storage-init"].command[0].includes("/sandbox-capacity"));
+    assert.equal(site.volumes["sandbox-capacity"].external, true);
+  }
+  assert.equal(combined, 3136 * 1024 * 1024);
+  assert.equal(provider.volumes["sandbox-capacity"].name, client.volumes["sandbox-capacity"].name);
+  assert.notEqual(provider.volumes["user-workspaces"].name, client.volumes["user-workspaces"].name);
+  assert.ok(!configuration(["compose.external-mysql.yaml", "compose.low-memory.yaml"], "client", true).includes("mysql"));
+});

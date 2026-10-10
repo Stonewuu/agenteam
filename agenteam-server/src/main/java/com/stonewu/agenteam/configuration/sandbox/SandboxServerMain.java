@@ -46,17 +46,18 @@ public final class SandboxServerMain {
                 value("AGENTEAM_SANDBOX_IMAGE", "agenteam/sandbox-office:local"), true,
                 number("AGENTEAM_SANDBOX_WORKSPACE_MB", 512), number("AGENTEAM_SANDBOX_FILE_MB", 20),
                 number("AGENTEAM_SANDBOX_MAXIMUM_FILES", 2000), number("AGENTEAM_SANDBOX_MEMORY_MB", 2048),
-                number("AGENTEAM_SANDBOX_CPUS", 1), number("AGENTEAM_SANDBOX_PROCESS_LIMIT", 64),
+                number("AGENTEAM_SANDBOX_CPUS", 1), number("AGENTEAM_SANDBOX_PROCESS_LIMIT", 128),
                 number("AGENTEAM_SANDBOX_TIMEOUT_SECONDS", 1800), value("AGENTEAM_SANDBOX_NETWORK", "none"));
             var runtime = new SandboxRuntimeSettings(number("AGENTEAM_SANDBOX_TEMPORARY_MB", 256),
                 number("AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT", 2), value("AGENTEAM_SANDBOX_LOCAL_MOUNT_ROOT", ""),
-                value("AGENTEAM_SANDBOX_HOST_MOUNT_ROOT", ""));
+                value("AGENTEAM_SANDBOX_HOST_MOUNT_ROOT", ""), value("AGENTEAM_SANDBOX_CAPACITY_ROOT", ""),
+                value("AGENTEAM_SANDBOX_CGROUP_PARENT", ""));
             var userSettings = new UserWorkspaceSettings(
                 value("AGENTEAM_USER_WORKSPACES_ROOT", root.resolve("user-workspaces").toString()),
                 value("AGENTEAM_USER_WORKSPACES_HOST_ROOT", ""));
             var docker = new DockerWorkspaceCommands(userSettings);
             docker.require(List.of("image", "inspect", settings.image()));
-            var capacity = new SandboxCapacity(runtime.maximumConcurrent());
+            var capacity = new SandboxCapacity(runtime);
             var executions = new SandboxExecutionService(new DockerWorkspaceRunner(settings, docker, runtime, capacity),
                 settings, new ObjectMapper(), root, runtime.maximumConcurrent() * 2);
             var json = new ObjectMapper();

@@ -260,9 +260,9 @@ class RunApprovalApiTest extends RunApprovalApiTestSupport {
         try (var worker = new RunWorker(lifecycle, tasks)) {
             worker.poll();
             await(() -> terminal(run));
-            assertEquals("failed", state(run));
+            assertEquals("completed", state(run));
             assertEquals(1, writes.get());
-            assertEquals("TOOL_RESULT_UNKNOWN", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getErrorCode).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getErrorCode()).toList()));
+            assertEquals("TOOL_RESULT_UNKNOWN", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().select(ToolCallRow::getErrorCode).eq(ToolCallRow::getRunId, run))).getErrorCode());
             assertEquals("unknown", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().select(ToolCallRow::getStatus).eq(ToolCallRow::getRunId, (run))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
             write(base() + "/runs/" + run + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
         }

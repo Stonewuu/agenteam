@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.mapper.tool;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -10,6 +11,7 @@ import com.stonewu.agenteam.model.security.entity.EncryptedPayload;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.model.tool.entity.ToolCallQueryRow;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
+import com.stonewu.agenteam.model.tool.entity.ToolCallRow;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
 
@@ -114,6 +116,24 @@ public class ToolCallMapper {
             DataAccessUtils.nullableSingleResult(statements.previouslyRejectedToolCall(run.enterpriseId(), run.id(),
                 binding.resourceId(), binding.resourceVersionId(), binding.pluginToolId(), binding.definition().name(),
                 arguments)));
+    }
+
+    public boolean hasUncertainWrite(RunRecord run, ExecutionToolBinding binding, String arguments) {
+        return hasUncertainWrite(run, binding, arguments, null);
+    }
+
+    public boolean hasUncertainWrite(RunRecord run, ExecutionToolBinding binding, String arguments, String excluding) {
+        var query = new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getEnterpriseId, run.enterpriseId())
+            .eq(ToolCallRow::getRunId, run.id()).eq(ToolCallRow::getResourceId, binding.resourceId())
+            .eq(ToolCallRow::getToolName, binding.definition().name()).eq(ToolCallRow::getArgumentHash, arguments)
+            .ne(excluding != null, ToolCallRow::getId, excluding)
+            .eq(binding.resourceVersionId() != null, ToolCallRow::getResourceVersionId, binding.resourceVersionId())
+            .isNull(binding.resourceVersionId() == null, ToolCallRow::getResourceVersionId)
+            .eq(binding.pluginToolId() != null, ToolCallRow::getPluginToolId, binding.pluginToolId())
+            .isNull(binding.pluginToolId() == null, ToolCallRow::getPluginToolId)
+            .and(condition -> condition.eq(ToolCallRow::getStatus, "unknown")
+                .or(pending -> pending.eq(ToolCallRow::getStatus, "running").isNotNull(ToolCallRow::getSubmittedAt)));
+        return statements.selectCount(query) > 0;
     }
 
     public void manualDataRead(String id, AuthContext actor, ResourceRecord resource, String hash,

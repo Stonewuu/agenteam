@@ -2,6 +2,7 @@
 FROM scratch
 COPY compose.yaml compose.registry.yaml compose.single.yaml /deployment/
 COPY compose.shared-mysql.yaml compose.external-mysql.yaml /deployment/
+COPY compose.low-memory.yaml agenteam-sandboxes.slice /deployment/
 COPY registry/configure-server.py registry/release.env registry/nginx-host.conf.template /deployment/
 COPY nginx/15-agenteam-config.sh nginx/default.conf.template nginx/api.conf /deployment/nginx/
 COPY registry/README.md /deployment/README.md

@@ -32,16 +32,18 @@ function fixture() {
   }
   write("agenteam/agenteam-web/package.json", JSON.stringify({name: "agenteam-web", version: "0.2.0"}));
   for (const name of ["compose.yaml", "compose.registry.yaml", "compose.single.yaml", "registry/configure-server.py",
-    "compose.shared-mysql.yaml", "compose.external-mysql.yaml",
+    "compose.shared-mysql.yaml", "compose.external-mysql.yaml", "compose.low-memory.yaml", "agenteam-sandboxes.slice",
     "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/README.md", "nginx/15-agenteam-config.sh", "nginx/default.conf.template",
     "nginx/api.conf", "Dockerfile.artifact", "container/sandbox-entrypoint.sh", "sandbox/Dockerfile", "sandbox/package.json",
-    "sandbox/package-lock.json", "sandbox/requirements.txt", "sandbox/requirements.lock", "sandbox/office/main.py", "sandbox/bin/office"]) {
+    "sandbox/package-lock.json", "sandbox/requirements.txt", "sandbox/requirements.lock", "sandbox/office/main.py", "sandbox/bin/office",
+    "sandbox/browser/browser-cli.cjs", "sandbox/bin/agenteam-browser"]) {
     write(`agenteam/deploy/${name}`, "验证用内容");
   }
   write("agenteam/LICENSE", "验证用的公共许可原文");
   write("agenteam/NOTICE", "验证用的公共版权声明");
   write("agenteam/docs/deployment/images.md", "社区镜像安装说明");
   write("agenteam/docs/deployment/enterprise-messaging.md", "共有的企业消息安装说明");
+  write("agenteam/docs/deployment/web-browsing.md", "共有的浏览器与代码拉取说明");
   // 外层文档、私有仓库与本地部署凭据均真实存在，复制结果不能包含它们。
   write("agenteam-pro/private.txt", "不可进入公共镜像");
   write("dev-docs/private.md", "不可进入镜像的维护资料");
@@ -91,11 +93,13 @@ test("只复制声明的输入，保留版权文件，五类镜像同版本且�
   verifyImageInputs(options.output, result);
   assert.equal(Object.keys(result.targets).length, 5);
   assert.deepEqual(Object.keys(result.contexts.deployment.files).sort(), ["compose.yaml", "compose.registry.yaml", "compose.single.yaml",
-    "compose.shared-mysql.yaml", "compose.external-mysql.yaml",
+    "compose.shared-mysql.yaml", "compose.external-mysql.yaml", "compose.low-memory.yaml", "agenteam-sandboxes.slice",
     "registry/configure-server.py", "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/README.md", "registry/release.env",
     "nginx/15-agenteam-config.sh", "nginx/default.conf.template", "nginx/api.conf", "docs/deployment/images.md",
-    "docs/deployment/enterprise-messaging.md", "licenses/agenteam/LICENSE", "licenses/agenteam/NOTICE"].sort());
+    "docs/deployment/enterprise-messaging.md", "docs/deployment/web-browsing.md", "licenses/agenteam/LICENSE", "licenses/agenteam/NOTICE"].sort());
   assert.equal(readFileSync(resolve(options.output, "frontend/src/component.LICENSE"), "utf8"), "必须保留的第三方版权声明");
+  assert.equal(readFileSync(resolve(options.output, "office/browser/browser-cli.cjs"), "utf8"), "验证用内容");
+  assert.equal(readFileSync(resolve(options.output, "office/bin/agenteam-browser"), "utf8"), "验证用内容");
   assert.ok(!JSON.stringify(result).includes(options.community));
   assert.equal(readFileSync(resolve(options.output, "deployment/docs/deployment/images.md"), "utf8"), "社区镜像安装说明");
   assert.throws(() => createImageInputs(options), /停止覆盖/);

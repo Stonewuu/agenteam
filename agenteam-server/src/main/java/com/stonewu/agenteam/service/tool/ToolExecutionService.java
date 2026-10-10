@@ -13,6 +13,7 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.security.entity.HttpConnectionCredentials;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
 import com.stonewu.agenteam.service.security.HttpCredentialService;
 import com.stonewu.agenteam.service.tool.provider.ToolProviderContext;
 import com.stonewu.agenteam.service.tool.provider.ToolProviderRegistry;
@@ -137,6 +138,8 @@ public class ToolExecutionService {
             }
             return result;
         }
+        var privateValues = new ArrayList<String>();
+        privateValues.addAll(ToolFailureDetails.inputValues(use.getInput()));
         try (var control = new ToolCallControl(() -> transactions.submitted(lease, binding, call.id()))) {
             cancellation.set(control);
             if (cancelled.getAsBoolean()) {
@@ -148,10 +151,12 @@ public class ToolExecutionService {
                 .equals("mysql")
                 ? new HttpConnectionCredentials(Map.of(), sources.databaseSecrets(run, binding)) : credentials.resolve(
                 run.enterpriseId(), credential);
+            privateValues.addAll(auth.secretValues());
             int limit = Math.min(binding.definition().timeoutSeconds(),
                 binding.config().path("timeoutSeconds").asInt(30));
             Duration timeout = ExecutionLimits.minTimeout(remaining, Duration.ofSeconds(limit));
             JsonNode arguments = transactions.arguments(call);
+            privateValues.addAll(payloads.secretValues(arguments, binding.definition().redactPaths()));
             JsonNode response;
             WorkspaceToolService.Outcome workspaceResult = null;
             if (WorkspaceToolDefinitions.handles(binding)) {
@@ -190,7 +195,6 @@ public class ToolExecutionService {
                 prepared = new ToolResultService.Prepared(prepared.modelResult(), stored,
                     workspaceResult.file() == null ? prepared.file() : workspaceResult.file());
             }
-            prepared = results.referenceForHistory(call.id(), prepared, maximumBytes);
             boolean failed = response.path("isError").asBoolean(false);
             transactions.complete(lease, call.id(), prepared, failed ? "TOOL_EXECUTION_FAILED" : null,
                 failed ? "工具返回执行失败，请查看结果。" : null);
@@ -198,13 +202,14 @@ public class ToolExecutionService {
                 imageOutput.accept(workspaceResult.image());
             }
             return prepared.modelResult();
+        } catch (ExecutionStoppedException stopped) {
+            throw stopped;
         } catch (RuntimeException failure) {
-            LOG.error("工具调用失败，执行编号 {}，调用编号 {}", run.id(), call.id(), failure);
+            LOG.error("工具调用失败，执行编号 {}，调用编号 {}", run.id(), call.id(), ToolFailureDetails.safe(failure, privateValues));
             String code = failure instanceof ApiException known ? known.code() : "TOOL_EXECUTION_FAILED";
-            String message = failure instanceof ApiException known ? known.getReason() : "工具调用未能完成，请稍后重试。";
-            if (transactions.failed(lease, call.id(), code, message)) {
-                throw ToolCallTransactions.unknown();
-            }
+            String message = failure instanceof ApiException known ? ToolFailureDetails.clean(known.getReason(), privateValues)
+                : "工具调用未能完成，请检查参数或改用其他方法继续。";
+            transactions.failed(lease, call.id(), code, message);
             var failed = calls.find(run.enterpriseId(), call.id(), false).orElseThrow();
             return transactions.result(failed);
         } finally {

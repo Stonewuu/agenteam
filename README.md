@@ -176,6 +176,8 @@ docker build -t agenteam/sandbox-office:local sandbox
 
 #### 2. 启动后端
 
+沙盒镜像还提供浏览器和 Git（代码版本管理工具）。需要让智能体读取动态网页或拉取远程仓库时，按[网页读取与代码拉取说明](docs/deployment/web-browsing.md)配置沙盒网络。
+
 进入 `agenteam-server`，在当前终端设置 `AGENTEAM_DB_USERNAME=agenteam`，并把 `.env` 中的 `DB_PASSWORD`、`REDIS_PASSWORD` 分别设置为 `AGENTEAM_DB_PASSWORD`、`AGENTEAM_REDIS_PASSWORD`，然后启动后端：
 
 ```sh

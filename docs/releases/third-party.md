@@ -33,4 +33,6 @@ jar uf0 应用包副本.jar BOOT-INF/lib/mariadb-java-client-3.5.10.jar
 
 ## 为开发者维护资料
 
+沙盒网页读取新增 Playwright 1.64.0 及配套 Chromium，网页正文解析使用 jsoup 1.22.2，Git 由镜像所属 Debian（操作系统发行版）提供。Playwright 及其浏览器安装方式见[官方浏览器文档](https://playwright.dev/docs/browsers)，jsoup 版本资料见[官方发布说明](https://jsoup.org/news/release-1.22.2)。浏览器实际版本记录在 `/opt/agenteam/browser-versions.json`，系统软件记录在 `/opt/agenteam/system-versions.txt`。这些改动尚未发布；下次发布需从新镜像重新采集声明和对应源码，不能复用旧镜像的材料。
+
 依赖与镜像更新时，按实际组件版本整理版权原文、源码及构建资料。仓库的 `scripts/release/` 提供声明采集、源码定位、下载和归档工具；具体步骤见[第三方源码维护说明](corresponding-sources.md)。

@@ -42,7 +42,7 @@ class ToolResultDocumentServiceTest {
     private final ToolCallRecord call = mock(ToolCallRecord.class);
     private final RunRecord run = mock(RunRecord.class);
     private final ToolResultDocumentService documents = new ToolResultDocumentService(calls, runs, conversations, sources, mock(ResourcePolicy.class), files,
-        storage, mapper, new ToolResultSettings(32, 64, 16, 2, 8, 200, 2, 20), mock(FileMapper.class), Clock.systemUTC());
+        storage, mapper, new ToolResultSettings(32, 64, 2, 8, 200, 2, 20), mock(FileMapper.class), Clock.systemUTC());
 
     @BeforeEach
     void setup() {

@@ -19,7 +19,7 @@ public record WorkspaceSettings(String root, String image, boolean executeEnable
                              @Value("${execution.sandbox.maximum-files:2000}") int maximumFiles,
                              @Value("${execution.sandbox.memory-mb:512}") int memoryMb,
                              @Value("${execution.sandbox.cpus:1}") int cpus,
-                             @Value("${execution.sandbox.process-limit:64}") int processLimit,
+                             @Value("${execution.sandbox.process-limit:128}") int processLimit,
                              @Value("${execution.sandbox.timeout-seconds:1800}") int timeoutSeconds,
                              @Value("${execution.sandbox.network:none}") String network) {
         if (root == null || root.isBlank() || root.contains(
