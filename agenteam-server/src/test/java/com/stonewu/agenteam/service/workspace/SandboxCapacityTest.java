@@ -76,6 +76,11 @@ class SandboxCapacityTest {
     }
 
     @Test
+    void aTimedOutWaiterDoesNotReleaseTheActiveProcessLock() throws Exception {
+        SandboxLockProcessCheck.main(new String[]{directory.resolve("shared-lock").toString()});
+    }
+
+    @Test
     void failedSharedDirectoryDoesNotConsumeLocalCapacity() throws Exception {
         Path root = directory.resolve("shared");
         Files.writeString(root, "此处暂时不是目录");
