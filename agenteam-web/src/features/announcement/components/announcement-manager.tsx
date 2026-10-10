@@ -65,11 +65,11 @@ export function AnnouncementManager({endpoint, title: providedTitle, children}: 
                   {list.data?.canManage && <Button className={ui.primary} onClick={() => setEditing("new")}><IconPlus
                     size={17}/>{uiText("新建公告")}</Button>}
                 </div>}/>
-    {children}
+    {children && <div className={styles.managementFilters}>{children}</div>}
     {!endpoint ? <p className={ui.empty}>{uiText("请选择企业。")}</p> : <>
       <MutationFeedback action={action} onReload={changed}/>
       <QueryState {...list} hasData={Boolean(list.data?.items.length)} empty={uiText("暂无公告。")}>
-        <div className={styles.list}>{list.data?.items.map((value) => {
+        <div className={`${styles.list} ${styles.managementList}`}>{list.data?.items.map((value) => {
           const Icon = value.scope === "platform" ? IconShield : IconBuilding;
           return <article className={styles.card} key={value.id}><span className={styles.scopeIcon}><Icon
             size={23}/></span>

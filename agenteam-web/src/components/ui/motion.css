@@ -266,7 +266,8 @@ input[data-slot="input"] {
   --dialog-exit-duration: 180ms;
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  /* 与弹窗同层，后打开弹窗的遮罩按节点顺序覆盖上一层内容。 */
+  z-index: 1010;
   background: var(--overlay);
   backdrop-filter: none;
   opacity: 1;
