@@ -6,6 +6,7 @@ import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceDraftRequest;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPricePreviewRequest;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPriceVersionView;
+import com.stonewu.agenteam.model.modelpricing.response.ModelPriceCatalogView;
 import com.stonewu.agenteam.service.http.ApiResponses;
 import com.stonewu.agenteam.service.modelpricing.ModelPriceApiService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,6 +49,16 @@ public class ModelPriceApiController {
     @GetMapping("/current")
     public ApiResponse<ModelPriceVersionView> current(@PathVariable String enterpriseId, @PathVariable String modelId, HttpServletRequest request) {
         return responses.success(service.current(enterpriseId, modelId, request), request);
+    }
+
+    @GetMapping("/catalog")
+    public ApiResponse<ModelPriceCatalogView> catalog(@PathVariable String enterpriseId, @PathVariable String modelId,
+                                                     @RequestParam(defaultValue = "") String query,
+                                                     @RequestParam(defaultValue = "") String provider,
+                                                     @RequestParam(defaultValue = "0") int offset,
+                                                     @RequestParam(defaultValue = "false") boolean suggested,
+                                                     HttpServletRequest request) {
+        return responses.success(service.catalog(enterpriseId, modelId, query, provider, offset, suggested, request), request);
     }
 
     @PostMapping

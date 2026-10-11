@@ -19,6 +19,14 @@ export type PricePreview = {
   totalAmount: string | null; knownAmount: string | null;
   items: {meter: PriceRate["meter"]; cacheTtlSeconds: number; quantity: string; pricePerMillion: string; amount: string}[];
 };
+export type CatalogPrice = {
+  providerId: string; providerName: string; modelId: string; modelName: string; matched: boolean;
+  configuration: PriceConfiguration; notices: string[];
+};
+export type PriceCatalog = {
+  items: CatalogPrice[]; total: number; offset: number; hasMore: boolean; fetchedAt: string; stale: boolean;
+  providers: {id: string; name: string}[];
+};
 
 export const priceMeters: {value: PriceRate["meter"]; label: string}[] = [
   {value: "input_uncached", label: "普通输入"}, {value: "output", label: "输出"},

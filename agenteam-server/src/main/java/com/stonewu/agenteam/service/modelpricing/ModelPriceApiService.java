@@ -6,6 +6,7 @@ import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceDraftRequest;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPricePreviewRequest;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPriceVersionView;
+import com.stonewu.agenteam.model.modelpricing.response.ModelPriceCatalogView;
 import com.stonewu.agenteam.service.auth.AuthContextService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.http.IdempotentRequestService;
@@ -26,13 +27,20 @@ public class ModelPriceApiService {
     private final ModelPriceService prices;
     private final ModelPricePreviewService previews;
     private final IdempotentRequestService requests;
+    private final ModelPriceCatalogService catalog;
 
     public ModelPriceApiService(AuthContextService identity, ModelPriceService prices, ModelPricePreviewService previews,
-                                 IdempotentRequestService requests) {
+                                 IdempotentRequestService requests, ModelPriceCatalogService catalog) {
         this.identity = identity;
         this.prices = prices;
         this.previews = previews;
         this.requests = requests;
+        this.catalog = catalog;
+    }
+
+    public ModelPriceCatalogView catalog(String enterprise, String model, String query, String provider, int offset, boolean suggested,
+                                        HttpServletRequest request) {
+        return catalog.search(identity.requireEnterprise(request.getSession(false), enterprise), model, query, provider, offset, suggested);
     }
 
     public List<ModelPriceVersionView> list(String enterprise, String model, Long before, HttpServletRequest request) {

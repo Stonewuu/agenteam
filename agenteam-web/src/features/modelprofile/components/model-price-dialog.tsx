@@ -12,6 +12,7 @@ import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {ModelPriceEditor} from "./model-price-editor";
+import {ModelPriceCatalog} from "./model-price-catalog";
 import {PricePreviewDialog} from "./price-preview-dialog";
 import {PriceConfigurationDetails} from "./price-configuration-details";
 import {priceMeters, shiftPrice, type PriceVersion} from "../types/model-pricing";
@@ -39,6 +40,7 @@ export function ModelPriceDialog({enterpriseId, model, onClose, onChanged}: {
   return <><Dialog title={t("{0} · 价格配置", [model.name])} icon={<IconChartBar size={21}/>} wide onClose={onClose}
     footer={<DialogCancel className={ui.button}>{t("关闭")}</DialogCancel>}>
     <div className={styles.stack}>
+      <ModelPriceCatalog enterpriseId={enterpriseId} model={model} onSaved={saved}/>
       <div className={styles.toolbar}><div className={styles.ruleCopy}><strong>{t("价格版本")}</strong>
         <p>{current.data ? t("当前生效：版本 {0} · {1}", [current.data.versionNo, current.data.currency]) :
           current.loading ? t("正在读取当前价格…") : current.error ? t("当前价格暂时无法读取") : t("尚未发布价格")}</p></div>

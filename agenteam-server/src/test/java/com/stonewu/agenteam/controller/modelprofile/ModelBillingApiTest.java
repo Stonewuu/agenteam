@@ -8,6 +8,9 @@ import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow;
 import com.stonewu.agenteam.service.execution.RunWorker;
 import com.stonewu.agenteam.service.modelusage.ModelUsageRecoveryWorker;
+import com.stonewu.agenteam.service.modelpricing.ModelsDevCatalogClient;
+import com.stonewu.agenteam.mapper.modelpricing.ModelsDevCatalogParser;
+import com.stonewu.agenteam.mapper.modelpricing.ModelsDevPriceMapper;
 import com.stonewu.agenteam.support.EnterpriseTestData;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
@@ -20,8 +23,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +35,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 /**
  * 使用真实身份、价格接口、运行工作进程、模型 HTTP 和数据库验证整条计费路径。
@@ -40,6 +47,8 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
     @Autowired
     private ModelUsageRecoveryWorker recovery;
+    @MockitoBean
+    private ModelsDevCatalogClient priceCatalog;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
@@ -131,6 +140,7 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
         var memberCookie = login.getResponse().getCookie("SESSION");
         mvc.perform(get(base() + "/usage/models").cookie(memberCookie)).andExpect(status().isForbidden());
         mvc.perform(get(path).cookie(memberCookie)).andExpect(status().isForbidden());
+        mvc.perform(get(path + "/catalog").cookie(memberCookie)).andExpect(status().isForbidden());
         mvc.perform(get(conversationPath).cookie(memberCookie)).andExpect(status().isNotFound());
         // 登录会轮换同一测试浏览器的会话，恢复管理员后再交给下一个用例。
         cookie = memberCookie;
@@ -164,6 +174,49 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
 
     private AgentRunRow run(String id) {
         return databaseAccess.mapper(RunSqlMapper.class).selectById(id);
+    }
+
+    @Test
+    void manualCatalogSearchCreatesAnIndependentDraftWithoutChangingTheModelOrPublishedPrice() throws Exception {
+        String model = model();
+        String path = base() + "/models/" + model + "/price-versions";
+        var existing = data(write(path, Map.of("configuration", price()), UUID.randomUUID().toString())
+            .andExpect(status().isCreated()).andReturn());
+        change(HttpMethod.POST, path + "/" + existing.path("id").asText() + "/publish", null, "1", UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        String body = """
+            {"deepseek":{"name":"DeepSeek","api":"https://api.deepseek.com","models":{
+              "deepseek-flash":{"name":"DeepSeek Flash","modalities":{"output":["text"]},
+                "cost":{"input":0.15,"output":0.6,"cache_read":0.003}}}}}
+            """;
+        var entries = new ModelsDevCatalogParser(new ModelsDevPriceMapper()).read(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+        when(priceCatalog.fetch(anyString())).thenReturn(entries);
+        var suggested = data(mvc.perform(get(path + "/catalog").param("suggested", "true").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(suggested.path("items")).isEmpty();
+        var found = data(mvc.perform(get(path + "/catalog").param("query", "deepsek flas").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(found.path("items")).hasSize(1);
+        assertThat(found.at("/providers/0/id").asText()).isEqualTo("deepseek");
+        var filtered = data(mvc.perform(get(path + "/catalog").param("provider", "another-provider").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(filtered.path("items")).isEmpty();
+        assertThat(found.at("/items/0/matched").asBoolean()).isFalse();
+        var configuration = found.at("/items/0/configuration");
+        assertThat(configuration.at("/rules/0/rates/0/pricePerMillion").asText()).isEqualTo("0.15");
+        var imported = data(write(path, Map.of("configuration", configuration), UUID.randomUUID().toString())
+            .andExpect(status().isCreated()).andReturn());
+        assertThat(imported.path("status").asText()).isEqualTo("draft");
+        assertThat(imported.at("/configuration/sourceReference").asText()).isEqualTo(ModelsDevCatalogClient.SOURCE);
+        assertThat(imported.at("/configuration/sourceCheckedAt").asText()).isNotBlank();
+        var current = data(mvc.perform(get(path + "/current").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertThat(current.path("id").asText()).isEqualTo(existing.path("id").asText());
+        mvc.perform(get(path + "/catalog").param("query", "x".repeat(101)).cookie(cookie)).andExpect(status().isUnprocessableEntity());
+        mvc.perform(get(base() + "/models/missing/price-versions/catalog").cookie(cookie)).andExpect(status().isNotFound());
+        String other = provisioning.create("其他目录企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
+        mvc.perform(get("/api/v1/enterprises/" + other + "/models/" + model + "/price-versions/catalog").cookie(cookie))
+            .andExpect(status().isNotFound());
+        mvc.perform(get(path + "/catalog")).andExpect(status().isUnauthorized());
     }
 
     private String model() throws Exception {

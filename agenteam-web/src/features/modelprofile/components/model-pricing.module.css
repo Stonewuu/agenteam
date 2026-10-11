@@ -95,6 +95,42 @@
   overflow-wrap: anywhere;
 }
 
+.catalogSection, .catalogResult, .catalogCopy {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.catalogSection, .catalogResult {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.catalogCopy .ruleCopy p, .catalogCopy strong {
+  overflow-wrap: anywhere;
+}
+
+.catalogRates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.catalogRates dt {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.catalogRates dd {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 600px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
