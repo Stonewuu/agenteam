@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.model.modelprofile.entity;
 
 import jakarta.validation.constraints.*;
+import jakarta.validation.Valid;
 import org.hibernate.validator.constraints.UniqueElements;
 
 import java.util.ArrayList;
@@ -17,10 +18,17 @@ public record ModelCapabilities(
     @NotNull(message = "请填写必填项。") @Min(value = 128L, message = "数值超出允许范围。") @Max(value = 10000000L, message = "数值超出允许范围。") Integer maxContextTokens,
     @NotNull(message = "请填写必填项。") @Size(min = 1, max = 2, message = "条目数量超出允许范围。") @UniqueElements(message = "不能包含重复条目。") List<@NotNull(message = "请填写必填项。") @Size(min = 1, max = 20, message = "文字长度不符合要求。") @Pattern(regexp = "(?:text|image)", message = "请选择支持的选项或格式。") String> inputTypes,
     @Size(max = 7, message = "思考等级数量超出允许范围。") @UniqueElements(message = "不能包含重复的思考等级。")
-    List<@NotNull(message = "请选择思考等级。") @Pattern(regexp = ReasoningEffort.PATTERN, message = "请选择支持的思考等级。") String> reasoningEfforts) {
+    List<@NotNull(message = "请选择思考等级。") @Pattern(regexp = ReasoningEffort.PATTERN, message = "请选择支持的思考等级。") String> reasoningEfforts,
+    @Valid ModelProtocolOptions protocolOptions) {
     public ModelCapabilities {
         reasoningEfforts = reasoningEfforts == null ? List.of() : Collections.unmodifiableList(
             new ArrayList<>(reasoningEfforts));
+        protocolOptions = protocolOptions == null ? ModelProtocolOptions.defaults() : protocolOptions;
+    }
+
+    public ModelCapabilities(Boolean supportsTools, Boolean supportsTemperature, Integer maxOutputTokens,
+                             Integer maxContextTokens, List<String> inputTypes, List<String> reasoningEfforts) {
+        this(supportsTools, supportsTemperature, maxOutputTokens, maxContextTokens, inputTypes, reasoningEfforts, null);
     }
 
     public ModelCapabilities(Boolean supportsTools, Boolean supportsTemperature, Integer maxOutputTokens,
@@ -34,6 +42,7 @@ public record ModelCapabilities(
     public boolean canExtendTo(ModelCapabilities next) {
         return supportsTools.equals(next.supportsTools) && supportsTemperature.equals(next.supportsTemperature)
             && maxOutputTokens.equals(next.maxOutputTokens) && maxContextTokens.equals(next.maxContextTokens)
-            && inputTypes.equals(next.inputTypes) && next.reasoningEfforts.containsAll(reasoningEfforts);
+            && inputTypes.equals(next.inputTypes) && next.reasoningEfforts.containsAll(reasoningEfforts)
+            && protocolOptions.canExtendTo(next.protocolOptions);
     }
 }

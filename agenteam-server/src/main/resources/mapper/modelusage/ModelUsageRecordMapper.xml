@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.modelusage.ModelUsageRecordMapper">
+  <select id="lock" resultType="com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow">
+    SELECT * FROM model_usage_record WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+  </select>
+  <select id="lockExpired" resultType="com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow">
+    SELECT * FROM model_usage_record WHERE call_status IN ('registered', 'in_flight') AND request_lease_until &lt;= #{now}
+    ORDER BY request_lease_until, id LIMIT 100 FOR UPDATE SKIP LOCKED
+  </select>
+  <select id="lockPendingCalculations" resultType="com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow">
+    SELECT * FROM model_usage_record WHERE price_status = 'pending' AND finished_at IS NOT NULL
+    AND next_calculation_at &lt;= #{now} AND (calculation_lease_until IS NULL OR calculation_lease_until &lt;= #{now})
+    ORDER BY next_calculation_at, id LIMIT 100 FOR UPDATE SKIP LOCKED
+  </select>
+</mapper>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.modelusage.ModelUsageQueryMapper">
+  <select id="aggregate" resultType="com.stonewu.agenteam.model.modelusage.entity.ModelUsageAggregateRow">
+    WITH selected AS (
+      SELECT * FROM model_usage_record WHERE enterprise_id = #{filter.enterpriseId}
+      <if test="filter.from != null">AND dispatched_at &gt;= #{filter.from}</if>
+      <if test="filter.to != null">AND dispatched_at &lt; #{filter.to}</if>
+      <if test="filter.modelProfileId != null">AND model_profile_id = #{filter.modelProfileId}</if>
+      <if test="filter.userId != null">AND user_id = #{filter.userId}</if>
+      <if test="filter.conversationId != null">AND conversation_id = #{filter.conversationId}</if>
+      <if test="filter.runId != null">AND run_id = #{filter.runId}</if>
+    ), costs AS (
+      SELECT c.enterprise_id, c.usage_record_id, SUM(c.amount) AS amount
+      FROM model_usage_cost_item c INNER JOIN selected s ON s.enterprise_id = c.enterprise_id AND s.id = c.usage_record_id
+      WHERE s.price_status = 'partial' GROUP BY c.enterprise_id, c.usage_record_id
+    )
+    SELECT u.currency,
+      <choose><when test="days.size() > 0">d.local_day</when><otherwise>NULL</otherwise></choose> AS day,
+      MIN(u.dispatched_at) AS first_request_at, COUNT(*) AS calls,
+      SUM(CASE WHEN u.usage_status != 'complete' THEN 1 ELSE 0 END) AS incomplete_usage_calls,
+      SUM(CASE WHEN u.price_status IN ('unpriced','partial','invalid') THEN 1 ELSE 0 END) AS unpriced_calls,
+      SUM(CASE WHEN u.price_status = 'pending' THEN 1 ELSE 0 END) AS pending_calls,
+      SUM(CASE WHEN u.usage_status = 'invalid' THEN 1 ELSE 0 END) AS invalid_usage_calls,
+      SUM(CASE WHEN u.price_status = 'priced' THEN 1 ELSE 0 END) AS complete_price_calls,
+      SUM(CASE WHEN u.price_status = 'partial' THEN 1 ELSE 0 END) AS partial_price_calls,
+      SUM(CASE WHEN u.price_status = 'priced' THEN u.total_amount ELSE NULL END) AS complete_amount,
+      SUM(CASE WHEN u.price_status = 'partial' THEN costs.amount ELSE NULL END) AS partial_amount,
+      SUM(u.input_tokens) AS input_tokens,
+      COUNT(u.input_tokens) AS input_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.input')) = 'not_applicable' THEN 1 ELSE 0 END) AS input_not_applicable_calls,
+      SUM(u.uncached_input_tokens) AS uncachedInput_tokens,
+      COUNT(u.uncached_input_tokens) AS uncachedInput_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.input_uncached')) = 'not_applicable' THEN 1 ELSE 0 END) AS uncachedInput_not_applicable_calls,
+      SUM(u.output_tokens) AS output_tokens,
+      COUNT(u.output_tokens) AS output_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.output')) = 'not_applicable' THEN 1 ELSE 0 END) AS output_not_applicable_calls,
+      SUM(u.cache_read_tokens) AS cacheRead_tokens,
+      COUNT(u.cache_read_tokens) AS cacheRead_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.cache_read')) = 'not_applicable' THEN 1 ELSE 0 END) AS cacheRead_not_applicable_calls,
+      SUM(u.cache_write_tokens) AS cacheWrite_tokens,
+      COUNT(u.cache_write_tokens) AS cacheWrite_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.cache_write')) = 'not_applicable' THEN 1 ELSE 0 END) AS cacheWrite_not_applicable_calls,
+      SUM(u.reasoning_tokens) AS reasoning_tokens,
+      COUNT(u.reasoning_tokens) AS reasoning_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.reasoning')) = 'not_applicable' THEN 1 ELSE 0 END) AS reasoning_not_applicable_calls,
+      SUM(u.tool_use_prompt_tokens) AS toolUsePrompt_tokens,
+      COUNT(u.tool_use_prompt_tokens) AS toolUsePrompt_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.tool_use_prompt')) = 'not_applicable' THEN 1 ELSE 0 END) AS toolUsePrompt_not_applicable_calls,
+      SUM(u.total_tokens) AS total_tokens,
+      COUNT(u.total_tokens) AS total_known_calls,
+      SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(u.field_states_json, '$.total')) = 'not_applicable' THEN 1 ELSE 0 END) AS total_not_applicable_calls
+    FROM selected u LEFT JOIN costs ON costs.enterprise_id = u.enterprise_id AND costs.usage_record_id = u.id
+    <if test="days.size() > 0">
+      INNER JOIN (
+        <foreach collection="days" item="day" separator=" UNION ALL ">
+          SELECT #{day.date} AS local_day, #{day.start} AS start_at, #{day.end} AS end_at
+        </foreach>
+      ) d ON u.dispatched_at &gt;= d.start_at AND u.dispatched_at &lt; d.end_at
+    </if>
+    GROUP BY u.currency <if test="days.size() > 0">, d.local_day</if>
+    ORDER BY day, u.currency
+  </select>
+</mapper>

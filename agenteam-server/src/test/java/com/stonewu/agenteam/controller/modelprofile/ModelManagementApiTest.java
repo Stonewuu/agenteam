@@ -10,6 +10,7 @@ import com.stonewu.agenteam.mapper.test.audit.AuditEventFixtureMapper;
 import com.stonewu.agenteam.mapper.test.http.ApiRequestFixtureMapper;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRow;
 import com.stonewu.agenteam.service.agent.AgentModelFactory;
+import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.support.EnterpriseTestData;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
@@ -119,9 +120,12 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         var active = modelFactory.create(enterprise, modelId);
         var messages = List.of(Msg.builder().role(MsgRole.USER).content(TextBlock.builder().text("验证模型配置").build()).build());
         var options = GenerateOptions.builder().maxTokens(active.maxOutputTokens()).build();
-        assertFalse(active.stream(messages, List.of(), options).collectList().block(Duration.ofSeconds(10)).isEmpty());
+        var context = new ModelCallContext(enterprise, admin, null, null, 1, 1, agent, "model-settings-test", null, null, null, "preview");
+        assertFalse(active.stream(messages, List.of(), options).contextWrite(value -> value.put(ModelCallContext.class, context))
+            .collectList().block(Duration.ofSeconds(10)).isEmpty());
         change(HttpMethod.PUT, base() + "/model-providers/" + providerId, provider("调用测试提供方", "rotated-call-key", true), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertFalse(active.stream(messages, List.of(), options).collectList().block(Duration.ofSeconds(10)).isEmpty());
+        assertFalse(active.stream(messages, List.of(), options).contextWrite(value -> value.put(ModelCallContext.class, context))
+            .collectList().block(Duration.ofSeconds(10)).isEmpty());
         assertEquals(List.of("Bearer first-call-key", "Bearer rotated-call-key"), headers);
         assertEquals(List.of("managed-chat", "managed-chat"), modelNames);
         assertEquals(List.of(204800, 204800), outputLimits);

@@ -5,6 +5,7 @@ import {useT} from "@/lib/i18n/locale-provider";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
+import {Select} from "@/components/ui/select";
 
 import {useId, useState} from "react";
 import {Dialog, DialogCancel} from "@/components/ui/dialog";
@@ -13,7 +14,8 @@ import {useConfirmClose} from "@/features/workspace/components/use-confirm-close
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
-import type {ModelProvider} from "../types/model-management";
+import type {ModelProtocol, ModelProvider} from "../types/model-management";
+import {modelProtocols} from "../lib/model-protocol";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./model-management.module.css";
 
@@ -23,12 +25,13 @@ export function ModelProviderDialog({enterpriseId, provider, onClose, onSaved}: 
   const uiText = useT();
   const action = useFormAction();
   const [name, setName] = useState(provider?.name ?? "");
+  const [protocol, setProtocol] = useState<ModelProtocol>(provider?.protocol ?? "openai");
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? "");
   const [apiKey, setApiKey] = useState("");
   const [clearKey, setClearKey] = useState(false);
   const [enabled, setEnabled] = useState(provider?.enabled ?? true);
   const formId = useId();
-  const dirty = name !== (provider?.name ?? "") || baseUrl !== (provider?.baseUrl ?? "") || Boolean(apiKey) || clearKey || enabled !== (provider?.enabled ?? true);
+  const dirty = name !== (provider?.name ?? "") || protocol !== (provider?.protocol ?? "openai") || baseUrl !== (provider?.baseUrl ?? "") || Boolean(apiKey) || clearKey || enabled !== (provider?.enabled ?? true);
   const closing = useConfirmClose(dirty, action.busy, onClose);
   return <><Dialog title={provider ? uiText("配置模型连接") : uiText("新增模型提供方")} onClose={onClose}
                    dialogRef={closing.dialogRef} onRequestClose={closing.canClose} busy={action.busy}
@@ -42,7 +45,7 @@ export function ModelProviderDialog({enterpriseId, provider, onClose, onSaved}: 
       void action.execute(async () => {
         await action.mutation.run(organizationPath(enterpriseId, provider ? `/model-providers/${encodeURIComponent(provider.id)}` : "/model-providers"), {
           method: provider ? "PUT" : "POST", revision: provider?.revision,
-          body: {name, protocol: "openai", baseUrl, apiKey: clearKey ? "" : apiKey || null, enabled},
+          body: {name, protocol, baseUrl, apiKey: clearKey ? "" : apiKey || null, enabled},
         });
         setApiKey("");
         closing.finish(onSaved);
@@ -52,12 +55,16 @@ export function ModelProviderDialog({enterpriseId, provider, onClose, onSaved}: 
                                                                             maxLength={80}
                                                                             disabled={action.busy} autoFocus
                                                                             onChange={(event) => setName(event.target.value)}/></label>
+      <label className={ui.field}><span>{uiText("连接协议")}</span><Select className={ui.select} name="protocol"
+        value={protocol} disabled={action.busy || provider?.inUse} onChange={(event) => setProtocol(event.target.value as ModelProtocol)}>
+        {modelProtocols.map((value) => <option key={value.value} value={value.value}>{value.label}</option>)}
+      </Select></label>
       <label className={ui.field}><span>{uiText("服务地址")}</span><Input className={ui.input} type="url"
                                                                           value={baseUrl} required maxLength={2048}
-                                                                          placeholder="https://api.example.com/v1"
+                                                                          placeholder={modelProtocols.find((value) => value.value === protocol)?.example}
                                                                           disabled={action.busy || provider?.inUse}
                                                                           onChange={(event) => setBaseUrl(event.target.value)}/><span
-        className={ui.description}>{uiText("使用兼容 OpenAI 的模型服务地址。")}</span></label>
+        className={ui.description}>{uiText("填写所选协议的服务基础地址。")}</span></label>
       {provider?.inUse &&
         <p className={ui.description}>{uiText("该提供方已有模型被使用。如需更换服务地址，请新增提供方。")}</p>}
       <label

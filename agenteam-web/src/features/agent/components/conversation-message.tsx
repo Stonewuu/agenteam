@@ -18,13 +18,15 @@ import styles from "./assistant-message.module.css";
 import layout from "./conversation-controls.module.css";
 import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
 import type {Employee} from "@/features/employee/types/employee";
-import {IconBookmark, IconCheck, IconCopy, IconThumbDown, IconThumbUp} from "@/components/ui/icons";
+import {IconBookmark, IconCheck, IconCopy, IconThumbDown, IconThumbUp, IconChartBar} from "@/components/ui/icons";
+import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {ConversationRunFeedback} from "./conversation-run-feedback";
 import {type LiveRunStep, mergeExecutionSteps, messageRunSteps, type RunStepHistory} from "../lib/conversation-steps";
 
 export function ConversationMessage({
                                       message,
                                       enterprise,
+                                      conversationId,
                                       latestRun,
                                       liveApprovals,
                                       liveSteps,
@@ -39,7 +41,7 @@ export function ConversationMessage({
                                       employeeName: providedEmployeeName,
                                       employee
                                     }: {
-  message: DisplayMessage; enterprise: string; latestRun: Run | null; liveApprovals?: ReadonlyMap<string, RunApproval>;
+  message: DisplayMessage; enterprise: string; conversationId?: string | null; latestRun: Run | null; liveApprovals?: ReadonlyMap<string, RunApproval>;
   liveSteps?: ReadonlyMap<string, LiveRunStep>; stepHistory?: RunStepHistory; onReloadSteps?: () => void;
   onRetry: (runId: string) => Promise<boolean>; retrying: boolean; retryError: string;
   onFeedback: (id: string, value: "positive" | "negative" | null) => void;
@@ -55,6 +57,7 @@ export function ConversationMessage({
   const [feedbackMutation] = useState(() => new ApiMutation());
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (copyTimer.current) {
@@ -151,6 +154,10 @@ export function ConversationMessage({
           selectedRef.current = "";
           onMemory(message, text);
         }}><IconBookmark size={18}/></Button>}
+      {conversationId && message.runId && <Button type="button" aria-label={uiText("查看本轮模型用量")}
+        title={uiText("查看本轮模型用量")} onClick={() => setUsageOpen(true)}><IconChartBar size={18}/></Button>}
     </div>}
+    {usageOpen && conversationId && message.runId && <ConversationModelUsageDialog enterpriseId={enterprise}
+      conversationId={conversationId} runId={message.runId} onClose={() => setUsageOpen(false)}/>}
   </div>;
 }

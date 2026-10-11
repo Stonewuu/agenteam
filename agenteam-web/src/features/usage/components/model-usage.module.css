@@ -1,0 +1,168 @@
+.stack {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tokens, .filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.metric > strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.hint, .metric > span, .metric > small, .callCopy small, .callAmounts small {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.money, .details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.money section, .notices {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.notices {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.details dt {
+  color: var(--secondary);
+}
+
+.details dd, .exactAmount {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.callList {
+  display: grid;
+  gap: 10px;
+  padding: 4px;
+}
+
+.callRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: start;
+  width: 100%;
+}
+
+.callRow:hover {
+  background: var(--surface-hover);
+}
+
+.callCopy, .callAmounts {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.callCopy {
+  flex: 1;
+}
+
+.callRow > svg {
+  flex-shrink: 0;
+}
+
+.tableScroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th, .table td {
+  padding: 12px 8px;
+  text-align: start;
+  border-bottom: 1px solid var(--border-light);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 800px) {
+  .tokens, .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .money, .details, .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric {
+    padding: 14px;
+  }
+
+  .metric > strong {
+    font-size: 20px;
+  }
+
+  .callRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .callAmounts {
+    grid-row: 2;
+  }
+
+  .callRow > svg {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+}

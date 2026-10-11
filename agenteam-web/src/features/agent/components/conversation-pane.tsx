@@ -134,7 +134,7 @@ export function ConversationPane({
                      className={`${styles.messageRow} ${content.role === "user" ? styles.userMessageRow : styles.assistantMessageRow}`}>
                   {content.role === "user" ? <ConversationUserMessage message={content} enterprise={enterprise}/>
                     : <ConversationMessage employeeName={workspace.agentName} employee={workspace.employeeAppearance}
-                                           message={content} enterprise={enterprise}
+                                           message={content} enterprise={enterprise} conversationId={workspace.conversationId}
                                            latestRun={stream.state?.latestRun ?? null}
                                            liveApprovals={stream.state?.approvals}
                                            liveSteps={stream.state?.steps}

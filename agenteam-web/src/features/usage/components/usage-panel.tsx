@@ -9,27 +9,33 @@ import { organizationPath } from "@/features/enterprise/api/organization-api";
 import { useApiQuery } from "@/lib/http/use-api-query";
 import type { Usage } from "../types/usage";
 import { UsageOverview } from "./usage-overview";
+import {ModelUsagePanel} from "./model-usage-panel";
+import {Tabs} from "@/components/ui/tabs";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./usage.module.css";
 
 export function UsagePanel({ enterpriseId }: { enterpriseId: string; permissions?: string[] }) {
   const uiText = useT();
   const [refresh, setRefresh] = useState(0);
+  const [tab, setTab] = useState<"executions" | "models">("executions");
   const usage = useApiQuery<Usage>(organizationPath(enterpriseId, "/usage"), refresh);
   return (
     <div className={styles.panel}>
       <PageHeader
-        title={uiText("执行用量")}
-        description={uiText("查看本月已使用和预留的执行次数。")}
+        title={uiText("用量统计")}
+        description={uiText("查看执行次数、模型用量和费用。")}
         actions={
           <Button className={ui.button} disabled={usage.loading} onClick={() => setRefresh((value) => value + 1)}>
             {uiText("刷新")}
           </Button>
         }
       />
-      <QueryState {...usage} hasData={Boolean(usage.data)} empty={uiText("暂时无法读取用量。")}>
+      <div className={styles.content}><Tabs value={tab} onChange={setTab} label={uiText("用量类型")} items={[
+        {value: "executions", label: uiText("执行次数")}, {value: "models", label: uiText("模型用量")},
+      ]}/>
+      {tab === "models" ? <ModelUsagePanel enterpriseId={enterpriseId} refresh={refresh}/> : <QueryState {...usage} hasData={Boolean(usage.data)} empty={uiText("暂时无法读取用量。")}>
         {usage.data && <UsageOverview usage={usage.data} />}
-      </QueryState>
+      </QueryState>}</div>
     </div>
   );
 }

@@ -5,6 +5,13 @@ import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRecord;
 import com.stonewu.agenteam.service.modelprofile.ModelProfileCatalog;
+import com.stonewu.agenteam.service.modelprofile.ModelProtocolFactory;
+import com.stonewu.agenteam.service.modelprofile.ModelProtocolValidation;
+import com.stonewu.agenteam.service.modelusage.ModelUsageJournal;
+import com.stonewu.agenteam.service.modelusage.ModelUsageService;
+import com.stonewu.agenteam.service.network.OutboundAddressPolicy;
+import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.UserMessage;
 import io.agentscope.core.model.ExecutionConfig;
@@ -20,6 +27,7 @@ import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -38,7 +46,7 @@ class AgentModelFactoryTest {
     @ValueSource(ints = {0, 1200})
     void responseAfterElevenMinutesUsesTheConfiguredTimeLimit(int seconds) {
         try (var transports = mockConstruction(OkHttpTransport.class, (transport, context) -> {
-            var config = (HttpTransportConfig) context.arguments().getFirst();
+            var config = (HttpTransportConfig) context.arguments().get(1);
             assertEquals(Duration.ZERO, config.getReadTimeout());
             assertEquals(Duration.ZERO, config.getWriteTimeout());
             when(transport.stream(any())).thenAnswer(ignored -> Flux.just("""
@@ -48,7 +56,8 @@ class AgentModelFactoryTest {
             var model = factory().create("enterprise", "model");
             var options = GenerateOptions.builder().executionConfig(ExecutionConfig.builder()
                 .timeout(seconds == 0 ? null : Duration.ofSeconds(seconds)).maxAttempts(1).build()).build();
-            StepVerifier.withVirtualTime(() -> model.stream(List.of(new UserMessage("生成大文件")), List.of(), options))
+            StepVerifier.withVirtualTime(() -> model.stream(List.of(new UserMessage("生成大文件")), List.of(), options)
+                    .contextWrite(context -> context.put(ModelCallContext.class, callContext())))
                 .expectSubscription().expectNoEvent(Duration.ofMinutes(10)).thenAwait(Duration.ofMinutes(1))
                 .expectNextMatches(response -> response.getContent().stream()
                     .anyMatch(block -> block instanceof TextBlock text && text.getText().equals("大文件已生成。")))
@@ -70,7 +79,8 @@ class AgentModelFactoryTest {
             var model = factory().create("enterprise", "model");
             var options = GenerateOptions.builder().executionConfig(ExecutionConfig.builder()
                 .timeout(Duration.ofSeconds(1)).maxAttempts(1).build()).build();
-            StepVerifier.withVirtualTime(() -> model.stream(List.of(new UserMessage("有时间上限的请求")), List.of(), options))
+            StepVerifier.withVirtualTime(() -> model.stream(List.of(new UserMessage("有时间上限的请求")), List.of(), options)
+                    .contextWrite(context -> context.put(ModelCallContext.class, callContext())))
                 .thenAwait(Duration.ofSeconds(2)).expectErrorMatches(failure -> failure.getMessage().contains("timeout"))
                 .verify(Duration.ofSeconds(5));
             verify(transports.constructed().getFirst()).close();
@@ -87,6 +97,12 @@ class AgentModelFactoryTest {
             "测试提供方", "openai", "http://model.test/v1", true, now, now));
         when(providers.find("enterprise", "provider")).thenReturn(Optional.of(new ModelProviderRecord("provider", "enterprise",
             "测试提供方", "openai", "http://model.test/v1", "test-key", true, 1, now, now)));
-        return new AgentModelFactory(profiles, providers);
+        return new AgentModelFactory(profiles, providers, new ModelProtocolFactory(mock(OutboundAddressPolicy.class), new ObjectMapper(),
+            new ModelUsageJournal(mock(ModelUsageService.class), Clock.systemUTC()), new ModelProtocolValidation()));
+    }
+
+    private ModelCallContext callContext() {
+        return new ModelCallContext("enterprise", "user", "conversation", "run", 1, 1, "agent", "session", null,
+            "conversation", "conversation", "agent");
     }
 }

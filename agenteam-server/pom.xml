@@ -36,7 +36,7 @@
   <properties>
     <agenteam.build.directory>${project.basedir}/target</agenteam.build.directory>
     <java.version>21</java.version>
-    <agentscope.version>2.0.3</agentscope.version>
+    <agentscope.version>2.0.4</agentscope.version>
     <aws-sdk.version>2.49.6</aws-sdk.version>
   </properties>
   <dependencies>
@@ -77,7 +77,7 @@
       <artifactId>apache-client</artifactId>
       <version>${aws-sdk.version}</version>
     </dependency>
-    <!-- AgentScope 2.0 HarnessAgent 和 OpenAI 兼容模型提供商。 -->
+    <!-- AgentScope 智能体框架及四种文本模型协议。 -->
     <dependency>
       <groupId>io.agentscope</groupId>
       <artifactId>agentscope-harness</artifactId>
@@ -86,6 +86,21 @@
     <dependency>
       <groupId>io.agentscope</groupId>
       <artifactId>agentscope-extensions-model-openai</artifactId>
+      <version>${agentscope.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.agentscope</groupId>
+      <artifactId>agentscope-extensions-model-anthropic</artifactId>
+      <version>${agentscope.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.agentscope</groupId>
+      <artifactId>agentscope-extensions-model-gemini</artifactId>
+      <version>${agentscope.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.agentscope</groupId>
+      <artifactId>agentscope-extensions-model-openai-official</artifactId>
       <version>${agentscope.version}</version>
     </dependency>
     <dependency>
@@ -260,6 +275,7 @@
             <configuration>
               <sources>
                 <source>${project.basedir}/agenteam-tool-api/src/main/java</source>
+                <source>${project.basedir}/agenteam-agentscope-compat/src/main/java</source>
               </sources>
             </configuration>
           </execution>

@@ -2,6 +2,7 @@ package com.stonewu.agenteam.mapper.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.agent.entity.AgentStreamEvent;
+import com.stonewu.agenteam.mapper.modelprofile.ModelPrivateMetadataMapper;
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.event.AgentResultEvent;
 import org.springframework.stereotype.Component;
@@ -95,7 +96,7 @@ public class AgentStreamEventMapper {
         if (event.getMetadata() == null) {
             return Map.of();
         }
-        Object value = toJsonValue(event.getMetadata(), new IdentityHashMap<>());
+        Object value = toJsonValue(publicMetadata(event.getMetadata()), new IdentityHashMap<>());
         return value instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
     }
 
@@ -145,7 +146,11 @@ public class AgentStreamEventMapper {
                 }
                 String fieldName = propertyName(method);
                 try {
-                    result.put(fieldName, toJsonValue(method.invoke(value), visited));
+                    Object fieldValue = method.invoke(value);
+                    if (fieldName.equals("metadata") && fieldValue instanceof Map<?, ?> metadata) {
+                        fieldValue = publicMetadata(metadata);
+                    }
+                    result.put(fieldName, toJsonValue(fieldValue, visited));
                 } catch (ReflectiveOperationException ignored) {
                     // 忽略单个不可读字段，保留其他字段。
                 }
@@ -154,6 +159,13 @@ public class AgentStreamEventMapper {
         } finally {
             visited.remove(value);
         }
+    }
+
+    private static Map<String, Object> publicMetadata(Map<?, ?> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return Map.of();
+        }
+        return ModelPrivateMetadataMapper.removePrivate(metadata);
     }
 
     private static List<Object> streamIterable(Iterable<?> iterable, IdentityHashMap<Object, Boolean> visited) {
