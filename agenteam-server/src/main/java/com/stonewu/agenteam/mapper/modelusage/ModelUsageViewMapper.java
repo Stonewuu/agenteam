@@ -4,6 +4,7 @@ import com.stonewu.agenteam.model.modelusage.entity.ModelUsageAggregateRow;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageCostItemRow;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageFilter;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow;
+import com.stonewu.agenteam.model.modelusage.entity.ModelUsageNamesRow;
 import com.stonewu.agenteam.model.modelusage.response.ModelCallView;
 import com.stonewu.agenteam.model.modelusage.response.ModelUsageSummaryView;
 import org.springframework.stereotype.Component;
@@ -58,7 +59,7 @@ public class ModelUsageViewMapper {
             count(rows, ModelUsageAggregateRow::getInvalidUsageCalls), tokens, money);
     }
 
-    public ModelCallView call(ModelUsageRecordRow row, List<ModelUsageCostItemRow> costs) {
+    public ModelCallView call(ModelUsageRecordRow row, List<ModelUsageCostItemRow> costs, ModelUsageNamesRow names) {
         if (!row.getPriceStatus().equals("priced") && !row.getPriceStatus().equals("partial")) {
             costs = List.of();
         }
@@ -83,7 +84,8 @@ public class ModelUsageViewMapper {
             row.getCallStatus(), row.getUsageStatus(), row.getPriceStatus(), row.getReasonCode(), row.getDispatchedAt(), row.getFinishedAt(),
             tokens, details, row.getCurrency(), decimal(row.getTotalAmount()), known, row.getPriceVersionId(), row.getPriceRuleId(),
             costs.stream().map(cost -> new ModelCallView.CostItem(cost.getMeter(), cost.getCacheTtlSeconds(), cost.getQuantity().toString(),
-                decimal(cost.getPricePerMillionSnapshot()), decimal(cost.getAmount()))).toList());
+                decimal(cost.getPricePerMillionSnapshot()), decimal(cost.getAmount()))).toList(),
+            names == null ? null : names.getUserName(), names == null ? null : names.getModelProfileName());
     }
 
     private ModelCallView.Token token(Long value, String state) {

@@ -10,7 +10,8 @@ public record ModelCallView(String id, String conversationId, String runId, Stri
                             String callStatus, String usageStatus, String priceStatus, String reasonCode,
                             Instant dispatchedAt, Instant finishedAt, Map<String, Token> tokens,
                             Map<Integer, String> cacheWriteDetails, String currency, String totalAmount,
-                            String knownAmount, String priceVersionId, String priceRuleId, List<CostItem> items) {
+                            String knownAmount, String priceVersionId, String priceRuleId, List<CostItem> items,
+                            String userName, String modelProfileName) {
     public record Token(String value, String state) {
     }
 

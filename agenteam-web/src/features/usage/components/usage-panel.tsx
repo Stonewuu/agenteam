@@ -23,10 +23,11 @@ export function UsagePanel({ enterpriseId }: { enterpriseId: string; permissions
   return (
     <div className={styles.panel}>
       <PageHeader
+        inlineActions
         title={uiText("用量统计")}
         description={uiText("查看执行次数、模型用量和费用。")}
         actions={
-          <Button className={ui.button} disabled={usage.loading} onClick={() => setRefresh((value) => value + 1)}>
+          <Button className={ui.button} disabled={tab === "executions" && usage.loading} onClick={() => setRefresh((value) => value + 1)}>
             <IconRefresh size={16}/>{uiText("刷新")}
           </Button>
         }

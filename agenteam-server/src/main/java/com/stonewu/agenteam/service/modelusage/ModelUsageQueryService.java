@@ -8,6 +8,7 @@ import com.stonewu.agenteam.mapper.modelusage.ModelUsageCostItemMapper;
 import com.stonewu.agenteam.mapper.modelusage.ModelUsageQueryMapper;
 import com.stonewu.agenteam.mapper.modelusage.ModelUsageRecordMapper;
 import com.stonewu.agenteam.mapper.modelusage.ModelUsageViewMapper;
+import com.stonewu.agenteam.mapper.modelusage.ModelUsageNamesMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.model.http.response.PageResponse;
@@ -49,18 +50,20 @@ public class ModelUsageQueryService {
     private final ModelUsageCostItemMapper items;
     private final ModelUsageQueryMapper aggregate;
     private final ModelUsageViewMapper views;
+    private final ModelUsageNamesMapper names;
     private final EnterpriseAuthorizationService authorization;
     private final ConversationQueryService conversations;
     private final ListPagination pagination;
     private final Clock clock;
 
     public ModelUsageQueryService(ModelUsageRecordMapper rows, ModelUsageCostItemMapper items, ModelUsageQueryMapper aggregate,
-                                   ModelUsageViewMapper views, EnterpriseAuthorizationService authorization,
+                                   ModelUsageViewMapper views, ModelUsageNamesMapper names, EnterpriseAuthorizationService authorization,
                                    ConversationQueryService conversations, ListPagination pagination, Clock clock) {
         this.rows = rows;
         this.items = items;
         this.aggregate = aggregate;
         this.views = views;
+        this.names = names;
         this.authorization = authorization;
         this.conversations = conversations;
         this.pagination = pagination;
@@ -116,7 +119,8 @@ public class ModelUsageQueryService {
         if (row == null) {
             throw ResourceAuthorizationService.unavailable();
         }
-        return views.call(row, costs(actor.enterpriseId(), List.of(row)).getOrDefault(row.getId(), List.of()));
+        return views.call(row, costs(actor.enterpriseId(), List.of(row)).getOrDefault(row.getId(), List.of()),
+            names.names(actor.enterpriseId(), List.of(row)).get(row.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -157,7 +161,8 @@ public class ModelUsageQueryService {
         var selected = rows.selectPage(new Page<ModelUsageRecordRow>(1, size + 1, false), query).getRecords();
         var page = pagination.page(selected, size, binding, row -> new PagePosition(row.getDispatchedAt(), row.getId(), null));
         var costs = costs(actor.enterpriseId(), page.items());
-        return new PageResponse<>(page.items().stream().map(row -> views.call(row, costs.getOrDefault(row.getId(), List.of()))).toList(),
+        var labels = names.names(actor.enterpriseId(), page.items());
+        return new PageResponse<>(page.items().stream().map(row -> views.call(row, costs.getOrDefault(row.getId(), List.of()), labels.get(row.getId()))).toList(),
             page.nextCursor(), page.hasMore());
     }
 

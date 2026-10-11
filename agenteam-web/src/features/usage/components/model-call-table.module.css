@@ -1,0 +1,322 @@
+.scroll {
+  min-width: 0;
+  container-type: inline-size;
+  overflow-x: auto;
+  padding: 6px;
+  margin: -6px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.table th,
+.table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: start;
+}
+.table thead th {
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--surface-soft);
+  white-space: nowrap;
+}
+.table tbody th {
+  font-weight: 400;
+  background: transparent;
+}
+.table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.table tbody tr {
+  transition: background-color 150ms ease;
+}
+.table tbody tr:hover {
+  background: var(--surface-soft);
+}
+.table .number {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.model {
+  min-width: 150px;
+  max-width: 270px;
+}
+.model strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.model small {
+  display: block;
+  color: var(--secondary);
+  font-size: 11px;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+.purpose {
+  display: inline-block;
+  color: var(--secondary);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.user {
+  min-width: 76px;
+  max-width: 160px;
+  overflow-wrap: anywhere;
+}
+.time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.time small {
+  display: block;
+  color: var(--secondary);
+  font-size: 11px;
+}
+.time .callState {
+  color: var(--amber-text);
+  margin-top: 4px;
+}
+.amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.amount strong {
+  font-size: 13px;
+  font-weight: 550;
+}
+.amount strong > span {
+  margin-inline-start: 5px;
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+.priceState {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--surface-hover);
+  color: var(--secondary);
+  font-size: 11px;
+}
+.priceState[data-state="priced"] {
+  color: var(--mint-text);
+  background: var(--mint-soft);
+}
+.priceState[data-state="partial"],
+.priceState[data-state="unpriced"],
+.priceState[data-state="invalid"] {
+  color: var(--amber-text);
+  background: var(--amber-soft);
+}
+.action {
+  width: 80px;
+}
+.action button {
+  min-height: 36px;
+  padding: 7px 10px;
+  gap: 8px;
+  font-size: 12px;
+}
+.metaIcon,
+.mobileLabel {
+  display: none;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container (max-width: 800px) {
+  .table .number {
+    text-align: start;
+  }
+  .table {
+    display: block;
+  }
+  .table tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  .table tbody tr:hover {
+    background: var(--surface);
+  }
+  .table tbody tr > * {
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    max-width: none;
+    width: auto;
+    text-align: start;
+    white-space: normal;
+  }
+  .model {
+    grid-column: 1 / 5;
+    grid-row: 1;
+  }
+  .model strong {
+    font-size: 14px;
+  }
+  .model small {
+    font-size: 11px;
+  }
+  .table .user,
+  .table .time {
+    grid-row: 2;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--secondary);
+  }
+  .user {
+    grid-column: 1 / 4;
+  }
+  .time {
+    grid-column: 4 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .time time {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0 5px;
+  }
+  .time .callState {
+    width: 100%;
+    text-align: end;
+  }
+  .metaIcon {
+    display: block;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .table .metric {
+    grid-column: span 2;
+    grid-row: 3;
+    padding: 9px 8px;
+    border-radius: 9px;
+    background: var(--slate-soft);
+    color: var(--slate-text);
+  }
+  .metric[data-meter="output"] {
+    background: var(--rose-soft);
+    color: var(--rose-text);
+  }
+  .metric[data-meter="cache_read"] {
+    background: var(--mint-soft);
+    color: var(--mint-text);
+  }
+  .mobileLabel {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-bottom: 5px;
+  }
+  .mobileLabel svg {
+    flex-shrink: 0;
+  }
+  .metric > span:last-child {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .table .cost {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-light);
+  }
+  .table tbody tr:last-child > .cost {
+    border-top: 1px solid var(--border-light);
+  }
+  .cost::before {
+    content: attr(data-label);
+    color: var(--secondary);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .amount {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-inline-start: auto;
+    gap: 6px 10px;
+  }
+  .amount strong {
+    font-size: 15px;
+  }
+  .table .action {
+    grid-column: 5 / -1;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+  }
+  .action button {
+    min-height: 44px;
+  }
+}
+
+@container (max-width: 340px) {
+  .table tbody tr {
+    padding: 12px;
+    gap: 10px 6px;
+  }
+  .table .metric {
+    padding: 8px 6px;
+  }
+  .metric > span:last-child {
+    font-size: 15px;
+  }
+}
+
+@container (max-width: 280px) {
+  .mobileLabel svg {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table tbody tr {
+    transition: none;
+  }
+}

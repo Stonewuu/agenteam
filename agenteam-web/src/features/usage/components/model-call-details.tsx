@@ -2,20 +2,21 @@
 
 import {Dialog, DialogCancel} from "@/components/ui/dialog";
 import {DetailSection} from "@/components/ui/detail-section";
-import {IconChartBar, IconClock, IconReceipt, IconRobot, IconWallet} from "@/components/ui/icons";
+import {IconChartBar, IconClock, IconReceipt, IconRobot, IconUser, IconWallet} from "@/components/ui/icons";
 import {useT} from "@/lib/i18n/locale-provider";
 import {priceReasons, tokenCount, tokenLabels, usageAmount, usagePurposes} from "../lib/model-usage-display";
 import type {ModelCall} from "../types/model-usage";
+import {ModelCallTokenUsage} from "./model-call-token-usage";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./model-usage.module.css";
 
 export function ModelCallDetails({call, onClose}: {call: ModelCall; onClose: () => void}) {
   const t = useT();
   const status: Record<string, string> = {registered: "等待请求", in_flight: "调用中", completed: "已结束", failed: "调用失败", cancelled: "已取消", interrupted: "调用中断"};
-  return <Dialog title={call.modelName} icon={<IconRobot size={21}/>} onClose={onClose} wide
+  return <Dialog title={call.modelProfileName || call.modelName} icon={<IconRobot size={21}/>} onClose={onClose} wide
     footer={<DialogCancel className={ui.button}>{t("关闭")}</DialogCancel>}>
     <div className={styles.stack}>
-      <div className={styles.toolbar}><p>{call.providerName} · {t(usagePurposes[call.purpose] ?? "模型调用")}</p>
+      <div className={styles.toolbar}><p>{call.modelName} · {call.providerName} · {t(usagePurposes[call.purpose] ?? "模型调用")}</p>
         <span className="badge neutral">{t(status[call.callStatus] ?? "已结束")}</span></div>
       <section className={styles.moneyCard}><span className={styles.moneyIcon}><IconWallet size={24} variant="Bulk"/></span>
         <div className={styles.moneyCopy}><span>{call.totalAmount !== null ? t("已计价费用") : call.knownAmount !== null ? t("已确认部分") : t("费用")}</span>
@@ -25,14 +26,13 @@ export function ModelCallDetails({call, onClose}: {call: ModelCall; onClose: () 
             {(call.totalAmount !== null || call.knownAmount !== null) && <span>{call.currency}</span>}</div>
           {call.reasonCode && priceReasons[call.reasonCode] && <small>{t(priceReasons[call.reasonCode])}</small>}
         </div></section>
-      <DetailSection title={t("发生时间")} icon={<IconClock size={20}/>}>
-        <p>{new Date(call.dispatchedAt).toLocaleString(t.formatLocale)}{call.finishedAt && <> – {new Date(call.finishedAt).toLocaleString(t.formatLocale)}</>}</p>
-      </DetailSection>
-      <DetailSection title={t("Token 用量")} icon={<IconChartBar size={20}/>} description={t("缓存属于输入子项，思考属于输出子项。") }>
-        <dl className={styles.details}>{Object.entries(tokenLabels).filter(([key]) => call.tokens[key]?.state !== "not_applicable").map(([key, label]) => <div key={key}><dt>{t(label)}</dt>
-          <dd>{tokenCount(call.tokens[key]?.value, t.formatLocale) ?? (call.tokens[key]?.state === "not_applicable" ? t("不适用") : t("未返回"))}</dd></div>)}
-          {Object.entries(call.cacheWriteDetails).map(([ttl, count]) => <div key={ttl}><dt>{t("创建缓存 · {0} 秒", [ttl])}</dt><dd>{tokenCount(count, t.formatLocale)}</dd></div>)}
-        </dl>
+      <dl className={styles.callMetadata}>
+        <div><dt><IconUser size={16}/>{t("调用用户")}</dt><dd>{call.userName || t("未提供姓名")}</dd></div>
+        <div><dt><IconClock size={16}/>{t("发生时间")}</dt>
+          <dd>{new Date(call.dispatchedAt).toLocaleString(t.formatLocale)}{call.finishedAt && <> – {new Date(call.finishedAt).toLocaleString(t.formatLocale)}</>}</dd></div>
+      </dl>
+      <DetailSection title={t("Token 用量")} icon={<IconChartBar size={20}/>}>
+        <ModelCallTokenUsage call={call}/>
       </DetailSection>
       <DetailSection title={t("费用明细")} icon={<IconReceipt size={20}/>}>
         <div className={styles.stack}>

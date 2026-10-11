@@ -1,50 +1,75 @@
 "use client";
 
 import {useT} from "@/lib/i18n/locale-provider";
-import {IconAlertCircle, IconArrowDown, IconArrowUp, IconChartBar, IconClock, IconDatabase, IconStack, IconWallet} from "@/components/ui/icons";
+import {IconAlertCircle, IconArrowDown, IconArrowUp, IconChartBar, IconWallet} from "@/components/ui/icons";
 import {tokenCount, usageAmount} from "../lib/model-usage-display";
 import type {ModelUsageTotals} from "../types/model-usage";
-import styles from "./model-usage.module.css";
+import styles from "./model-usage-overview.module.css";
 
 export function ModelUsageSummaryCards({totals}: {totals: ModelUsageTotals}) {
   const t = useT();
-  const metrics = [
-    {key: "input", label: t("全部输入"), Icon: IconArrowDown, tone: "input"},
-    {key: "output", label: t("输出"), Icon: IconArrowUp, tone: "output"},
-    {key: "cache_read", label: t("缓存读取"), Icon: IconDatabase, tone: "cache"},
-    {key: "cache_write", label: t("缓存创建"), Icon: IconStack, tone: "cache"},
-  ].filter(({key}) => !(totals.calls !== "0" && totals.tokens[key]?.notApplicableCalls === totals.calls));
-  return <div className={styles.stack}>
-    <div className={styles.overviewHeading}><h2><IconWallet size={20}/>{t("费用概览")}</h2>
-      <span><IconChartBar size={16}/>{t("共 {0} 次模型调用", [tokenCount(totals.calls, t.formatLocale) ?? "0"])}</span></div>
-    <div className={styles.money}>{totals.amounts.map((value) => <section key={value.currency} className={styles.moneyCard}>
-      <span className={styles.moneyIcon}><IconWallet size={24} variant="Bulk"/></span>
-      <div className={styles.moneyCopy}><span>{value.completeAmount !== null ? t("已计价费用") : t("已确认部分")}</span>
-        <div className={styles.moneyValue}><strong title={value.completeAmount ?? value.partialAmount ?? undefined}>
-          {value.completeAmount !== null ? usageAmount(value.completeAmount, t.formatLocale) : value.partialAmount !== null ? usageAmount(value.partialAmount, t.formatLocale) : "—"}</strong>
-          <span>{value.currency}</span></div>
-        {value.completeAmount !== null && value.partialAmount !== null && <small title={value.partialAmount}>
-          {t("另有已确认部分：{0} {1}", [usageAmount(value.partialAmount, t.formatLocale), value.currency])}</small>}
+  const count = (value: string) => tokenCount(value, t.formatLocale) ?? "0";
+  const priced = totals.amounts.reduce((sum, amount) => sum + BigInt(amount.completeCalls), BigInt(0)).toString();
+  return <section aria-label={t("用量概览")} className={styles.overview}>
+    <div className={styles.grid}>
+      <div className={`${styles.card} ${styles.cost}`}>
+        <h2><IconWallet size={18}/>{t("已计价费用")}</h2>
+        {totals.amounts.length === 0 ? <p className={styles.noAmount}>{t("暂无已确认金额")}</p>
+          : totals.amounts.map((amount) => <div key={amount.currency} className={styles.currency}>
+            <div className={styles.value}><strong title={amount.completeAmount ?? undefined}>
+              {amount.completeAmount === null ? "—" : usageAmount(amount.completeAmount, t.formatLocale)}
+            </strong><span>{amount.currency}</span></div>
+            {amount.partialAmount !== null && <p title={amount.partialAmount}>{t("另有已确认部分：{0} {1}", [usageAmount(amount.partialAmount, t.formatLocale), amount.currency])}</p>}
+          </div>)}
+        <p className={styles.caption}>{t("仅汇总已完整计价的调用")}</p>
       </div>
-      <span className={styles.moneyCount}>{t("{0} 次调用已完整计价", [tokenCount(value.completeCalls, t.formatLocale) ?? "0"])}</span>
-    </section>)}
-      {totals.amounts.length === 0 && <section className={styles.moneyCard}><span className={styles.moneyIcon}><IconWallet size={24} variant="Bulk"/></span>
-        <div className={styles.moneyCopy}><span>{t("已计价费用")}</span><strong className={styles.noAmount}>{t("暂无已确认金额")}</strong></div></section>}
+      <div className={styles.card}>
+        <h2><IconChartBar size={18}/>{t("模型调用")}</h2>
+        <div className={styles.value}><strong>{count(totals.calls)}</strong><span>{t("次")}</span></div>
+        <dl className={styles.breakdown}>
+          <div><dt>{t("已完整计价")}</dt><dd>{t("{0} 次", [count(priced)])}</dd></div>
+          {totals.unpricedCalls !== "0" && <div data-warning><dt>{t("未完整计价")}</dt><dd>{t("{0} 次", [count(totals.unpricedCalls)])}</dd></div>}
+          {totals.pendingCalls !== "0" && <div><dt>{t("金额待计算")}</dt><dd>{t("{0} 次", [count(totals.pendingCalls)])}</dd></div>}
+        </dl>
+      </div>
+      <div className={styles.card}>
+        <h2><IconArrowDown size={18}/>{t("全部输入")}</h2>
+        <UsageValue totals={totals} meter="input"/>
+        <dl className={styles.breakdown}>
+          <UsagePart totals={totals} meter="input_uncached" label={t("普通输入")}/>
+          <UsagePart totals={totals} meter="cache_read" label={t("其中缓存读取")}/>
+          <UsagePart totals={totals} meter="cache_write" label={t("其中缓存创建")}/>
+          <UsagePart totals={totals} meter="tool_use_prompt" label={t("其中工具输入")}/>
+        </dl>
+      </div>
+      <div className={styles.card}>
+        <h2><IconArrowUp size={18}/>{t("输出")}</h2>
+        <UsageValue totals={totals} meter="output"/>
+        <dl className={styles.breakdown}><UsagePart totals={totals} meter="reasoning" label={t("其中思考")}/></dl>
+      </div>
     </div>
-    <div className={styles.tokens}>{metrics.map(({key, label, Icon, tone}) => {
-      const value = totals.tokens[key];
-      return <div key={key} className={styles.metric}><div className={styles.metricHeading}><span className={styles.metricIcon} data-tone={tone}><Icon size={20}/></span><span>{label}</span></div>
-        <div className={styles.metricValue}><strong>{tokenCount(value?.value, t.formatLocale)
-        ?? (value?.notApplicableCalls === totals.calls && totals.calls !== "0" ? t("不适用") : t("未返回"))}</strong>
-          {value?.value !== null && value?.value !== undefined && <span>Token</span>}</div>
-        {value && BigInt(value.knownCalls) + BigInt(value.notApplicableCalls) < BigInt(totals.calls)
-          && <small>{t("{0} 次调用已返回", [tokenCount(value.knownCalls, t.formatLocale) ?? "0"])}</small>}</div>;
-    })}</div>
-    <p className={styles.usageHint}><IconAlertCircle size={15}/>{t("缓存属于输入子项，思考属于输出子项。")}</p>
-    {(totals.incompleteUsageCalls !== "0" || totals.unpricedCalls !== "0" || totals.pendingCalls !== "0") && <div className={styles.notices}>
-      {totals.incompleteUsageCalls !== "0" && <p><IconAlertCircle size={17}/>{t("有 {0} 次调用未返回完整用量。", [tokenCount(totals.incompleteUsageCalls, t.formatLocale) ?? "0"])}</p>}
-      {totals.unpricedCalls !== "0" && <p><IconWallet size={17}/>{t("有 {0} 次调用尚未完整计价，可在明细中查看原因。", [tokenCount(totals.unpricedCalls, t.formatLocale) ?? "0"])}</p>}
-      {totals.pendingCalls !== "0" && <p><IconClock size={17}/>{t("有 {0} 次调用尚未完成金额计算。", [tokenCount(totals.pendingCalls, t.formatLocale) ?? "0"])}</p>}
-    </div>}
-  </div>;
+    {totals.incompleteUsageCalls !== "0" && <p className={styles.notice}><IconAlertCircle size={16}/>
+      {t("有 {0} 次调用未返回完整用量，统计仅包含已返回部分。", [count(totals.incompleteUsageCalls)])}</p>}
+  </section>;
+}
+
+function UsageValue({totals, meter}: {totals: ModelUsageTotals; meter: string}) {
+  const t = useT();
+  const value = totals.tokens[meter];
+  const missing = value && BigInt(value.knownCalls) + BigInt(value.notApplicableCalls) < BigInt(totals.calls);
+  return <><div className={styles.value}><strong>{tokenCount(value?.value, t.formatLocale) ?? "—"}</strong><span>Token</span></div>
+    {missing && <p className={styles.caption}>{t("{0} 次调用已返回", [tokenCount(value.knownCalls, t.formatLocale) ?? "0"])}</p>}</>;
+}
+
+function UsagePart({totals, meter, label}: {totals: ModelUsageTotals; meter: string; label: string}) {
+  const t = useT();
+  const value = totals.tokens[meter];
+  if (!value || totals.calls === "0" || value.notApplicableCalls === totals.calls) {
+    return null;
+  }
+  const missing = BigInt(value.knownCalls) + BigInt(value.notApplicableCalls) < BigInt(totals.calls);
+  return <div><dt>{label}</dt><dd>
+    {tokenCount(value.value, t.formatLocale) ?? t("未返回")}
+    {missing && value.value !== null && <small>{t("{0} 次调用已返回", [tokenCount(value.knownCalls, t.formatLocale) ?? "0"])}</small>}
+  </dd></div>;
 }

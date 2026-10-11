@@ -11,6 +11,7 @@ export type ModelUsageSummary = {
 export type ModelCall = {
   id: string; conversationId: string | null; runId: string | null; userId: string; modelProfileId: string;
   modelName: string; providerName: string; protocol: string; purpose: string; workflowNodeId: string | null;
+  modelProfileName: string | null; userName: string | null;
   callStatus: string; usageStatus: string; priceStatus: string; reasonCode: string | null; dispatchedAt: string; finishedAt: string | null;
   tokens: Record<string, UsageToken>; cacheWriteDetails: Record<string, string>; currency: string | null;
   totalAmount: string | null; knownAmount: string | null; priceVersionId: string | null; priceRuleId: string | null;

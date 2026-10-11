@@ -1,10 +1,11 @@
 "use client";
 
-import {useState} from "react";
+import {useRef, useState} from "react";
 import {Field} from "@/components/ui/field";
 import {Input} from "@/components/ui/input";
 import {SearchableSelect} from "@/components/ui/searchable-select";
-import {QueryState, Pagination} from "@/components/ui/query-state";
+import {QueryState} from "@/components/ui/query-state";
+import {Disclosure, DisclosureSummary} from "@/components/ui/disclosure";
 import {DetailSection} from "@/components/ui/detail-section";
 import {IconCalendar, IconChartBar, IconListDetails, IconRobot, IconUser} from "@/components/ui/icons";
 import {useT} from "@/lib/i18n/locale-provider";
@@ -12,6 +13,7 @@ import {useApiPage, useApiQuery} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {ModelUsageSummaryCards} from "./model-usage-summary";
 import {ModelCallList} from "./model-call-list";
+import {ModelCallPagination} from "./model-call-pagination";
 import {tokenCount, usageAmount} from "../lib/model-usage-display";
 import type {ModelUsageSummary, ModelCall} from "../types/model-usage";
 import ui from "@/components/ui/surface.module.css";
@@ -31,6 +33,8 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
   });
   const [model, setModel] = useState<Option | null>(null);
   const [user, setUser] = useState<Option | null>(null);
+  const [pageSize, setPageSize] = useState(10);
+  const detail = useRef<HTMLDivElement>(null);
   const start = new Date(`${range.from}T00:00:00`);
   const end = new Date(`${range.to}T00:00:00`);
   end.setDate(end.getDate() + 1);
@@ -48,7 +52,13 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
   }
   const base = organizationPath(enterpriseId, "/usage");
   const summary = useApiQuery<ModelUsageSummary>(valid ? `${base}/models?${query}&groupBy=day` : null, refresh);
-  const calls = useApiPage<ModelCall>(`${base}/model-calls?${query}`, refresh, 200, 30, valid);
+  const calls = useApiPage<ModelCall>(`${base}/model-calls?${query}`, refresh, 200, pageSize, valid);
+  const total = summary.error ? undefined : summary.data?.totals.calls;
+  const page = calls.previous.length + 1;
+  function changePage(action: () => void) {
+    action();
+    detail.current?.scrollIntoView({block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  }
   return <div className={styles.stack}>
     <div className={styles.filters}>
       <Field label={t("开始日期")} icon={<IconCalendar size={16}/>}><Input className={ui.input} type="date" value={range.from}
@@ -58,10 +68,30 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
       <UsageOptionPicker path={valid ? `${base}/model-options?${dates}&kind=model` : null} kind="model" value={model} onChange={setModel}/>
       <UsageOptionPicker path={valid ? `${base}/model-options?${dates}&kind=user` : null} kind="user" value={user} onChange={setUser}/>
     </div>
-    {valid && <QueryState {...summary} hasData={Boolean(summary.data && summary.data.totals.calls !== "0")}
+    {valid && <><QueryState {...summary} hasData={Boolean(summary.data)} loadingLayout="cards"
       empty={t("所选范围内还没有模型用量记录。") }>
-      {summary.data && <div className={styles.stack}><ModelUsageSummaryCards totals={summary.data.totals}/>
-        {summary.data.days.length > 1 && <DetailSection title={t("每日用量")} icon={<IconChartBar size={20}/>}>
+      {summary.data && <ModelUsageSummaryCards totals={summary.data.totals}/>}
+    </QueryState>
+    <div ref={detail} className={styles.callSection}>
+      <DetailSection title={t("调用明细")} icon={<IconListDetails size={20}/>} level="h2"
+        description={t("每行对应一次模型调用，缓存读取已包含在输入中。")}
+        action={<span className={styles.recordCount}>{total === undefined ? "" : t("共 {0} 条", [tokenCount(total, t.formatLocale) ?? "0"])}</span>}>
+        <QueryState {...calls} hasData={Boolean(!calls.loading && !calls.error && calls.data?.items.length)}
+          retry={() => {
+            calls.first();
+            calls.retry();
+          }} empty={t("没有匹配的调用记录。") }>
+          <ModelCallList calls={calls.data?.items ?? []}/>
+        </QueryState>
+        <ModelCallPagination page={page} pageSize={pageSize} total={total} count={calls.data?.items.length ?? 0}
+          loading={calls.loading} error={calls.error} hasMore={Boolean(calls.data?.hasMore)}
+          back={() => changePage(calls.back)} next={() => changePage(calls.next)}
+          onPageSizeChange={(size) => changePage(() => setPageSize(size))}/>
+      </DetailSection>
+    </div>
+    {summary.data && summary.data.days.length > 0 && <Disclosure className={styles.daily} animateContentHeight>
+      <DisclosureSummary><IconChartBar size={18}/>{t("每日汇总")}</DisclosureSummary>
+      <div className={styles.dailyBody}>
           <div className={styles.tableScroll}><table className={styles.table}><thead><tr><th>{t("日期")}</th><th>{t("输入")}</th><th>{t("输出")}</th><th>{t("已完整计价金额")}</th></tr></thead><tbody>
             {summary.data.days.map((day) => <tr key={day.date}><td>{day.date}</td><td>{tokenCount(day.totals.tokens.input?.value, t.formatLocale) ?? t("未返回")}</td>
               <td>{tokenCount(day.totals.tokens.output?.value, t.formatLocale) ?? t("未返回")}</td><td>
@@ -69,15 +99,8 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
                   .map((amount) => <p key={amount.currency} title={amount.completeAmount!}>{usageAmount(amount.completeAmount!, t.formatLocale)} {amount.currency}</p>) : t("未计价")}
               </td></tr>)}
           </tbody></table></div>
-        </DetailSection>}
-        <DetailSection title={t("调用明细")} icon={<IconListDetails size={20}/>}>
-          <QueryState {...calls} hasData={Boolean(calls.data?.items.length)} empty={t("没有匹配的调用记录。") }>
-            <ModelCallList calls={calls.data?.items ?? []}/>
-          </QueryState>
-          <Pagination {...calls} hasMore={calls.data?.hasMore}/>
-        </DetailSection>
-      </div>}
-    </QueryState>}
+      </div>
+    </Disclosure>}</>}
   </div>;
 }
 

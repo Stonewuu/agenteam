@@ -1,5 +1,8 @@
 .panel {
   min-width: 0;
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
 }
 
 .content {
@@ -15,7 +18,7 @@
   flex-wrap: wrap;
 }
 
-.panel h2 {
+.monthlyHeading h2 {
   font-size: 17px;
   margin: 0;
 }

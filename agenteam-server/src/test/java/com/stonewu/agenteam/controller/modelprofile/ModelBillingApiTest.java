@@ -114,6 +114,8 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
         assertThat(modelOptions.get(0).path("id").asText()).isEqualTo(model);
         var userOptions = data(mvc.perform(get(base() + "/usage/model-options").param("kind", "user").cookie(cookie)).andExpect(status().isOk()).andReturn());
         assertThat(userOptions.get(0).path("id").asText()).isEqualTo(admin);
+        assertThat(own.at("/calls/items/0/modelProfileName").asText()).isEqualTo(modelOptions.get(0).path("name").asText());
+        assertThat(own.at("/calls/items/0/userName").asText()).isEqualTo(userOptions.get(0).path("name").asText());
         var effective = data(mvc.perform(get(path + "/current").cookie(cookie)).andExpect(status().isOk()).andReturn());
         assertThat(effective.path("id").asText()).isEqualTo(priceId);
         var detail = mvc.perform(get(base() + "/usage/model-calls/" + call.getId()).cookie(cookie)).andExpect(status().isOk()).andReturn();
