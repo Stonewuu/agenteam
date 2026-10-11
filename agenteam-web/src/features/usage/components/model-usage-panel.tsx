@@ -3,8 +3,7 @@
 import {useState} from "react";
 import {Field} from "@/components/ui/field";
 import {Input} from "@/components/ui/input";
-import {Select} from "@/components/ui/select";
-import {SearchInput} from "@/components/ui/search-input";
+import {SearchableSelect} from "@/components/ui/searchable-select";
 import {QueryState, Pagination} from "@/components/ui/query-state";
 import {DetailSection} from "@/components/ui/detail-section";
 import {IconCalendar, IconChartBar, IconListDetails, IconRobot, IconUser} from "@/components/ui/icons";
@@ -85,15 +84,16 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
 function UsageOptionPicker({path, kind, value, onChange}: {path: string | null; kind: "model" | "user"; value: Option | null; onChange: (value: Option | null) => void}) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const options = useApiQuery<Option[]>(path ? `${path}&query=${encodeURIComponent(query)}` : null, 0, 250);
-  const values = options.data ?? [];
-  return <Field label={kind === "model" ? t("模型") : t("用户")} icon={kind === "model" ? <IconRobot size={16}/> : <IconUser size={16}/>} error={path ? options.error || undefined : undefined}>
-    <SearchInput aria-label={kind === "model" ? t("查找模型") : t("查找用户")} value={query} placeholder={t("按名称查找")} disabled={!path}
-      onChange={(event) => setQuery(event.target.value)}/>
-    <Select className={ui.select} value={value?.id ?? ""} disabled={!path} onChange={(event) => onChange(values.find((option) => option.id === event.target.value) ?? null)}>
-      <option value="">{kind === "model" ? t("全部模型") : t("全部用户")}</option>
-      {value && !values.some((option) => option.id === value.id) && <option value={value.id}>{value.name}</option>}
-      {values.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-    </Select>
+  const [open, setOpen] = useState(false);
+  const options = useApiQuery<Option[]>(path && open ? `${path}&query=${encodeURIComponent(query)}` : null, 0, 250);
+  return <Field label={kind === "model" ? t("模型") : t("用户")} icon={kind === "model" ? <IconRobot size={16}/> : <IconUser size={16}/>}>
+    <SearchableSelect options={(options.data ?? []).map((option) => ({value: option.id, label: option.name}))}
+      value={value ? {value: value.id, label: value.name} : null} disabled={!path}
+      onChange={(option) => onChange(option ? {id: option.value, name: option.label} : null)}
+      query={query} onQueryChange={setQuery} open={open} onOpenChange={setOpen}
+      resetLabel={kind === "model" ? t("全部模型") : t("全部用户")}
+      searchLabel={kind === "model" ? t("查找模型") : t("查找用户")}
+      emptyLabel={t("没有匹配的记录。")}
+      loading={options.loading} error={options.error} onRetry={options.retry}/>
   </Field>;
 }
