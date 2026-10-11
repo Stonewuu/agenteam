@@ -140,17 +140,21 @@ class AnthropicProtocolModelTest {
     }
 
     @Test
-    void missingOptionalCacheFieldsDoNotBecomeCompleteBilling() throws Exception {
+    void unusedCacheFieldsDoNotPreventCompleteBilling() throws Exception {
         replies.add(textReply("仍可回答", false));
         var chunks = model().stream(List.of(new UserMessage("测试请求")), List.of(), null)
             .collectList().block(Duration.ofSeconds(8));
         assertNotNull(chunks);
         var usage = usages.getFirst().snapshot();
-        assertEquals("partial", usage.status());
+        assertEquals("complete", usage.status());
+        assertEquals(42L, usage.usage().inputTokens());
         assertEquals(42L, usage.usage().uncachedInputTokens());
         assertNull(usage.usage().cacheReadTokens());
         assertNull(usage.usage().cacheWriteTokens());
+        assertEquals("not_applicable", usage.usage().fieldStates().get("cache_read"));
+        assertEquals("not_applicable", usage.usage().fieldStates().get("cache_write"));
         assertEquals(6L, usage.usage().outputTokens());
+        assertEquals(48L, usage.usage().totalTokens());
         assertTrue(usage.terminal());
     }
 

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import reactor.core.publisher.Flux;
 import okhttp3.Request;
 
@@ -90,11 +90,12 @@ class ResponsesProtocolModelTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-        "{\"input_tokens\":120,\"output_tokens\":5,\"total_tokens\":125}",
-        "{\"input_tokens\":120,\"output_tokens\":5,\"total_tokens\":125,\"input_tokens_details\":{\"cached_tokens\":0}}"
-    })
-    void missingDetailsDoNotStopTextOrBecomeRealZeroCounts(String rawUsage) throws Exception {
+    @CsvSource(delimiter = '|', nullValues = "null", textBlock = """
+        {"input_tokens":120,"output_tokens":5,"total_tokens":125}|partial|not_reported|null|null
+        {"input_tokens":120,"output_tokens":5,"total_tokens":125,"input_tokens_details":{"cached_tokens":0}}|complete|reported|0|120
+        """)
+    void optionalFieldsAreDistinctFromMissingCacheRead(String rawUsage, String status, String cacheState,
+                                                       Long cacheRead, Long uncachedInput) throws Exception {
         replies.add(textReply("完成", rawUsage));
         var chunks = model().stream(List.of(user()), List.of(), null).collectList().block(Duration.ofSeconds(8));
         assertNotNull(chunks);
@@ -102,10 +103,13 @@ class ResponsesProtocolModelTest {
             .filter(TextBlock.class::isInstance).map(TextBlock.class::cast)
             .anyMatch(block -> block.getText().equals("完成")));
         var usage = usages.getFirst().snapshot();
-        assertEquals("partial", usage.status());
+        assertEquals(status, usage.status());
         assertEquals(120L, usage.usage().inputTokens());
+        assertEquals(cacheRead, usage.usage().cacheReadTokens());
+        assertEquals(uncachedInput, usage.usage().uncachedInputTokens());
+        assertEquals(cacheState, usage.usage().fieldStates().get("cache_read"));
         assertNull(usage.usage().cacheWriteTokens());
-        assertEquals("not_reported", usage.usage().fieldStates().get("cache_write"));
+        assertEquals("not_applicable", usage.usage().fieldStates().get("cache_write"));
         assertEquals("resp-test", usage.metadata().responseId());
         assertFalse(captured().path("store").asBoolean(true));
         assertEquals(1, dispatches.get());
