@@ -62,6 +62,7 @@ public class ModelUsageService {
             .set(ModelUsageRecordRow::getToolUsePromptTokens, usage.toolUsePromptTokens()).set(ModelUsageRecordRow::getTotalTokens, usage.totalTokens())
             .set(ModelUsageRecordRow::getCacheWriteDetailsJson, encoded.cacheDetails()).set(ModelUsageRecordRow::getFieldStatesJson, encoded.fieldStates())
             .set(ModelUsageRecordRow::getUsageEvidenceJson, encoded.evidence()).set(ModelUsageRecordRow::getUsageStatus, value.usage().status())
+            .set(ModelUsageRecordRow::getPricingAlgorithmVersion, ModelUsageEvidenceMapper.CURRENT_VERSION)
             .set(ModelUsageRecordRow::getProviderResponseId, metadata.responseId()).set(ModelUsageRecordRow::getResponseModel, metadata.model())
             .set(ModelUsageRecordRow::getActualServiceTier, limited(metadata.serviceTier(), 32))
             .set(ModelUsageRecordRow::getHttpStatus, value.httpStatus()).set(ModelUsageRecordRow::getProviderRequestId, value.providerRequestId())

@@ -50,10 +50,10 @@ public class ModelUsageRegistrationMapper {
         row.setDispatchedAt(now);
         row.setCacheWriteDetailsJson("{}");
         row.setFieldStatesJson("{}");
-        row.setUsageEvidenceJson("{\"parserVersion\":1,\"fields\":{},\"problems\":[],\"unsupportedMeters\":[]}");
+        row.setUsageEvidenceJson("{\"parserVersion\":2,\"fields\":{},\"problems\":[],\"unsupportedMeters\":[]}");
         row.setPriceVersionId(price == null ? null : price.getId());
         row.setCurrency(price == null ? null : price.getCurrency());
-        row.setPricingAlgorithmVersion(1);
+        row.setPricingAlgorithmVersion(ModelUsageEvidenceMapper.CURRENT_VERSION);
         row.setSnapshotSeq(0L);
         row.setRevision(1L);
         row.setRequestOwnerId(owner);

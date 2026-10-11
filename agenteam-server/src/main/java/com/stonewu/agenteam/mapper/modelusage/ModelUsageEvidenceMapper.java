@@ -3,6 +3,8 @@ package com.stonewu.agenteam.mapper.modelusage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.modelusage.entity.ModelTokenUsage;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow;
 import org.springframework.stereotype.Component;
@@ -16,6 +18,7 @@ import java.util.Map;
  */
 @Component
 public class ModelUsageEvidenceMapper {
+    public static final int CURRENT_VERSION = 2;
     private final ObjectMapper json;
 
     public ModelUsageEvidenceMapper(ObjectMapper json) {
@@ -24,7 +27,7 @@ public class ModelUsageEvidenceMapper {
 
     public Encoded encode(ModelTokenUsage usage) {
         var encoded = new Encoded(write(usage.cacheWriteDetails()), write(usage.fieldStates()),
-            write(new Evidence(1, usage.evidence(), usage.problems(), usage.unsupportedMeters())));
+            write(new Evidence(CURRENT_VERSION, usage.evidence(), usage.problems(), usage.unsupportedMeters())));
         int bytes = encoded.cacheDetails().getBytes(StandardCharsets.UTF_8).length
             + encoded.fieldStates().getBytes(StandardCharsets.UTF_8).length + encoded.evidence().getBytes(StandardCharsets.UTF_8).length;
         if (bytes > 16384) {
@@ -46,6 +49,19 @@ public class ModelUsageEvidenceMapper {
         } catch (JsonProcessingException failure) {
             throw new IllegalStateException("已保存的模型用量无法解析。", failure);
         }
+    }
+
+    public ObjectNode restoreSource(ModelTokenUsage previous) {
+        var source = JsonNodeFactory.instance.objectNode();
+        previous.evidence().forEach((path, value) -> {
+            String[] parts = path.split("\\.");
+            var parent = source;
+            for (int index = 0; index < parts.length - 1; index++) {
+                parent = parent.withObject("/" + parts[index]);
+            }
+            parent.set(parts[parts.length - 1], json.valueToTree(value));
+        });
+        return source;
     }
 
     private String write(Object value) {

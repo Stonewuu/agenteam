@@ -36,6 +36,48 @@
   min-width: 0;
 }
 
+.versionCopy {
+  flex: 1;
+}
+
+.priceIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.titleWithIcon, .priceContext, .sourceLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleWithIcon > svg, .priceContext > svg, .sourceLink > svg {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.priceContext {
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sourceLink {
+  display: inline-flex;
+  color: var(--accent-text);
+  font-size: 13px;
+}
+
 .versionCopy small, .ruleCopy p, .hint {
   color: var(--secondary);
   font-size: 13px;
@@ -88,6 +130,11 @@
 .table th {
   color: var(--secondary);
   font-weight: 500;
+  background: var(--surface-soft);
+}
+
+.table th:not(:first-child), .table td:not(:first-child) {
+  text-align: end;
 }
 
 .amount {

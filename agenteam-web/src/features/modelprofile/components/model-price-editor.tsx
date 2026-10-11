@@ -9,7 +9,7 @@ import {Select} from "@/components/ui/select";
 import {Textarea} from "@/components/ui/textarea";
 import {AnimatedHeight} from "@/components/ui/animated-height";
 import {DetailSection} from "@/components/ui/detail-section";
-import {IconChartBar, IconAdjustments, IconPencil, IconPlus, IconTrash, IconBook2} from "@/components/ui/icons";
+import {IconChartBar, IconAdjustments, IconPencil, IconPlus, IconTrash, IconBook2, IconCalendar, IconClock, IconWallet, IconDeviceFloppy} from "@/components/ui/icons";
 import {useT} from "@/lib/i18n/locale-provider";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {useConfirmClose} from "@/features/workspace/components/use-confirm-close";
@@ -63,22 +63,22 @@ export function ModelPriceEditor({enterpriseId, modelId, version, onClose, onSav
   }
 
   return <><Dialog title={version ? t("编辑价格草稿 · 版本 {0}", [version.versionNo]) : t("创建价格草稿")}
-    wide onClose={onClose} busy={action.busy} dialogRef={closing.dialogRef} onRequestClose={closing.canClose}
+    icon={<IconPencil size={21}/>} wide onClose={onClose} busy={action.busy} dialogRef={closing.dialogRef} onRequestClose={closing.canClose}
     footer={<><DialogCancel className={ui.button} disabled={action.busy}>{t("取消")}</DialogCancel><Button type="submit" form={id}
-      className={ui.primary} disabled={action.busy}>{action.busy ? t("正在保存…") : t("保存草稿")}</Button></>}>
+      className={ui.primary} disabled={action.busy}><IconDeviceFloppy size={16}/>{action.busy ? t("正在保存…") : t("保存草稿")}</Button></>}>
     <AnimatedHeight preserveControlShadows><form id={id} className={styles.stack} onSubmit={(event) => {
       event.preventDefault();
       save();
     }} onInput={action.resetFeedback}>
       <div className={styles.columns}>
-        <Field label={t("币种")} error={action.fieldErrors.currency?.[0]}><Select className={ui.select} value={draft.currency} disabled={action.busy}
+        <Field label={t("币种")} icon={<IconWallet size={16}/>} error={action.fieldErrors.currency?.[0]}><Select className={ui.select} value={draft.currency} disabled={action.busy}
           onChange={(event) => setDraft({...draft, currency: event.target.value})}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</Select></Field>
-        <Field label={t("计价单位")}><Select className={ui.select} value={unit} disabled={action.busy} onChange={(event) => changeUnit(event.target.value)}>
+        <Field label={t("计价单位")} icon={<IconChartBar size={16}/>}><Select className={ui.select} value={unit} disabled={action.busy} onChange={(event) => changeUnit(event.target.value)}>
           <option value="1000000">{t("每百万 Token")}</option><option value="1000">{t("每千 Token")}</option>
         </Select></Field>
-        <Field label={t("价格时区")} error={action.fieldErrors.timezone?.[0]}><Select className={ui.select} value={draft.timezone} disabled={action.busy}
+        <Field label={t("价格时区")} icon={<IconClock size={16}/>} error={action.fieldErrors.timezone?.[0]}><Select className={ui.select} value={draft.timezone} disabled={action.busy}
           onChange={(event) => setDraft({...draft, timezone: event.target.value})}>{zones.map((zone) => <option key={zone}>{zone}</option>)}</Select></Field>
-        <Field label={t("日历覆盖截止日期")} required={draft.rules.some((rule) => rule.dates.length > 0)}
+        <Field label={t("日历覆盖截止日期")} icon={<IconCalendar size={16}/>} required={draft.rules.some((rule) => rule.dates.length > 0)}
           error={action.fieldErrors.calendarValidThrough?.[0]}><Input className={ui.input} type="date" value={draft.calendarValidThrough ?? ""}
           required={draft.rules.some((rule) => rule.dates.length > 0)} disabled={action.busy} onChange={(event) => setDraft({...draft, calendarValidThrough: event.target.value || null})}/></Field>
       </div>

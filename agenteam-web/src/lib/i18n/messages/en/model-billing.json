@@ -1,4 +1,5 @@
 {
+  "单次最多查询 93 天，请缩小日期范围。": "Select a date range of no more than 93 days.",
   "{0} · 价格版本 {1}": "{0} · Price version {1}",
   "{0} · 价格配置": "{0} · Pricing",
   "{0} · 每百万 Token · {1}": "{0} · Per million tokens · {1}",
@@ -216,5 +217,13 @@
   "价格读取已中断，请重试。": "Price retrieval was interrupted. Please try again.",
   "搜索内容最多 100 个字符，请使用有效的分页位置。": "Use up to 100 characters and a valid page position.",
   "价格服务商": "Price provider",
-  "全部服务商": "All providers"
+  "全部服务商": "All providers",
+  "费用概览": "Cost overview",
+  "共 {0} 次模型调用": "{0} model calls",
+  "已计价费用": "Calculated cost",
+  "另有已确认部分：{0} {1}": "Additional known cost: {0} {1}",
+  "{0} 次调用已完整计价": "Fully priced calls: {0}",
+  "有 {0} 次调用尚未完整计价，可在明细中查看原因。": "Calls not fully priced: {0}. See call details for the reason.",
+  "当时未配置价格": "No price at call time",
+  "费用": "Cost"
 }

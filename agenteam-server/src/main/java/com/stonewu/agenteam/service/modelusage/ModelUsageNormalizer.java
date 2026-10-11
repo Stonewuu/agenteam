@@ -15,8 +15,13 @@ public final class ModelUsageNormalizer {
     public ModelTokenUsage normalize(String protocol, String usageFormat, JsonNode source,
                                      Set<String> notApplicable) {
         var excluded = new HashSet<>(notApplicable);
-        if (protocol.equals("gemini") || "deepseek".equals(usageFormat)) {
-            excluded.add("cache_write");
+        switch (protocol) {
+            case "openai", "openai_responses" -> excluded.addAll(Set.of("cache_write", "reasoning"));
+            case "anthropic" -> excluded.addAll(Set.of("cache_read", "cache_write", "reasoning"));
+            case "gemini" -> excluded.addAll(Set.of("cache_read", "cache_write", "reasoning", "tool_use_prompt"));
+            default -> {
+                // 未知协议由下方统一拒绝，不把真实缺失字段标为不适用。
+            }
         }
         var fields = new ModelUsageFieldReader(source, excluded);
         return switch (protocol) {
@@ -83,6 +88,9 @@ public final class ModelUsageNormalizer {
         }
         if (write == null && shortWrite != null && longWrite != null) {
             write = fields.derive("cache_write", shortWrite, longWrite);
+        } else if (write == null && (shortWrite != null || longWrite != null)) {
+            // 返回了部分创建明细时，不能把未知的创建总量当作没有创建。
+            fields.states.put("cache_write", "not_reported");
         }
         long detailed = details.values().stream().mapToLong(Long::longValue).sum();
         if (write != null && detailed > write) {

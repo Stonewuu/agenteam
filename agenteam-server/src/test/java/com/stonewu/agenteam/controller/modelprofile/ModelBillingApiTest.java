@@ -158,9 +158,12 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
         var draft = data(write(path, Map.of("configuration", price()), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
         String id = draft.path("id").asText();
         var preview = data(write(path + "/" + id + "/preview", Map.of("dispatchedAt", Instant.now().toString(), "inputTokens", 1000,
-            "outputTokens", 50, "cacheReadTokens", 0, "cacheWriteTokens", 0), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
+            "outputTokens", 50, "cacheReadTokens", 0), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
         assertThat(preview.path("totalAmount").isTextual()).isTrue();
         assertThat(preview.path("totalAmount").asText()).isEqualTo("0.0024");
+        write(path + "/" + id + "/preview", Map.of("dispatchedAt", Instant.now().toString(), "inputTokens", 1000,
+            "outputTokens", 50, "cacheReadTokens", 0, "cacheWriteDetails", Map.of("300", 100)), UUID.randomUUID().toString())
+            .andExpect(status().isUnprocessableEntity());
         change(HttpMethod.PUT, path + "/" + id, price(), "99", UUID.randomUUID().toString()).andExpect(status().isConflict());
         var second = data(write(path, Map.of("copyFromVersionId", id), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
         assertThat(second.path("id").asText()).isNotEqualTo(id);

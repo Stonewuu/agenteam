@@ -45,6 +45,9 @@ public class ModelPricePreviewService {
         counter(detail, "cache_write_tokens", input.cacheWriteTokens());
         var base = new ModelUsageNormalizer().normalize("openai_responses", "standard", source, Set.of("reasoning"));
         Map<Integer, Long> details = input.cacheWriteDetails() == null ? Map.of() : input.cacheWriteDetails();
+        if (input.cacheWriteTokens() == null && details.values().stream().anyMatch(value -> value != null && value > 0)) {
+            throw ApiException.invalidField("cacheWriteTokens", "填写缓存创建明细时，请同时填写创建总量。");
+        }
         if (details.size() > 32 || details.entrySet().stream().anyMatch(entry -> entry.getKey() == null || entry.getKey() <= 0
             || entry.getKey() > 31536000 || entry.getValue() == null || entry.getValue() < 0 || entry.getValue() > 100000000000L)
             || (input.cacheWriteTokens() != null && details.values().stream().mapToLong(Long::longValue).sum() > input.cacheWriteTokens())) {

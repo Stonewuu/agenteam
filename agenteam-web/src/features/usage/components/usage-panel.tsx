@@ -11,6 +11,7 @@ import type { Usage } from "../types/usage";
 import { UsageOverview } from "./usage-overview";
 import {ModelUsagePanel} from "./model-usage-panel";
 import {Tabs} from "@/components/ui/tabs";
+import {IconChartBar, IconPlayerPlay, IconRefresh} from "@/components/ui/icons";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./usage.module.css";
 
@@ -26,12 +27,12 @@ export function UsagePanel({ enterpriseId }: { enterpriseId: string; permissions
         description={uiText("查看执行次数、模型用量和费用。")}
         actions={
           <Button className={ui.button} disabled={usage.loading} onClick={() => setRefresh((value) => value + 1)}>
-            {uiText("刷新")}
+            <IconRefresh size={16}/>{uiText("刷新")}
           </Button>
         }
       />
       <div className={styles.content}><Tabs value={tab} onChange={setTab} label={uiText("用量类型")} items={[
-        {value: "executions", label: uiText("执行次数")}, {value: "models", label: uiText("模型用量")},
+        {value: "executions", label: uiText("执行次数"), icon: IconPlayerPlay}, {value: "models", label: uiText("模型用量"), icon: IconChartBar},
       ]}/>
       {tab === "models" ? <ModelUsagePanel enterpriseId={enterpriseId} refresh={refresh}/> : <QueryState {...usage} hasData={Boolean(usage.data)} empty={uiText("暂时无法读取用量。")}>
         {usage.data && <UsageOverview usage={usage.data} />}

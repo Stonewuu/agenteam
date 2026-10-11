@@ -50,6 +50,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.UUID;
 
@@ -61,6 +62,61 @@ class ModelBillingPersistenceTest {
     private static final Instant NOW = Instant.parse("2026-10-11T12:00:00Z");
 
     @Test
+    void repairsLegacyProtocolFactsOnceAndKeepsTheOriginalPriceDecision() throws Exception {
+        try (var database = new IsolatedDatabase()) {
+            database.initialize();
+            var f = new Fixture(database.databaseAccess());
+            f.tx.executeWithoutResult(status -> f.usage.register("old-unpriced", "process", f.context, f.model, f.provider));
+            var draft = f.tx.execute(status -> f.pricing.create(f.actor, f.model.id(), f.price("2")));
+            var original = f.tx.execute(status -> f.pricing.publish(f.actor, f.model.id(), draft.id(), 1));
+            for (String id : List.of("old-priced", "old-cancelled", "old-missing-read")) {
+                f.tx.executeWithoutResult(status -> f.usage.register(id, "process", f.context, f.model, f.provider));
+            }
+            for (String id : List.of("old-unpriced", "old-priced", "old-cancelled", "old-missing-read")) {
+                var collector = new ModelUsageAccumulator("openai", "standard", Set.of());
+                collector.accept(f.json.readTree(id.equals("old-missing-read")
+                    ? "{\"prompt_tokens\":1000,\"completion_tokens\":50}"
+                    : "{\"prompt_tokens\":1000,\"completion_tokens\":50,\"prompt_tokens_details\":{\"cached_tokens\":0}}"));
+                collector.finish();
+                String callStatus = id.equals("old-cancelled") ? "cancelled" : "completed";
+                f.tx.executeWithoutResult(status -> f.usage.save(f.snapshot(id, collector, callStatus)));
+                var states = new HashMap<>(collector.snapshot().usage().fieldStates());
+                states.put("cache_write", "not_reported");
+                states.put("input_uncached", "not_reported");
+                f.rows.update(Wrappers.<ModelUsageRecordRow>lambdaUpdate().eq(ModelUsageRecordRow::getEnterpriseId, f.enterprise)
+                    .eq(ModelUsageRecordRow::getId, id).set(ModelUsageRecordRow::getPricingAlgorithmVersion, 1)
+                    .set(ModelUsageRecordRow::getUncachedInputTokens, null).set(ModelUsageRecordRow::getUsageStatus, "partial")
+                    .set(ModelUsageRecordRow::getFieldStatesJson, f.json.writeValueAsString(states)));
+            }
+            var repairs = new ModelUsageProtocolRepairService(f.rows, f.items, new ModelUsageEvidenceMapper(f.json), Clock.fixed(NOW, ZoneOffset.UTC));
+            var candidates = repairs.candidates();
+            assertThat(candidates).hasSize(4);
+            for (var candidate : candidates) {
+                f.tx.executeWithoutResult(status -> repairs.repair(candidate));
+            }
+            for (var work : f.tx.execute(status -> f.recovery.claimCalculations())) {
+                f.tx.executeWithoutResult(status -> f.recovery.calculate(work));
+            }
+            var charged = f.rows.selectById("old-priced");
+            assertThat(charged.getUsageStatus()).isEqualTo("complete");
+            assertThat(charged.getPriceStatus()).isEqualTo("priced");
+            assertThat(charged.getUncachedInputTokens()).isEqualTo(1000);
+            assertThat(charged.getTotalAmount()).isEqualByComparingTo("0.0024");
+            assertThat(charged.getPriceVersionId()).isEqualTo(original.id());
+            assertThat(f.rows.selectById("old-unpriced").getUsageStatus()).isEqualTo("complete");
+            assertThat(f.rows.selectById("old-unpriced").getPriceVersionId()).isNull();
+            assertThat(f.rows.selectById("old-unpriced").getReasonCode()).isEqualTo("PRICE_NOT_CONFIGURED");
+            assertThat(f.rows.selectById("old-cancelled").getUsageStatus()).isEqualTo("partial");
+            assertThat(f.rows.selectById("old-missing-read").getUsageStatus()).isEqualTo("partial");
+            assertThat(repairs.candidates()).isEmpty();
+            f.tx.executeWithoutResult(status -> repairs.repair(new ModelUsageProtocolRepairService.Candidate(f.enterprise, "old-priced")));
+            assertThat(f.rows.selectById("old-priced").getRevision()).isEqualTo(charged.getRevision());
+            assertThat(f.items.selectCount(Wrappers.<ModelUsageCostItemRow>lambdaQuery()
+                .eq(ModelUsageCostItemRow::getUsageRecordId, "old-priced"))).isEqualTo(2);
+        }
+    }
+
+    @Test
     void upgradesExistingModelsAndRepeatedStartupDoesNotChangeThem() throws Exception {
         try (var database = new IsolatedDatabase()) {
             var access = database.databaseAccess();
@@ -69,7 +125,7 @@ class ModelBillingPersistenceTest {
             var fixture = new Fixture(access);
             var upgrade = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
                 .cleanDisabled(true).validateMigrationNaming(true).load();
-            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
+            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(2);
             assertThat(upgrade.migrate().migrationsExecuted).isZero();
             assertThat(upgrade.validateWithResult().validationSuccessful).isTrue();
             assertThat(fixture.providers.find(fixture.enterprise, fixture.provider.id()).orElseThrow().protocol()).isEqualTo("openai");

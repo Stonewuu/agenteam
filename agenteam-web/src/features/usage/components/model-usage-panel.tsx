@@ -7,7 +7,7 @@ import {Select} from "@/components/ui/select";
 import {SearchInput} from "@/components/ui/search-input";
 import {QueryState, Pagination} from "@/components/ui/query-state";
 import {DetailSection} from "@/components/ui/detail-section";
-import {IconChartBar, IconListDetails} from "@/components/ui/icons";
+import {IconCalendar, IconChartBar, IconListDetails, IconRobot, IconUser} from "@/components/ui/icons";
 import {useT} from "@/lib/i18n/locale-provider";
 import {useApiPage, useApiQuery} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
@@ -35,7 +35,10 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
   const start = new Date(`${range.from}T00:00:00`);
   const end = new Date(`${range.to}T00:00:00`);
   end.setDate(end.getDate() + 1);
-  const valid = Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) && end > start;
+  const validDates = Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) && end > start;
+  const withinLimit = validDates && end.getTime() - start.getTime() <= 93 * 86400000;
+  const valid = validDates && withinLimit;
+  const rangeError = !validDates ? t("请选择有效的开始与结束日期。") : !withinLimit ? t("单次最多查询 93 天，请缩小日期范围。") : undefined;
   const dates = new URLSearchParams(valid ? {from: start.toISOString(), to: end.toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone} : {});
   const query = new URLSearchParams(dates);
   if (model) {
@@ -49,14 +52,14 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
   const calls = useApiPage<ModelCall>(`${base}/model-calls?${query}`, refresh, 200, 30, valid);
   return <div className={styles.stack}>
     <div className={styles.filters}>
-      <Field label={t("开始日期")}><Input className={ui.input} type="date" value={range.from}
+      <Field label={t("开始日期")} icon={<IconCalendar size={16}/>}><Input className={ui.input} type="date" value={range.from}
         onChange={(event) => setRange({...range, from: event.target.value})}/></Field>
-      <Field label={t("结束日期")} error={!valid ? t("请选择有效的开始与结束日期。") : undefined}><Input className={ui.input} type="date" value={range.to}
+      <Field label={t("结束日期")} icon={<IconCalendar size={16}/>} error={rangeError}><Input className={ui.input} type="date" value={range.to}
         onChange={(event) => setRange({...range, to: event.target.value})}/></Field>
-      <UsageOptionPicker path={`${base}/model-options?${dates}&kind=model`} kind="model" value={model} onChange={setModel}/>
-      <UsageOptionPicker path={`${base}/model-options?${dates}&kind=user`} kind="user" value={user} onChange={setUser}/>
+      <UsageOptionPicker path={valid ? `${base}/model-options?${dates}&kind=model` : null} kind="model" value={model} onChange={setModel}/>
+      <UsageOptionPicker path={valid ? `${base}/model-options?${dates}&kind=user` : null} kind="user" value={user} onChange={setUser}/>
     </div>
-    <QueryState {...summary} hasData={Boolean(summary.data && summary.data.totals.calls !== "0")}
+    {valid && <QueryState {...summary} hasData={Boolean(summary.data && summary.data.totals.calls !== "0")}
       empty={t("所选范围内还没有模型用量记录。") }>
       {summary.data && <div className={styles.stack}><ModelUsageSummaryCards totals={summary.data.totals}/>
         {summary.data.days.length > 1 && <DetailSection title={t("每日用量")} icon={<IconChartBar size={20}/>}>
@@ -75,19 +78,19 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
           <Pagination {...calls} hasMore={calls.data?.hasMore}/>
         </DetailSection>
       </div>}
-    </QueryState>
+    </QueryState>}
   </div>;
 }
 
-function UsageOptionPicker({path, kind, value, onChange}: {path: string; kind: "model" | "user"; value: Option | null; onChange: (value: Option | null) => void}) {
+function UsageOptionPicker({path, kind, value, onChange}: {path: string | null; kind: "model" | "user"; value: Option | null; onChange: (value: Option | null) => void}) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const options = useApiQuery<Option[]>(`${path}&query=${encodeURIComponent(query)}`, 0, 250);
+  const options = useApiQuery<Option[]>(path ? `${path}&query=${encodeURIComponent(query)}` : null, 0, 250);
   const values = options.data ?? [];
-  return <Field label={kind === "model" ? t("模型") : t("用户")} error={options.error || undefined}>
-    <SearchInput aria-label={kind === "model" ? t("查找模型") : t("查找用户")} value={query} placeholder={t("按名称查找")}
+  return <Field label={kind === "model" ? t("模型") : t("用户")} icon={kind === "model" ? <IconRobot size={16}/> : <IconUser size={16}/>} error={path ? options.error || undefined : undefined}>
+    <SearchInput aria-label={kind === "model" ? t("查找模型") : t("查找用户")} value={query} placeholder={t("按名称查找")} disabled={!path}
       onChange={(event) => setQuery(event.target.value)}/>
-    <Select className={ui.select} value={value?.id ?? ""} onChange={(event) => onChange(values.find((option) => option.id === event.target.value) ?? null)}>
+    <Select className={ui.select} value={value?.id ?? ""} disabled={!path} onChange={(event) => onChange(values.find((option) => option.id === event.target.value) ?? null)}>
       <option value="">{kind === "model" ? t("全部模型") : t("全部用户")}</option>
       {value && !values.some((option) => option.id === value.id) && <option value={value.id}>{value.name}</option>}
       {values.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}

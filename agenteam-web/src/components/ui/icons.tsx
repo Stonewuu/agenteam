@@ -70,6 +70,7 @@ import {
   Profile2User,
   ProfileCircle,
   Record,
+  Receipt1,
   Refresh,
   Save2,
   SearchNormal1,
@@ -91,6 +92,7 @@ import {
   Unlock,
   User,
   UserMinus,
+  Wallet2,
 } from "iconsax-reactjs";
 
 // 统一使用 Iconsax 原始组件，交互图标默认使用线形，导航和资源图标可选 Bulk。
@@ -203,6 +205,8 @@ export const IconPlayerStop = agenteamIcon(Stop);
 export const IconPlug = agenteamIcon(Link21);
 export const IconPlus = agenteamIcon(Add);
 export const IconRefresh = agenteamIcon(Refresh);
+export const IconReceipt = agenteamIcon(Receipt1);
+export const IconWallet = agenteamIcon(Wallet2);
 export const IconRobot = agenteamIcon(Cpu);
 export const IconSchema = agenteamIcon(HierarchySquare2);
 export const IconSearch = agenteamIcon(SearchNormal1);

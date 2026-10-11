@@ -12,15 +12,25 @@ import org.springframework.stereotype.Component;
 public class ModelUsageRecoveryWorker {
     private static final Logger LOG = LoggerFactory.getLogger(ModelUsageRecoveryWorker.class);
     private final ModelUsageRecoveryService recovery;
+    private final ModelUsageProtocolRepairService repairs;
 
-    public ModelUsageRecoveryWorker(ModelUsageRecoveryService recovery) {
+    public ModelUsageRecoveryWorker(ModelUsageRecoveryService recovery, ModelUsageProtocolRepairService repairs) {
         this.recovery = recovery;
+        this.repairs = repairs;
     }
 
     @Scheduled(fixedDelay = 5000, initialDelay = 15000)
     public void run() {
         try {
             recovery.recoverInterrupted();
+            for (var candidate : repairs.candidates()) {
+                try {
+                    repairs.repair(candidate);
+                } catch (RuntimeException failure) {
+                    LOG.warn("修正旧模型用量失败，企业={}，调用={}", candidate.enterprise(), candidate.id(), failure);
+                    repairs.postpone(candidate);
+                }
+            }
             for (var work : recovery.claimCalculations()) {
                 try {
                     recovery.calculate(work);

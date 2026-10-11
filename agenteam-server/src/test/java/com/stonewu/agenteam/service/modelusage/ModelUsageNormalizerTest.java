@@ -56,7 +56,7 @@ class ModelUsageNormalizerTest {
     }
 
     @Test
-    void geminiToolInputIsIncludedOnceAndMissingIsDifferentFromZero() throws Exception {
+    void geminiToolInputIsIncludedOnceAndUnusedToolsDoNotMakeUsageIncomplete() throws Exception {
         var usage = parse("gemini", """
             {"promptTokenCount":12000,"cachedContentTokenCount":8000,"candidatesTokenCount":900,
              "thoughtsTokenCount":600,"toolUsePromptTokenCount":300,"totalTokenCount":13800}
@@ -72,9 +72,59 @@ class ModelUsageNormalizerTest {
             {"promptTokenCount":12000,"cachedContentTokenCount":8000,"candidatesTokenCount":900,
              "thoughtsTokenCount":600}
             """);
-        assertNull(missing.inputTokens());
+        assertEquals(12000L, missing.inputTokens());
         assertNull(missing.toolUsePromptTokens());
-        assertFalse(missing.complete());
+        assertEquals("not_applicable", missing.fieldStates().get("tool_use_prompt"));
+        assertTrue(missing.complete());
+    }
+
+    @Test
+    void standardOpenaiUsageDoesNotRequireOptionalCacheCreationOrReasoning() throws Exception {
+        var usage = parse("openai", """
+            {"prompt_tokens":7388,"completion_tokens":497,"prompt_tokens_details":{"cached_tokens":6272},"total_tokens":7885}
+            """);
+        assertTrue(usage.complete());
+        assertEquals(1116L, usage.uncachedInputTokens());
+        assertNull(usage.cacheWriteTokens());
+        assertEquals("not_applicable", usage.fieldStates().get("cache_write"));
+        assertEquals("not_applicable", usage.fieldStates().get("reasoning"));
+        var responses = parse("openai_responses", """
+            {"input_tokens":100,"output_tokens":20,"input_tokens_details":{"cached_tokens":30},"total_tokens":120}
+            """);
+        assertTrue(responses.complete());
+        assertEquals(70L, responses.uncachedInputTokens());
+    }
+
+    @Test
+    void unusedNativeProtocolFeaturesAreNotRequired() throws Exception {
+        var anthropic = parse("anthropic", """
+            {"input_tokens":100,"output_tokens":20}
+            """);
+        assertTrue(anthropic.complete());
+        assertEquals(100L, anthropic.inputTokens());
+        assertEquals("not_applicable", anthropic.fieldStates().get("cache_write"));
+        var gemini = parse("gemini", """
+            {"promptTokenCount":100,"candidatesTokenCount":20,"totalTokenCount":120}
+            """);
+        assertTrue(gemini.complete());
+        assertEquals(20L, gemini.outputTokens());
+        assertEquals("not_applicable", gemini.fieldStates().get("reasoning"));
+        assertEquals("not_applicable", gemini.fieldStates().get("cache_read"));
+    }
+
+    @Test
+    void malformedOptionalCountersAndPartialCreationDetailsRemainVisible() throws Exception {
+        var malformed = parse("openai", """
+            {"prompt_tokens":100,"completion_tokens":20,"prompt_tokens_details":{"cached_tokens":30,"cache_write_tokens":"invalid"}}
+            """);
+        assertFalse(malformed.valid());
+        assertFalse(malformed.complete());
+        var partial = parse("anthropic", """
+            {"input_tokens":100,"output_tokens":20,"cache_creation":{"ephemeral_5m_input_tokens":50}}
+            """);
+        assertFalse(partial.complete());
+        assertNull(partial.inputTokens());
+        assertEquals("not_reported", partial.fieldStates().get("cache_write"));
     }
 
     @Test

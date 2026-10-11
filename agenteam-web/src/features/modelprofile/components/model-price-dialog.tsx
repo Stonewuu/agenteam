@@ -5,7 +5,7 @@ import {Dialog, DialogCancel, useDialogControl} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {QueryState} from "@/components/ui/query-state";
 import {DetailSection} from "@/components/ui/detail-section";
-import {IconChartBar, IconPlus, IconEye, IconCopy, IconPencil, IconTrash, IconHistory, IconCheck} from "@/components/ui/icons";
+import {IconChartBar, IconPlus, IconEye, IconCopy, IconPencil, IconTrash, IconHistory, IconCheck, IconWallet, IconReceipt} from "@/components/ui/icons";
 import {useT} from "@/lib/i18n/locale-provider";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
@@ -37,7 +37,7 @@ export function ModelPriceDialog({enterpriseId, model, onClose, onChanged}: {
     setRefresh((count) => count + 1);
     onChanged();
   }
-  return <><Dialog title={t("{0} · 价格配置", [model.name])} icon={<IconChartBar size={21}/>} wide onClose={onClose}
+  return <><Dialog title={t("{0} · 价格配置", [model.name])} icon={<IconWallet size={21}/>} wide onClose={onClose}
     footer={<DialogCancel className={ui.button}>{t("关闭")}</DialogCancel>}>
     <div className={styles.stack}>
       <ModelPriceCatalog enterpriseId={enterpriseId} model={model} onSaved={saved}/>
@@ -49,7 +49,7 @@ export function ModelPriceDialog({enterpriseId, model, onClose, onChanged}: {
         onClick={() => setDetailId(current.data!.id)}>{t("查看当前生效价格")}</Button>}
       <QueryState {...versions} hasData={Boolean(versions.data?.length)} empty={t("还没有价格配置。创建草稿后即可设置单价。") }>
         <div className={styles.stack}>{versions.data?.map((value) => <article className={styles.version} key={value.id}>
-          <div className={styles.versionCopy}><strong>{t("版本 {0}", [value.versionNo])} · {value.currency}</strong>
+          <span className={styles.priceIcon}><IconReceipt size={21} variant="Bulk"/></span><div className={styles.versionCopy}><strong>{t("版本 {0}", [value.versionNo])} · {value.currency}</strong>
             <small>{value.effectiveFrom ? t("生效于 {0}", [new Date(value.effectiveFrom).toLocaleString(t.formatLocale)]) :
               t("创建于 {0}", [new Date(value.createdAt).toLocaleString(t.formatLocale)])}</small></div>
           <div className={styles.actions}><span className="badge neutral">{value.status === "draft" ? t("草稿") : current.data?.id === value.id ? t("当前生效") : t("已发布")}</span>
@@ -84,7 +84,7 @@ function PriceVersionDialog({enterpriseId, model, versionId, onClose, onChanged}
   const current = useApiQuery<PriceVersion | null>(`${path}/current`, refresh);
   const value = version.data;
   return <><Dialog title={value ? t("{0} · 价格版本 {1}", [model.name, value.versionNo]) : t("价格详情")}
-    onClose={onClose} wide busy={action.busy} dialogRef={dialog.ref}
+    icon={<IconReceipt size={21}/>} onClose={onClose} wide busy={action.busy} dialogRef={dialog.ref}
     footer={<><DialogCancel className={ui.button} disabled={action.busy}>{t("关闭")}</DialogCancel>
       {value?.status === "draft" && <Button className={ui.primary} disabled={action.busy} onClick={() => setConfirm("publish")}><IconCheck size={16}/>{t("发布价格")}</Button>}</>}>
     <QueryState {...version} hasData={Boolean(value)} empty={t("价格版本不存在或无法访问。") }>

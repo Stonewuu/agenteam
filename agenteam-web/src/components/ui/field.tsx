@@ -4,6 +4,7 @@ import {useT} from "@/lib/i18n/locale-provider";
 
 import {createContext, type ReactNode, useContext, useId, useState,} from "react";
 import {FieldErrorFeedback} from "./error-feedback";
+import ui from "./surface.module.css";
 
 const FieldContext = createContext<{
   labelId: string;
@@ -17,12 +18,14 @@ export function useFieldContext() {
 
 export function Field({
                         label,
+                        icon,
                         children,
                         hint,
                         error,
                         required,
                       }: {
   label: string;
+  icon?: ReactNode;
   children: ReactNode;
   hint?: string;
   error?: string;
@@ -84,7 +87,8 @@ export function Field({
         }}
       >
         <label id={id}>
-          <span id={`${id}-label`}>
+          <span id={`${id}-label`} className={ui.fieldLabel}>
+            {icon}
             {label}
             {required && <span className="required"> *</span>}
           </span>
