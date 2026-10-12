@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Stonewuu/agenteam/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/version-0.2.0-AD6547?style=flat-square" alt="AgenTeam 0.2.0" /></a>
+  <a href="https://github.com/Stonewuu/agenteam/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/version-0.3.0-AD6547?style=flat-square" alt="AgenTeam 0.3.0" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-596B57?style=flat-square" alt="Apache-2.0 开源许可证" /></a>
   <a href="docs/deployment/images.md"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="使用 Docker Compose 部署" /></a>
 </p>
