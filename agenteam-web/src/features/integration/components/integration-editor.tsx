@@ -6,6 +6,7 @@ import {Button} from "@/components/ui/button";
 import {DetailHeading, SettingRow} from "@/components/ui/detail-section";
 import {IconPlug, IconKey, IconBell, IconBuilding} from "@/components/ui/icons";
 import {ChannelIdentity} from "./channel-identity";
+import {IntegrationSetupGuide} from "./integration-setup-guide";
 import {Dialog, DialogActions, DialogCancel, DialogForm, useDialogControl} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import {Field} from "@/components/ui/field";
@@ -72,8 +73,10 @@ export function IntegrationEditor({path, initial, mode, onClose, onSaved}: {
         dialog.close(onSaved);
       }, t("接入配置已保存。"));
     }}>
-      {initial && <ChannelIdentity name={initial.name} providerName={initial.providerName} providerCode={initial.providerCode}/>}
-      {creating && <DetailHeading title={t("应用信息")} icon={<IconBuilding size={18}/>}/>}
+      {initial && <div className={styles.editorHeading}><ChannelIdentity name={initial.name} providerName={initial.providerName} providerCode={initial.providerCode}/>
+        <IntegrationSetupGuide providerCode={providerCode} connection={initial} disabled={action.busy}/></div>}
+      {creating && <DetailHeading title={t("应用信息")} icon={<IconBuilding size={18}/>}
+        action={<IntegrationSetupGuide providerCode={providerCode} disabled={action.busy}/>}/>}
       {creating && <Field label={t("平台")} error={action.fieldErrors.providerCode?.join(" ")}>
         <Select name="providerCode" value={providerCode} disabled={action.busy} onChange={(event) => {
           setProviderCode(event.target.value);

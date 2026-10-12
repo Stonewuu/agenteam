@@ -18,6 +18,7 @@ import {useApiPage} from "@/lib/http/use-api-query";
 import {useT} from "@/lib/i18n/locale-provider";
 import {integrationPath, type Integration} from "../types/integration";
 import {IntegrationEditor} from "./integration-editor";
+import {IntegrationSetupGuide} from "./integration-setup-guide";
 import {IntegrationTestMessageDialog} from "./integration-test-message-dialog";
 import {ChannelDeliveryPanel} from "@/features/notification/components/channel-delivery-panel";
 import ui from "@/components/ui/surface.module.css";
@@ -54,7 +55,7 @@ export function IntegrationPanel({enterpriseId, system = false, canManage = true
   return <div className={styles.adminPage}>
     <PageHeader title={t(system ? "企业接入" : "消息与登录接入")} icon={<IconPlug size={24} variant="Bulk"/>}
                 description={t("配置企业微信和飞书，供成员绑定账号、登录和接收通知。")}
-                actions={<div className={ui.actions}><Button className={ui.button} disabled={list.loading} onClick={changed}><IconRefresh size={16}/>{t("刷新")}</Button>
+                actions={<div className={ui.actions}><IntegrationSetupGuide/><Button className={ui.button} disabled={list.loading} onClick={changed}><IconRefresh size={16}/>{t("刷新")}</Button>
                   {canManage && <Button className={ui.primary} onClick={() => setEditor({mode: "create", value: null})}><IconPlug size={16}/>{t("新增接入")}</Button>}
                 </div>}/>
     {enterpriseSelector && <div className={styles.enterpriseToolbar}>{enterpriseSelector}</div>}
