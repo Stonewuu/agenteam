@@ -2,17 +2,17 @@
 
 AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过 Docker Hub 的 `stonewuu` 账号获取镜像，即可在自己的服务器上部署工作空间。
 
-本文使用 0.2.0 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
+本文使用 0.3.0 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
 
 ## 镜像清单
 
 | 用途 | 镜像 |
 | --- | --- |
-| 后端 | `docker.io/stonewuu/agenteam-backend:0.2.0` |
-| 前端 | `docker.io/stonewuu/agenteam-frontend:0.2.0` |
-| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.2.0` |
-| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.2.0` |
-| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.2.0` |
+| 后端 | `docker.io/stonewuu/agenteam-backend:0.3.0` |
+| 前端 | `docker.io/stonewuu/agenteam-frontend:0.3.0` |
+| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.3.0` |
+| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.3.0` |
+| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.3.0` |
 
 部署包包含本版本的 Compose（多容器服务配置）文件、入口代理配置和初始化工具。使用部署包即可完成服务器安装。
 
@@ -21,10 +21,10 @@ AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过
 在 Linux 服务器准备 Docker、Docker Compose、Python 3，以及指向该服务器的域名。以下命令在空的部署工作目录执行：
 
 ```sh
-deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.2.0)
-docker cp "$deployment_container":/deployment ./agenteam-0.2.0
+deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.3.0)
+docker cp "$deployment_container":/deployment ./agenteam-0.3.0
 docker rm "$deployment_container"
-cd agenteam-0.2.0
+cd agenteam-0.3.0
 python3 configure-server.py --domain app.example.com
 ```
 
@@ -75,6 +75,6 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 解出的部署包在 `licenses/agenteam/LICENSE` 保存公共项目许可，`licenses/third-party/README.md` 提供第三方原文索引。后端、前端、执行器和办公镜像内的对应目录为 `/usr/share/licenses/agenteam/`。可以使用 `docker cp` 从已创建的容器取得文件；查看声明不需要启动应用或连接数据库。
 
-从 [0.2.0 第三方源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.2.0/third-party-sources.json) 取得本版本附件清单。索引列出对应镜像、下载地址、字节数及 SHA-256（文件内容摘要）；下载后使用 `sha256sum <附件文件>` 核对摘要再保存。附件包含相关第三方原源码、原始补丁及构建资料，各组件继续适用其原有许可。
+从 [0.3.0 第三方源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.3.0/third-party-sources.json) 取得本版本附件清单。索引列出对应镜像、下载地址、字节数及 SHA-256（文件内容摘要）；下载后使用 `sha256sum <附件文件>` 核对摘要再保存。附件包含相关第三方原源码、原始补丁及构建资料，各组件继续适用其原有许可。
 
 镜像、安装说明和第三方资料统一使用明确的版本号，便于部署维护及后续更新。

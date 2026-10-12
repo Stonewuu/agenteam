@@ -4,7 +4,7 @@ AgenTeam 使用开源框架、语言运行环境和文件处理组件构建产�
 
 ## 获取许可与源码
 
-在 [0.2.0 发布页面](https://github.com/Stonewuu/agenteam/releases/tag/v0.2.0)下载第三方源码附件。[源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.2.0/third-party-sources.json)列出组件、对应镜像、下载地址、文件大小及 SHA-256（文件内容摘要）。
+在 [0.3.0 发布页面](https://github.com/Stonewuu/agenteam/releases/tag/v0.3.0)下载第三方源码附件。[源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.3.0/third-party-sources.json)列出组件、对应镜像、下载地址、文件大小及 SHA-256（文件内容摘要）。
 
 附件包含对应版本的源码、发行版补丁和构建资料。下载后可以通过 `sha256sum 文件名` 核对内容摘要，并与部署版本一起保存。
 
@@ -39,4 +39,4 @@ jar uf0 应用包副本.jar BOOT-INF/lib/mariadb-java-client-3.5.10.jar
 
 依赖与镜像更新时，按实际组件版本整理版权原文、源码及构建资料。仓库的 `scripts/release/` 提供声明采集、源码定位、下载和归档工具；具体步骤见[第三方源码维护说明](corresponding-sources.md)。
 
-0.3.0 开发代码采用 AgentScope Java 2.0.4，复用其官方 Responses、Anthropic 和 Gemini 扩展；对应 OpenAI Java 4.52.0、Anthropic Java 2.52.0 和 Google Gen AI 1.45.0。Responses 的客户端构造适配保存在独立目录 `agenteam-server/agenteam-agentscope-compat`，没有复制其消息或流协议实现。新版本声明须从实际构建依赖重新采集；上述 0.2.0 附件仍只对应已经发布的 0.2.0。
+0.3.0 采用 AgentScope Java 2.0.4，复用其官方 Responses、Anthropic 和 Gemini 扩展；对应 OpenAI Java 4.52.0、Anthropic Java 2.52.0 和 Google Gen AI 1.45.0。Responses 的客户端构造适配保存在独立目录 `agenteam-server/agenteam-agentscope-compat`，没有复制其消息或流协议实现。发布声明从实际构建依赖采集；不同版本的源码附件分别对应各自的成品，不能相互替代。

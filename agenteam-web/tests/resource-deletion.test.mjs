@@ -15,8 +15,8 @@ vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/features/reso
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, { exports: display, require: () => ({}) });
 
-function component(file, values) {
-  const source = readFileSync(new URL(`../src/features/resource/components/${file}`, import.meta.url), "utf8");
+function component(file, values, feature = "resource") {
+  const source = readFileSync(new URL(`../src/features/${feature}/components/${file}`, import.meta.url), "utf8");
   const compiled = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
   } }).outputText;
@@ -38,11 +38,14 @@ function component(file, values) {
     DialogCancel: wrapper("button"),
     useDialogControl: () => ({ ref: { current: null }, close: (callback) => callback() }),
     QueryState: ({ children }) => children,
+    AnimatedHeight: ({ children }) => React.createElement("div", null, children),
     MutationFeedback: () => null,
     ResourceAvatar: () => null,
     VersionSelectionDialog: () => null,
     organizationPath: (enterprise, path) => `/api/v1/enterprises/${enterprise}${path}`,
-    useApiQuery: () => ({ ...values.query, retry: () => {} }),
+    useApiQuery: (path) => path?.includes("/java-packages/references")
+      ? { data: values.pluginNotices ?? [], loading: false, error: "", retry: () => {} }
+      : { ...values.query, retry: () => {} },
     useFormAction: () => ({
       busy: false,
       mutation: { run: async (...request) => {
@@ -66,6 +69,12 @@ function component(file, values) {
     }
     if (name === "../lib/resource-display") {
       return display;
+    }
+    if (name === "@/features/plugin/components/plugin-type-labels") {
+      return component("plugin-type-labels.tsx", values, "plugin");
+    }
+    if (name === "@/features/plugin/components/java-plugin-notices") {
+      return component("java-plugin-notices.tsx", values, "plugin");
     }
     return ui;
   } });
@@ -146,8 +155,8 @@ for (const [kind, label] of [["agent", "智能体"], ["skill", "技能"], ["plug
   });
 }
 
-function picker(query) {
-  const values = { buttons: [], query };
+function picker(query, pluginNotices = []) {
+  const values = { buttons: [], query, pluginNotices };
   const { VersionPicker } = component("version-picker.tsx", values);
   const html = renderToStaticMarkup(React.createElement(VersionPicker, {
     enterpriseId: "enterprise", kind: "plugin", title: "插件", selected: ["deleted-version"],
@@ -173,4 +182,21 @@ test("读取中或读取失败时不把未知状态显示成不可用", () => {
   const failed = picker({ data: null, loading: false, error: "读取失败" });
   assert.match(failed.html, /已选插件 1/);
   assert.doesNotMatch(failed.html, /不可用/);
+});
+
+test("已选插件按实际来源展示类型，并保留升级与卸载提示", () => {
+  const result = picker({
+    data: { items: [{ versionId: "deleted-version", name: "数据工具", versionNo: 1, pluginTypes: ["builtin", "mcp", "java"] }] },
+    loading: false, error: "",
+  }, [
+    { versionId: "updated-extension", name: "数据助手", status: "upgraded" },
+    { versionId: "removed-extension", name: "历史工具", status: "uninstalled" },
+  ]);
+  assert.match(result.html, /数据工具 · 版本 1/);
+  assert.match(result.html, /内置插件/);
+  assert.match(result.html, /远程插件/);
+  assert.match(result.html, /扩展插件/);
+  assert.match(result.html, /插件有更新，请确认并重新选择插件版本/);
+  assert.match(result.html, /插件已下架，请移除/);
+  assert.doesNotMatch(result.html, /Java 插件|不可用/);
 });
