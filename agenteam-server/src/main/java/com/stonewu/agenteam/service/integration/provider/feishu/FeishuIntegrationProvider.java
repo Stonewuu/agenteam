@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 飞书自建应用按当前 v3 用户令牌协议授权，以应用身份给本企业成员发消息。
+ * 飞书自建应用使用支持一次性授权校验的配套端点，以应用身份给本企业成员发消息。
  */
 @Component
 public class FeishuIntegrationProvider implements IntegrationProvider, ChannelIdentityProvider, ChannelMessageSender {
@@ -98,9 +98,12 @@ public class FeishuIntegrationProvider implements IntegrationProvider, ChannelId
     @Override
     public ChannelIdentity exchangeIdentity(IntegrationApplication app, String secret, ChannelAccessToken appToken,
                                             String code, URI callback, String codeVerifier) {
-        var userToken = responses.token(http.form(app.id(), endpoints.feishuAccounts("/oauth/v3/token"),
-            Map.of("grant_type", "authorization_code", "client_id", app.externalAppId(), "client_secret", secret,
-                "code", code, "redirect_uri", callback.toString(), "code_verifier", codeVerifier)),
+        // 飞书授权码文档要求当前授权入口的 PKCE 校验搭配 v2 令牌端点，不能混用 v3 或重试同一授权码。
+        var payload = json.createObjectNode().put("grant_type", "authorization_code")
+            .put("client_id", app.externalAppId()).put("client_secret", secret).put("code", code)
+            .put("redirect_uri", callback.toString()).put("code_verifier", codeVerifier);
+        var userToken = responses.token(http.post(app.id(), endpoints.feishu("/open-apis/authen/v2/oauth/token"),
+            Map.of(), payload, null),
             "access_token", "expires_in", true);
         return responses.feishuIdentity(http.get(app.id(), endpoints.feishu("/open-apis/authen/v1/user_info"),
             Map.of(), userToken.value()), app.externalTenantId());
