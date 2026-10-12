@@ -25,13 +25,15 @@ public class PluginDiscoveryService {
     private final ToolProviderMapper mapper;
     private final PluginToolMapper published;
     private final ResourceJson json;
+    private final JavaPluginRegistry javaPlugins;
 
     public PluginDiscoveryService(ToolProviderRegistry providers, ToolProviderMapper mapper, PluginToolMapper published,
-                                  ResourceJson json) {
+                                  ResourceJson json, JavaPluginRegistry javaPlugins) {
         this.providers = providers;
         this.mapper = mapper;
         this.published = published;
         this.json = json;
+        this.javaPlugins = javaPlugins;
     }
 
     public List<ToolDefinition> discover(String enterprise, JsonNode config) {
@@ -39,6 +41,12 @@ public class PluginDiscoveryService {
             var result = new ArrayList<ToolDefinition>();
             for (var selected : config.path("tools")) {
                 var source = PluginConfigurationMapper.source(config, selected.path("sourceId").asText());
+                if (source.path("type").asText().equals("java")) {
+                    javaPlugins.tools(javaPlugins.require(enterprise, source.path("versionId").asText())).stream()
+                        .filter(tool -> tool.name().equals(selected.path("name").asText()))
+                        .findFirst().ifPresent(result::add);
+                    continue;
+                }
                 published.list(enterprise, source.path("versionId").asText()).stream()
                     .filter(tool -> tool.enabled() && tool.definition().name().equals(selected.path("name").asText()))
                     .findFirst().ifPresent(tool -> result.add(tool.definition()));

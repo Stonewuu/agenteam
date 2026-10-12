@@ -16,6 +16,8 @@ import ui from "@/components/ui/surface.module.css";
 import styles from "./resource.module.css";
 import picker from "./version-picker.module.css";
 import {VersionSelectionDialog} from "./version-selection-dialog";
+import {JavaPluginNotices} from "@/features/plugin/components/java-plugin-notices";
+import {PluginTypeLabels} from "@/features/plugin/components/plugin-type-labels";
 
 export function VersionPicker({
                                 enterpriseId,
@@ -59,13 +61,15 @@ export function VersionPicker({
   }
   return <Fieldset className={styles.section}>
     <legend>{title}</legend>
+    {kind === "plugin" && allowed && <JavaPluginNotices enterpriseId={enterpriseId} versions={selected}/>}
     {resolved.error && <p className={ui.error} role="alert">{localizeUiMessage(resolved.error ?? "", uiText)}<Button
       className={ui.button} type="button" onClick={resolved.retry}>{uiText("重新读取")}</Button></p>}
     <div className={picker.selected} data-selected-versions={kind}>{selected.map((id, index) => <div
       className={picker.selectedRow} key={id}>
       <span className={picker.summary}>{known.get(id) &&
         <ResourceAvatar icon={known.get(id)!.icon} color={known.get(id)!.color}
-                        size="small"/>}<span>{known.get(id) ? uiText("{0} · 版本 {1}", [known.get(id)!.name, known.get(id)!.versionNo]) : resolved.loading ? uiText("正在读取已选内容…") : resolved.data && !resolved.error ? uiText("{0} {1}（不可用）", [title, index + 1]) : uiText("已选{0} {1}", [title, index + 1])}</span></span>
+                        size="small"/>}<span className={picker.selectedIdentity}><span>{known.get(id) ? uiText("{0} · 版本 {1}", [known.get(id)!.name, known.get(id)!.versionNo]) : resolved.loading ? uiText("正在读取已选内容…") : resolved.data && !resolved.error ? uiText("{0} {1}（不可用）", [title, index + 1]) : uiText("已选{0} {1}", [title, index + 1])}</span>
+        {kind === "plugin" && <PluginTypeLabels types={known.get(id)?.pluginTypes}/>}</span></span>
       {!readOnly && <Button className={ui.button} type="button"
                             aria-label={uiText("移除{0}版本 {1}", [known.get(id)?.name ?? title, known.get(id)?.versionNo ?? index + 1])}
                             onClick={() => {

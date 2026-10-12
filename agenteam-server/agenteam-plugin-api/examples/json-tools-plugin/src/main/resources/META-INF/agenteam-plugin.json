@@ -1,0 +1,31 @@
+{
+  "name": "JSON 数据助手",
+  "configurationSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "indentSize": {
+        "type": "integer",
+        "title": "缩进空格数",
+        "description": "格式化时每一级使用的空格数。",
+        "default": 2,
+        "enum": [2, 4]
+      },
+      "sortKeys": {
+        "type": "boolean",
+        "title": "按字段名排序",
+        "description": "格式化时排列对象字段，数组顺序保持原样。",
+        "default": true
+      },
+      "maxDifferences": {
+        "type": "integer",
+        "title": "最多显示的差异数",
+        "description": "超过上限时会说明仍有未显示的差异。",
+        "default": 50,
+        "minimum": 1,
+        "maximum": 200
+      }
+    },
+    "required": ["indentSize", "sortKeys", "maxDifferences"]
+  }
+}

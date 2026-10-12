@@ -116,7 +116,7 @@ public class WorkflowAgentNodeExecutor {
         var execution = factory.createScoped(context.run(), context.lease(), config,
             dependency.path("resourceId").asText(), dependency.path("name").asText(), session, context.states(),
             restored, timeout, ignored -> {
-            });
+            }, node.id());
         try {
             execution.guard().researchSlots(context.researchSlots());
             execution.guard()

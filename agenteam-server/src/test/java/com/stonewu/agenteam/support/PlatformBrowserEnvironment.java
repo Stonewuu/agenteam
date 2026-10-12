@@ -75,6 +75,7 @@ public final class PlatformBrowserEnvironment {
             var environment = new StandardEnvironment();
             environment.getPropertySources().addFirst(new MapPropertySource("isolated-ui", properties));
             var application = new SpringApplication(AgenteamApplication.class);
+            application.addPrimarySources(List.of(SharedEnterpriseTestEdition.class));
             if (List.of(args).contains("--channels")) {
                 application.addPrimarySources(List.of(ChannelBrowserConfiguration.class));
             }

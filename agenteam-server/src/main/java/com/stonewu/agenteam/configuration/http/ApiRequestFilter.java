@@ -88,7 +88,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
             if (!SAFE_METHODS.contains(request.getMethod())) {
                 protection.verify(request);
                 if (request.getMethod().equals("PUT") && path.matches(
-                    "/api/v1/enterprises/[^/]+/files/[^/]+/content")) {
+                    "/api/v1/enterprises/[^/]+/(?:files/[^/]+/content|plugins/java-packages/content)")) {
                     if (request.getContentLengthLong() > 20L * 1024 * 1024) {
                         throw tooLarge();
                     }

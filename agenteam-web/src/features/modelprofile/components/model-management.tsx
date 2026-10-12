@@ -15,6 +15,7 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {ModelProviderDialog} from "./model-provider-dialog";
 import {ModelProfileDialog} from "./model-profile-dialog";
+import {ModelPriceDialog} from "./model-price-dialog";
 import {SearchInput} from "@/components/ui/search-input";
 import {
   IconDots,
@@ -44,6 +45,7 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
   const [provider, setProvider] = useState<ModelProvider | "new" | null>(null);
   const [model, setModel] = useState<ManagedModel | "new" | null>(null);
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
+  const [pricing, setPricing] = useState<ManagedModel | null>(null);
   const [filter, setFilter] = useState("");
   const [query, setQuery] = useState("");
   const [providerQuery, setProviderQuery] = useState("");
@@ -126,7 +128,8 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
                         aria-label={uiText("编辑模型{0}", [value.name])} onClick={() => setModel(value)}><IconPencil
                   size={17}/></Button>}{canManage && <DropdownMenu><DropdownMenuTrigger
                 render={<Button className="icon-button" aria-label={uiText("{0}的更多操作", [value.name])}><IconDots
-                  size={18}/></Button>}/><DropdownMenuContent align="end"><DropdownMenuItem disabled={value.inUse}
+                  size={18}/></Button>}/><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setPricing(value)}>
+                <IconPencil size={16}/>{uiText("价格配置")}</DropdownMenuItem><DropdownMenuItem disabled={value.inUse}
                                                                                             onClick={() => setDeleting({
                                                                                               kind: "model",
                                                                                               value
@@ -139,6 +142,8 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
       {!current && !providers.loading && !providers.error &&
         <p className={ui.empty}>{canManage ? uiText("添加提供方后，即可配置模型。") : uiText("暂无模型配置。")}</p>}
     </div>
+    {canManage && pricing && <ModelPriceDialog enterpriseId={enterpriseId} model={pricing} onClose={() => setPricing(null)}
+      onChanged={() => setRefresh((value) => value + 1)}/>}
     {canManage && provider &&
       <ModelProviderDialog enterpriseId={enterpriseId} provider={provider === "new" ? null : provider}
                            onClose={() => setProvider(null)} onSaved={saved}/>}

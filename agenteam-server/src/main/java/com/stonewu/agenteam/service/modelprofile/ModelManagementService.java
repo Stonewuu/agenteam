@@ -119,7 +119,7 @@ public class ModelManagementService {
     public ManagedModelProfileView createModel(AuthContext actor, ModelProfileWriteRequest input) {
         authorize(actor, true);
         var value = validation.model(input);
-        provider(actor, value.providerId());
+        new ModelProtocolValidation().validate(provider(actor, value.providerId()).protocol(), value.capabilities());
         String id = UUID.randomUUID().toString();
         try {
             profiles.insert(actor.enterpriseId(), id, value, clock.instant());
@@ -138,10 +138,10 @@ public class ModelManagementService {
         var current = model(actor, id);
         checkRevision(current.revision(), revision);
         var value = validation.model(input);
-        provider(actor, value.providerId());
+        new ModelProtocolValidation().validate(provider(actor, value.providerId()).protocol(), value.capabilities());
         if ((!current.providerId().equals(value.providerId()) || !current.modelName().equals(value.modelName())
             || !current.capabilities().canExtendTo(value.capabilities())) && profiles.inUse(actor.enterpriseId(), id)) {
-            throw inUse("该模型已被智能体、工作流或对话使用，请新建模型调整提供方、模型标识或能力。");
+            throw inUse("该模型已有使用记录或价格配置，请新建模型调整提供方、模型标识或能力。");
         }
         try {
             profiles.update(actor.enterpriseId(), id, value, clock.instant());
@@ -158,7 +158,7 @@ public class ModelManagementService {
         authorize(actor, true);
         checkRevision(model(actor, id).revision(), revision);
         if (profiles.inUse(actor.enterpriseId(), id)) {
-            throw inUse("该模型已被智能体、工作流或对话使用，可以停用，不能删除。");
+            throw inUse("该模型已有使用记录或价格配置，可以停用；仅有价格草稿时可先删除草稿再删除模型。");
         }
         profiles.delete(actor.enterpriseId(), id);
         authorization.changed(actor, "model_profile.delete", "model_profile", id, "删除未使用的模型", Map.of());

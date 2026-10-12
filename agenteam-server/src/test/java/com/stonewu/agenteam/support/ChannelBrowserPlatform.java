@@ -60,7 +60,7 @@ public final class ChannelBrowserPlatform implements AutoCloseable {
                 authorize(exchange, query);
             } else if (path.equals("/approve") && exchange.getRequestMethod().equals("GET")) {
                 approve(exchange, query);
-            } else if (path.equals("/oauth/v3/token") && exchange.getRequestMethod().equals("POST")) {
+            } else if (path.equals("/open-apis/authen/v2/oauth/token") && exchange.getRequestMethod().equals("POST")) {
                 token(exchange);
             } else if (path.equals("/open-apis/auth/v3/tenant_access_token/internal") && exchange.getRequestMethod().equals("POST")) {
                 var body = json.readTree(exchange.getRequestBody());
@@ -144,15 +144,20 @@ public final class ChannelBrowserPlatform implements AutoCloseable {
     }
 
     private void token(HttpExchange exchange) throws IOException {
-        var form = parameters(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-        var authorization = codes.remove(form.getOrDefault("code", ""));
+        String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
+        if (contentType == null || !contentType.startsWith("application/json")) {
+            write(exchange, 415, "application/json", "{\"code\":20063,\"error\":\"invalid_request\"}");
+            return;
+        }
+        var body = json.readTree(exchange.getRequestBody());
+        var authorization = codes.remove(body.path("code").asText());
         boolean valid = authorization != null && authorization.expiresAt().isAfter(Instant.now())
-            && authorization.client().equals(form.get("client_id")) && authorization.redirect().equals(form.get("redirect_uri"))
-            && "authorization_code".equals(form.get("grant_type")) && "test-ui-secret".equals(form.get("client_secret"));
+            && authorization.client().equals(body.path("client_id").asText()) && authorization.redirect().equals(body.path("redirect_uri").asText())
+            && "authorization_code".equals(body.path("grant_type").asText()) && "test-ui-secret".equals(body.path("client_secret").asText());
         if (valid) {
             try {
                 String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(MessageDigest.getInstance("SHA-256")
-                    .digest(form.getOrDefault("code_verifier", "").getBytes(StandardCharsets.US_ASCII)));
+                    .digest(body.path("code_verifier").asText().getBytes(StandardCharsets.US_ASCII)));
                 valid = authorization.challenge().equals(challenge);
             } catch (Exception failure) {
                 throw new IOException("模拟平台无法验证授权材料", failure);

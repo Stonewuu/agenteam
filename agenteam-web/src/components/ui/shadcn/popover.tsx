@@ -22,11 +22,12 @@ function PopoverContent({
                           alignOffset = 0,
                           side = "bottom",
                           sideOffset = 4,
+                          collisionAvoidance,
                           ...props
                         }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    "align" | "alignOffset" | "side" | "sideOffset" | "collisionAvoidance"
   >) {
   const loadingSurface = useLoadingSurface();
   const popup = useRender({
@@ -47,6 +48,7 @@ function PopoverContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        collisionAvoidance={collisionAvoidance}
         className="agenteam-positioner isolate z-50"
       >
         {popup}

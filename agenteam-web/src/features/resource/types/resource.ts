@@ -44,11 +44,12 @@ export type KnowledgeConfig = Appearance & {
 };
 export type PluginSource = {
   id: string;
-  type: "builtin" | "mcp";
+  type: "builtin" | "mcp" | "java";
   versionId?: string | null;
   transport?: "streamable_http" | "legacy_sse" | null;
   endpoint?: string | null;
-  credentialId?: string | null
+  credentialId?: string | null;
+  configuration?: Record<string, string | number | boolean>
 };
 export type PluginToolSelection = { id: string; sourceId: string; name: string; timeoutSeconds?: number | null };
 export type PluginConfig = Appearance & {
@@ -112,7 +113,8 @@ export type UsableVersion = {
   name: string;
   description: string;
   icon: string;
-  color: string
+  color: string;
+  pluginTypes?: Array<"builtin" | "mcp" | "java">
 };
 export type ModelProfile = {
   id: string;

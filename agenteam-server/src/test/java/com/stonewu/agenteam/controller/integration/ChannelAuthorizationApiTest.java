@@ -35,7 +35,11 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -109,7 +113,20 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         var pending = flow(state);
         assertNotEquals(state, pending.getStateHash());
         assertFalse(pending.getTransientEncryptedJson().contains(state));
-        callback(member, state);
+        queueIdentity();
+        rawCallback(member, connection, state).andExpect(status().isSeeOther());
+        PLATFORM.take();
+        var exchange = PLATFORM.take();
+        assertEquals("/open-apis/authen/v2/oauth/token", exchange.uri().getPath());
+        assertTrue(exchange.header("Content-Type").startsWith("application/json"));
+        var exchanged = json.readTree(exchange.body());
+        String verifier = exchanged.path("code_verifier").asText();
+        assertTrue(verifier.matches("[A-Za-z0-9_-]{43}"));
+        assertEquals(query.getFirst("code_challenge"), Base64.getUrlEncoder().withoutPadding().encodeToString(
+            MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII))));
+        assertEquals(URLDecoder.decode(query.getFirst("redirect_uri"), StandardCharsets.UTF_8), exchanged.path("redirect_uri").asText());
+        PLATFORM.take();
+        reviews.put(member.cookie().getValue(), flow(state).getId());
         assertEquals(0, countBindings());
         var review = data(mvc.perform(get("/api/v1/auth/channel-authorization").cookie(member.cookie())).andExpect(status().isOk()).andReturn());
         schemas.validate("ChannelAuthorizationReview", review);

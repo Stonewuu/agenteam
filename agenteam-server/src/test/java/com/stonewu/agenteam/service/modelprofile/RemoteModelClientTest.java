@@ -10,6 +10,11 @@ import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -17,14 +22,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(OutputCaptureExtension.class)
 class RemoteModelClientTest {
     private HttpServer server;
     private final RemoteModelMapper mapper = new RemoteModelMapper(new ObjectMapper());
     private final OutboundAddressPolicy policy = new OutboundAddressPolicy("");
-    private final RemoteModelClient client = new RemoteModelClient(policy, mapper);
+    private final RemoteModelClient client = new RemoteModelClient(policy, mapper, new ObjectMapper());
 
     @BeforeEach
     void start() throws Exception {
@@ -104,6 +112,66 @@ class RemoteModelClientTest {
         var timeout = assertThrows(ApiException.class, () -> impatient.list(provider("")));
         assertEquals("MODEL_LIST_TIMEOUT", timeout.code());
         assertNotNull(timeout.getCause());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"anthropic", "gemini"})
+    void readsNativeCatalogPagesWithTheRightAuthentication(String protocol) {
+        boolean gemini = protocol.equals("gemini");
+        var queries = new ArrayList<String>();
+        var keys = new ArrayList<String>();
+        server.createContext(gemini ? "/native/v1beta/models" : "/native/v1/models", exchange -> {
+            queries.add(exchange.getRequestURI().getRawQuery());
+            keys.add(exchange.getRequestHeaders().getFirst(gemini ? "x-goog-api-key" : "x-api-key"));
+            assertNull(exchange.getRequestHeaders().getFirst("Authorization"));
+            if (!gemini) {
+                assertEquals("2023-06-01", exchange.getRequestHeaders().getFirst("anthropic-version"));
+            }
+            boolean first = queries.size() == 1;
+            String reply = gemini ? first ? "{\"models\":[{\"name\":\"models/first\",\"displayName\":\"首个模型\",\"inputTokenLimit\":125000,\"outputTokenLimit\":8000}],\"nextPageToken\":\"next-test\"}"
+                : "{\"models\":[{\"name\":\"models/second\"}]}"
+                : first ? "{\"data\":[{\"id\":\"first\",\"display_name\":\"首个模型\"}],\"has_more\":true,\"last_id\":\"first\"}"
+                : "{\"data\":[{\"id\":\"second\"}],\"has_more\":false}";
+            byte[] body = reply.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            try (exchange) {
+                exchange.getResponseBody().write(body);
+            }
+        });
+        var nativeProvider = new ModelProviderRecord("provider", "enterprise", "原生目录", protocol,
+            "http://127.0.0.1:" + server.getAddress().getPort() + "/native", "native-key", true, 1, Instant.now(), Instant.now());
+        var models = client.list(nativeProvider);
+        assertEquals(2, models.size());
+        assertEquals("首个模型", models.getFirst().name());
+        assertEquals(List.of("native-key", "native-key"), keys);
+        assertTrue(queries.getLast().contains(gemini ? "pageToken=next-test" : "after_id=first"));
+        assertNull(models.getFirst().supportsTools());
+        if (gemini) {
+            assertEquals(125000, models.getFirst().maxContextTokens());
+            assertEquals(8000, models.getFirst().maxOutputTokens());
+        }
+    }
+
+    @Test
+    void diagnosticsKeepProviderReasonAndTraceWithoutCredentialsOrResponseContent(CapturedOutput output) {
+        server.createContext("/custom/v1/models", exchange -> {
+            byte[] body = "{\"error\":{\"type\":\"invalid_request_error\",\"message\":\"Unsupported parameter temperature; api_key=private-key; content='正文不能泄露'\"},\"payload\":\"原始正文不能记录\"}"
+                .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("x-request-id", "trace-42");
+            exchange.sendResponseHeaders(400, body.length);
+            try (exchange) {
+                exchange.getResponseBody().write(body);
+            }
+        });
+        assertThrows(ApiException.class, () -> client.list(provider("private-key")));
+        assertTrue(output.getAll().contains("Unsupported parameter temperature"));
+        assertTrue(output.getAll().contains("invalid_request_error"));
+        assertTrue(output.getAll().contains("trace-42"));
+        assertTrue(output.getAll().contains("/custom/v1/models"));
+        assertTrue(output.getAll().contains("RemoteModelClient.list"));
+        assertFalse(output.getAll().contains("private-key"));
+        assertFalse(output.getAll().contains("正文不能泄露"));
+        assertFalse(output.getAll().contains("原始正文不能记录"));
     }
 
     private ModelProviderRecord provider(String key) {

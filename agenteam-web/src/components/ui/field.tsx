@@ -2,8 +2,9 @@
 
 import {useT} from "@/lib/i18n/locale-provider";
 
-import {createContext, type ReactNode, useContext, useId, useState,} from "react";
+import {createContext, type ReactNode, useContext, useEffect, useId, useRef, useState,} from "react";
 import {FieldErrorFeedback} from "./error-feedback";
+import ui from "./surface.module.css";
 
 const FieldContext = createContext<{
   labelId: string;
@@ -17,12 +18,14 @@ export function useFieldContext() {
 
 export function Field({
                         label,
+                        icon,
                         children,
                         hint,
                         error,
                         required,
                       }: {
   label: string;
+  icon?: ReactNode;
   children: ReactNode;
   hint?: string;
   error?: string;
@@ -30,7 +33,14 @@ export function Field({
 }) {
   const uiText = useT();
   const id = useId();
+  const root = useRef<HTMLDivElement>(null);
   const [validationError, setValidationError] = useState("");
+  useEffect(() => {
+    const form = root.current?.closest("form");
+    const reset = () => setValidationError("");
+    form?.addEventListener("reset", reset);
+    return () => form?.removeEventListener("reset", reset);
+  }, []);
   const visibleError = error || validationError;
   const describedBy =
     [hint && `${id}-hint`, visibleError && `${id}-error`]
@@ -46,12 +56,13 @@ export function Field({
       }}
     >
       <div
+        ref={root}
         className={`field ${visibleError ? "has-error" : ""}`}
         onInvalid={(event) => {
           event.preventDefault();
           const input = event.target as
             HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-          const message = input.validity.valueMissing
+          const message = input.validity.customError ? input.validationMessage : input.validity.valueMissing
             ? uiText(input.tagName === "SELECT" ? "请选择{0}。" : "请填写{0}。", [label])
             : input.validity.typeMismatch
               ? uiText("请填写有效的{0}。", [label])
@@ -84,7 +95,8 @@ export function Field({
         }}
       >
         <label id={id}>
-          <span id={`${id}-label`}>
+          <span id={`${id}-label`} className={ui.fieldLabel}>
+            {icon}
             {label}
             {required && <span className="required"> *</span>}
           </span>

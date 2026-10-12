@@ -2,6 +2,7 @@ package com.stonewu.agenteam.service.agent;
 
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.ChatResponse;
@@ -68,7 +69,7 @@ public final class AgentContextCompaction {
                         Mono<Void> permission = guard == null ? Mono.empty() : attempt == null
                             ? Mono.error(new IllegalStateException("上下文压缩缺少执行归属")) : guard.beforeCompaction(
                             attempt.context);
-                        return permission.thenMany(Flux.defer(() -> model.stream(messages, List.of(), options)))
+                        var generated = permission.thenMany(Flux.defer(() -> model.stream(messages, List.of(), options)))
                             .doOnNext(response -> {
                                 if (response.getContent().stream().anyMatch(block -> block instanceof TextBlock text
                                     && text.getText() != null && !text.getText().isBlank())) {
@@ -82,6 +83,9 @@ public final class AgentContextCompaction {
                                 }
                                 LOG.warn("上下文压缩失败，执行编号 {}", runId, failure);
                             });
+                        ModelCallContext owner = values.getOrDefault(ModelCallContext.class, null);
+                        return owner == null ? generated
+                            : generated.contextWrite(context -> context.put(ModelCallContext.class, owner.forCompaction()));
                     });
                 }
             }).build();

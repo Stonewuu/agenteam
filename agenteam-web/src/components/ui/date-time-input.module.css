@@ -1,0 +1,372 @@
+.control {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+}
+
+.control .entry {
+  width: 100%;
+  padding-inline-end: 48px;
+  font-variant-numeric: tabular-nums;
+}
+
+.control .trigger {
+  position: absolute;
+  inset-inline-end: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  color: var(--secondary);
+}
+
+.control .trigger:hover:not(:disabled),
+.control .trigger[data-popup-open] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.control > .native, .srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.popup {
+  width: min(354px, calc(100vw - 24px));
+  max-height: var(--available-height);
+  padding: 16px;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--menu-radius);
+  color: var(--text);
+  box-shadow: var(--menu-shadow);
+  overflow-y: auto;
+}
+
+.calendar, .months, .month {
+  width: 100%;
+  min-width: 0;
+}
+
+.widePopup {
+  width: min(640px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  gap: 12px;
+}
+
+.multiMonth {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.mobilePopup:global(.agenteam-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  max-width: calc(100vw - 24px);
+  overflow-y: auto;
+}
+
+.mobileTitle {
+  min-height: 28px;
+  padding-inline-end: 32px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.mobilePopup > * {
+  flex-shrink: 0;
+}
+
+.mobilePopup :global([data-slot="dialog-close"]) {
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
+}
+
+.mobilePopup .timeOnly .timeHeading {
+  display: none;
+}
+
+.month {
+  position: relative;
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding-inline: 37px;
+  margin-block-end: 6px;
+}
+
+.captionLabel {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dropdowns {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calendarSelect {
+  width: auto;
+  min-width: 0;
+}
+
+.calendarSelect :global(.select-trigger) {
+  min-height: 36px;
+  padding: 5px 8px;
+  gap: 5px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.previous, .next {
+  position: absolute;
+  top: 3px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--secondary);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.previous {
+  inset-inline-start: 0;
+}
+
+.next {
+  inset-inline-end: 0;
+}
+
+.grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 4px;
+  white-space: normal;
+}
+
+/* 日历使用日期网格，不继承业务数据表格的表头底色、行悬浮色和分隔线。 */
+.calendar .grid th, .calendar .grid td {
+  border: 0;
+  padding: 0;
+}
+
+.calendar .grid th, .calendar .grid td, .calendar .grid tr:hover {
+  background: transparent;
+}
+
+.weekday {
+  height: 28px;
+  padding: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.day {
+  padding: 0;
+  text-align: center;
+}
+
+.week, .day {
+  height: 36px;
+}
+
+.dayButton {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.outside {
+  color: var(--muted);
+  opacity: .55;
+}
+
+.today:not(.selected) .dayButton {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.dayButton:hover:not(:disabled), .previous:hover:not(:disabled), .next:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.day.rangeMiddle .dayButton, .day.rangePreview .dayButton {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  font-weight: 500;
+}
+
+.selected:not(.rangeMiddle) .dayButton,
+.day.rangeStart .dayButton, .day.rangeEnd .dayButton, .day.rangePreviewEndpoint .dayButton {
+  color: var(--on-accent);
+  background: var(--accent-action);
+  font-weight: 600;
+}
+
+.selected:not(.rangeMiddle) .dayButton:hover,
+.day.rangeStart .dayButton:hover, .day.rangeEnd .dayButton:hover, .day.rangePreviewEndpoint .dayButton:hover {
+  background: var(--accent-hover);
+}
+
+.outside:is(.selected, .rangePreview, .rangePreviewEndpoint) {
+  opacity: 1;
+}
+
+.disabledDay, .previous:disabled, .next:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+
+.hiddenDay {
+  visibility: hidden;
+}
+
+.timeSection {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar + .timeSection {
+  padding-block-start: 14px;
+  border-top: 1px solid var(--border-light);
+}
+
+.timeHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.timeHeading svg {
+  color: var(--accent-text);
+}
+
+.timeFields {
+  display: flex;
+  gap: 10px;
+}
+
+.timeFields > label {
+  display: grid;
+  flex: 1;
+  gap: 7px;
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.timeFields :global(.select-trigger) {
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block-start: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.footer button {
+  min-height: 40px;
+  padding-inline: 16px;
+}
+
+.rangeError {
+  margin: 0;
+  color: var(--red-text);
+  font-size: 12px;
+}
+
+@media (max-width: 600px), (pointer: coarse) {
+  .control .entry {
+    min-height: 48px;
+    padding-inline-end: 50px;
+    font-size: 16px;
+  }
+
+  .control .trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .dayButton, .footer button {
+    min-height: 44px;
+  }
+
+  .week, .day {
+    height: 44px;
+  }
+
+  .caption {
+    min-height: 44px;
+    padding-inline: 44px;
+  }
+
+  .calendarSelect :global(.select-trigger) {
+    min-height: 44px;
+    padding-inline: 5px;
+  }
+
+  .previous, .next {
+    top: 0;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dayButton {
+    transition: none;
+  }
+}

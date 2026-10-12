@@ -9,6 +9,8 @@ import com.stonewu.agenteam.service.execution.ExecutionTask;
 import com.stonewu.agenteam.service.execution.RunApprovalService;
 import com.stonewu.agenteam.service.execution.RunCheckpointService;
 import com.stonewu.agenteam.service.http.ApiException;
+import io.agentscope.core.agent.AgentRun;
+import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.event.AgentResultEvent;
 import io.agentscope.core.event.ExternalExecutionResultEvent;
 import io.agentscope.core.event.RequireExternalExecutionEvent;
@@ -22,6 +24,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -86,7 +89,7 @@ public class AgentExecutionAdapter {
         private final AgentExecutionFactory.Execution execution;
         private final FrameEventPersistence persistence;
         private final FrameEventPersistence.Stream stream;
-        private final List<Msg> input;
+        private final AgentRun<AgentEvent> invocation;
         private final RunRecord run;
         private final JobLease lease;
         private final boolean ownsPersistence;
@@ -102,7 +105,7 @@ public class AgentExecutionAdapter {
                      RunRecord run, JobLease lease, boolean ownsPersistence) {
             this.execution = execution;
             this.persistence = persistence;
-            this.input = input;
+            this.invocation = execution.agent().prepareRun(List.copyOf(input), execution.context());
             this.run = run;
             this.stream = persistence.stream();
             this.lease = lease;
@@ -110,7 +113,7 @@ public class AgentExecutionAdapter {
         }
 
         public Mono<Void> completion() {
-            var completion = execution.agent().streamEvents(input, execution.context()).doOnNext(event -> {
+            var completion = invocation.stream().doOnNext(event -> {
                     if (event instanceof RequireUserConfirmEvent confirmation) {
                         if (event.getSource() != null) {
                             throw new IllegalStateException("子任务不能申请外部写入确认");
@@ -130,6 +133,8 @@ public class AgentExecutionAdapter {
                     event -> !(event instanceof RequireUserConfirmEvent) && !(event instanceof RequireExternalExecutionEvent)
                         && !(event instanceof ExternalExecutionResultEvent)).map(events::map).doOnNext(stream::accept)
                 .takeUntilOther(stop.asMono()).takeUntilOther(persistence.failure().asMono()).then()
+                // 新版用取消异常通知结束，仅把平台主动取消的本次调用转为正常停止。
+                .onErrorComplete(failure -> cancelled.get() && failure instanceof CancellationException)
                 .doOnSuccess(ignored -> {
                     stream.finish(cancelled.get() ? "cancelled" : "completed");
                     persistence.flush();
@@ -149,7 +154,8 @@ public class AgentExecutionAdapter {
 
         public void cancel() {
             if (cancelled.compareAndSet(false, true)) {
-                execution.cancel();
+                execution.guard().cancel();
+                invocation.cancel();
                 stop.tryEmitEmpty();
             }
         }
@@ -196,7 +202,8 @@ public class AgentExecutionAdapter {
         public void close() {
             if (closed.compareAndSet(false, true)) {
                 if (!completed.get()) {
-                    execution.cancel();
+                    execution.guard().cancel();
+                    invocation.cancel();
                 }
                 try {
                     stream.close();

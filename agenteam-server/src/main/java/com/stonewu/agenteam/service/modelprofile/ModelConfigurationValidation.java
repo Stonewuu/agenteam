@@ -50,7 +50,7 @@ public class ModelConfigurationValidation {
         var normalized = new ModelCapabilities(capability.supportsTools(), capability.supportsTemperature(),
             capability.maxOutputTokens(),
             capability.maxContextTokens(), capability.inputTypes().stream().sorted().toList(),
-            ReasoningEffort.VALUES.stream().filter(capability.reasoningEfforts()::contains).toList());
+            ReasoningEffort.VALUES.stream().filter(capability.reasoningEfforts()::contains).toList(), capability.protocolOptions());
         return new ModelProfileWriteRequest(value.providerId(), ResourceInput.text(value.name(), "name", 80, true),
             ResourceInput.text(value.modelName(), "modelName", 128, true), normalized, value.enabled());
     }

@@ -20,7 +20,8 @@ services:
   backend:
     environment:
       <<: *low-memory-sandbox
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0
+      # 四协议还需要类信息与编译空间，低内存主机固定堆上限和较轻量的编译等级。
+      JAVA_TOOL_OPTIONS: -Xmx192m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1
     mem_limit: 512m
     memswap_limit: 512m
 

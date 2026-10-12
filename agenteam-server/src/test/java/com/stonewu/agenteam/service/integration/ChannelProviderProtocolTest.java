@@ -102,7 +102,7 @@ class ChannelProviderProtocolTest {
     }
 
     @Test
-    void feishuExchangesV3FormThenUsesUserTokenAndChecksTenant() throws Exception {
+    void feishuExchangesPkceCodeWithSupportedV2JsonThenChecksTenant() throws Exception {
         server.reply("feishu.userToken");
         server.reply("feishu.identity");
         String verifier = "test-verifier-0123456789012345678901234567890123456789";
@@ -111,14 +111,25 @@ class ChannelProviderProtocolTest {
         assertEquals("feishu_open_id", identity.subjectType());
         var exchange = server.take();
         assertEquals("POST", exchange.method());
-        assertEquals("/oauth/v3/token", exchange.uri().getPath());
-        assertTrue(exchange.header("Content-Type").startsWith("application/x-www-form-urlencoded"));
-        assertEquals(Map.of("grant_type", "authorization_code", "client_id", "cli_test_application", "client_secret",
-            "secret+&=中文", "code", "code+&=", "redirect_uri", CALLBACK.toString(), "code_verifier", verifier), exchange.form());
+        assertEquals("/open-apis/authen/v2/oauth/token", exchange.uri().getPath());
+        assertTrue(exchange.header("Content-Type").startsWith("application/json"));
+        assertEquals(Map.of(), exchange.query());
+        assertNull(exchange.header("Authorization"));
+        assertEquals(json.valueToTree(Map.of("grant_type", "authorization_code", "client_id", "cli_test_application", "client_secret",
+            "secret+&=中文", "code", "code+&=", "redirect_uri", CALLBACK.toString(), "code_verifier", verifier)), json.readTree(exchange.body()));
         assertFalse(exchange.body().contains("offline_access"));
         var information = server.take();
         assertEquals("/open-apis/authen/v1/user_info", information.uri().getPath());
         assertEquals("Bearer test-feishu-user-token", information.header("Authorization"));
+    }
+
+    @Test
+    void failedTokenExchangeDoesNotRetryTheCodeOrRequestUserInformation() throws Exception {
+        server.raw(400, "{\"code\":20049,\"error\":\"invalid_grant\",\"error_description\":\"PKCE code challenge failed.\"}", Map.of());
+        assertThrows(ChannelProviderException.class,
+            () -> feishu.exchangeIdentity(FEISHU, "secret", token(), "one-use-code", CALLBACK, "verifier"));
+        assertEquals("/open-apis/authen/v2/oauth/token", server.take().uri().getPath());
+        assertEquals(0, server.remainingRequests());
     }
 
     @Test

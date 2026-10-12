@@ -25,27 +25,40 @@ public class RemoteModelMapper {
     }
 
     public List<RemoteModelView> read(byte[] body) {
+        return readPage(parse(body), "openai").items();
+    }
+
+    public JsonNode parse(byte[] body) {
         JsonNode root;
         try {
             root = json.readTree(body);
         } catch (IOException invalid) {
             throw invalidResponse(invalid);
         }
-        JsonNode data = root == null ? null : root.get("data");
+        if (root == null || !root.isObject()) {
+            throw invalidResponse(null);
+        }
+        return root;
+    }
+
+    public ModelPage readPage(JsonNode root, String protocol) {
+        boolean gemini = protocol.equals("gemini");
+        boolean anthropic = protocol.equals("anthropic");
+        JsonNode data = root.get(gemini ? "models" : "data");
         if (data == null || !data.isArray()) {
             throw invalidResponse(null);
         }
         var models = new LinkedHashMap<String, RemoteModelView>();
         for (JsonNode item : data) {
-            String id = text(item.path("id"), 128);
+            String id = text(item.path(gemini ? "name" : "id"), 128);
             if (id == null) {
                 continue;
             }
-            String name = text(item.path("name"), 80);
+            String name = text(item.path(gemini ? "displayName" : anthropic ? "display_name" : "name"), 80);
             JsonNode parameters = item.path("supported_parameters");
-            Integer context = length(10_000_000, item.path("context_length"), item.path("max_context_length"),
+            Integer context = length(10_000_000, item.path("inputTokenLimit"), item.path("max_input_tokens"), item.path("context_length"), item.path("max_context_length"),
                 item.path("top_provider").path("context_length"));
-            Integer output = length(1_000_000, item.path("max_output_tokens"),
+            Integer output = length(1_000_000, item.path("outputTokenLimit"), item.path("max_output_tokens"),
                 item.path("top_provider").path("max_completion_tokens"));
             // 相互矛盾的限制不能作为可直接保存的配置。
             if (context != null && output != null && output > context) {
@@ -59,7 +72,16 @@ public class RemoteModelMapper {
         if (!data.isEmpty() && models.isEmpty()) {
             throw invalidResponse(null);
         }
-        return models.values().stream().sorted(Comparator.comparing(RemoteModelView::id)).toList();
+        String next = gemini ? text(root.path("nextPageToken"), 2048) : text(root.path("last_id"), 2048);
+        boolean more = gemini ? root.hasNonNull("nextPageToken") && !root.path("nextPageToken").asText().isBlank()
+            : root.path("has_more").asBoolean(false);
+        if (more && (next == null || (!gemini && !anthropic))) {
+            throw invalidResponse(null);
+        }
+        return new ModelPage(models.values().stream().sorted(Comparator.comparing(RemoteModelView::id)).toList(), next, more);
+    }
+
+    public record ModelPage(List<RemoteModelView> items, String next, boolean hasMore) {
     }
 
     private String text(JsonNode value, int max) {

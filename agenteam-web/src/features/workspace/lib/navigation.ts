@@ -40,7 +40,7 @@ export const managementNavigation: readonly ManagementNavigationItem[] = [
   {id: "models", label: "模型配置", searchTerms: "model settings", permission: "model.view", managePermission: "model.manage", icon: IconSettings},
   {id: "integrations", label: "消息与登录接入", searchTerms: "messaging sign-in integrations", permission: "integration.view", managePermission: "integration.manage", icon: IconPlug},
   {id: "announcements", label: "企业公告", permission: "announcement.view", icon: IconBell},
-  {id: "usage", label: "执行用量", permission: "usage.view", icon: IconChartBar},
+  {id: "usage", label: "用量统计", searchTerms: "执行用量 模型用量 tokens pricing usage", permission: "usage.view", icon: IconChartBar},
   {id: "tool-logs", label: "调用日志", permission: "tool_log.view", icon: IconListDetails},
   ...editionNavigationExtension.management,
 ];

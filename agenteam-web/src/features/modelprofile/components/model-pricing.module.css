@@ -1,0 +1,207 @@
+.stack {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.toolbar, .version, .ruleHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.version, .rule {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.rule {
+  display: grid;
+  gap: 14px;
+}
+
+.versionCopy, .ruleCopy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.versionCopy {
+  flex: 1;
+}
+
+.priceIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.titleWithIcon, .priceContext, .sourceLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleWithIcon > svg, .priceContext > svg, .sourceLink > svg {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+.priceContext {
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sourceLink {
+  display: inline-flex;
+  color: var(--accent-text);
+  font-size: 13px;
+}
+
+.versionCopy small, .ruleCopy p, .hint {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rateRow, .timeRow, .dateRow {
+  display: grid;
+  gap: 12px;
+  align-items: end;
+  padding: 4px;
+}
+
+.rateRow {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.timeRow, .dateRow {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+}
+
+.table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th, .table td {
+  text-align: start;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border-light);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ruleHeading strong {
+  overflow-wrap: anywhere;
+}
+
+.table th {
+  color: var(--secondary);
+  font-weight: 500;
+  background: var(--surface-soft);
+}
+
+.table th:not(:first-child), .table td:not(:first-child) {
+  text-align: end;
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.catalogSection, .catalogResult, .catalogCopy {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.catalogSection, .catalogResult {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.catalogCopy .ruleCopy p, .catalogCopy strong {
+  overflow-wrap: anywhere;
+}
+
+.catalogRates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.catalogRates dt {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.catalogRates dd {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .version, .toolbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .dateRow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .dateRow > input:nth-child(3) {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .timeRow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .timeRow > :first-child {
+    grid-column: 1 / -1;
+  }
+}

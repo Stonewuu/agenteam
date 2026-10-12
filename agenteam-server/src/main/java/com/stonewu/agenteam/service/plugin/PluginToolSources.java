@@ -31,15 +31,17 @@ public class PluginToolSources {
     private final ResourceAuthorizationService access;
     private final PluginToolMapper tools;
     private final PluginCheckEvidence evidence;
+    private final JavaPluginSources javaPlugins;
 
     public PluginToolSources(ResourceMapper resources, ResourceVersionMapper versions,
                              ResourceAuthorizationService access,
-                             PluginToolMapper tools, PluginCheckEvidence evidence) {
+                             PluginToolMapper tools, PluginCheckEvidence evidence, JavaPluginSources javaPlugins) {
         this.resources = resources;
         this.versions = versions;
         this.access = access;
         this.tools = tools;
         this.evidence = evidence;
+        this.javaPlugins = javaPlugins;
     }
 
     public record Resolved(String entryId, ToolDefinition definition, PluginToolSource source) {
@@ -74,7 +76,7 @@ public class PluginToolSources {
                 definitions.put(id,
                     tools.list(actor.enterpriseId(), builtin.version().id()).stream().filter(tool -> tool.enabled())
                         .map(tool -> tool.definition()).toList());
-            } else {
+            } else if (!source.path("type").asText().equals("java")) {
                 definitions.put(id, evidence.tools(resource));
             }
         }
@@ -83,6 +85,10 @@ public class PluginToolSources {
             String name = selection.path("name").asText();
             int timeout = Math.min(config.path("timeoutSeconds").asInt(30),
                 selection.path("timeoutSeconds").asInt(120));
+            if (source.path("type").asText().equals("java")) {
+                result.add(javaPlugins.resolve(actor, source, selection, timeout));
+                continue;
+            }
             ToolDefinition definition;
             PluginToolSource fixed;
             if (source.path("type").asText().equals("builtin")) {

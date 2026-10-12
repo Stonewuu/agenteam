@@ -1,5 +1,7 @@
 # 企业微信与飞书模拟协议依据
 
+2026-10-13 补充核对：飞书“获取授权码”文档说明，当前授权入口启用 PKCE（防止授权码被其他客户端冒用的校验机制）时，暂需配套使用 v2 用户令牌端点。将其与 v3 端点混用会导致真实授权返回 20049；模拟平台现按这一接口组合检查 JSON（结构化请求正文）、原回调地址和一次性校验原文，不在失败后重试同一授权码。
+
 核对日期：2026-09-28。这里的账号、令牌、企业和消息编号都是测试专用值；字段名称、层级、参数编码和错误码依据下列官方文档。测试在网络边界接收真实适配器发出的请求，不把业务服务直接替换成“返回成功”。
 
 样本的错误说明文字只用于可读性；平台文档说明错误文本可能变化，测试与实现都不依赖 `msg/errmsg/error_description` 的具体措辞。业务判定依赖文档定义的响应状态、数字错误码和必要字段。
@@ -13,7 +15,7 @@
 | 企业微信限频/过期 | [全局错误码](https://developer.work.weixin.qq.com/document/path/90313) | 45009 限频，40014/42001 访问令牌失效，81013 全部接收人无效 |
 | `feishu.token` | [自建应用访问凭证](https://open.feishu.cn/document/server-docs/authentication-management/access-token/tenant_access_token_internal) | POST 结构化正文，字段是 `expire`，不是 `expires_in` |
 | `feishu.tenant` | [获取企业信息](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/tenant-v2/tenant/query) | 应用访问令牌放认证头，企业标识位于 `data.tenant.tenant_key` |
-| `feishu.userToken`、`feishu.expiredCode` | [当前用户令牌接口](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/authentication-management/access-token/get-user-access-token-v3) | 当前地址 `/oauth/v3/token`；推荐表单编码；授权码、回调地址和校验原文一起提交 |
+| `feishu.userToken`、`feishu.expiredCode` | [授权入口及 PKCE 兼容说明](https://open.feishu.cn/document/common-capabilities/sso/api/obtain-oauth-code)、[配套 v2 用户令牌接口](https://open.feishu.cn/document/authentication-management/access-token/get-user-access-token) | 使用 `/open-apis/authen/v2/oauth/token` 和 JSON 正文；授权码、原回调地址和校验原文一起提交，不移除校验或失败后改用其他端点重试 |
 | `feishu.identity` | [用户信息](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/authen-v1/user_info/get) | 使用用户访问令牌，读取 `data.open_id` 并核对企业标识 |
 | `feishu.accepted`、消息拒绝 | [发送消息](https://open.feishu.cn/document/server-docs/im-v1/message/create) | 地址参数 `receive_id_type=open_id`；`content` 是序列化后的字符串；消息编号位于 `data.message_id` |
 | 飞书令牌失效 | [通用错误码](https://open.feishu.cn/document/ukTMukTMukTM/ugjM14COyUjL4ITN) | 99991663/99991665 是应用访问令牌失效，不能混用用户令牌 |

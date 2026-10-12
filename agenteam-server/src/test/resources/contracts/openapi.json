@@ -54809,6 +54809,16 @@
                 "uniqueItems": true,
                 "default": [],
                 "description": "管理员确认模型支持的思考等级，空列表表示不提供等级选择。"
+              },
+              "protocolOptions": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ModelProtocolOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false,
@@ -54843,7 +54853,10 @@
             "minLength": 1,
             "maxLength": 32,
             "enum": [
-              "openai"
+              "openai",
+              "openai_responses",
+              "anthropic",
+              "gemini"
             ]
           },
           "baseUrl": {
@@ -54912,7 +54925,10 @@
             "minLength": 1,
             "maxLength": 32,
             "enum": [
-              "openai"
+              "openai",
+              "openai_responses",
+              "anthropic",
+              "gemini"
             ]
           },
           "baseUrl": {
@@ -55023,6 +55039,16 @@
                 "uniqueItems": true,
                 "default": [],
                 "description": "管理员确认模型支持的思考等级，空列表表示不提供等级选择。"
+              },
+              "protocolOptions": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ModelProtocolOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false,
@@ -55140,6 +55166,16 @@
                 "uniqueItems": true,
                 "default": [],
                 "description": "管理员确认模型支持的思考等级，空列表表示不提供等级选择。"
+              },
+              "protocolOptions": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ModelProtocolOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false,
@@ -63946,6 +63982,12 @@
       "UsableVersion": {
         "type": "object",
         "properties": {
+          "pluginTypes": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["builtin", "mcp", "java"] },
+            "maxItems": 3,
+            "uniqueItems": true
+          },
           "resourceId": {
             "type": "string",
             "minLength": 1,
@@ -67038,7 +67080,8 @@
             "type": "string",
             "enum": [
               "builtin",
-              "mcp"
+              "mcp",
+              "java"
             ]
           },
           "versionId": {
@@ -67074,6 +67117,20 @@
             ],
             "minLength": 1,
             "maxLength": 100
+          },
+          "configuration": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "maxProperties": 30,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
           }
         },
         "additionalProperties": false,
@@ -68920,6 +68977,120 @@
             ]
           }
         ]
+      },
+      "ModelProtocolOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ],
+            "default": 1
+          },
+          "reasoningMode": {
+            "type": "string",
+            "enum": [
+              "effort",
+              "budget",
+              "adaptive",
+              "level"
+            ]
+          },
+          "thinkingBudgets": {
+            "type": "object",
+            "maxProperties": 7,
+            "propertyNames": {
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ]
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "thinkingLevels": {
+            "type": "object",
+            "maxProperties": 7,
+            "propertyNames": {
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "max"
+              ]
+            }
+          },
+          "cacheTtlSeconds": {
+            "type": "integer",
+            "enum": [
+              0,
+              300,
+              3600
+            ]
+          },
+          "usageFormat": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "deepseek"
+            ]
+          },
+          "notApplicableUsage": {
+            "type": "array",
+            "maxItems": 4,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "cache_read",
+                "cache_write",
+                "reasoning",
+                "tool_use_prompt"
+              ]
+            }
+          },
+          "serviceTier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "default",
+                  "auto",
+                  "flex",
+                  "priority",
+                  "standard_only"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "按所选协议验证原生思考参数、缓存及计量能力。旧配置未提供时保留 OpenAI 兼容默认值。"
       }
     }
   },

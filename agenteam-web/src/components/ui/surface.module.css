@@ -87,6 +87,18 @@
   font-weight: 500;
 }
 
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.fieldLabel > svg {
+  flex-shrink: 0;
+  margin-inline-end: 8px;
+  color: var(--secondary);
+}
+
 .form {
   display: grid;
   gap: 22px;

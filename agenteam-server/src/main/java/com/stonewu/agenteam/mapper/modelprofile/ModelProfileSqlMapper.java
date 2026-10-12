@@ -18,6 +18,8 @@ import java.util.List;
  */
 @Mapper
 public interface ModelProfileSqlMapper extends MPJBaseMapper<ModelProfileRow> {
+    ModelProfileRow lockForPricing(@Param("enterprise") String enterprise, @Param("id") String id);
+
     default List<ModelProfileQueryRow> findModelProfile(String enterprise, String id) {
         var criteria = JoinWrappers.lambda(ModelProfileRow.class).selectAll(ModelProfileRow.class)
             .selectAs(ModelProviderRow::getName, ModelProfileQueryRow::getProviderName)

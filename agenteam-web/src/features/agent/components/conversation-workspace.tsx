@@ -35,7 +35,8 @@ import {ConversationManagementDialog} from "./conversation-management-dialog";
 import {SkillPickerDialog} from "@/features/skill/components/skill-picker-dialog";
 import styles from "./agent-workspace.module.css";
 import controls from "./conversation-controls.module.css";
-import {IconDots, IconDownload, IconSidebarRight, IconStar} from "@/components/ui/icons";
+import {IconDots, IconDownload, IconSidebarRight, IconStar, IconChartBar} from "@/components/ui/icons";
+import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {useConversationSidebar} from "../hooks/use-conversation-sidebar";
 import {ConversationSidebar, type ConversationSidebarHandle} from "./conversation-sidebar";
 import {ConversationFileProvider} from "@/features/file/components/conversation-file-context";
@@ -104,6 +105,7 @@ export default function ConversationWorkspace({user, context}: {
   const {conversationRef, ...view} = workspace;
   const [manage, setManage] = useState<Conversation | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [usageConversation, setUsageConversation] = useState<string | null>(null);
   const [nextEmployee, setNextEmployee] = useState<Employee | null>(null);
   const [memorySource, setMemorySource] = useState<{ agentId: string; source: MemorySource } | null>(null);
   const latestMemoryMessage = workspace.messages.filter((message) => message.role === "assistant" && ["completed", "failed", "cancelled"].includes(message.status)).at(-1);
@@ -167,6 +169,8 @@ export default function ConversationWorkspace({user, context}: {
           <div className={controls.heading}><h1 title={workspace.title}>{workspace.title}</h1></div>
           <div className={styles.accountActions}>
             <div className={controls.desktopActions}>
+              {workspace.detail && <Button className="icon-button" type="button" aria-label={uiText("查看对话累计用量")}
+                title={uiText("查看对话累计用量")} onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={19}/></Button>}
               {workspace.detail && context.permissions.includes("conversation.manage") &&
                 <Button className="icon-button" type="button"
                         aria-label={workspace.detail.favorite ? uiText("取消收藏对话") : uiText("收藏对话")}
@@ -180,10 +184,11 @@ export default function ConversationWorkspace({user, context}: {
                 <Button className="icon-button" aria-label={uiText("管理当前对话")}
                         onClick={() => setManage(workspace.detail!)}><IconDots size={20}/></Button>}
             </div>
-            {workspace.detail && (context.permissions.includes("conversation.manage") || context.permissions.includes("conversation.export")) &&
+            {workspace.detail &&
               <div className={controls.mobileActions}><DropdownMenu><DropdownMenuTrigger
                 render={<Button className="icon-button" aria-label={uiText("更多对话操作")}><IconDots
                   size={20}/></Button>}/><DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={17}/>{uiText("对话累计用量")}</DropdownMenuItem>
                 {workspace.detail && context.permissions.includes("conversation.manage") &&
                   <DropdownMenuItem disabled={favorite.busy} onClick={toggleFavorite}><IconStar
                     size={17}/>{workspace.detail.favorite ? uiText("取消收藏") : uiText("收藏对话")}</DropdownMenuItem>}
@@ -229,6 +234,8 @@ export default function ConversationWorkspace({user, context}: {
                                aria-expanded={sidebar.open} aria-controls={sidebar.id}
                                onClick={() => sidebar.setOpen(!sidebar.open)}><IconSidebarRight size={20}/></Button>}
     </div>
+    {usageConversation && <ConversationModelUsageDialog enterpriseId={enterprise} conversationId={usageConversation}
+      onClose={() => setUsageConversation(null)}/>}
     {exportOpen && workspace.detail &&
       <Dialog title={uiText("导出对话")} onClose={() => setExportOpen(false)}><ExportControl enterpriseId={enterprise}
                                                                                              userId={user.id}

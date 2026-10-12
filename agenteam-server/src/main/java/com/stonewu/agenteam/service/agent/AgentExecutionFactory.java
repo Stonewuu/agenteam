@@ -12,6 +12,7 @@ import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
 import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
+import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
@@ -33,6 +34,8 @@ import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.state.AgentState;
 import io.agentscope.core.state.ToolContextState;
+import io.agentscope.core.tool.ToolMergeMode;
+import io.agentscope.core.tool.ToolRequestConfig;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.subagent.SubagentDeclaration;
 import io.agentscope.harness.agent.subagent.SubagentDeclaration.Mode;
@@ -58,11 +61,6 @@ public class AgentExecutionFactory {
     public record Execution(HarnessAgent agent, RuntimeContext context, EncryptedAgentStateStore states,
                             ExecutionGuardMiddleware guard, List<HarnessAgent> children, ExecutionToolRuntime tools,
                             boolean restored, Duration timeout) implements AutoCloseable {
-        public void cancel() {
-            guard.cancel();
-            agent.getDelegate().interrupt(context);
-        }
-
         @Override
         public void close() {
             tools.close();
@@ -144,11 +142,18 @@ public class AgentExecutionFactory {
                                   String session,
                                   EncryptedAgentStateStore states, boolean restored, Duration remaining,
                                   Consumer<RuntimeContext> checkpoint) {
+        return createScoped(run, lease, config, agentId, name, session, states, restored, remaining, checkpoint, null);
+    }
+
+    public Execution createScoped(RunRecord run, JobLease lease, JsonNode config, String agentId, String name,
+                                  String session, EncryptedAgentStateStore states, boolean restored, Duration remaining,
+                                  Consumer<RuntimeContext> checkpoint, String workflowNodeId) {
         if (!Set.of("chat", "task").contains(config.path("agentType").asText())) {
             throw new ApiException(HttpStatus.CONFLICT,
                 "RESOURCE_DEPENDENCY_UNAVAILABLE", "当前流程节点需要对话型或任务型智能体。");
         }
         ConfiguredModel model = models.create(run.enterpriseId(), config.path("modelProfileId").asText());
+        var callContext = ModelCallContext.fromRun(run, agentId, workflowNodeId);
         var guard = new ExecutionGuardMiddleware(lifecycle, lease, session, config.path("maxSteps").asInt());
         var limit = Duration.ofSeconds(config.path("timeoutSeconds").asInt());
         var timeout = ExecutionLimits.minTimeout(remaining, limit);
@@ -163,7 +168,7 @@ public class AgentExecutionFactory {
         String projectInstructions = projects.instructions(run);
         String languageInstruction = languages.instruction(run.userId());
         var builder = builder(workspace, new ReadableToolModel(model, runtimeTools::modelToolNames), states, guard,
-            config, timeout, run.id()).name(name)
+            config, timeout, run.id(), callContext).name(name)
             .sysPrompt(instructions(config) + memories.instructions(run, agentId, config)
                 + (model.supportsTools() ? WorkspaceToolDefinitions.GUIDANCE : "") + projectInstructions + languageInstruction);
         var subagents = AgentSubagentConfigurationMapper.resolve(config, run.executionConfig().path("dependencies"));
@@ -187,7 +192,8 @@ public class AgentExecutionFactory {
             // 框架会按运行上下文重建管理器，必须在构造时注册工厂，不能事后只替换默认管理器。
             builder.subagent(declaration).subagentFactory(definition.id(), declaration.getDescription(), ignored -> {
                 var child = builder(workspace, new ReadableToolModel(childModel, runtimeTools::modelToolNames), states,
-                    guard, childConfig, childTimeout, run.id()).name(definition.name()).maxIters(steps)
+                    guard, childConfig, childTimeout, run.id(), callContext.forChild(selected.resourceId()))
+                    .name(definition.name()).maxIters(steps)
                     .disableSubagents()
                     .workspace(prepare(workspace.resolve("children").resolve(UUID.randomUUID().toString())))
                     .sysPrompt(
@@ -209,6 +215,8 @@ public class AgentExecutionFactory {
             SubagentToolEvents.attach(agent, guard, subagents);
         }
         var context = RuntimeContext.builder().userId(run.userId()).sessionId(session)
+            .toolRequestConfig(new ToolRequestConfig(Map.of(), ToolMergeMode.AGENT_ONLY))
+            .put(ModelCallContext.class, callContext)
             .put(AgentSpawnTool.CTX_FORCE_SYNC, true)
             // 框架单次委派最多等待六百秒；零值不能传入，否则会退回三十秒默认值。
             .put(AgentSpawnTool.CTX_FORCE_SYNC_TIMEOUT_SECONDS,
@@ -218,7 +226,7 @@ public class AgentExecutionFactory {
 
     private HarnessAgent.Builder builder(Path workspace, ConfiguredModel model, EncryptedAgentStateStore states,
                                          ExecutionGuardMiddleware guard, JsonNode config, Duration timeout,
-                                         String runId) {
+                                         String runId, ModelCallContext callContext) {
         var options = GenerateOptions.builder()
             .executionConfig(
                 ExecutionConfig.builder().timeout(timeout.isZero() ? null : timeout).maxAttempts(1).build());
@@ -235,12 +243,13 @@ public class AgentExecutionFactory {
         }
         var generation = options.build();
         return HarnessAgent.builder().model(model).workspace(prepare(workspace)).stateStore(states).middleware(guard)
+            .middleware(new ModelUsageContextMiddleware(callContext))
             .middleware(new CompactionSafetyMiddleware())
             .compaction(AgentContextCompaction.create(model, generation, runId, guard))
             .toolExecutionConfig(
                 ExecutionConfig.builder().timeout(ExecutionLimits.frameworkToolTimeout(timeout)).maxAttempts(1).build())
             .maxIters(ExecutionLimits.frameworkMaxSteps(config.path("maxSteps").asInt())).generateOptions(generation)
-            .disableFilesystemTools().disableShellTool().disableDynamicSkills().disableDefaultWorkspaceSkills()
+            .disableFilesystemTools().disableShellTool().disableWebTools().disableDynamicSkills().disableDefaultWorkspaceSkills()
             .disableDynamicSubagents().disableMemoryTools().disableMemoryHooks().disableToolsConfig()
             .disableWorkspaceContext().disableAtPathExpansion().disableSessionPersistence().disableToolResultEviction()
             .enableAgentTracingLog(false);

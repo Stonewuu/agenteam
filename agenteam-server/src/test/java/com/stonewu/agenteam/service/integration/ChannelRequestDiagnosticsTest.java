@@ -9,6 +9,8 @@ import com.stonewu.agenteam.support.MockChannelServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
@@ -74,18 +76,24 @@ class ChannelRequestDiagnosticsTest {
         assertFalse(logs.contains("private-app-secret"));
     }
 
-    @Test
-    void oauthFormFailureKeepsDescriptionButNeverAuthorizationCodeOrVerifier() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void oauthFailureKeepsDescriptionButNeverAuthorizationCodeOrVerifier(boolean structuredBody) {
         server.raw(400, """
             {"error":"invalid_grant","error_description":"Authorization code expired: private-code, verifier=private-verifier\\nforged entry"}
             """, Map.of());
-        http.form("test-feishu", server.origin().resolve("/oauth/v3/token"),
-            Map.of("client_secret", "private-secret", "code", "private-code", "code_verifier", "private-verifier"));
+        var fields = Map.of("client_secret", "private-secret", "code", "private-code", "code_verifier", "private-verifier");
+        if (structuredBody) {
+            http.post("test-feishu", server.origin().resolve("/open-apis/authen/v2/oauth/token"), Map.of(), json.valueToTree(fields), null);
+        } else {
+            http.form("test-feishu", server.origin().resolve("/oauth/v3/token"), fields);
+        }
         String logs = logs();
         assertTrue(logs.contains("invalid_grant"));
         assertTrue(logs.contains("Authorization code expired"));
         assertFalse(logs.contains("private-code"));
         assertFalse(logs.contains("private-verifier"));
+        assertFalse(logs.contains("private-secret"));
         assertFalse(logs.contains("\nforged entry"));
     }
 

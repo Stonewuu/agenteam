@@ -14,6 +14,7 @@ import type {ResourceKind, UsableVersion} from "../types/resource";
 import {ResourceVersionSelect} from "./resource-version-select";
 import styles from "./version-picker.module.css";
 import ui from "@/components/ui/surface.module.css";
+import {PluginTypeLabels} from "@/features/plugin/components/plugin-type-labels";
 
 export function VersionSelectionDialog({
                                          enterpriseId,
@@ -76,7 +77,8 @@ export function VersionSelectionDialog({
             <label className={styles.choice}><Checkbox aria-label={latest.name} checked={checked} disabled={disabled}
                                                        onCheckedChange={(next) => toggle(value, next)}/>
               <ResourceAvatar icon={value.icon} color={value.color} size="small"/>
-              <span className={styles.identity}><strong>{latest.name}</strong><span>{value.description}</span></span>
+              <span className={styles.identity}><strong>{latest.name}{kind === "plugin" &&
+                <PluginTypeLabels types={value.pluginTypes}/>}</strong><span>{value.description}</span></span>
             </label>
             <ResourceVersionSelect enterpriseId={enterpriseId} value={{...value, name: latest.name}}
                                    onChange={selectVersion} subagentsOnly={subagentsOnly} disabled={disabled}

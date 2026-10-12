@@ -8,6 +8,7 @@ import {Dialog, DialogAction, DialogActions, DialogCancel} from "@/components/ui
 import {type FieldErrors, NumberField, Section, TextField} from "@/features/resource/components/resource-fields";
 import type {PluginConfig, PluginSource} from "@/features/resource/types/resource";
 import {CredentialPicker} from "./credential-picker";
+import {JavaPluginConfig} from "./java-plugin-config";
 import {PluginCollectionTools} from "./plugin-collection-tools";
 import {remoteSource} from "../lib/plugin-collection";
 import ui from "@/components/ui/surface.module.css";
@@ -22,11 +23,13 @@ export function PluginConfigForm({enterpriseId, value, onChange, permissions, er
 }) {
   const uiText = useT();
   const remote = remoteSource(value);
-  const [switching, setSwitching] = useState<"collection" | "mcp" | null>(null);
-  const applyType = (mode: "collection" | "mcp") => {
+  const javaPlugin = value.sources.some((source) => source.type === "java");
+  const [switching, setSwitching] = useState<"collection" | "mcp" | "java" | null>(null);
+  const applyType = (mode: "collection" | "mcp" | "java") => {
     onChange({
       ...value, tools: [], sources: mode === "mcp"
-        ? [{id: "remote", type: "mcp", transport: "streamable_http", endpoint: "", credentialId: null}] : []
+        ? [{id: "remote", type: "mcp", transport: "streamable_http", endpoint: "", credentialId: null}]
+        : mode === "java" ? [{id: "java", type: "java", versionId: null, configuration: {}, credentialId: null}] : []
     });
     setSwitching(null);
   };
@@ -37,10 +40,10 @@ export function PluginConfigForm({enterpriseId, value, onChange, permissions, er
   };
   return <Section title={uiText("工具配置")}>
     <label className={ui.field}><span>{uiText("工具来源")}</span><Select className={ui.select}
-                                                                         value={remote ? "mcp" : "collection"}
+                                                                          value={remote ? "mcp" : javaPlugin ? "java" : "collection"}
                                                                          disabled={readOnly} onChange={(event) => {
-      const next = event.target.value as "collection" | "mcp";
-      if (value.tools.length || remote?.endpoint || remote?.credentialId) {
+      const next = event.target.value as "collection" | "mcp" | "java";
+      if (value.tools.length || remote?.endpoint || remote?.credentialId || javaPlugin) {
         setSwitching(next);
       } else {
         applyType(next);
@@ -48,6 +51,7 @@ export function PluginConfigForm({enterpriseId, value, onChange, permissions, er
     }}>
       <option value="collection">{uiText("选择内置工具")}</option>
       <option value="mcp">{uiText("连接远程服务")}</option>
+      <option value="java">{uiText("安装扩展插件")}</option>
     </Select></label>
     {remote ? <>
       <TextField label={uiText("MCP 服务地址")} name="config.sources[0].endpoint" value={remote.endpoint ?? ""} required
@@ -64,7 +68,8 @@ export function PluginConfigForm({enterpriseId, value, onChange, permissions, er
                         canManage={permissions.includes("credential.manage")}
                         canUse={permissions.includes("credential.use") || permissions.includes("credential.manage")}
                         readOnly={readOnly}/>
-    </> : <PluginCollectionTools enterpriseId={enterpriseId} value={value} onChange={onChange} readOnly={readOnly}
+    </> : javaPlugin ? <JavaPluginConfig enterpriseId={enterpriseId} value={value} onChange={onChange}
+      readOnly={readOnly} permissions={permissions}/> : <PluginCollectionTools enterpriseId={enterpriseId} value={value} onChange={onChange} readOnly={readOnly}
                                  allowed={permissions.includes("plugin.invoke")}/>}
     <NumberField label={uiText("工具等待上限（秒）")} name="config.timeoutSeconds" value={value.timeoutSeconds} min={1}
                  max={120} errors={errors} onChange={(timeoutSeconds) => onChange({...value, timeoutSeconds})}/>

@@ -22,9 +22,11 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {RemoteModelPicker} from "./remote-model-picker";
 import {TokenLengthInput} from "./token-length-input";
+import {ModelProtocolFields} from "./model-protocol-options";
+import {defaultProtocolOptions} from "../lib/model-protocol";
 import {formatTokenLength, parseTokenLength, tokenLengthError} from "../lib/model-token-length";
 import {reasoningEffortLabels, reasoningEfforts} from "../lib/reasoning-effort";
-import type {ManagedModel, ModelCapabilities, ModelProvider, RemoteModel} from "../types/model-management";
+import type {ManagedModel, ModelCapabilities, ModelProvider, RemoteModel, ModelProtocolOptions} from "../types/model-management";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./model-management.module.css";
 import formStyles from "./model-profile-form.module.css";
@@ -46,6 +48,8 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
   const initialProvider = model?.providerId ?? (preferredProvider || providers[0]?.id || "");
   const [name, setName] = useState(model?.name ?? "");
   const [providerId, setProviderId] = useState(initialProvider);
+  const protocol = providers.find((provider) => provider.id === providerId)?.protocol ?? "openai";
+  const [protocolOptions, setProtocolOptions] = useState<ModelProtocolOptions>(model?.capabilities.protocolOptions ?? defaultProtocolOptions(protocol));
   const [modelName, setModelName] = useState(model?.modelName ?? "");
   const [enabled, setEnabled] = useState(model?.enabled ?? true);
   const [options, setOptions] = useState<CapabilityOptions>(model ? {
@@ -62,7 +66,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
   const inputErrorId = useId();
   const reasoningId = useId();
   const readOnly = action.busy || Boolean(model?.inUse);
-  const draft = JSON.stringify({name, providerId, modelName, enabled, options, contextLength, outputLength});
+  const draft = JSON.stringify({name, providerId, modelName, enabled, options, protocolOptions, contextLength, outputLength});
   const [initialDraft] = useState(draft);
   const closing = useConfirmClose(draft !== initialDraft, action.busy, onClose);
 
@@ -141,7 +145,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
         method: model ? "PUT" : "POST", revision: model?.revision,
         body: {
           providerId, name: name.trim(), modelName: modelName.trim(), enabled,
-          capabilities: {...options, maxContextTokens, maxOutputTokens}
+          capabilities: {...options, protocolOptions, maxContextTokens, maxOutputTokens}
         },
       });
       closing.finish(onSaved);
@@ -169,6 +173,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                                                                                                   setName("");
                                                                                                 }
                                                                                                 setProviderId(event.target.value);
+                                                                                                setProtocolOptions(defaultProtocolOptions(providers.find((value) => value.id === event.target.value)?.protocol ?? "openai"));
                                                                                                 setModelName("");
                                                                                                 resetCapabilities();
                                                                                               }}>
@@ -285,6 +290,12 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
             </div>
           </CollapsibleContent>
         </Collapsible>
+        <ModelProtocolFields protocol={protocol} value={protocolOptions} efforts={options.reasoningEfforts ?? []}
+          fixed={model?.inUse ? model.capabilities.protocolOptions ?? defaultProtocolOptions(protocol) : undefined}
+          disabled={action.busy} errors={errors} onChange={(value) => {
+            setProtocolOptions(value);
+            action.resetFeedback();
+          }}/>
         <div className={formStyles.enabled}><Toggle label={uiText("启用此模型")} checked={enabled}
                                                     disabled={action.busy} onChange={setEnabled}/></div>
         <MutationFeedback action={feedback}/>

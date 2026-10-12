@@ -33,6 +33,10 @@ jar uf0 应用包副本.jar BOOT-INF/lib/mariadb-java-client-3.5.10.jar
 
 ## 为开发者维护资料
 
-沙盒网页读取新增 Playwright 1.64.0 及配套 Chromium，网页正文解析使用 jsoup 1.22.2，Git 由镜像所属 Debian（操作系统发行版）提供。Playwright 及其浏览器安装方式见[官方浏览器文档](https://playwright.dev/docs/browsers)，jsoup 版本资料见[官方发布说明](https://jsoup.org/news/release-1.22.2)。浏览器实际版本记录在 `/opt/agenteam/browser-versions.json`，系统软件记录在 `/opt/agenteam/system-versions.txt`。这些改动尚未发布；下次发布需从新镜像重新采集声明和对应源码，不能复用旧镜像的材料。
+扩展插件功能使用 PF4J 3.15.0，采用 Apache-2.0（Apache 第二版开源许可证）。它随后端依赖打包，公共接口与示例见 [扩展插件开发说明](../development/java-plugins.md)。发布时从实际构建采集 PF4J 及其依赖的许可和源码材料。
+
+沙盒网页读取包含 Playwright 1.64.0 及配套 Chromium，网页正文解析使用 jsoup 1.22.2，Git 由镜像所属 Debian（操作系统发行版）提供。Playwright 及其浏览器安装方式见[官方浏览器文档](https://playwright.dev/docs/browsers)，jsoup 版本资料见[官方发布说明](https://jsoup.org/news/release-1.22.2)。浏览器实际版本记录在 `/opt/agenteam/browser-versions.json`，系统软件记录在 `/opt/agenteam/system-versions.txt`。发布资料必须从实际成品重新采集声明和对应源码，不能用旧镜像的材料代替。
 
 依赖与镜像更新时，按实际组件版本整理版权原文、源码及构建资料。仓库的 `scripts/release/` 提供声明采集、源码定位、下载和归档工具；具体步骤见[第三方源码维护说明](corresponding-sources.md)。
+
+0.3.0 开发代码采用 AgentScope Java 2.0.4，复用其官方 Responses、Anthropic 和 Gemini 扩展；对应 OpenAI Java 4.52.0、Anthropic Java 2.52.0 和 Google Gen AI 1.45.0。Responses 的客户端构造适配保存在独立目录 `agenteam-server/agenteam-agentscope-compat`，没有复制其消息或流协议实现。新版本声明须从实际构建依赖重新采集；上述 0.2.0 附件仍只对应已经发布的 0.2.0。

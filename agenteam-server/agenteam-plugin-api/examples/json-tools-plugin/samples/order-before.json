@@ -1,0 +1,6 @@
+{
+  "orderId": 9007199254740993,
+  "customer": { "name": "张三" },
+  "items": [{ "sku": "BOOK", "quantity": 2, "price": 19.90 }],
+  "status": "pending"
+}

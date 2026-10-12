@@ -2,6 +2,7 @@ package com.stonewu.agenteam.service.http;
 
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.stonewu.agenteam.configuration.http.ApiRequestFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validation;
@@ -21,6 +22,7 @@ public final class InputValidation {
     private static final ValidatorFactory FACTORY = Validation.buildDefaultValidatorFactory();
     private static final Validator VALIDATOR = FACTORY.getValidator();
     private static final ObjectMapper JSON = JsonMapper.builder()
+        .addModule(new JavaTimeModule())
         .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
         .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT).disable(MapperFeature.ALLOW_COERCION_OF_SCALARS).build();
 

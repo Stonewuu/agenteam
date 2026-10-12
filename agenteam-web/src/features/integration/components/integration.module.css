@@ -184,6 +184,14 @@
   font-size: 12px;
 }
 
+.editorHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
 .editorOptions {
   padding: 18px 0 0;
   border-top: 1px solid var(--border-light);

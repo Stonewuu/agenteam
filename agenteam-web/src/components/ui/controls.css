@@ -2,6 +2,19 @@
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 120ms var(--motion-ease);
 }
 
+/* 隐藏浏览器自带的装饰按钮，保留数字键盘与方向键操作。 */
+input[type="number"] {
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .agenteam-checkbox, .agenteam-radio {
   color: var(--on-accent);
   border-color: var(--border);

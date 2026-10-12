@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.plugin.JavaPluginInstallationMapper">
+    <select id="lock" resultType="com.stonewu.agenteam.model.plugin.entity.JavaPluginInstallationRow">
+        SELECT id, enterprise_id, plugin_id, plugin_version, name, description, author,
+               configuration_schema, tools_json, artifact_hash, status, active_key, installed_by, created_at, updated_at
+        FROM java_plugin_installation WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
+    </select>
+</mapper>
