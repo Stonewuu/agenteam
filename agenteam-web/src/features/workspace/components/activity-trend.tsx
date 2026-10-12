@@ -139,7 +139,7 @@ function ActivityCalendar({data}: { data: ActivityTrendData }) {
             {days.map((day, index) => {
               const count = activityTotal(day);
               const label = uiText("{0}，{1} 次活动", [dateFormat.format(calendarDate(day.date)), count]);
-              return <button key={day.date} type="button" ref={(node) => {
+              return <Button key={day.date} type="button" ref={(node) => {
                 buttons.current[index] = node;
               }} className={styles.day} data-level={activityLevel(count, maximum)} aria-label={label} title={label}
                              aria-pressed={selected === index} tabIndex={selected === index ? 0 : -1}

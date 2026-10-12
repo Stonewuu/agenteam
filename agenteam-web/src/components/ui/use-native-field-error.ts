@@ -64,7 +64,13 @@ function nativeLabel(input: Control) {
 function nativeMessage(input: Control, t: Translator) {
   const label = nativeLabel(input) || t("此项");
   const validity = input.validity;
+  if (validity.customError) {
+    return input.validationMessage;
+  }
   if (validity.valueMissing) {
+    if (input instanceof HTMLInputElement && input.type === "file") {
+      return t("请选择文件。");
+    }
     return t(input.tagName === "SELECT" ? "请选择{0}。" : "请填写{0}。", [label]);
   }
   if (validity.typeMismatch) {

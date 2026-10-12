@@ -1,0 +1,17 @@
+.control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+
+.control > button {
+  min-height: 44px;
+}
+
+.name {
+  min-width: 0;
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}

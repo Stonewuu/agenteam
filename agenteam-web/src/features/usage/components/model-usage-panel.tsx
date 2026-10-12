@@ -2,7 +2,7 @@
 
 import {useRef, useState} from "react";
 import {Field} from "@/components/ui/field";
-import {Input} from "@/components/ui/input";
+import {DateRangePicker} from "@/components/ui/date-range-picker";
 import {SearchableSelect} from "@/components/ui/searchable-select";
 import {QueryState} from "@/components/ui/query-state";
 import {Disclosure, DisclosureSummary} from "@/components/ui/disclosure";
@@ -16,7 +16,6 @@ import {ModelCallList} from "./model-call-list";
 import {ModelCallPagination} from "./model-call-pagination";
 import {tokenCount, usageAmount} from "../lib/model-usage-display";
 import type {ModelUsageSummary, ModelCall} from "../types/model-usage";
-import ui from "@/components/ui/surface.module.css";
 import styles from "./model-usage.module.css";
 
 type Option = {id: string; name: string};
@@ -61,10 +60,9 @@ export function ModelUsagePanel({enterpriseId, refresh}: {enterpriseId: string; 
   }
   return <div className={styles.stack}>
     <div className={styles.filters}>
-      <Field label={t("开始日期")} icon={<IconCalendar size={16}/>}><Input className={ui.input} type="date" value={range.from}
-        onChange={(event) => setRange({...range, from: event.target.value})}/></Field>
-      <Field label={t("结束日期")} icon={<IconCalendar size={16}/>} error={rangeError}><Input className={ui.input} type="date" value={range.to}
-        onChange={(event) => setRange({...range, to: event.target.value})}/></Field>
+      <div className={styles.rangeFilter}><Field label={t("日期范围")} icon={<IconCalendar size={16}/>} error={rangeError}>
+        <DateRangePicker value={range} onChange={setRange} maxDays={93}/>
+      </Field></div>
       <UsageOptionPicker path={valid ? `${base}/model-options?${dates}&kind=model` : null} kind="model" value={model} onChange={setModel}/>
       <UsageOptionPicker path={valid ? `${base}/model-options?${dates}&kind=user` : null} kind="user" value={user} onChange={setUser}/>
     </div>

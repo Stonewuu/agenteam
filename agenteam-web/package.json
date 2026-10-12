@@ -18,6 +18,7 @@
     "test:file-preview": "node --test tests/file-preview.test.mjs",
     "test:file-upload": "node --test tests/file-upload-paste.test.mjs",
     "test:forms": "node --test tests/form-errors.test.mjs",
+    "test:controls": "node --test tests/platform-controls.test.mjs",
     "test:channel-auth": "node --test tests/channel-access.test.mjs",
     "test:schedule-actions": "node --test tests/schedule-actions.test.mjs",
     "test:model-config": "node --test tests/model-token-length.test.mjs tests/model-selection.test.mjs",
@@ -30,6 +31,7 @@
   "dependencies": {
     "@assistant-ui/react": "^0.15.17",
     "@base-ui/react": "1.8.0",
+    "@daypicker/react": "10.0.2",
     "@streamdown/cjk": "^1.0.3",
     "@streamdown/code": "^1.1.1",
     "@tiptap/core": "3.31.3",

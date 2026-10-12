@@ -19,6 +19,10 @@
   border-radius: 18px;
   background: var(--surface);
 }
+.rangeFilter {
+  grid-column: span 2;
+  min-width: 0;
+}
 .recordCount {
   color: var(--secondary);
   font-size: 13px;
@@ -207,7 +211,11 @@
 }
 
 @media (max-width: 600px) {
+  .rangeFilter {
+    grid-column: auto;
+  }
   .filters {
+    grid-template-columns: minmax(0, 1fr);
     padding: 16px;
     gap: 14px 12px;
   }
