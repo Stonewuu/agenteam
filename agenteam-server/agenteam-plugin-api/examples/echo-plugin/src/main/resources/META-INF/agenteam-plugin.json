@@ -1,0 +1,11 @@
+{
+  "name": "文本格式示例",
+  "configurationSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "prefix": {"type": "string", "title": "文本前缀", "description": "每次返回文本前附加的内容。", "default": "示例：", "maxLength": 100}
+    },
+    "required": ["prefix"]
+  }
+}

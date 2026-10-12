@@ -4,7 +4,10 @@
   <sql id="versionFields">
     SELECT r.id AS resource_id, r.kind, v.id AS version_id, v.version_no, v.name, v.description, v.published_at,
     JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon,
-    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS color
+    JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS color,
+    CASE WHEN r.kind = 'plugin' THEN COALESCE(JSON_EXTRACT(v.config_json, '$.sources[*].type'),
+      JSON_ARRAY(JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.pluginType'))))
+      ELSE JSON_ARRAY() END AS plugin_types_json
     FROM resource_version v JOIN resource r ON r.enterprise_id = v.enterprise_id AND r.id = v.resource_id
   </sql>
   <select id="listVersions" resultType="com.stonewu.agenteam.model.resource.entity.UsableVersionQueryRow">

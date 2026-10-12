@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.plugin.JavaPluginRegistry;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
@@ -136,7 +138,7 @@ class AgentExecutionFactoryTest {
         when(toolExecution.invoke(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any())).thenReturn(json.createObjectNode().put("text", "已查询自己的资料库"));
         var factory = new AgentExecutionFactory(models, paths, encryption, json, lifecycle, savedRuns, mock(ExecutionMessageMapper.class), checkpoints,
             new ExecutionToolCatalog(mock(PluginToolMapper.class), new SourceToolDefinitions(new ResourceJson(json)), new WorkspaceToolDefinitions(new ResourceJson(json),
-                new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
+                new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions, mock(JavaPluginRegistry.class)), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
             new ProjectPromptService(mock(ProjectMetadataService.class), mock(ConversationProjectService.class), json), languages);
         try (var execution = factory.create(run, lease)) {
             assertEquals(parentSteps == 0 ? Integer.MAX_VALUE : parentSteps, execution.agent().getDelegate().getMaxIters());

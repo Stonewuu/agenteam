@@ -8,6 +8,7 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.plugin.entity.PluginToolRecord;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.plugin.JavaPluginRegistry;
 import com.stonewu.agenteam.service.workspace.WorkspaceToolDefinitions;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,13 +24,15 @@ public class ExecutionToolCatalog {
     private final SourceToolDefinitions sources;
     private final WorkspaceToolDefinitions workspace;
     private final ResourceVersionMapper versions;
+    private final JavaPluginRegistry javaPlugins;
 
     public ExecutionToolCatalog(PluginToolMapper tools, SourceToolDefinitions sources,
-                                WorkspaceToolDefinitions workspace, ResourceVersionMapper versions) {
+                                WorkspaceToolDefinitions workspace, ResourceVersionMapper versions, JavaPluginRegistry javaPlugins) {
         this.tools = tools;
         this.sources = sources;
         this.workspace = workspace;
         this.versions = versions;
+        this.javaPlugins = javaPlugins;
     }
 
     public Map<String, ExecutionToolBinding> list(RunRecord run) {
@@ -37,10 +40,10 @@ public class ExecutionToolCatalog {
     }
 
     public Map<String, ExecutionToolBinding> list(RunRecord run, JsonNode config) {
-        return list(run, config, availableVersions(run));
+        return list(run, config, availableVersions(run), availableJavaVersions(run));
     }
 
-    private Map<String, ExecutionToolBinding> list(RunRecord run, JsonNode config, Set<String> available) {
+    private Map<String, ExecutionToolBinding> list(RunRecord run, JsonNode config, Set<String> available, Set<String> javaAvailable) {
         Map<String, ExecutionToolBinding> result = new LinkedHashMap<>();
         Map<String, List<PluginToolRecord>> sourceTools = new LinkedHashMap<>();
         for (var version : config.path("pluginVersionIds")) {
@@ -61,7 +64,7 @@ public class ExecutionToolCatalog {
                                 .equals("read")) {
                                 continue;
                             }
-                            if (!sourceEnabled(run, tool, sourceTools, available)) {
+                            if (!sourceEnabled(run, tool, sourceTools, available, javaAvailable)) {
                                 continue;
                             }
                             result.put(binding.alias(), binding);
@@ -99,8 +102,9 @@ public class ExecutionToolCatalog {
      */
     public Map<String, ExecutionToolBinding> all(RunRecord run) {
         var available = availableVersions(run);
+        var javaAvailable = availableJavaVersions(run);
         Map<String, ExecutionToolBinding> result = new LinkedHashMap<>(
-            list(run, run.executionConfig().path("config"), available));
+            list(run, run.executionConfig().path("config"), available, javaAvailable));
         workspace.delegatedResults(run).values().forEach(binding -> result.put(binding.alias(), binding));
         var workflows = new ArrayList<JsonNode>();
         if (run.executionConfig().has("workflowId")) {
@@ -111,7 +115,7 @@ public class ExecutionToolCatalog {
                 continue;
             }
             if (dependency.path("kind").asText().equals("agent")) {
-                result.putAll(list(run, dependency.path("config"), available));
+                result.putAll(list(run, dependency.path("config"), available, javaAvailable));
             }
             if (dependency.path("kind").asText().equals("workflow")) {
                 workflows.add(dependency.path("config"));
@@ -123,18 +127,21 @@ public class ExecutionToolCatalog {
                     continue;
                 }
                 var binding = tool(run, node.path("config").path("pluginVersionId").asText(),
-                    selectionKey(node.path("config")), available);
-                result.put(binding.alias(), binding);
+                    selectionKey(node.path("config")), available, javaAvailable, true);
+                if (binding != null) {
+                    result.put(binding.alias(), binding);
+                }
             }
         }
         return Map.copyOf(result);
     }
 
     public ExecutionToolBinding tool(RunRecord run, String versionId, String name) {
-        return tool(run, versionId, name, availableVersions(run));
+        return tool(run, versionId, name, availableVersions(run), availableJavaVersions(run), false);
     }
 
-    private ExecutionToolBinding tool(RunRecord run, String versionId, String name, Set<String> available) {
+    private ExecutionToolBinding tool(RunRecord run, String versionId, String name, Set<String> available,
+                                      Set<String> javaAvailable, boolean omitUnavailableJava) {
         Map<String, List<PluginToolRecord>> sourceTools = new LinkedHashMap<>();
         for (var dependency : run.executionConfig().path("dependencies")) {
             if (!available.contains(versionId) || !dependency.path("versionId").asText()
@@ -142,12 +149,22 @@ public class ExecutionToolCatalog {
                 continue;
             }
             var matches = tools.list(run.enterpriseId(), versionId).stream()
-                .filter(tool -> tool.enabled() && sourceEnabled(run, tool, sourceTools, available))
+                .filter(PluginToolRecord::enabled)
                 .filter(
                     tool -> tool.id().equals(name) || name.equals(tool.entryId()) || !PluginConfigurationMapper.modern(
                         dependency.path("config")) && tool.definition().name().equals(name)).toList();
             if (matches.size() == 1) {
-                return binding(dependency, matches.getFirst());
+                var selected = matches.getFirst();
+                if (selected.source() != null && selected.source().type().equals("java")
+                    && !javaAvailable.contains(selected.source().versionId())) {
+                    if (omitUnavailableJava) {
+                        return null;
+                    }
+                    javaPlugins.require(run.enterpriseId(), selected.source().versionId());
+                }
+                if (sourceEnabled(run, selected, sourceTools, available, javaAvailable)) {
+                    return binding(dependency, selected);
+                }
             }
         }
         throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
@@ -155,6 +172,9 @@ public class ExecutionToolCatalog {
     }
 
     public ExecutionToolBinding requireCurrent(RunRecord run, ExecutionToolBinding expected) {
+        if (expected.source() != null && expected.source().type().equals("java")) {
+            javaPlugins.require(run.enterpriseId(), expected.source().versionId());
+        }
         var current = all(run).get(expected.alias());
         if (current == null || !current.definition().schemaHash().equals(expected.definition().schemaHash())) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
@@ -183,7 +203,10 @@ public class ExecutionToolCatalog {
     }
 
     private boolean sourceEnabled(RunRecord run, PluginToolRecord tool, Map<String, List<PluginToolRecord>> sourceTools,
-                                  Set<String> available) {
+                                  Set<String> available, Set<String> javaAvailable) {
+        if (tool.source() != null && tool.source().type().equals("java")) {
+            return javaAvailable.contains(tool.source().versionId());
+        }
         if (tool.source() == null || !tool.source().type().equals("builtin")) {
             return true;
         }
@@ -194,5 +217,20 @@ public class ExecutionToolCatalog {
             .anyMatch(source -> source.enabled()
                 && source.definition().name().equals(tool.definition().name()) && source.definition().schemaHash()
                 .equals(tool.definition().schemaHash()));
+    }
+
+    private Set<String> availableJavaVersions(RunRecord run) {
+        var requested = new HashSet<String>();
+        for (var dependency : run.executionConfig().path("dependencies")) {
+            for (var source : dependency.path("config").path("sources")) {
+                if (source.path("type").asText().equals("java")) {
+                    requested.add(source.path("versionId").asText());
+                }
+            }
+        }
+        var available = new HashSet<String>();
+        javaPlugins.findMany(run.enterpriseId(), requested).values().stream()
+            .filter(row -> row.getStatus().equals("active")).forEach(row -> available.add(row.getId()));
+        return Set.copyOf(available);
     }
 }

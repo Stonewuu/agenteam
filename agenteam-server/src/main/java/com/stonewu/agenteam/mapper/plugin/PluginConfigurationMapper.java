@@ -51,7 +51,7 @@ public class PluginConfigurationMapper {
         result.path("tools").forEach(tool -> used.add(tool.path("sourceId").asText()));
         var retained = new ArrayList<JsonNode>();
         result.path("sources").forEach(source -> {
-            if (source.path("type").asText().equals("mcp") || used.contains(source.path("id").asText())) {
+            if (Set.of("mcp", "java").contains(source.path("type").asText()) || used.contains(source.path("id").asText())) {
                 retained.add(source);
             }
         });

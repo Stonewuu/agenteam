@@ -2,6 +2,7 @@ package com.stonewu.agenteam.model.plugin.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
 
@@ -15,10 +16,10 @@ public record PluginCollectionInput(
     @NotNull(message = "请填写必填项。") @Size(max = 100) List<@NotNull(message = "请填写必填项。") @Valid Source> sources,
     @NotNull(message = "请填写必填项。") @Size(max = 100) List<@NotNull(message = "请填写必填项。") @Valid Selection> tools) {
     public record Source(@NotBlank(message = "请填写此项内容。") @Size(max = 100) String id,
-                         @NotNull(message = "请填写必填项。") @Pattern(regexp = "builtin|mcp", message = "请选择当前支持的工具来源。") String type,
+                         @NotNull(message = "请填写必填项。") @Pattern(regexp = "builtin|mcp|java", message = "请选择当前支持的工具来源。") String type,
                          @Size(max = 100) String versionId,
                          @Pattern(regexp = "streamable_http|legacy_sse", message = "请选择支持的连接方式。") String transport,
-                         @Size(max = 2048) String endpoint, @Size(max = 100) String credentialId) {
+                         @Size(max = 2048) String endpoint, @Size(max = 100) String credentialId, JsonNode configuration) {
     }
 
     public record Selection(@NotBlank(message = "请填写此项内容。") @Size(max = 100) String id,

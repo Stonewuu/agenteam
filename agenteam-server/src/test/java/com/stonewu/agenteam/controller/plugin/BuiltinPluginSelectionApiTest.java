@@ -85,6 +85,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         int toolCount = 0;
         for (var value : response.path("items")) {
             schemas.validate("UsableVersion", value);
+            assertEquals(json.valueToTree(List.of("builtin")), value.path("pluginTypes"));
             String id = value.path("resourceId").asText(), versionId = value.path("versionId").asText();
             var resource = resources.find(enterprise, id, false, false).orElseThrow();
             assertEquals("builtin", resource.source());

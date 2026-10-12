@@ -6,6 +6,8 @@ COPY agenteam-server/.mvn/ .mvn/
 COPY agenteam-server/mvnw agenteam-server/pom.xml ./
 RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
 COPY agenteam-server/agenteam-tool-api/src/main/ agenteam-tool-api/src/main/
+COPY agenteam-server/agenteam-plugin-api/src/main/ agenteam-plugin-api/src/main/
+COPY agenteam-server/agenteam-agentscope-compat/src/main/ agenteam-agentscope-compat/src/main/
 COPY agenteam-server/src/main/ src/main/
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B --no-transfer-progress -Dmaven.test.skip=true package
 

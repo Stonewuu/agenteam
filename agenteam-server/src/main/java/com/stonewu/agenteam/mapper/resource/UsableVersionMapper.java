@@ -7,6 +7,7 @@ import com.stonewu.agenteam.model.resource.response.UsableVersionView;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.HashSet;
 
 /**
  * 先限制使用权限、资源启停与版本资格，再按发布次序分页；不读取私有配置正文。
@@ -14,9 +15,11 @@ import java.util.List;
 @Repository
 public class UsableVersionMapper {
     private final UsableVersionSqlMapper statements;
+    private final ResourceJson json;
 
-    public UsableVersionMapper(UsableVersionSqlMapper statements) {
+    public UsableVersionMapper(UsableVersionSqlMapper statements, ResourceJson json) {
         this.statements = statements;
+        this.json = json;
     }
 
     public List<UsableVersionRecord> list(ResourceQueryScope scope, String query, PagePosition cursor, int limit) {
@@ -39,7 +42,8 @@ public class UsableVersionMapper {
             .map(rows ->
                 new UsableVersionRecord(
                     new UsableVersionView(rows.getResourceId(), rows.getVersionId(), rows.getVersionNo(),
-                        rows.getKind(), rows.getName(), rows.getDescription(), rows.getIcon(), rows.getColor()),
+                        rows.getKind(), rows.getName(), rows.getDescription(), rows.getIcon(), rows.getColor(),
+                        pluginTypes(rows.getPluginTypesJson())),
                     rows.getPublishedAt().toInstant())).toList();
     }
 
@@ -49,6 +53,15 @@ public class UsableVersionMapper {
         }
         return statements.selectedVersions(scope, ids).stream().map(rows ->
             new UsableVersionView(rows.getResourceId(), rows.getVersionId(), rows.getVersionNo(), rows.getKind(),
-                rows.getName(), rows.getDescription(), rows.getIcon(), rows.getColor())).toList();
+                rows.getName(), rows.getDescription(), rows.getIcon(), rows.getColor(),
+                pluginTypes(rows.getPluginTypesJson()))).toList();
+    }
+
+    private List<String> pluginTypes(String value) {
+        var types = new HashSet<String>();
+        if (value != null) {
+            json.read(value).forEach(type -> types.add(type.asText()));
+        }
+        return List.of("builtin", "mcp", "java").stream().filter(types::contains).toList();
     }
 }

@@ -8,6 +8,7 @@ import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.resource.entity.*;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.plugin.JavaPluginRegistry;
 import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
 import com.stonewu.agenteam.service.resource.FixedDependencyService.ResolvedGraph;
 import org.springframework.http.HttpStatus;
@@ -28,16 +29,18 @@ public class ExecutionDependencyService {
     private final ResourceConfigurationService configurations;
     private final FixedDependencyService dependencies;
     private final ResourceJson json;
+    private final JavaPluginRegistry javaPlugins;
 
     public ExecutionDependencyService(ResourceMapper resources, ResourceVersionMapper versions,
                                       ResourceAuthorizationService access, ResourceConfigurationService configurations,
-                                      FixedDependencyService dependencies, ResourceJson json) {
+                                      FixedDependencyService dependencies, ResourceJson json, JavaPluginRegistry javaPlugins) {
         this.resources = resources;
         this.versions = versions;
         this.access = access;
         this.configurations = configurations;
         this.dependencies = dependencies;
         this.json = json;
+        this.javaPlugins = javaPlugins;
     }
 
     public record Prepared(ResourceRecord resource, ResolvedGraph dependencies) {
@@ -61,7 +64,7 @@ public class ExecutionDependencyService {
         var config = state.configuration(root.kind(), root.config(), path, 0);
         if (config == null) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                "此流程所需的资源已删除，请替换不可用的资源后重新发布。");
+                "此流程所需的插件或资源已不可用，请替换后重新发布。");
         }
         var prepared = root.withConfiguration(config, json.hash(config));
         return new Prepared(prepared, dependencies.resolveGraph(actor, prepared, state.prepared));
@@ -83,6 +86,14 @@ public class ExecutionDependencyService {
 
         private ObjectNode configuration(ResourceKind kind, JsonNode original, Set<String> path, int depth) {
             var config = (ObjectNode) configurations.draft(kind, original);
+            if (kind == ResourceKind.PLUGIN) {
+                for (var source : original.path("sources")) {
+                    if (source.path("type").asText().equals("java")
+                        && !javaPlugins.available(actor.enterpriseId(), source.path("versionId").asText())) {
+                        return null;
+                    }
+                }
+            }
             var bindings = configurations.dependencies(kind, config);
             load(bindings);
             boolean removedSource = false;

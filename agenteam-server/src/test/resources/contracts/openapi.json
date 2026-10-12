@@ -63982,6 +63982,12 @@
       "UsableVersion": {
         "type": "object",
         "properties": {
+          "pluginTypes": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["builtin", "mcp", "java"] },
+            "maxItems": 3,
+            "uniqueItems": true
+          },
           "resourceId": {
             "type": "string",
             "minLength": 1,
@@ -67074,7 +67080,8 @@
             "type": "string",
             "enum": [
               "builtin",
-              "mcp"
+              "mcp",
+              "java"
             ]
           },
           "versionId": {
@@ -67110,6 +67117,20 @@
             ],
             "minLength": 1,
             "maxLength": 100
+          },
+          "configuration": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "maxProperties": 30,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
           }
         },
         "additionalProperties": false,

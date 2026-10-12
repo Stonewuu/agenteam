@@ -41,6 +41,11 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.pf4j</groupId>
+      <artifactId>pf4j</artifactId>
+      <version>3.15.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
       <version>1.22.2</version>
@@ -275,6 +280,7 @@
             <configuration>
               <sources>
                 <source>${project.basedir}/agenteam-tool-api/src/main/java</source>
+                <source>${project.basedir}/agenteam-plugin-api/src/main/java</source>
                 <source>${project.basedir}/agenteam-agentscope-compat/src/main/java</source>
               </sources>
             </configuration>

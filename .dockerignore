@@ -17,6 +17,16 @@ agenteam-server/agenteam-tool-api/*
 !agenteam-server/agenteam-tool-api/src/
 !agenteam-server/agenteam-tool-api/src/main/
 !agenteam-server/agenteam-tool-api/src/main/**
+!agenteam-server/agenteam-plugin-api/
+agenteam-server/agenteam-plugin-api/*
+!agenteam-server/agenteam-plugin-api/src/
+!agenteam-server/agenteam-plugin-api/src/main/
+!agenteam-server/agenteam-plugin-api/src/main/**
+!agenteam-server/agenteam-agentscope-compat/
+agenteam-server/agenteam-agentscope-compat/*
+!agenteam-server/agenteam-agentscope-compat/src/
+!agenteam-server/agenteam-agentscope-compat/src/main/
+!agenteam-server/agenteam-agentscope-compat/src/main/**
 !deploy/
 deploy/*
 !deploy/Dockerfile.source

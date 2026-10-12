@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -210,6 +211,20 @@ public class ToolCallTransactions {
         calls.queried(call, lease.version(), clock.instant());
     }
 
+    /**
+     * 同一 Java 工具内的后续外部操作重新检查权限，不把它登记成重试整个工具。
+     */
+    @Transactional
+    public void recheckPluginCall(JobLease lease, ExecutionToolBinding binding, String callId) {
+        var run = current(lease, binding);
+        lifecycle.remaining(run);
+        var call = calls.find(lease.enterpriseId(), callId, true).orElseThrow();
+        if (!call.runId().equals(run.id()) || !call.status().equals("running")) {
+            throw new IllegalStateException("插件调用已经结束");
+        }
+        requireApproval(run, call);
+    }
+
     @Transactional
     public void complete(JobLease lease, String id, ToolResultService.Prepared result, String code, String error) {
         var run = lifecycle.locked(lease.enterpriseId(), lease.runId());
@@ -235,8 +250,11 @@ public class ToolCallTransactions {
             return false;
         }
         boolean unknown = !call.readOnly() && call.submittedAt() != null;
-        JsonNode result = json.tree(Map.of("isError", true, "code", unknown ? "TOOL_RESULT_UNKNOWN" : code, "content",
-            List.of(Map.of("type", "text", "text", unknown ? unknown().getReason() : message))));
+        boolean pluginChanged = Set.of("JAVA_PLUGIN_UPGRADED", "JAVA_PLUGIN_UNINSTALLED").contains(code);
+        String detail = unknown ? pluginChanged ? message + " 此前已提交的外部操作结果无法确认，请先核对，勿重复执行。"
+            : unknown().getReason() : message;
+        JsonNode result = json.tree(Map.of("isError", true, "code", unknown && !pluginChanged ? "TOOL_RESULT_UNKNOWN" : code, "content",
+            List.of(Map.of("type", "text", "text", detail))));
         calls.finish(call, unknown ? "unknown" : "failed", encryption.encrypt(result, resultBinding(call)), result,
             unknown ? "TOOL_RESULT_UNKNOWN" : code, unknown ? unknown().getReason() : message, clock.instant());
         return unknown;

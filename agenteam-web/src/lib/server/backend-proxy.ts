@@ -35,7 +35,7 @@ async function forwardBackendRequest(request: Request, path: string) {
   const hasBody = method !== "GET" && method !== "HEAD";
   let body: Uint8Array | undefined;
   if (hasBody) {
-    const fileUpload = method === "PUT" && /^\/api\/v1\/enterprises\/[^/]+\/files\/[^/]+\/content$/.test(path.split("?")[0]);
+    const fileUpload = method === "PUT" && /^\/api\/v1\/enterprises\/[^/]+\/(?:files\/[^/]+\/content|plugins\/java-packages\/content)$/.test(path.split("?")[0]);
     body = await boundedBody(request, (fileUpload ? 20 : 1) * 1024 * 1024);
     if (!body) {
       return NextResponse.json({

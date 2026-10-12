@@ -1,0 +1,43 @@
+.root, .detail, .tools {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.detail {
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+.tool {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.tool > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tool small {
+  color: var(--muted-foreground);
+}
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}

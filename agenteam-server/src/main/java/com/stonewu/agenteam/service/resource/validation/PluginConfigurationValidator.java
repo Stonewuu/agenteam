@@ -134,6 +134,12 @@ public class PluginConfigurationValidator implements ResourceConfigValidator {
                 if (source.transport() != null || source.endpoint() != null || source.credentialId() != null) {
                     throw ApiException.invalidField("config.sources", "内置工具来源不能设置远程连接。");
                 }
+            } else if (source.type().equals("java")) {
+                if (source.versionId() == null || source.versionId().isBlank() || source.transport() != null
+                    || source.endpoint() != null || source.configuration() == null || !source.configuration().isObject()
+                    || input.sources().size() != 1) {
+                    throw ApiException.invalidField("config.sources", "请选择 Java 插件版本并填写配置。");
+                }
             } else {
                 if (input.sources().size() != 1 || source.versionId() != null) {
                     throw ApiException.invalidField("config.sources", "远程插件目前只支持一个独立连接。");

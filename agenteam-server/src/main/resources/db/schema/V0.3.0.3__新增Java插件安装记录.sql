@@ -1,0 +1,21 @@
+CREATE TABLE java_plugin_installation (
+    id VARCHAR(100) NOT NULL PRIMARY KEY,
+    enterprise_id VARCHAR(100) NOT NULL,
+    plugin_id VARCHAR(80) NOT NULL,
+    plugin_version VARCHAR(80) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(2000) NOT NULL,
+    author VARCHAR(100) NOT NULL,
+    configuration_schema LONGTEXT NOT NULL,
+    tools_json LONGTEXT NOT NULL,
+    artifact_hash VARCHAR(64) NOT NULL,
+    artifact LONGBLOB NULL,
+    status VARCHAR(20) NOT NULL,
+    active_key VARCHAR(80) NULL,
+    installed_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP(3) NOT NULL,
+    updated_at TIMESTAMP(3) NOT NULL,
+    UNIQUE KEY uk_java_plugin_active (enterprise_id, active_key),
+    KEY idx_java_plugin_version (enterprise_id, plugin_id, created_at),
+    KEY idx_java_plugin_cleanup (status, created_at)
+);

@@ -124,7 +124,7 @@ class ModelBillingPersistenceTest {
                 .target("0.2.0.1").cleanDisabled(true).load().migrate();
             var fixture = new Fixture(access);
             var upgrade = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
-                .cleanDisabled(true).validateMigrationNaming(true).load();
+                .target("0.3.0.2").cleanDisabled(true).validateMigrationNaming(true).load();
             assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(2);
             assertThat(upgrade.migrate().migrationsExecuted).isZero();
             assertThat(upgrade.validateWithResult().validationSuccessful).isTrue();

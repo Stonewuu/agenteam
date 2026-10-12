@@ -31,6 +31,9 @@ spring:
 data:
   query-recovery:
     enabled: "false"
+java-plugins:
+  cleanup:
+    enabled: "false"
 execution:
   worker:
     enabled: "false"

@@ -14,6 +14,13 @@
   flex-shrink: 0;
 }
 
+.selectedIdentity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
 .selected {
   display: grid;
   gap: 8px;
