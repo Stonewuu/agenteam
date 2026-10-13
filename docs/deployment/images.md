@@ -69,12 +69,10 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 更新时保持五类 AgenTeam 镜像使用同一版本，并保留原账号、资源、任务、平台绑定及应用密钥。已有部署按当前版本对应的升级步骤操作。
 
-## 查看软件许可与第三方声明
+## 查看项目版权信息
 
 项目版权声明保存在 `licenses/agenteam/NOTICE`，版权名称为 stonewu。
 
-解出的部署包在 `licenses/agenteam/LICENSE` 保存公共项目许可，`licenses/third-party/README.md` 提供第三方原文索引。后端、前端、执行器和办公镜像内的对应目录为 `/usr/share/licenses/agenteam/`。可以使用 `docker cp` 从已创建的容器取得文件；查看声明不需要启动应用或连接数据库。
+解出的部署包在 `licenses/agenteam/LICENSE` 保存项目许可。后端、前端、执行器和办公镜像内的对应目录为 `/usr/share/licenses/agenteam/agenteam/`。可以使用 `docker cp` 从已创建的容器取得文件，不需要启动应用或连接数据库。
 
-从 [0.3.0 第三方源码索引](https://github.com/Stonewuu/agenteam/releases/download/v0.3.0/third-party-sources.json) 取得本版本附件清单。索引列出对应镜像、下载地址、字节数及 SHA-256（文件内容摘要）；下载后使用 `sha256sum <附件文件>` 核对摘要再保存。附件包含相关第三方原源码、原始补丁及构建资料，各组件继续适用其原有许可。
-
-镜像、安装说明和第三方资料统一使用明确的版本号，便于部署维护及后续更新。
+代码和依赖原有版权信息继续保留。镜像与安装说明使用明确的版本号，便于部署维护和后续更新。

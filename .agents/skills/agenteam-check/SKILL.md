@@ -43,8 +43,8 @@ node --input-type=module -e 'import {readCommunitySource} from "./scripts/releas
 
 - Flyway（按版本执行数据库迁移脚本的工具）的文件在 `agenteam-server/src/main/resources/db/schema/`。当前应用版本取 `deploy/registry/release.env` 的 `RELEASE_TAG`；新文件使用 `V<版本>.<序号>__简短中文说明.sql`。已发布或已执行文件保持原名和内容，不自动清库、修复历史或关闭校验。
 - 提交只包含任务需要的源码、文档和配置示例。检查新增文件与提交差异，排除令牌、私钥、真实账号、运行数据、个人绝对路径及本机构建产物；环境变量示例使用明确占位内容。
-- 对外文案以真实能力、体验变化和使用步骤为主，保留必要安装要求、数据保护步骤和第三方许可资料。
-- 依赖或镜像更新时参考 [第三方软件说明](../../../docs/releases/third-party.md) 与 [源码维护说明](../../../docs/releases/corresponding-sources.md)，确认资料和实际产物一致。
+- 更新日志只写真实的新特性、问题修复和体验优化；安装、开发和维护要求留在对应文档，不把维护者部署或验收过程写进公开 Release（版本发布页面）。
+- 代码及依赖已有版权信息继续保留。发版不要求额外生成第三方声明、源码归档或分卷，不上传此类附件，不自动向更新日志添加相关段落和下载链接。
 
 ## 交付检查结论
 

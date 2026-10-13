@@ -154,9 +154,19 @@ test("源文件和输出的目录链接不能把构建输入指向私有目录",
   assert.throws(() => createImageInputs({...second.options, output: resolve(second.root, "linked-output/output")}), /父目录/);
 });
 
-test("正式镜像要求资料绑定当前产物，四类构建输入都保留原文且不修改源码模板", () => {
+test("正式镜像直接保留代码版权，不要求额外整理第三方资料", () => {
   const value = fixture();
-  assert.throws(() => createImageInputs({...value.options, release: true}), /必须附上/);
+  const result = createImageInputs({...value.options, release: true});
+  verifyImageInputs(value.options.output, result);
+  for (const kind of ["backend", "frontend", "office", "deployment"]) {
+    assert.equal(readFileSync(resolve(value.options.output, kind, "licenses/agenteam/LICENSE"), "utf8"), "验证用的公共许可原文");
+    assert.equal(readFileSync(resolve(value.options.output, kind, "licenses/agenteam/NOTICE"), "utf8"), "验证用的公共版权声明");
+  }
+  assert.equal(readFileSync(resolve(value.options.output, "frontend/src/component.LICENSE"), "utf8"), "必须保留的第三方版权声明");
+});
+
+test("显式附加的已有资料必须绑定当前产物，保留原文且不修改源码模板", () => {
+  const value = fixture();
   const kit = documents(value);
   const result = createImageInputs({...value.options, release: true, thirdPartyDocuments: kit.directory});
   verifyImageInputs(value.options.output, result);

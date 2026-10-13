@@ -125,9 +125,6 @@ export function createImageInputs({community, productRoot = community, frontend,
   if (web.version !== version) {
     throw new Error("前端源文件与镜像版本不一致。");
   }
-  if (release && !thirdPartyDocuments) {
-    throw new Error("正式镜像必须附上与当前构建对应的第三方声明资料。");
-  }
   const productDocuments = thirdPartyDocuments ? readThirdPartyInputs(thirdPartyDocuments) : null;
   const sharedDocuments = sharedThirdPartyDocuments === thirdPartyDocuments ? productDocuments
     : sharedThirdPartyDocuments ? readThirdPartyInputs(sharedThirdPartyDocuments) : null;
