@@ -19,6 +19,20 @@ import static org.mockito.Mockito.when;
 
 class ExecutionGuardStepLimitTest {
     @Test
+    void fiveHundredStepsAreAllowedAndTheNextStepIsRejected() {
+        var context = RuntimeContext.builder().userId("user").sessionId("session").build();
+        var model = mock(Model.class);
+        when(model.getContextWindowSize()).thenReturn(100_000);
+        var input = new ModelCallInput(List.of(), List.of(), GenerateOptions.builder().build(), model);
+        var limited = new ExecutionGuardMiddleware(mock(RunLifecycleService.class), null, "session", 500);
+        for (int step = 0; step < 500; step++) {
+            limited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2));
+        }
+        assertEquals("EXECUTION_STEP_LIMIT", assertThrows(ApiException.class,
+            () -> limited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2))).code());
+    }
+
+    @Test
     void unlimitedExecutionsPassFiftyStepsAndExplicitLimitsStillStop() {
         var context = RuntimeContext.builder().userId("user").sessionId("session").build();
         var model = mock(Model.class);

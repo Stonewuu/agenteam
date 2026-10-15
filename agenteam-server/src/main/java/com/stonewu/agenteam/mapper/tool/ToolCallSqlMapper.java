@@ -311,10 +311,20 @@ public interface ToolCallSqlMapper extends MPJBaseMapper<ToolCallRow> {
     List<ToolCallQueryRow> forArtifactToolCall(@Param("enterprise") String enterprise, @Param("run") String run,
                                                @Param("resource") String resource, @Param("file") String file);
 
-    List<ToolCallQueryRow> sourceResultsForContextToolCall(@Param("enterpriseId") String enterpriseId,
-                                                           @Param("conversationId") String conversationId,
-                                                           @Param("userId") String userId,
-                                                           @Param("recentRuns") int recentRuns);
+    default List<ToolCallQueryRow> sourceResultsForContextToolCall(String enterpriseId, String conversationId, String userId) {
+        var query = JoinWrappers.lambda(ToolCallRow.class).selectAll(ToolCallRow.class)
+            .innerJoin(AgentRunRow.class, join -> join.eq(AgentRunRow::getId, ToolCallRow::getRunId)
+                .eq(AgentRunRow::getEnterpriseId, ToolCallRow::getEnterpriseId))
+            .eq(ToolCallRow::getEnterpriseId, enterpriseId).eq(ToolCallRow::getActorUserId, userId)
+            .eq(AgentRunRow::getConversationId, conversationId).eq(AgentRunRow::getUserId, userId)
+            .and(group -> group.in(ToolCallRow::getResourceKind, List.of("knowledge", "data"))
+                .or(workspace -> workspace.in(ToolCallRow::getResourceKind, List.of("agent", "workflow"))
+                    .in(ToolCallRow::getToolName, List.of("read_file", "grep_files", "list_files", "write_file", "edit_file",
+                        "execute", "export_file", "read_agent_spawn_result", "read_agent_send_result", "read_workflow_result"))))
+            .in(ToolCallRow::getStatus, List.of("succeeded", "failed"))
+            .orderByAsc(ToolCallRow::getCreatedAt).orderByAsc(ToolCallRow::getId);
+        return selectJoinList(ToolCallQueryRow.class, query);
+    }
 
     int prepareToolCall(@Param("id") String id, @Param("enterpriseId") String enterpriseId, @Param("id2") String id2,
                         @Param("currentAttemptNo") int currentAttemptNo, @Param("step") String step,

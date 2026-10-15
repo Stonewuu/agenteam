@@ -1,4 +1,6 @@
 {
+  "雇佣并对话": "Hire and chat",
+  "正在雇佣…": "Hiring…",
   "申请雇佣“{0}”，申请有效期为 7 天。": "Request approval to hire “{0}”. Your request expires after 7 days.",
   "雇佣“{0}”后，将出现在我的员工中。": "Hire “{0}” to add this AI employee to your workspace.",
   "暂停雇佣“{0}”后，将无法继续使用这位员工，已有对话记录保留。": "Pause “{0}” to stop using this AI employee. Your conversations will be kept.",

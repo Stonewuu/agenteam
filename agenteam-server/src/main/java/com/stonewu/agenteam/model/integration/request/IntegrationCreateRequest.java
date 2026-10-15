@@ -7,7 +7,15 @@ import java.util.Map;
  */
 public record IntegrationCreateRequest(String providerCode, String name, String externalTenantId,
                                        String externalAppId, String secret, Boolean bindingEnabled,
-                                       Boolean loginEnabled, Boolean messagingEnabled, Map<String, Object> configuration) {
+                                       Boolean loginEnabled, Boolean messagingEnabled, Map<String, Object> configuration,
+                                       String purpose) {
+    public IntegrationCreateRequest(String providerCode, String name, String externalTenantId,
+            String externalAppId, String secret, Boolean bindingEnabled, Boolean loginEnabled,
+            Boolean messagingEnabled, Map<String, Object> configuration) {
+        this(providerCode, name, externalTenantId, externalAppId, secret, bindingEnabled, loginEnabled,
+            messagingEnabled, configuration, null);
+    }
+
     @Override
     public String toString() {
         return "IntegrationCreateRequest[接入配置和密钥已隐藏]";

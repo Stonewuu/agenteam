@@ -1,9 +1,10 @@
-import type {Conversation} from "@/features/agent/types/execution";
+import type {Conversation, ConversationNavigationItem} from "@/features/agent/types/execution";
 import type {Employee} from "@/features/employee/types/employee";
 import type {Todo} from "@/features/todo/types/todo";
 
 export type HomeSummary = {
   recentConversations: Conversation[];
+  recentTasks?: ConversationNavigationItem[];
   todos: Todo[];
   employees: Employee[];
   openTodoCount: number;

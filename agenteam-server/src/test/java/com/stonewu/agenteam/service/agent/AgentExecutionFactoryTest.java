@@ -16,6 +16,7 @@ import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
+import com.stonewu.agenteam.model.execution.response.MessageView;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
 import com.stonewu.agenteam.model.user.entity.UserLanguage;
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
@@ -136,7 +137,12 @@ class AgentExecutionFactoryTest {
         var availableVersions = mock(ResourceVersionMapper.class);
         when(availableVersions.available(any(), any())).thenAnswer(invocation -> Set.copyOf(invocation.<List<String>>getArgument(1)));
         when(toolExecution.invoke(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any())).thenReturn(json.createObjectNode().put("text", "已查询自己的资料库"));
-        var factory = new AgentExecutionFactory(models, paths, encryption, json, lifecycle, savedRuns, mock(ExecutionMessageMapper.class), checkpoints,
+        var messages = mock(ExecutionMessageMapper.class);
+        when(messages.find("enterprise", "conversation", "input")).thenReturn(Optional.of(new MessageView("input", "run", 0,
+            "user", "初始任务", "completed", List.of(), List.of(), null, now.toString(), now.toString())));
+        when(messages.find("enterprise", "conversation", "input-next")).thenReturn(Optional.of(new MessageView("input-next", "next", 0,
+            "user", "后续任务", "completed", List.of(), List.of(), null, now.toString(), now.toString())));
+        var factory = new AgentExecutionFactory(models, paths, encryption, json, lifecycle, savedRuns, messages, checkpoints,
             new ExecutionToolCatalog(mock(PluginToolMapper.class), new SourceToolDefinitions(new ResourceJson(json)), new WorkspaceToolDefinitions(new ResourceJson(json),
                 new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions, mock(JavaPluginRegistry.class)), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
             new ProjectPromptService(mock(ProjectMetadataService.class), mock(ConversationProjectService.class), json), languages);
@@ -218,6 +224,17 @@ class AgentExecutionFactoryTest {
             }
             assertTrue(execution.states().get("user", "conversation", "agent_state", AgentState.class).isPresent());
             verify(lifecycle, atLeastOnce()).beforeExternalStep(lease);
+            var savedParent = execution.states().get("user", "conversation", "agent_state", AgentState.class).orElseThrow();
+            for (var child : savedParent.getToolContext().getSpawnRegistry().values()) {
+                var childState = execution.states().get("user", child.sessionId(), "agent_state", AgentState.class).orElseThrow();
+                var completeHistory = new ArrayList<>(childState.getContext());
+                for (int turn = 0; turn < 30; turn++) {
+                    completeHistory.add(Msg.builder().id("child-history-" + turn).role(MsgRole.USER).textContent("合成子任务补充 " + turn).build());
+                    completeHistory.add(Msg.builder().id("child-reply-" + turn).role(MsgRole.ASSISTANT).textContent("合成子任务结果 " + turn).build());
+                }
+                execution.states().save("user", child.sessionId(), "agent_state", AgentState.builder().userId("user")
+                    .sessionId(child.sessionId()).context(completeHistory).build());
+            }
             when(savedRuns.find("enterprise", "run", false)).thenReturn(Optional.of(run));
             when(savedRuns.latestTerminal("enterprise", "conversation")).thenReturn(Optional.of(run.id()));
             when(checkpoints.load(run)).thenReturn(execution.states());
@@ -228,6 +245,12 @@ class AgentExecutionFactoryTest {
             var nextStates = factory.store(next);
             factory.initializeHistory(next, nextStates);
             assertEquals(2, nextStates.get("user", "conversation", "agent_state", AgentState.class).orElseThrow().getToolContext().getSpawnRegistry().size(), "配置不变时保留各自的子会话");
+            for (var child : savedParent.getToolContext().getSpawnRegistry().values()) {
+                var previousContext = execution.states().get("user", child.sessionId(), "agent_state", AgentState.class).orElseThrow().getContext();
+                var nextContext = nextStates.get("user", child.sessionId(), "agent_state", AgentState.class).orElseThrow().getContext();
+                assertTrue(nextContext.size() > 60, "子智能体历史也不能按旧条数截断");
+                assertEquals(previousContext.stream().map(Msg::getId).toList(), nextContext.stream().map(Msg::getId).toList());
+            }
             nextSnapshot.put("workspaceProjectId", "second-project").put("workspaceProjectName", "新项目")
                 .put("workspaceProjectDirectory", "projects/second");
             try (var continued = factory.createScoped(next, lease, nextSnapshot.path("config"), "employee", "资料员工", "conversation",

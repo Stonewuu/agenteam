@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import org.junit.jupiter.api.Tag;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
@@ -21,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@Tag("external-process")
 class UserContainerOwnershipTest {
     @TempDir
     Path root;

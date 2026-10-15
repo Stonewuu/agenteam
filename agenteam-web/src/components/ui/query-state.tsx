@@ -43,7 +43,7 @@ export function QueryState({
     {state === "loading" ? loadingContent ??
       <LoadingState layout={loadingLayout}/> : state === "empty" && emptyContent ? emptyContent : !hasData ?
       <div className={styles.empty} data-query-empty>
-        <span className={styles.emptyIcon}>{error ? <IconAlertCircle size={27} variant="Bulk"/> :
+        <span className={styles.emptyIcon} data-icon-surface>{error ? <IconAlertCircle size={27} variant="Bulk"/> :
           <IconInbox size={27} variant="Bulk"/>}</span>
         {error ? <><p role="alert">{localizeUiMessage(error ?? "", uiText)}</p><Button className={styles.button}
                                                                                        type="button"

@@ -10,5 +10,6 @@ public record IntegrationView(String id, String enterpriseId, String providerCod
                               boolean bindingEnabled, boolean loginEnabled, boolean messagingEnabled,
                               boolean secretConfigured, String callbackUrl, String loginUrl,
                               String lastCheckStatus, String lastCheckedAt, String lastCheckError,
-                              String revision, String createdAt, String updatedAt, Map<String, Object> configuration) {
+                              String revision, String createdAt, String updatedAt, Map<String, Object> configuration,
+                              String purpose) {
 }

@@ -7,6 +7,7 @@ export type ChannelBinding = {
   status: "unbound" | "active" | "disabled";
   displayName: string | null;
   receiveEnabled: boolean;
+  chatEnabled: boolean;
   externalLoginEnabled: boolean;
   revision: string | null;
   bindingAvailable: boolean;
@@ -25,6 +26,8 @@ export type ChannelAuthorizationReview = {
   externalSubjectId: string;
   expiresAt: string;
   loginAvailable: boolean;
+  messagingAvailable: boolean;
+  chatAvailable: boolean;
 };
 
 export const channelsPath = (enterprise: string) => `/api/v1/enterprises/${encodeURIComponent(enterprise)}/me/channels`;

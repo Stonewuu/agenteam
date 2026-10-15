@@ -62,11 +62,10 @@ public class DocumentParserProcess {
             return sandbox.extract(file, current, timeout);
         }
         Path directory = null;
-        Process process = null;
         boolean retained = false;
         long deadline = System.nanoTime() + timeout.toNanos();
         try {
-            if (!Set.of("knowledge", "attachment", "data_import").contains(file.purpose())) {
+            if (!Set.of("knowledge", "attachment", "data_import", "collaboration_artifact").contains(file.purpose())) {
                 throw failure("FILE_TYPE_INVALID");
             }
             Files.createDirectories(root);
@@ -79,27 +78,8 @@ public class DocumentParserProcess {
             }
             Path source = directory.resolve("source.data");
             copySource(file, source, current, deadline);
-            var command = new ProcessBuilder(
-                command(directory, source, FileUploadPolicy.extension(file.originalName()))).directory(
-                    directory.toFile())
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD);
-            command.environment().keySet().removeIf(
-                name -> !Set.of("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "LC_ALL")
-                    .contains(name.toUpperCase(Locale.ROOT)));
-            process = command.start();
-            while (process.isAlive()) {
-                if (!current.getAsBoolean() || Thread.currentThread().isInterrupted()) {
-                    throw failure("FILE_PROCESSING_CANCELLED");
-                }
-                if (System.nanoTime() >= deadline) {
-                    throw failure("FILE_PROCESSING_TIMEOUT");
-                }
-                var output = directory.resolve(file.purpose().equals("data_import") ? "rows.jsonl" : "chunks.jsonl");
-                if (Files.exists(output) && Files.size(output) > DocumentChunkWriter.MAX_EXPANDED_BYTES) {
-                    throw failure("FILE_EXPANDED_TOO_LARGE");
-                }
-                process.waitFor(100, TimeUnit.MILLISECONDS);
-            }
+            int exitCode = executeParser(directory, source, FileUploadPolicy.extension(file.originalName()),
+                file.purpose(), current, deadline);
             if (!current.getAsBoolean()) {
                 throw failure("FILE_PROCESSING_CANCELLED");
             }
@@ -108,7 +88,7 @@ public class DocumentParserProcess {
                 throw failure("FILE_TYPE_INVALID");
             }
             var result = json.readValue(status.toFile(), DocumentParserMain.Result.class);
-            if (process.exitValue() != 0 || !result.success()) {
+            if (exitCode != 0 || !result.success()) {
                 throw failure(result.errorCode());
             }
             if (file.purpose().equals("data_import")) {
@@ -127,6 +107,41 @@ public class DocumentParserProcess {
         } catch (IOException unavailable) {
             throw FileStorageKeys.storageUnavailable(unavailable);
         } finally {
+            if (directory != null && !retained) {
+                ParsedDocument.cleanup(directory);
+            }
+        }
+    }
+
+    /**
+     * 隔离进程执行与格式解析分开，业务接口测试可复用真实解析实现。
+     */
+    protected int executeParser(Path directory, Path source, String format, String purpose,
+                                BooleanSupplier current, long deadline) throws IOException, InterruptedException {
+        Process process = null;
+        try {
+            var command = new ProcessBuilder(command(directory, source, format)).directory(directory.toFile())
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD);
+            command.environment().keySet().removeIf(
+                name -> !Set.of("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "LC_ALL")
+                    .contains(name.toUpperCase(Locale.ROOT)));
+            process = command.start();
+            process.getOutputStream().close();
+            while (process.isAlive()) {
+                if (!current.getAsBoolean() || Thread.currentThread().isInterrupted()) {
+                    throw failure("FILE_PROCESSING_CANCELLED");
+                }
+                if (System.nanoTime() >= deadline) {
+                    throw failure("FILE_PROCESSING_TIMEOUT");
+                }
+                var output = directory.resolve(purpose.equals("data_import") ? "rows.jsonl" : "chunks.jsonl");
+                if (Files.exists(output) && Files.size(output) > DocumentChunkWriter.MAX_EXPANDED_BYTES) {
+                    throw failure("FILE_EXPANDED_TOO_LARGE");
+                }
+                process.waitFor(100, TimeUnit.MILLISECONDS);
+            }
+            return process.exitValue();
+        } finally {
             if (process != null && process.isAlive()) {
                 process.descendants().forEach(ProcessHandle::destroyForcibly);
                 process.destroyForcibly();
@@ -140,9 +155,6 @@ public class DocumentParserProcess {
                         Thread.currentThread().interrupt();
                     }
                 }
-            }
-            if (directory != null && !retained) {
-                ParsedDocument.cleanup(directory);
             }
         }
     }

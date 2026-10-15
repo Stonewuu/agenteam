@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.mapper.resource;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.agent.AgentListingMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
@@ -19,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -89,7 +92,7 @@ public class ResourceViewMapper {
     public ResourceDetailView detail(AuthContext actor, ResourceRecord resource) {
         List<ResourceGrantSpec> visibleGrants = policy.grantManager(actor, resource) ? grants.grants(
             actor.enterpriseId(), resource.id()) : List.of();
-        return new ResourceDetailView(summary(actor, resource), json.object(
+        return new ResourceDetailView(summary(actor, resource), configuration(
             resource.kind() == ResourceKind.PLUGIN ? pluginConfigs.normalize(actor.enterpriseId(),
                 resource.config()) : resource.config()), visibleGrants, configurations.errors(resource),
             connectionChecks.lastResult(resource));
@@ -108,7 +111,13 @@ public class ResourceViewMapper {
                 }
             }
         }
-        return new ResourceVersionView(version(version), json.object(version.config()), List.copyOf(visible));
+        return new ResourceVersionView(version(version), configuration(version.config()), List.copyOf(visible));
+    }
+
+    private Map<String, Object> configuration(JsonNode config) {
+        var result = new LinkedHashMap<>(json.object(config));
+        result.remove("historyMessageLimit");
+        return result;
     }
 
     public VersionSummaryView version(ResourceVersionRecord version) {

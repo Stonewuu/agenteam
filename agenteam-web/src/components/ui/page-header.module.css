@@ -108,8 +108,15 @@
   width: calc(48px - 16px * var(--header-progress));
   height: calc(48px - 16px * var(--header-progress));
   border-radius: calc(14px - 5px * var(--header-progress));
-  color: var(--accent-text);
-  background: var(--accent-soft);
+  color: var(--icon-tone-color, var(--accent-text));
+  background: color-mix(in srgb, currentColor 12%, var(--surface));
+}
+
+@media (forced-colors: active) {
+  .menuIcon {
+    color: CanvasText;
+    background: Canvas;
+  }
 }
 
 .menuIcon > svg {
@@ -217,6 +224,33 @@
   flex: 0 0 auto;
   max-width: 60%;
   margin-top: 0;
+}
+
+.frame[data-inline-metadata=true] .titleLine[data-has-metadata=true] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: auto;
+}
+
+.frame[data-inline-metadata=true] .titleLine[data-has-metadata=true] .title {
+  flex-shrink: 0;
+  width: auto;
+  transform: none;
+}
+
+.frame[data-inline-metadata=true] .metadata {
+  position: static;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  margin-top: 0;
+  transform: none;
+}
+
+.frame[data-inline-metadata=true][data-measuring-compact=true] .metadata {
+  flex: 0 1 auto;
+  max-width: none;
 }
 
 .actions {

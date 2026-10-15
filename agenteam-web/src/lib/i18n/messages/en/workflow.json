@@ -134,5 +134,8 @@
   "选择输入或步骤结果…": "Choose an input or step result…",
   "部分步骤未成功": "Some steps did not succeed",
   "重新读取步骤": "Reload steps",
-  "重新读取结果": "Reload results"
+  "重新读取结果": "Reload results",
+  "工作流当前不可用": "Workflows unavailable",
+  "当前不可用": "Currently unavailable",
+  "当前无法使用工作流。你可以在智能体中选择“对话型”或“任务型”继续工作。": "Workflows are currently unavailable. Choose a chat or task agent to continue."
 }

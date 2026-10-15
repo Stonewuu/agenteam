@@ -16,7 +16,7 @@ public final class IsolatedDatabase implements AutoCloseable {
     private final IsolatedDatabaseName name;
     private final String url;
     private final String password;
-    private final MybatisTestDatabase administration;
+    private MybatisTestDatabase administration;
     private MybatisTestDatabase access;
 
     public IsolatedDatabase() throws SQLException {
@@ -25,7 +25,7 @@ public final class IsolatedDatabase implements AutoCloseable {
         password = mysql.getPassword();
         String rootUrl = mysql.getJdbcUrl();
         url = rootUrl.replace("/" + mysql.getDatabaseName(), "/" + name.value());
-        administration = new MybatisTestDatabase(new DriverManagerDataSource(rootUrl, "root", password));
+        administration = MybatisTestDatabase.administration(new DriverManagerDataSource(rootUrl, "root", password));
         administration.mapper(TestDatabaseAdministrationMapper.class).createDatabase(name);
     }
 
@@ -47,6 +47,13 @@ public final class IsolatedDatabase implements AutoCloseable {
 
     @Override
     public void close() throws SQLException {
-        administration.mapper(TestDatabaseAdministrationMapper.class).dropDatabase(name);
+        if (administration != null) {
+            try {
+                administration.mapper(TestDatabaseAdministrationMapper.class).dropDatabase(name);
+            } finally {
+                administration = null;
+                access = null;
+            }
+        }
     }
 }

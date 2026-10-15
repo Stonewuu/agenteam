@@ -74,9 +74,6 @@ export function AgentConfigForm({
       next.subagentVersionIds = [];
       next.dynamicSubagentEnabled = false;
     }
-    if (typeChange === "task") {
-      next.historyMessageLimit = 0;
-    }
     onChange(next);
     setTypeChange(null);
   };
@@ -89,8 +86,8 @@ export function AgentConfigForm({
         onChange={(event) => setTypeChange(event.target.value as AgentConfig["agentType"])}>
         <option value="chat">{uiText("对话型")}</option>
         <option value="task">{uiText("任务型")}</option>
-        <option value="workflow"
-                disabled={workflowInDevelopment}>{workflowInDevelopment ? uiText("流程型（开发中）") : uiText("流程型")}</option>
+        {(!workflowInDevelopment || value.agentType === "workflow") && <option value="workflow"
+                disabled={workflowInDevelopment}>{workflowInDevelopment ? uiText("流程型（当前不可用）") : uiText("流程型")}</option>}
       </Select></label>
         {value.agentType !== "workflow" &&
           <QueryState {...profiles} hasData={Boolean(profiles.data?.length)}
@@ -147,7 +144,7 @@ export function AgentConfigForm({
         ["skill", uiText("技能"), "skillVersionIds", 20], ["plugin", uiText("插件"), "pluginVersionIds", 20], ["knowledge", uiText("知识库"), "knowledgeVersionIds", 10],
         ["data", uiText("数据源"), "dataVersionIds", 10], ["workflow", uiText("工作流"), "workflowVersionIds", 5],
       ] as const).map(([kind, title, field, maximum]) => kind === "workflow" && workflowInDevelopment ?
-        <WorkflowDevelopmentNotice key={kind}/> :
+        (value.agentType === "workflow" || value.workflowVersionIds.length > 0 ? <WorkflowDevelopmentNotice key={kind}/> : null) :
         <VersionPicker key={kind} enterpriseId={enterpriseId} kind={kind} title={title} selected={value[field]}
                        onChange={(selected) => {
                          const next = {...value, [field]: selected};
@@ -171,10 +168,6 @@ export function AgentConfigForm({
       <label className={ui.check}><Checkbox checked={value.attachmentsEnabled}
                                             onCheckedChange={(checked) => set("attachmentsEnabled", checked)}/>{uiText("  允许用户附加资料")}
       </label>
-      {value.agentType === "chat" && <NumberField label={uiText("带入的历史消息条数")} name="config.historyMessageLimit"
-                                                  value={value.historyMessageLimit} min={0} max={100}
-                                                  onChange={(value) => set("historyMessageLimit", value)}
-                                                  errors={errors}/>}
     </Section>}
     {(!section || section === "advanced") && <Section title={uiText("执行设置")}>
       {model?.capabilities.supportsTemperature &&
@@ -216,7 +209,7 @@ export function AgentConfigForm({
                           errors={errors}/>
     </Section>}
     {typeChange && <Dialog title={uiText("切换智能体类型？")} onClose={() => setTypeChange(null)}><p
-      className={ui.description}>{typeChange === "workflow" ? uiText("切换为流程型后，将清除默认模型、思考强度、回复变化程度和子智能体设置，并使用选定工作流。") : typeChange === "task" ? uiText("切换为任务型后，将清除入口工作流设置，并设为不带入历史消息。") : uiText("切换为对话型后，将清除入口工作流设置。")}</p>
+      className={ui.description}>{typeChange === "workflow" ? uiText("切换为流程型后，将清除默认模型、思考强度、回复变化程度和子智能体设置，并使用选定工作流。") : typeChange === "task" ? uiText("切换为任务型后，将清除入口工作流设置。") : uiText("切换为对话型后，将清除入口工作流设置。")}</p>
       <DialogActions className={ui.footer}><DialogCancel
         className={ui.button}>{uiText("取消")}</DialogCancel><DialogAction className={ui.primary}
                                                                            onAction={(close) => close(switchType)}>{uiText("确认切换")}</DialogAction></DialogActions></Dialog>}

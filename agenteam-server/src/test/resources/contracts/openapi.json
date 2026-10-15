@@ -5413,6 +5413,16 @@
               "minimum": 1,
               "maximum": 100
             }
+          },
+          {
+            "name": "unboundBotOnly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "仅查询尚未关联岗位机器人的配置。"
           }
         ],
         "security": [
@@ -8120,6 +8130,16 @@
               "minimum": 1,
               "maximum": 100
             }
+          },
+          {
+            "name": "unboundBotOnly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "仅查询尚未关联岗位机器人的配置。"
           }
         ],
         "security": [
@@ -51509,6 +51529,467 @@
           }
         }
       }
+    },
+    "/enterprises/{enterpriseId}/conversations/navigation": {
+      "get": {
+        "operationId": "listConversationNavigation",
+        "summary": "按任务分页查询本人对话入口",
+        "description": "协作岗位对话按任务合并后分页，任务名称保持加密保存并在本人可见范围内搜索；分页位置绑定账号、企业和筛选。",
+        "x-permissions": [
+          "conversation.view"
+        ],
+        "x-tables": [
+          "agent_conversation"
+        ],
+        "x-feature-ids": [
+          "F06"
+        ],
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "description": "服务端返回的分页位置，不得跨用户、企业或筛选复用"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "默认 30，最大 100"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 100
+            },
+            "description": "名称或标题包含查询，先应用权限范围"
+          },
+          {
+            "name": "agentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "按员工身份筛选"
+          },
+          {
+            "name": "favorite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "仅收藏"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "enum": [
+                "active",
+                "archived",
+                "deleted"
+              ]
+            },
+            "description": "默认 active，删除数据仅本人恢复期可读摘要"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "standalone",
+                "collaboration"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功，字段和权限以本操作声明为准",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ConversationNavigationItem"
+                          },
+                          "maxItems": 100,
+                          "minItems": 0
+                        },
+                        "nextCursor": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "items",
+                        "nextCursor",
+                        "hasMore"
+                      ]
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprises/{enterpriseId}/conversations/{conversationId}/navigation": {
+      "get": {
+        "operationId": "getConversationNavigation",
+        "summary": "读取当前岗位所属任务与可查看的岗位对话",
+        "description": "必须验证已认证用户、路径企业、实际数据范围及本操作权限，按分册规定处理状态、重复请求和并发修改。",
+        "x-permissions": [
+          "conversation.view"
+        ],
+        "x-tables": [
+          "agent_conversation",
+          "agent_message",
+          "agent_run"
+        ],
+        "x-feature-ids": [
+          "F06"
+        ],
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功，字段和权限以本操作声明为准",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ConversationNavigationItem"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -52068,6 +52549,9 @@
           },
           "externalLoginEnabled": {
             "type": "boolean"
+          },
+          "chatEnabled": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -52084,6 +52568,9 @@
             "type": "boolean"
           },
           "externalLoginEnabled": {
+            "type": "boolean"
+          },
+          "chatEnabled": {
             "type": "boolean"
           }
         },
@@ -52174,6 +52661,10 @@
           },
           "messagingAvailable": {
             "type": "boolean"
+          },
+          "chatEnabled": {
+            "type": "boolean",
+            "description": "成员是否明确允许此应用账号发起聊天任务；与通知、外部登录分开控制。"
           }
         },
         "required": [
@@ -52189,7 +52680,8 @@
           "revision",
           "bindingAvailable",
           "loginAvailable",
-          "messagingAvailable"
+          "messagingAvailable",
+          "chatEnabled"
         ],
         "additionalProperties": false
       },
@@ -52263,6 +52755,12 @@
           },
           "loginAvailable": {
             "type": "boolean"
+          },
+          "chatAvailable": {
+            "type": "boolean"
+          },
+          "messagingAvailable": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -52275,7 +52773,9 @@
           "externalDisplayName",
           "externalSubjectId",
           "expiresAt",
-          "loginAvailable"
+          "loginAvailable",
+          "chatAvailable",
+          "messagingAvailable"
         ],
         "additionalProperties": false
       },
@@ -52620,6 +53120,13 @@
                 "type": "null"
               }
             ]
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "enterprise",
+              "chat_bot"
+            ]
           }
         },
         "required": [
@@ -52697,14 +53204,30 @@
             "type": "boolean"
           },
           "callbackUrl": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4096
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "企微专用智能机器人不提供外部登录时为空。"
           },
           "loginUrl": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 4096
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "企微专用智能机器人不提供外部登录时为空。"
           },
           "lastCheckStatus": {
             "type": "string",
@@ -52760,6 +53283,13 @@
             },
             "required": [],
             "additionalProperties": false
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "enterprise",
+              "chat_bot"
+            ]
           }
         },
         "required": [
@@ -55391,11 +55921,6 @@
               }
             ]
           },
-          "historyMessageLimit": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          },
           "memoryEnabled": {
             "type": "boolean"
           },
@@ -55484,7 +56009,6 @@
           "dataVersionIds",
           "workflowVersionIds",
           "entryWorkflowVersionId",
-          "historyMessageLimit",
           "memoryEnabled",
           "memoryFields",
           "businessTerms",
@@ -60810,6 +61334,14 @@
                 "type": "null"
               }
             ]
+          },
+          "collaborationTaskId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100,
+            "description": "所属协作总任务编号；普通对话为空。岗位会话的补充和重试通过总任务处理。"
           }
         },
         "additionalProperties": false,
@@ -60830,7 +61362,8 @@
           "canContinue",
           "unavailableReason",
           "approvalPolicy",
-          "projectId"
+          "projectId",
+          "collaborationTaskId"
         ]
       },
       "ConversationUpdate": {
@@ -63508,6 +64041,13 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 1000000000
+          },
+          "recentTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationNavigationItem"
+            },
+            "maxItems": 3
           }
         },
         "additionalProperties": false,
@@ -63516,7 +64056,8 @@
           "todos",
           "employees",
           "openTodoCount",
-          "enabledScheduleCount"
+          "enabledScheduleCount",
+          "recentTasks"
         ],
         "description": "同次读取本人内容。待办只计本人负责且可查看和处理的未完成项；没有团队查看权限不包含团队项。员工先排除无效使用资格，再按最近使用和最近雇佣排序。无对应权限返回空集合或零，页面隐藏该区域。"
       },
@@ -63984,7 +64525,14 @@
         "properties": {
           "pluginTypes": {
             "type": "array",
-            "items": { "type": "string", "enum": ["builtin", "mcp", "java"] },
+            "items": {
+              "type": "string",
+              "enum": [
+                "builtin",
+                "mcp",
+                "java"
+              ]
+            },
             "maxItems": 3,
             "uniqueItems": true
           },
@@ -64537,11 +65085,6 @@
               }
             ]
           },
-          "historyMessageLimit": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          },
           "memoryEnabled": {
             "type": "boolean"
           },
@@ -64630,7 +65173,6 @@
           "dataVersionIds",
           "workflowVersionIds",
           "entryWorkflowVersionId",
-          "historyMessageLimit",
           "memoryEnabled",
           "memoryFields",
           "businessTerms",
@@ -69091,6 +69633,168 @@
           }
         },
         "description": "按所选协议验证原生思考参数、缓存及计量能力。旧配置未提供时保留 OpenAI 兼容默认值。"
+      },
+      "ConversationNavigationRole": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "conversationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "conversationId",
+          "agentId",
+          "status",
+          "icon",
+          "color"
+        ],
+        "additionalProperties": false
+      },
+      "ConversationNavigationGroup": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "shortCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "ownerConversationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationNavigationRole"
+            },
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "taskId",
+          "shortCode",
+          "title",
+          "status",
+          "ownerConversationId",
+          "roles"
+        ],
+        "additionalProperties": false
+      },
+      "ConversationNavigationItem": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "favorite": {
+            "type": "boolean"
+          },
+          "conversation": {
+            "$ref": "#/components/schemas/Conversation"
+          },
+          "collaboration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationNavigationGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "matchedRole": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "updatedAt",
+          "favorite",
+          "conversation",
+          "collaboration",
+          "matchedRole"
+        ],
+        "additionalProperties": false
       }
     }
   },

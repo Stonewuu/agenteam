@@ -99,8 +99,8 @@ export function AgentPreview({enterpriseId, resource, draft, saving}: {
   }
 
   return <>
-    <Button className={ui.button} type="button" disabled={saving || workflow && workflowInDevelopment}
-            onClick={() => setOpen(true)}>{workflow ? workflowInDevelopment ? uiText("工作流预览（开发中）") : uiText("预览流程员工") : uiText("预览与对比")}</Button>
+    {!(workflow && workflowInDevelopment) && <Button className={ui.button} type="button" disabled={saving}
+            onClick={() => setOpen(true)}>{workflow ? uiText("预览流程员工") : uiText("预览与对比")}</Button>}
     {open && !(workflow && workflowInDevelopment) &&
       <Dialog title={workflow ? uiText("预览流程员工") : uiText("预览与模型对比")} onClose={() => setOpen(false)}
               busy={busy} wide>

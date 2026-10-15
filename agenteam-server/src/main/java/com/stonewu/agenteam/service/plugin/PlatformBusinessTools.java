@@ -20,6 +20,7 @@ import com.stonewu.agenteam.service.todo.TodoManagementService;
 import com.stonewu.agenteam.service.todo.TodoQueryService;
 import com.stonewu.agenteam.service.todo.TodoSelectionService;
 import com.stonewu.agenteam.service.workspace.WorkspaceSearchService;
+import com.stonewu.agenteam.service.collaboration.CollaborationToolService;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -47,6 +48,7 @@ public class PlatformBusinessTools {
     private final Clock clock;
     private final ScheduleSelectionService scheduleSelections;
     private final ScheduleOccurrenceCancellation cancellations;
+    private final CollaborationToolService collaboration;
 
     public PlatformBusinessTools(TodoManagementService todos, TodoQueryService todoQueries,
                                  TodoSelectionService selections,
@@ -54,7 +56,8 @@ public class PlatformBusinessTools {
                                  ScheduleTimePreviewService times, ScheduleTriggerService triggers,
                                  EmployeeQueryService employees, WorkspaceSearchService search,
                                  EnterpriseMapper enterprises, PlatformToolInputMapper input, ResourceJson json,
-                                 Clock clock, ScheduleSelectionService scheduleSelections, ScheduleOccurrenceCancellation cancellations) {
+                                 Clock clock, ScheduleSelectionService scheduleSelections, ScheduleOccurrenceCancellation cancellations,
+                                 CollaborationToolService collaboration) {
         this.todos = todos;
         this.todoQueries = todoQueries;
         this.selections = selections;
@@ -70,9 +73,13 @@ public class PlatformBusinessTools {
         this.clock = clock;
         this.scheduleSelections = scheduleSelections;
         this.cancellations = cancellations;
+        this.collaboration = collaboration;
     }
 
     public JsonNode call(BuiltinExecutionContext context, String name, JsonNode args) {
+        if (name.startsWith("collab_")) {
+            return collaboration.call(context, name, args);
+        }
         var actor = context.actor();
         String query = input.text(args, "query"), cursor = input.text(args, "cursor");
         int limit = input.limit(args);

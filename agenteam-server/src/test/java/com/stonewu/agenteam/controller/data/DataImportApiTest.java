@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.data;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -49,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Import({SharedEnterpriseTestEdition.class, DataImportApiTest.HttpsClientConfiguration.class})
+@Import({SharedEnterpriseTestEdition.class, DataImportApiTest.HttpsClientConfiguration.class, InProcessDocumentParsing.class})
 class DataImportApiTest extends DataImportApiTestSupport {
 
     @Test

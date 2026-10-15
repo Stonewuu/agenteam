@@ -5,6 +5,7 @@ import {usePathname, useRouter} from "next/navigation";
 import type {EnterpriseContext} from "@/features/auth/types/identity";
 import {useConversationList} from "../hooks/use-conversation-list";
 import {useFileSidebarOpen} from "../hooks/use-file-sidebar-open";
+import type {Conversation} from "../types/execution";
 
 type NavigationState = {
   collapsed: boolean; setCollapsed: (value: boolean) => void;
@@ -13,6 +14,7 @@ type NavigationState = {
   mobile: boolean; mobileListOpen: boolean; setMobileListOpen: (value: boolean) => void;
   list: ReturnType<typeof useConversationList>; context: EnterpriseContext;
   startNewTask: () => void; registerNewTaskAction: (action: () => void) => () => void;
+  currentConversation: Conversation | null; setCurrentConversation: (value: Conversation | null) => void;
 };
 const ConversationNavigationContext = createContext<NavigationState | null>(null);
 const mobileQuery = "(max-width: 800px)";
@@ -29,6 +31,7 @@ export function ConversationNavigationProvider({context, children}: {
   children: ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [fileSidebarOpen, setFileSidebarOpen] = useFileSidebarOpen(context.member.userId, context.enterprise.id);
   const [fileSidebarTab, setFileSidebarTab] = useState("files");
   const [mobileListFor, setMobileListFor] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function ConversationNavigationProvider({context, children}: {
     }
   }, [context.enterprise.id, router]);
   const mobile = useSyncExternalStore(subscribeMobile, readMobile, () => false);
-  const list = useConversationList(context.enterprise.id, context.permissions.includes("conversation.view"));
+  const list = useConversationList(context.enterprise.id, context.permissions.includes("conversation.view"), context.member.userId);
   return <ConversationNavigationContext.Provider value={{
     collapsed,
     setCollapsed,
@@ -65,7 +68,9 @@ export function ConversationNavigationProvider({context, children}: {
     list,
     context,
     startNewTask,
-    registerNewTaskAction
+    registerNewTaskAction,
+    currentConversation,
+    setCurrentConversation
   }}>{children}</ConversationNavigationContext.Provider>;
 }
 

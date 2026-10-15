@@ -58,6 +58,15 @@ public class IntegrationManagementService {
     public IntegrationView create(UserEntity actor, String enterprise, boolean system, IntegrationCreateRequest input) {
         policy.require(actor, enterprise, system, "integration.manage", true);
         var provider = providers.require(input.providerCode());
+        String purpose = input.purpose() == null ? (input.providerCode().equals("wecom_aibot") ? "chat_bot" : "enterprise") : input.purpose();
+        if (!Set.of("enterprise", "chat_bot").contains(purpose)
+            || purpose.equals("chat_bot") && !Set.of("feishu", "wecom_aibot").contains(input.providerCode())
+            || purpose.equals("enterprise") && input.providerCode().equals("wecom_aibot")) {
+            throw ApiException.invalidField("purpose", "请选择平台支持的企业接入或机器人接入。");
+        }
+        if (purpose.equals("chat_bot") && (Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
+            throw ApiException.invalidField("purpose", "机器人接入不用于企业登录或个人通知，请在企业接入中配置这些功能。");
+        }
         String app = identifier(input.externalAppId(), "externalAppId", true);
         String tenant = identifier(input.externalTenantId(), "externalTenantId",
             provider.publicFields().stream().anyMatch(field -> field.name().equals("externalTenantId") && field.required()));
@@ -66,6 +75,7 @@ public class IntegrationManagementService {
         row.setId(UUID.randomUUID().toString());
         row.setEnterpriseId(enterprise);
         row.setProviderCode(input.providerCode());
+        row.setPurpose(purpose);
         row.setConfigJson(configuration.encode(row.getProviderCode(), input.configuration()));
         row.setName(ResourceInput.text(input.name(), "name", 80, true));
         row.setExternalAppId(app);
@@ -73,6 +83,13 @@ public class IntegrationManagementService {
         row.setBindingEnabled(Boolean.TRUE.equals(input.bindingEnabled()));
         row.setLoginEnabled(Boolean.TRUE.equals(input.loginEnabled()));
         row.setMessagingEnabled(Boolean.TRUE.equals(input.messagingEnabled()));
+        if (input.providerCode().equals("wecom_aibot")) {
+            row.setIdentityScope("bot");
+            row.setExternalTenantId(null);
+            row.setBindingEnabled(false);
+            row.setLoginEnabled(false);
+            row.setMessagingEnabled(false);
+        }
         row.setPublicLoginKey(UUID.randomUUID().toString().replace("-", ""));
         row.setCreatedBy(actor.id());
         row.setUpdatedBy(actor.id());
@@ -92,6 +109,13 @@ public class IntegrationManagementService {
     public IntegrationView update(UserEntity actor, String enterprise, boolean system, String id,
                                    long revision, IntegrationUpdateRequest input) {
         var row = current(actor, enterprise, system, id, revision, "integration.manage");
+        if ("chat_bot".equals(row.getPurpose()) && (Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
+            throw ApiException.invalidField("loginEnabled", "机器人接入不用于企业登录或个人通知，请在企业接入中配置这些功能。");
+        }
+        if ("bot".equals(row.getIdentityScope()) && (Boolean.TRUE.equals(input.bindingEnabled())
+            || Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
+            throw ApiException.invalidField("providerCode", "企微智能机器人仅支持聊天配对，不能用于登录或个人通知。");
+        }
         var changes = changes(row, actor);
         if (input.name() != null) {
             changes.set(EnterpriseIntegrationRow::getName, ResourceInput.text(input.name(), "name", 80, true));
@@ -136,7 +160,7 @@ public class IntegrationManagementService {
             throw ApiException.invalidField("status", "请选择启用或停用接入。");
         }
         if (status.equals("enabled") && (!row.getLastCheckStatus().equals("passed") || row.getIdentityVerifiedAt() == null
-            || row.getExternalTenantId() == null || !secrets.configured(enterprise, id))) {
+            || row.getExternalTenantId() == null && !"bot".equals(row.getIdentityScope()) || !secrets.configured(enterprise, id))) {
             throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_CHECK_REQUIRED", "请先校验当前应用密钥与配置，再启用接入。");
         }
         save(row, changes(row, actor).set(EnterpriseIntegrationRow::getStatus, status));

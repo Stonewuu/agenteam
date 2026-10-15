@@ -41,7 +41,16 @@ public final class MybatisTestDatabase {
     }
 
     public MybatisTestDatabase(DataSource dataSource) {
-        this.factory = createFactory(dataSource);
+        this(dataSource, false);
+    }
+
+    /** 创建和删除测试库只需要管理映射，不重复加载全部业务模型。 */
+    public static MybatisTestDatabase administration(DataSource dataSource) {
+        return new MybatisTestDatabase(dataSource, true);
+    }
+
+    private MybatisTestDatabase(DataSource dataSource, boolean administrationOnly) {
+        this.factory = createFactory(dataSource, administrationOnly);
         if (dataSource instanceof SingleConnectionDataSource single) {
             try {
                 this.direct = factory.openSession(single.getConnection());
@@ -85,7 +94,7 @@ public final class MybatisTestDatabase {
         }
     }
 
-    private static SqlSessionFactory createFactory(DataSource source) {
+    private static SqlSessionFactory createFactory(DataSource source, boolean administrationOnly) {
         try {
             var configuration = new MybatisConfiguration();
             MybatisPersistenceConfiguration.configure(configuration);
@@ -96,11 +105,16 @@ public final class MybatisTestDatabase {
             }
             factory.setConfiguration(configuration);
             factory.setGlobalConfig(new GlobalConfig().setBanner(false).setDbConfig(new GlobalConfig.DbConfig()).setSqlInjector(new MPJSqlInjector()));
-            factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:/mapper/**/*.xml"));
+            String mapperPattern = administrationOnly
+                ? "classpath*:/mapper/test/support/TestDatabaseAdministrationMapper.xml" : "classpath*:/mapper/**/*.xml";
+            factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources(mapperPattern));
             factory.setPlugins(new MybatisPaginationConfiguration().mybatisPlusInterceptor(),
                 new QueryTimeoutInterceptor(), new DataQueryControlInterceptor(), new MPJInterceptor());
             factory.afterPropertiesSet();
             SqlSessionFactory result = factory.getObject();
+            if (administrationOnly) {
+                return result;
+            }
             var resolver = new ResolverUtil<Object>();
             resolver.find(new ResolverUtil.IsA(Object.class), "com.stonewu.agenteam.mapper");
             for (Class<?> type : resolver.getClasses()) {

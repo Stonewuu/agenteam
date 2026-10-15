@@ -49,9 +49,10 @@ public class IntegrationApiService {
         this.providers = providers;
     }
 
-    public PageResponse<IntegrationView> list(String enterprise, String cursor, Integer limit, HttpServletRequest request) {
+    public PageResponse<IntegrationView> list(String enterprise, String cursor, Integer limit, String purpose, String providerCode,
+                                             boolean unboundBotOnly, HttpServletRequest request) {
         requireScope(enterprise, request);
-        return queries.list(identity.requireUser(request.getSession(false)), enterprise, system(request), cursor, limit);
+        return queries.list(identity.requireUser(request.getSession(false)), enterprise, system(request), cursor, limit, purpose, providerCode, unboundBotOnly);
     }
 
     public List<IntegrationProviderView> providers(String enterprise, HttpServletRequest request) {

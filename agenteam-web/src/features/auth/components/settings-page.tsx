@@ -20,10 +20,11 @@ import {PasswordSettings, ProfileSettings, ThemeSettings, WorkPreferencesSetting
 import {errorMessage} from "@/lib/http/api-client";
 import {Tabs} from "@/components/ui/tabs";
 import {MotionPanel} from "@/components/ui/motion-panel";
-import {IconBell, IconBookmark, IconLanguage, IconLock, IconPlug, IconSun, IconUser} from "@/components/ui/icons";
+import {IconBell, IconBookmark, IconLanguage, IconLock, IconMessages, IconPlug, IconSun, IconUser} from "@/components/ui/icons";
 import {useEnterpriseIdentity} from "./enterprise-gate";
 import {LocalReauthentication} from "./local-reauthentication";
 import {ChannelSettingsPanel} from "@/features/integration/components/channel-settings-panel";
+import {ReplyPreferencesPanel} from "@/features/chat/components/reply-preferences-panel";
 import {LanguageSettings} from "./language-settings";
 import {SavedMemorySettings} from "@/features/memory/components/saved-memory-settings";
 import {editionClientExtension} from "@/features/edition/client-extension";
@@ -31,7 +32,8 @@ import Link from "next/link";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./settings.module.css";
 
-const sections = [{value: "profile", label: "个人资料", icon: IconUser}, {value: "channels", label: "企业账号绑定", icon: IconPlug}, {
+const sections = [{value: "profile", label: "个人资料", icon: IconUser}, {value: "channels", label: "企业账号绑定", icon: IconPlug},
+  {value: "robot-chat", label: "机器人聊天", icon: IconMessages}, {
   value: "security",
   label: "账号安全",
   icon: IconLock
@@ -62,6 +64,8 @@ export function SettingsPage() {
   const [creatingEnterprise, setCreatingEnterprise] = useState(false);
   const [reauthenticate, setReauthenticate] = useState(false);
   const enterpriseId = enterpriseIdentity?.context.enterprise.id ?? user?.lastEnterpriseId;
+  const requestedReplyEnterprise = params.get("enterprise");
+  const replyEnterprise = user?.enterprises.some((value) => value.id === requestedReplyEnterprise) ? requestedReplyEnterprise : enterpriseId;
   useEffect(() => {
     const refreshIdentity = () => setRefresh((value) => value + 1);
     window.addEventListener("agenteam:identity-changed", refreshIdentity);
@@ -119,7 +123,9 @@ export function SettingsPage() {
         <MotionPanel value={tab} className={styles.panel}>
           {tab === "channels" && (enterpriseId ? <ChannelSettingsPanel key={enterpriseId} enterpriseId={enterpriseId} superAdmin={user.superAdmin}/>
             : <p>{uiText("请先加入企业，再绑定企业账号。")}</p>)}
-          <div hidden={tab === "channels"}>{user.authenticationMethod === "channel" ?
+          {tab === "robot-chat" && (replyEnterprise ? <ReplyPreferencesPanel key={replyEnterprise} enterpriseId={replyEnterprise}
+            selectedConversation={params.get("conversation")}/> : <p>{uiText("请先加入企业，再使用机器人聊天。")}</p>)}
+          <div hidden={tab === "channels" || tab === "robot-chat"}>{user.authenticationMethod === "channel" ?
             <div className={ui.form}><p>{uiText("修改个人设置前，请验证当前账号密码。")}</p>
               <Button onClick={() => setReauthenticate(true)}>{uiText("验证账号密码")}</Button></div> : <>
           <div hidden={tab !== "profile"}><ProfileSettings user={user} onChange={changed}/></div>

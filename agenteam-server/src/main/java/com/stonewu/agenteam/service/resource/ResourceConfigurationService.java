@@ -53,7 +53,7 @@ public class ResourceConfigurationService {
     public JsonNode draft(ResourceKind kind, Object value) {
         JsonNode config = json.checkedSize(json.tree(value));
         if (kind == ResourceKind.AGENT && config instanceof ObjectNode object) {
-            object.remove(List.of("researchSubagentEnabled", "subagents"));
+            object.remove(List.of("researchSubagentEnabled", "subagents", "historyMessageLimit"));
         }
         validators.get(kind).draft(config);
         return config;

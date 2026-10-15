@@ -10,6 +10,7 @@ import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.knowledge.KnowledgeFileAccess;
 import com.stonewu.agenteam.service.project.ProjectInputFileService;
 import com.stonewu.agenteam.service.skill.SkillExportService;
+import com.stonewu.agenteam.service.collaboration.CollaborationFileAuthorization;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -30,12 +31,13 @@ public class FileAccessService {
     private final PublicJobMapper jobs;
     private final ExportAccessService dataExports;
     private final ProjectInputFileService projectInputs;
+    private final CollaborationFileAuthorization collaboration;
 
     public FileAccessService(FileMapper files, FilePurposeAuthorization purposes, Clock clock,
                              SkillExportService exports, ToolArtifactAccessService artifacts,
                              KnowledgeFileAccess knowledge, MessageAttachmentMapper attachments,
                              PublicJobMapper jobs, ExportAccessService dataExports,
-                             ProjectInputFileService projectInputs) {
+                             ProjectInputFileService projectInputs, CollaborationFileAuthorization collaboration) {
         this.files = files;
         this.purposes = purposes;
         this.clock = clock;
@@ -46,6 +48,7 @@ public class FileAccessService {
         this.jobs = jobs;
         this.dataExports = dataExports;
         this.projectInputs = projectInputs;
+        this.collaboration = collaboration;
     }
 
     public void authorizeUpload(AuthContext actor, String purpose, String resourceId, boolean mutation) {
@@ -71,6 +74,8 @@ public class FileAccessService {
             exports.authorize(actor, file.resourceId(), file.resourceVersionId(), mutation);
         } else if (file.purpose().equals("artifact")) {
             artifacts.require(actor, file);
+        } else if (file.purpose().equals("collaboration_artifact")) {
+            collaboration.require(actor, file);
         } else if (file.purpose().equals("export")) {
             dataExports.readable(actor,
                 jobs.forExportFile(actor.enterpriseId(), file.id()).orElseThrow(FileAccessService::unavailable));

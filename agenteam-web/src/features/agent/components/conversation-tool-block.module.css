@@ -1,4 +1,6 @@
 .card {
+  --tool-trigger-inline-padding: 5px;
+  --tool-trigger-min-height: 30px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
@@ -77,8 +79,8 @@
   justify-content: center;
   flex-shrink: 0;
   gap: 4px;
-  min-height: 30px;
-  padding: 4px 5px;
+  min-height: var(--tool-trigger-min-height);
+  padding: 4px var(--tool-trigger-inline-padding);
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -160,6 +162,14 @@
   margin-left: auto;
   color: var(--secondary);
   font-size: 11px;
+}
+
+/* 没有详情按钮时，文字右边缘与详情按钮最右侧图标对齐。 */
+.card[data-waiting] .status {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tool-trigger-min-height);
+  padding-inline-end: var(--tool-trigger-inline-padding);
 }
 
 .card[data-state="running"] .status {
@@ -264,15 +274,20 @@
     margin-right: auto;
   }
 
+  .card[data-waiting] .status {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
   .trigger {
     margin-left: auto;
   }
 }
 
 @media (max-width: 600px) {
-  .trigger {
-    min-height: 44px;
-    padding-inline: 7px;
+  .card {
+    --tool-trigger-inline-padding: 7px;
+    --tool-trigger-min-height: 44px;
   }
 
   .notice {

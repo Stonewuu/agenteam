@@ -2,7 +2,6 @@ package com.stonewu.agenteam.service.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stonewu.agenteam.mapper.agent.AgentHistoryMessageMapper;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -14,7 +13,6 @@ import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
-import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
 import com.stonewu.agenteam.service.execution.RunCheckpointService;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
@@ -29,7 +27,6 @@ import com.stonewu.agenteam.service.user.UserLanguageService;
 import com.stonewu.agenteam.service.workspace.WorkspaceToolDefinitions;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.Msg;
-import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.state.AgentState;
@@ -41,6 +38,7 @@ import io.agentscope.harness.agent.subagent.SubagentDeclaration;
 import io.agentscope.harness.agent.subagent.SubagentDeclaration.Mode;
 import io.agentscope.harness.agent.tool.AgentSpawnTool;
 import org.springframework.http.HttpStatus;
+import com.stonewu.agenteam.service.collaboration.CollaborationInstructions;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -54,7 +52,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * 在原有 HarnessAgent 对话流上按固定发布配置构造父子实例，不复用用户会话状态。
+ * 按固定发布配置构造父子实例，在本次执行的独立状态目录延续同一对话上下文。
  */
 @Component
 public class AgentExecutionFactory {
@@ -170,7 +168,8 @@ public class AgentExecutionFactory {
         var builder = builder(workspace, new ReadableToolModel(model, runtimeTools::modelToolNames), states, guard,
             config, timeout, run.id(), callContext).name(name)
             .sysPrompt(instructions(config) + memories.instructions(run, agentId, config)
-                + (model.supportsTools() ? WorkspaceToolDefinitions.GUIDANCE : "") + projectInstructions + languageInstruction);
+                + (model.supportsTools() ? WorkspaceToolDefinitions.GUIDANCE : "") + projectInstructions + languageInstruction
+                + CollaborationInstructions.forRun(run, session));
         var subagents = AgentSubagentConfigurationMapper.resolve(config, run.executionConfig().path("dependencies"));
         guard.subagents(subagents.stream().map(value -> value.id()).collect(Collectors.toSet()));
         for (var selected : subagents) {
@@ -273,13 +272,6 @@ public class AgentExecutionFactory {
     }
 
     public void initializeHistory(RunRecord run, EncryptedAgentStateStore states) {
-        seedHistory(run, states, run.executionConfig().path("config").path("historyMessageLimit").asInt());
-    }
-
-    private void seedHistory(RunRecord run, EncryptedAgentStateStore states, int limit) {
-        if (limit <= 0) {
-            return;
-        }
         List<Msg> context = new ArrayList<>();
         var toolContext = ToolContextState.builder().build();
         String previousId = run.executionConfig().path("previousRunId").asText(null);
@@ -314,47 +306,17 @@ public class AgentExecutionFactory {
                             .ifPresent(childState ->
                                 states.save(run.userId(), child.sessionId(), "agent_state",
                                     AgentState.builder().userId(run.userId()).sessionId(child.sessionId())
-                                        .context(recentContext(childState.getContext(), limit)).build()));
+                                        .context(List.copyOf(childState.getContext())).build()));
                         toolContext.putSpawnEntry(entry.getKey(), child);
                     }
                 }
             });
         }
-        if (context.isEmpty()) {
-            var input = messages.find(run.enterpriseId(), run.conversationId(), run.inputMessageId()).orElseThrow();
-            var history = messages.history(run.enterpriseId(), run.conversationId(), input, limit).reversed();
-            var historyRuns = history.stream().map(message -> message.runId()).filter(value -> value != null).distinct()
-                .toList();
-            var callsByRun = callRecords.forConversationRuns(run.enterpriseId(), run.userId(), run.conversationId(),
-                    historyRuns).stream()
-                .collect(Collectors.groupingBy(ToolCallRecord::runId,
-                    Collectors.toMap(ToolCallRecord::stepId, call -> call)));
-            for (var message : history) {
-                String sources = message.role().equals("user") && message.runId() != null ? runs.find(
-                        run.enterpriseId(), message.runId(), false)
-                    .filter(previous -> previous.userId().equals(run.userId()) && previous.conversationId()
-                        .equals(run.conversationId()))
-                    .map(previous -> previous.executionConfig().path("sourceContext").asText("")).orElse("") : "";
-                var mapped = AgentHistoryMessageMapper.map(message, sources,
-                    callsByRun.getOrDefault(message.runId(), Map.of()));
-                if (!mapped.getTextContent().isBlank()) {
-                    context.add(mapped);
-                }
-            }
-        }
-        var recent = recentContext(context, limit);
-        if (!recent.isEmpty() || !toolContext.getSpawnRegistry().isEmpty()) {
+        var history = AgentHistoryContext.restoreMissing(run, context, messages, runs, callRecords);
+        if (!history.isEmpty() || !toolContext.getSpawnRegistry().isEmpty()) {
             states.save(run.userId(), run.conversationId(), "agent_state", AgentState.builder()
-                .userId(run.userId()).sessionId(run.conversationId()).context(recent).toolContext(toolContext).build());
+                .userId(run.userId()).sessionId(run.conversationId()).context(history).toolContext(toolContext).build());
         }
-    }
-
-    private List<Msg> recentContext(List<Msg> context, int limit) {
-        int start = Math.max(0, context.size() - limit);
-        while (start < context.size() && context.get(start).getRole() != MsgRole.USER) {
-            start++;
-        }
-        return context.subList(start, context.size());
     }
 
     private String instructions(JsonNode config) {

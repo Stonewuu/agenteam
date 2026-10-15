@@ -2,6 +2,8 @@ package com.stonewu.agenteam.mapper.execution;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.execution.entity.RunQueryRow;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import org.springframework.dao.support.DataAccessUtils;
@@ -9,8 +11,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.stonewu.agenteam.mapper.execution.ExecutionJson.instant;
 import static com.stonewu.agenteam.mapper.execution.ExecutionJson.timestamp;
@@ -91,6 +95,18 @@ public class RunMapper {
 
     public List<RunRecord> forConversation(String enterprise, String conversation) {
         return statements.forConversationAgentRun(enterprise, conversation).stream().map(this::map).toList();
+    }
+
+    /** 恢复一页历史时批量读取原资料说明，避免按每条用户消息重复查询。 */
+    public Map<String, String> sourceContexts(String enterprise, String user, String conversation, List<String> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        var criteria = new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getId, AgentRunRow::getExecutionConfigJson)
+            .eq(AgentRunRow::getEnterpriseId, enterprise).eq(AgentRunRow::getUserId, user)
+            .eq(AgentRunRow::getConversationId, conversation).in(AgentRunRow::getId, ids);
+        return statements.selectList(criteria).stream().collect(Collectors.toMap(AgentRunRow::getId,
+            row -> json.tree(row.getExecutionConfigJson()).path("sourceContext").asText("")));
     }
 
     public Optional<String> previousRun(String enterprise, String conversation) {

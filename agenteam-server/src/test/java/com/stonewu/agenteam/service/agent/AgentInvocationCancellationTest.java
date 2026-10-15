@@ -73,7 +73,7 @@ class AgentInvocationCancellationTest {
         var context = RuntimeContext.builder().userId("user").sessionId("session").build();
         var execution = new AgentExecutionFactory.Execution(harness, context, null,
             mock(ExecutionGuardMiddleware.class), List.of(), mock(ExecutionToolRuntime.class), false, Duration.ZERO);
-        var adapter = new AgentExecutionAdapter(null, new AgentStreamEventMapper(), null, null, null, null, null);
+        var adapter = new AgentExecutionAdapter(null, new AgentStreamEventMapper(), null, null, null, null, null, null);
         return adapter.createScoped(mock(RunRecord.class), mock(JobLease.class), execution, persistence,
             List.of(new UserMessage("测试请求")));
     }

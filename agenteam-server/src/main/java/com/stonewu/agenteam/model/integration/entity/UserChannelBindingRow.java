@@ -46,6 +46,9 @@ public class UserChannelBindingRow {
     @TableField("receive_enabled")
     private Boolean receiveEnabled;
 
+    @TableField("chat_enabled")
+    private Boolean chatEnabled;
+
     @TableField("external_login_enabled")
     private Boolean externalLoginEnabled;
 

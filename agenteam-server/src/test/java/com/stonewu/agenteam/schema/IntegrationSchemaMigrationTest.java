@@ -37,6 +37,11 @@ import com.stonewu.agenteam.model.schedule.entity.ScheduledOccurrenceRow;
 import com.stonewu.agenteam.model.schedule.entity.ScheduledNotificationTargetRow;
 import com.stonewu.agenteam.support.IsolatedDatabase;
 import com.stonewu.agenteam.support.MybatisTestDatabase;
+import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
+import com.stonewu.agenteam.service.security.PayloadEncryption;
+import com.stonewu.agenteam.service.integration.IntegrationSecretService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.crypto.spec.SecretKeySpec;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -49,6 +54,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 在真实隔离数据库验证旧企业升级、新身份唯一性、企业外键及重复启动。
@@ -56,6 +63,63 @@ import static org.junit.jupiter.api.Assertions.*;
 class IntegrationSchemaMigrationTest {
     private static final Set<String> TABLES = Set.of("enterprise_integration", "enterprise_integration_secret",
         "user_channel_binding", "channel_oauth_session", "user_channel_preference");
+
+    @Test
+    void collaborationUpgradeKeepsLegacySecretsAndBindingsDisabledAndCanRestart() throws Exception {
+        try (var database = new IsolatedDatabase()) {
+            var access = database.databaseAccess();
+            Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
+                .target("0.3.0.3").cleanDisabled(true).load().migrate();
+            String owner = user(access);
+            String enterprise = enterprise(access, owner);
+            member(access, enterprise, owner);
+            String connection = connection(access, enterprise, owner);
+            var account = binding(enterprise, connection, owner, "ou_legacy");
+            access.mapper(UserChannelBindingMapper.class).insert(account);
+            var keys = mock(ApplicationSecretKeys.class);
+            when(keys.activeVersion()).thenReturn("schema-test-key");
+            when(keys.encryptionKey("schema-test-key")).thenReturn(new SecretKeySpec(new byte[32], "AES"));
+            var json = new ObjectMapper();
+            var secretService = new IntegrationSecretService(access.mapper(EnterpriseIntegrationSecretMapper.class), new PayloadEncryption(keys, json), json);
+            secretService.store(enterprise, connection, "legacy-isolated-application-secret", owner, 1, Instant.now());
+            var before = access.mapper(EnterpriseIntegrationSecretMapper.class).selectOne(new LambdaQueryWrapper<EnterpriseIntegrationSecretRow>()
+                .eq(EnterpriseIntegrationSecretRow::getConnectionId, connection));
+            var latest = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
+                .cleanDisabled(true).validateMigrationNaming(true).load();
+            // 后续版本可以继续增加脚本，这里验证本次待执行的脚本全部完成。
+            int pendingMigrations = latest.info().pending().length;
+            assertTrue(pendingMigrations > 0);
+            assertEquals(pendingMigrations, latest.migrate().migrationsExecuted);
+            var tables = access.mapper(SchemaSnapshotMapper.class).tables();
+            assertTrue(tables.containsAll(Set.of("chat_bot_binding", "chat_conversation", "chat_conversation_bot", "chat_inbound_receipt",
+                "chat_message", "chat_message_resource", "chat_outbound_message", "chat_outbound_attempt", "collaboration_task", "collaboration_participant",
+                "collaboration_work_item", "collaboration_work_dependency", "collaboration_action", "collaboration_context", "collaboration_artifact", "collaboration_run_link")));
+            assertFalse(access.mapper(UserChannelBindingMapper.class).selectById(account.getId()).getChatEnabled());
+            assertEquals("tenant", access.mapper(EnterpriseIntegrationMapper.class).selectById(connection).getIdentityScope());
+            assertEquals(before.getEncryptedValue(), access.mapper(EnterpriseIntegrationSecretMapper.class).selectById(before.getId()).getEncryptedValue());
+            assertEquals("legacy-isolated-application-secret", secretService.load(enterprise, connection));
+            assertEquals(0, latest.migrate().migrationsExecuted);
+            assertTrue(latest.validateWithResult().validationSuccessful);
+            var secondStartup = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema").cleanDisabled(true).load();
+            assertEquals(0, secondStartup.migrate().migrationsExecuted);
+
+            var app = access.mapper(EnterpriseIntegrationMapper.class).selectById(connection);
+            app.setExternalTenantId("tenant_legacy_verified");
+            access.mapper(EnterpriseIntegrationMapper.class).updateById(app);
+            app.setId(UUID.randomUUID().toString());
+            app.setEnterpriseId(enterprise(access, owner));
+            app.setPublicLoginKey(UUID.randomUUID().toString());
+            assertThrows(DataIntegrityViolationException.class, () -> access.mapper(EnterpriseIntegrationMapper.class).insert(app));
+            app.setProviderCode("wecom_aibot");
+            app.setExternalTenantId(null);
+            app.setIdentityScope("bot");
+            access.mapper(EnterpriseIntegrationMapper.class).insert(app);
+            app.setId(UUID.randomUUID().toString());
+            app.setEnterpriseId(enterprise);
+            app.setPublicLoginKey(UUID.randomUUID().toString());
+            assertThrows(DataIntegrityViolationException.class, () -> access.mapper(EnterpriseIntegrationMapper.class).insert(app));
+        }
+    }
 
     @Test
     void upgradesExistingCompaniesAndOnlyGrantsNewPermissionsToBuiltinAdministrators() throws Exception {

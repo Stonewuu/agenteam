@@ -78,6 +78,10 @@ export type ConversationMessage = {
   updatedAt: string;
 };
 export type Conversation = {
+  navigationKey?: string;
+  collaboration?: CollaborationConversationGroup | null;
+  matchedRole?: boolean;
+  collaborationTaskId?: string | null;
   projectId?: string | null;
   modelSelection?: ModelSelection | null;
   approvalPolicy?: ToolApprovalPolicy;
@@ -96,6 +100,14 @@ export type Conversation = {
   activeRunId: string | null;
   canContinue: boolean;
   unavailableReason: string | null;
+};
+export type CollaborationConversationGroup = {
+  taskId: string; shortCode: string; title: string; status: string; ownerConversationId: string | null;
+  roles: {id: string; name: string; conversationId: string | null; agentId: string; status: string; icon: string | null; color: string | null}[];
+};
+export type ConversationNavigationItem = {
+  key: string; title: string; updatedAt: string; favorite: boolean; conversation: Conversation;
+  collaboration: CollaborationConversationGroup | null; matchedRole: boolean;
 };
 export type ConversationSnapshot = {
   conversation: Conversation;

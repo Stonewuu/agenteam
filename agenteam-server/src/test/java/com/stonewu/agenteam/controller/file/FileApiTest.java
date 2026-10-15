@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.file;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -56,7 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "server.address=127.0.0.1")
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Import(SharedEnterpriseTestEdition.class)
+@Import({SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
 class FileApiTest extends FileApiTestSupport {
 
     @Test

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
@@ -56,7 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 真实文件、数据库、模型流和 AgentScope 父子工具调用共同验证资料读取与引用。
  */
-@Import({SharedEnterpriseTestEdition.class, SourceToolExecutionApiTest.HttpsConfiguration.class})
+@Import({SharedEnterpriseTestEdition.class, SourceToolExecutionApiTest.HttpsConfiguration.class, InProcessDocumentParsing.class})
 class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
 
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();

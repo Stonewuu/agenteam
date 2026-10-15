@@ -177,7 +177,7 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
 
   if (!employees.length && !selected) {
     return <section className={styles.emptyTask} aria-labelledby="empty-task-title">
-      <span className={styles.emptyTaskIcon} aria-hidden="true"><IconUsers size={30} variant="Bulk"/></span>
+      <span className={styles.emptyTaskIcon} data-icon-surface aria-hidden="true"><IconUsers size={30} variant="Bulk"/></span>
       <div className={styles.emptyTaskCopy}>
         <h2 id="empty-task-title">{canMarket ? uiText("找一位数字员工，开始协作") : uiText("暂无可用的数字员工")}</h2>
         <p>{canMarket ? uiText("前往员工广场，雇佣适合当前工作的数字员工。") : uiText("请联系企业管理员获取帮助。")}</p>

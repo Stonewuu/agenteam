@@ -1,5 +1,8 @@
 package com.stonewu.agenteam.controller.skill;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -51,7 +54,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Import(SharedEnterpriseTestEdition.class)
+@Import({SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
 class SkillTransferApiTest {
 
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();

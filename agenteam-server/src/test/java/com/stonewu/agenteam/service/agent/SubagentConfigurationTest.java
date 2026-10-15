@@ -3,7 +3,9 @@ package com.stonewu.agenteam.service.agent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
+import com.stonewu.agenteam.model.agent.request.AgentConfigurationInput;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.http.InputValidation;
 import com.stonewu.agenteam.service.memory.MemoryContentValidation;
 import com.stonewu.agenteam.service.modelprofile.ModelProfileCatalog;
 import com.stonewu.agenteam.service.resource.validation.AgentConfigurationValidator;
@@ -20,6 +22,21 @@ import static org.mockito.Mockito.mock;
 class SubagentConfigurationTest {
     private final ObjectMapper json = new ObjectMapper();
     private final AgentConfigurationValidator validator = new AgentConfigurationValidator(mock(ModelProfileCatalog.class), mock(MemoryContentValidation.class));
+
+    @Test
+    void historyLengthIsNotRequiredAndLegacyValuesAreIgnored() throws Exception {
+        var current = config();
+        current.remove("researchSubagentEnabled");
+        validator.draft(current);
+        new ApiContractAssertions().validate("AgentConfig", current);
+        for (int legacy : new int[]{0, 1, 20, 100}) {
+            var old = current.deepCopy().put("historyMessageLimit", legacy);
+            validator.draft(old);
+            var input = InputValidation.read(old, AgentConfigurationInput.class, "config");
+            assertFalse(json.valueToTree(input).has("historyMessageLimit"));
+            assertTrue(old.has("historyMessageLimit"), "读取旧发布配置不能修改其原始内容");
+        }
+    }
 
     @Test
     void stepLimitsAllowZeroAndLargeIntegersButRejectNegativeValues() throws Exception {
@@ -124,7 +141,7 @@ class SubagentConfigurationTest {
              "modelProfileId":"model","instructions":"处理用户交付的任务","maxSteps":20,"timeoutSeconds":120,
              "attachmentsEnabled":false,"welcomeMessage":"","suggestedQuestions":[],"skillVersionIds":[],
              "pluginVersionIds":[],"knowledgeVersionIds":[],"dataVersionIds":[],"workflowVersionIds":[],
-             "entryWorkflowVersionId":null,"historyMessageLimit":20,"memoryEnabled":false,"memoryFields":[],
+             "entryWorkflowVersionId":null,"memoryEnabled":false,"memoryFields":[],
              "businessTerms":[],"researchSubagentEnabled":true,"publicExamples":[]}
             """);
     }

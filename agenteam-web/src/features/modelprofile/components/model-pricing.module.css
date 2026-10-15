@@ -59,7 +59,7 @@
 
 .titleWithIcon > svg, .priceContext > svg, .sourceLink > svg {
   flex-shrink: 0;
-  color: var(--accent-text);
+  color: var(--icon-context-color, var(--icon-tone-color, var(--accent-text)));
 }
 
 .priceContext {

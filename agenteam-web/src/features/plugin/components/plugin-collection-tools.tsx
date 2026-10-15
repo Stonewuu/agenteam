@@ -13,7 +13,7 @@ import type {PluginConfig, PluginSource, PluginToolSelection} from "@/features/r
 import type {ToolSource} from "../types/plugin";
 import {cleanCollection} from "../lib/plugin-collection";
 import {ToolSelectionDialog, toolSourcePath} from "./tool-selection-dialog";
-import {toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
+import {toolDisplayDescription, toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
 import styles from "./tool-collection.module.css";
 import ui from "@/components/ui/surface.module.css";
 
@@ -75,7 +75,7 @@ function SelectedSource({enterpriseId, source, known, selections, readOnly, onRe
       const tool = value?.tools.find((item) => item.name === selection.name);
       const name = tool ? toolDisplayName(tool, value?.code, uiText) : request.loading ? uiText("正在读取工具…") : uiText("此工具已不可用");
       return <div key={selection.id} className={styles.selectedTool}><span><strong>{name}</strong>{tool &&
-        <span>{tool.description}</span>}</span>
+        <span>{toolDisplayDescription(tool, value?.code, uiText)}</span>}</span>
         {tool && <span
           className={`badge ${tool.operationClass === "read" ? "blue" : "amber"}`}>{uiText(toolOperationLabel(tool.operationClass))}</span>}
         {!readOnly && <Button type="button" className="icon-button" aria-label={uiText("移除{0}", [name])}

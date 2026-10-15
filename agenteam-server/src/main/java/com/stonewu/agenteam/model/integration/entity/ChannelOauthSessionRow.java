@@ -16,6 +16,8 @@ import java.time.Instant;
 @Setter
 @TableName("channel_oauth_session")
 public class ChannelOauthSessionRow {
+    @TableField("pairing_attempts")
+    private Integer pairingAttempts;
     @TableId(value = "id", type = IdType.INPUT)
     private String id;
 

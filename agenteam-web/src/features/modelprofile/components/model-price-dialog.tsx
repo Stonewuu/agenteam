@@ -49,7 +49,7 @@ export function ModelPriceDialog({enterpriseId, model, onClose, onChanged}: {
         onClick={() => setDetailId(current.data!.id)}>{t("查看当前生效价格")}</Button>}
       <QueryState {...versions} hasData={Boolean(versions.data?.length)} empty={t("还没有价格配置。创建草稿后即可设置单价。") }>
         <div className={styles.stack}>{versions.data?.map((value) => <article className={styles.version} key={value.id}>
-          <span className={styles.priceIcon}><IconReceipt size={21} variant="Bulk"/></span><div className={styles.versionCopy}><strong>{t("版本 {0}", [value.versionNo])} · {value.currency}</strong>
+          <span className={styles.priceIcon} data-icon-surface><IconReceipt size={21} variant="Bulk"/></span><div className={styles.versionCopy}><strong>{t("版本 {0}", [value.versionNo])} · {value.currency}</strong>
             <small>{value.effectiveFrom ? t("生效于 {0}", [new Date(value.effectiveFrom).toLocaleString(t.formatLocale)]) :
               t("创建于 {0}", [new Date(value.createdAt).toLocaleString(t.formatLocale)])}</small></div>
           <div className={styles.actions}><span className="badge neutral">{value.status === "draft" ? t("草稿") : current.data?.id === value.id ? t("当前生效") : t("已发布")}</span>

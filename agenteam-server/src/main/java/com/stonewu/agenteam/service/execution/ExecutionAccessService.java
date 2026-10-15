@@ -7,6 +7,7 @@ import com.stonewu.agenteam.model.execution.entity.ModelSelection;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.SourceToolResultAccessService;
+import com.stonewu.agenteam.service.collaboration.CollaborationRunAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -22,15 +23,17 @@ public class ExecutionAccessService {
     private final ExecutionConfigurationService configurations;
     private final ExecutionSourceService sources;
     private final SourceToolResultAccessService sourceResults;
+    private final CollaborationRunAccessService collaboration;
 
     public ExecutionAccessService(AuthMapper users, PermissionMapper permissions,
                                   ExecutionConfigurationService configurations, ExecutionSourceService sources,
-                                  SourceToolResultAccessService sourceResults) {
+                                  SourceToolResultAccessService sourceResults, CollaborationRunAccessService collaboration) {
         this.users = users;
         this.permissions = permissions;
         this.configurations = configurations;
         this.sources = sources;
         this.sourceResults = sourceResults;
+        this.collaboration = collaboration;
     }
 
     public AuthContext actor(RunRecord run) {
@@ -38,6 +41,9 @@ public class ExecutionAccessService {
             .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前账号已不能继续执行任务。"));
         var actor = new AuthContext(user, run.enterpriseId(),
             Set.copyOf(permissions.listPermissionCodes(user.id(), run.enterpriseId())));
+        if (collaboration.applies(run)) {
+            actor = collaboration.require(run, run.conversationId(), false).actor();
+        }
         if (run.mode().equals("preview")) {
             if (run.executionConfig().has("workflowId")) {
                 configurations.workflowPreview(actor, run.executionConfig().path("workflowId").asText(),
@@ -60,5 +66,11 @@ public class ExecutionAccessService {
             return "agent.run";
         }
         return run.executionConfig().has("workflowId") ? "workflow.preview" : "agent.preview";
+    }
+
+    public void requireExternalStep(RunRecord run) {
+        if (collaboration.applies(run)) {
+            collaboration.require(run, run.conversationId(), true);
+        }
     }
 }

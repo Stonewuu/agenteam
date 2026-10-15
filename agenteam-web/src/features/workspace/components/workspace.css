@@ -148,7 +148,7 @@
 }
 
 .nav-item.selected > svg {
-  color: var(--nav-icon-selected);
+  color: color-mix(in srgb, var(--icon-tone-color, currentColor) var(--nav-icon-tone-weight), var(--nav-on-selected));
 }
 
 .nav-item.selected .nav-count {

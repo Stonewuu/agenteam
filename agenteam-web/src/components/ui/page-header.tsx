@@ -9,7 +9,7 @@ import styles from "./page-header.module.css";
 type PageHeaderProps = {
   title: ReactNode; description?: ReactNode; eyebrow?: ReactNode; actions?: ReactNode;
   leading?: ReactNode; metadata?: ReactNode; inlineActions?: boolean; size?: "normal" | "small" | "hero";
-  className?: string; icon?: ReactNode;
+  className?: string; icon?: ReactNode; inlineMetadata?: boolean;
 };
 
 const PageHeaderIconContext = createContext<ReactNode>(null);
@@ -27,6 +27,7 @@ export function PageHeader({
                              leading,
                              metadata,
                              inlineActions = false,
+                             inlineMetadata = false,
                              size = "normal",
                              className = "",
                              icon
@@ -37,7 +38,7 @@ export function PageHeader({
   const resolvedIcon = icon ?? menuIcon;
   const identity = leading ?? (resolvedIcon &&
     <span className={styles.menuIcon} data-page-icon aria-hidden="true">{resolvedIcon}</span>);
-  return <header ref={frame} data-page-header data-size={size} data-inline-actions={inlineActions}
+  return <header ref={frame} data-page-header data-size={size} data-inline-actions={inlineActions} data-inline-metadata={inlineMetadata}
                  className={`${styles.frame} ${className}`}>
     <div ref={surface} className={styles.surface}>
       <div className={styles.identity}>{identity && <div className={styles.leading}>{identity}</div>}

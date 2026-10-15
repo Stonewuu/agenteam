@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import org.junit.jupiter.api.Tag;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 真实容器验证三类办公文档、公式重算、中文渲染和附件解析。
  */
+@Tag("external-process")
 class OfficeSandboxIntegrationTest {
     @TempDir
     Path directory;

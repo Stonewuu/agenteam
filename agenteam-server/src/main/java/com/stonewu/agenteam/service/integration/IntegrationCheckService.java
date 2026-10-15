@@ -43,8 +43,7 @@ public class IntegrationCheckService {
         try {
             var application = queries.application(row);
             var provider = providers.require(row.getProviderCode());
-            var token = provider.fetchAccessToken(application, secrets.load(enterprise, id));
-            return new PreparedCheck(enterprise, id, revision, provider.checkApplication(application, token), null, null);
+            return new PreparedCheck(enterprise, id, revision, provider.verify(application, secrets.load(enterprise, id)), null, null);
         } catch (ChannelProviderException failure) {
             LOG.warn("企业应用校验失败，企业={}，接入={}", enterprise, id, failure);
             return new PreparedCheck(enterprise, id, revision, null, failure.code(), failure.getMessage());

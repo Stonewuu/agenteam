@@ -329,7 +329,7 @@
 }
 
 .section header h2 svg, .employees header h2 svg {
-  color: var(--accent-text);
+  color: var(--icon-context-color, var(--icon-tone-color, var(--accent-text)));
 }
 
 .section header a, .employees header a {

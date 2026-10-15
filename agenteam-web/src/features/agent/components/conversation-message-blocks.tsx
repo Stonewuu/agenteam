@@ -100,9 +100,10 @@ export function ConversationBlocks({blocks, ...context}: { blocks: DisplayBlock[
   }}/>;
 }
 
-function ExecutionBlock({title, status, icon, kind, children, pendingIds = [], defaultOpen = true}: {
+function ExecutionBlock({title, status, statusText, icon, kind, children, pendingIds = [], defaultOpen = true}: {
   title: string;
   status: BlockStatus;
+  statusText?: string;
   icon: ReactNode;
   kind: string;
   children: ReactNode;
@@ -114,7 +115,7 @@ function ExecutionBlock({title, status, icon, kind, children, pendingIds = [], d
   return <Collapsible className={executionStyles.block} data-kind={kind} open={open} onOpenChange={setOpen}>
     <CollapsibleTrigger className={executionStyles.executionTrigger}><span
       className={executionStyles.blockIcon}>{icon}</span><strong>{title}</strong><span className={executionStyles.state}
-                                                                                       data-state={status}>{localizeCatalog(blockStatus, uiText)[status]}</span><IconChevronDown
+                                                                                       data-state={status}>{statusText ?? localizeCatalog(blockStatus, uiText)[status]}</span><IconChevronDown
       size={14}/></CollapsibleTrigger>
     <CollapsibleContent className="agenteam-disclosure-content" keepMounted={false}>
       <div className={executionStyles.body}>{children}</div>
@@ -204,6 +205,14 @@ function RenderBlock({block, context, grouped = false}: {
     </ExecutionBlock>;
   }
   if (block.kind === "tool") {
+    const confirmations = block.blocks.filter((child): child is Extract<DisplayBlock, {
+      kind: "approval"
+    }> => child.kind === "approval");
+    const status = toolBlockStatus(block, context.approvals);
+    const summaries = [block.summary, summary].filter((text): text is string => Boolean(text)).filter((text, index, values) => text !== block.label && values.indexOf(text) === index
+      && !confirmations.some((confirmation) => context.approvals.get(confirmation.approvalId)?.summary.description === text));
+    const waitingForContent = (status === "pending" || status === "running") && !block.input && !block.result
+      && summaries.length === 0 && confirmations.length === 0 && children.length === 0;
     const contentUrl = context.runId && block.stepId ? organizationPath(context.enterprise,
       `/runs/${encodeURIComponent(context.runId)}/steps/${encodeURIComponent(block.stepId)}/tool-content`) : null;
     if (isSubagentTool(block)) {
@@ -213,7 +222,8 @@ function RenderBlock({block, context, grouped = false}: {
         return <><RenderBlocks blocks={block.blocks} context={context}/>{failure &&
           <div className={styles.statusError}><NativeToolReply block={block} url={contentUrl}/></div>}</>;
       }
-      return <ExecutionBlock title={uiText("子智能体")} status={block.status} kind="agent"
+      return <ExecutionBlock title={uiText("子智能体")} status={status} kind="agent"
+                             statusText={uiText(toolStatusLabel(block, status, waitingForContent))}
                              defaultOpen={!block.result.startsWith('{"truncated":true')}
                              icon={block.status === "running" ? <ToolActivityIcon status={block.status}/> :
                                <IconRobot size={18}/>}>
@@ -222,19 +232,11 @@ function RenderBlock({block, context, grouped = false}: {
         {block.result && <NativeToolReply block={block} url={contentUrl}/>}
       </ExecutionBlock>;
     }
-    const confirmations = block.blocks.filter((child): child is Extract<DisplayBlock, {
-      kind: "approval"
-    }> => child.kind === "approval");
-    const status = toolBlockStatus(block, context.approvals);
-    const summaries = [block.summary, summary].filter((text): text is string => Boolean(text)).filter((text, index, values) => text !== block.label && values.indexOf(text) === index
-      && !confirmations.some((confirmation) => context.approvals.get(confirmation.approvalId)?.summary.description === text));
-    const waitingForContent = (status === "pending" || status === "running") && !block.input && !block.result
-      && summaries.length === 0 && confirmations.length === 0 && children.length === 0;
     const file = fileToolPresentation(block);
     const completed = status === "completed";
     return <ConversationToolBlock
       label={file ? uiText(completed ? file.completed : file.label) : localizeSavedToolLabel(block.label, uiText)}
-      status={status} statusText={file && completed && !grouped ? "" : uiText(toolStatusLabel(block, status))}
+      status={status} statusText={file && completed && !grouped ? "" : uiText(toolStatusLabel(block, status, waitingForContent))}
       toolCallId={block.toolCallId} waitingForContent={waitingForContent}
       grouped={grouped}
       subject={file?.file && <ConversationFileLink file={file.file} available={completed}/>}

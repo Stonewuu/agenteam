@@ -2,17 +2,21 @@
 
 import {useT} from "@/lib/i18n/locale-provider";
 
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {errorMessage} from "@/lib/http/api-client";
 import {type ConversationFilter, listConversations} from "../api/conversation-api";
 import type {Conversation} from "../types/execution";
+import {useConversationScope} from "./use-conversation-scope";
+import {retainConversationOrder} from "../lib/conversation-navigation";
 
 type EmployeeOption = { name: string; icon: string | null; color: string | null; updatedAt: string };
 
 /** 侧栏只保留实际加载的页，搜索和分类改变时从第一页读取。 */
-export function useConversationList(enterprise: string, enabled = true) {
+export function useConversationList(enterprise: string, enabled = true, user = "") {
   const uiText = useT();
-  const [filter, setFilter] = useState<ConversationFilter>({query: "", status: "active", favorite: false, agentId: ""});
+  const [conditions, setFilter] = useState<ConversationFilter>({query: "", status: "active", favorite: false, agentId: ""});
+  const [scope, setScope] = useConversationScope(user, enterprise);
+  const filter = useMemo(() => ({...conditions, scope}), [conditions, scope]);
   const [items, setItems] = useState<Conversation[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,12 +31,16 @@ export function useConversationList(enterprise: string, enabled = true) {
   }>({enterprise, values: new Map()});
   const controller = useRef<AbortController | null>(null);
   const loadingMore = useRef(false);
+  const previousBinding = useRef("");
   const refresh = useCallback(() => setVersion((value) => value + 1), []);
   // 保留当前企业已经加载过的员工选项，搜索无结果时仍可调整员工条件。
   const rememberEmployees = useCallback((conversations: Conversation[]) => {
     setEmployeeOptions((previous) => {
       const values = new Map(previous.enterprise === enterprise ? previous.values : []);
       for (const conversation of conversations) {
+        for (const role of conversation.collaboration?.roles ?? []) {
+          values.set(role.agentId, {name: role.name, icon: role.icon, color: role.color, updatedAt: conversation.updatedAt});
+        }
         const previousEmployee = conversation.agentId ? values.get(conversation.agentId) : null;
         if (conversation.agentId && (!previousEmployee || conversation.updatedAt >= previousEmployee.updatedAt)) {
           values.set(conversation.agentId, {
@@ -60,7 +68,9 @@ export function useConversationList(enterprise: string, enabled = true) {
       listConversations(enterprise, filter, null, request.signal).then((page) => {
         if (!request.signal.aborted) {
           setLoadedEnterprise(enterprise);
-          setItems(page.items);
+          const sameFilter = previousBinding.current === binding;
+          setItems(previous => sameFilter ? retainConversationOrder(previous, page.items) : page.items);
+          previousBinding.current = binding;
           rememberEmployees(page.items);
           setCursor(page.hasMore ? page.nextCursor : null);
         }
@@ -93,8 +103,8 @@ export function useConversationList(enterprise: string, enabled = true) {
       const page = await listConversations(enterprise, filter, cursor, request.signal);
       if (!request.signal.aborted) {
         setItems((previous) => {
-          const ids = new Set(previous.map((value) => value.id));
-          return [...previous, ...page.items.filter((value) => !ids.has(value.id))];
+          const ids = new Set(previous.map((value) => value.navigationKey ?? value.id));
+          return [...previous, ...page.items.filter((value) => !ids.has(value.navigationKey ?? value.id))];
         });
         rememberEmployees(page.items);
         setCursor(page.hasMore ? page.nextCursor : null);
@@ -116,6 +126,7 @@ export function useConversationList(enterprise: string, enabled = true) {
     items: enabled && loadedEnterprise === enterprise ? items : [],
     filter,
     setFilter,
+    setScope,
     loading: enabled && (!matches || loading),
     error: enabled && matches ? error : "",
     employeeOptions: enabled && employeeOptions.enterprise === enterprise ? employeeOptions.values : new Map<string, EmployeeOption>(),

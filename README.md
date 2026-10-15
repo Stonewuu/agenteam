@@ -200,7 +200,9 @@ pnpm dev
 
 ### 验证与贡献
 
-按改动范围完成相关验证：后端使用 `./mvnw test`；前端使用 `pnpm lint`、`pnpm exec tsc --noEmit` 和 `pnpm build`。专项命令见 [package.json](agenteam-web/package.json)。
+按改动范围完成相关验证：后端使用 `./mvnw test`；前端使用 `pnpm lint`、`pnpm exec tsc --noEmit` 和 `pnpm build`，全部前端用例使用 `pnpm test`。专项命令见 [package.json](agenteam-web/package.json)。
+
+后端按独立进程并发执行，真实进程与容器用例单独顺序执行；每类结束后关闭应用并释放框架缓存，同一进程内复用临时数据库容器。业务文件接口测试复用真实格式解析，专门的进程测试保留隔离、取消和超时检查。需要减少并发时使用 `-Dagenteam.test.forks=2`，不要在同一进程内另外启用测试类并发。
 
 欢迎通过 [Issues（问题反馈）](https://github.com/Stonewuu/agenteam/issues) 分享使用建议、报告问题，或提交 Pull Request（合并请求）改进功能与文档。详细流程见 [贡献指南](CONTRIBUTING.md)。
 

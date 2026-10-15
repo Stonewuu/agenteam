@@ -95,8 +95,26 @@ import {
   Wallet2,
 } from "iconsax-reactjs";
 
+type IconTone = "copper" | "blue" | "teal" | "violet" | "amber" | "mint" | "rose" | "slate";
+
+// 同一个原始图标只定义一次配色，别名自动沿用；明确的状态和资源头像可继承所在区域颜色。
+const iconTones = new Map<Icon, IconTone>([
+  ...[Messages2, Edit2, Send2].map(value => [value, "copper"] as const),
+  ...[Chart, DocumentText, DocumentText1, NoteText, Book1, Copy, DirectInbox, SearchNormal1, Calendar1, Clock,
+    ExportSquare, ProfileCircle, User, People].map(value => [value, "blue"] as const),
+  ...[Data, Link21, ImportCurve, ExportCurve, Save2, Refresh, Wallet2, Buildings2, Profile2User, ShieldTick]
+    .map(value => [value, "teal"] as const),
+  ...[Cpu, Flash, Layer, Box1, Hierarchy, Hierarchy2, Hierarchy3, HierarchySquare2, Setting2, Setting4,
+    SidebarLeft, SidebarRight, Global, Moon, Lock1, Unlock, SecuritySafe, More, Element3, Category2]
+    .map(value => [value, "violet"] as const),
+  ...[Star1, Bookmark, LampOn, Notification, Sun1, Folder2, Key, Pause, Flag, InfoCircle, Receipt1, CalendarTick]
+    .map(value => [value, "amber"] as const),
+  ...[TickCircle, Play, Add, TaskSquare, Like1].map(value => [value, "mint"] as const),
+  ...[Trash, Dislike, UserMinus, Logout, Stop].map(value => [value, "rose"] as const),
+]);
+
 // 统一使用 Iconsax 原始组件，交互图标默认使用线形，导航和资源图标可选 Bulk。
-function agenteamIcon(Component: Icon, defaults: Partial<IconProps> = {}) {
+function agenteamIcon(Component: Icon, defaults: Partial<IconProps> = {}, tone: IconTone = iconTones.get(Component) ?? "slate") {
   function AgenteamIcon({
                           variant = "Linear",
                           style,
@@ -109,6 +127,8 @@ function agenteamIcon(Component: Icon, defaults: Partial<IconProps> = {}) {
         aria-hidden="true"
         focusable="false"
         className={`iconsax-icon ${className || ""}`}
+        data-icon-tone={tone}
+        color="currentColor"
         variant={variant}
         {...defaults}
         {...props}
@@ -131,6 +151,7 @@ export const IconArrowUpRight = agenteamIcon(ArrowRight, {
   style: {rotate: "-45deg"},
 });
 export const IconArrowsJoin = agenteamIcon(Hierarchy2);
+export const IconCollaboration = agenteamIcon(People, {variant: "Bulk"});
 export const IconArrowsSplit = agenteamIcon(Hierarchy);
 export const IconAt = agenteamIcon(DocumentFilter);
 export const IconBell = agenteamIcon(Notification);
@@ -225,4 +246,4 @@ export const IconUserCircle = agenteamIcon(ProfileCircle);
 export const IconUserMinus = agenteamIcon(UserMinus);
 export const IconUsers = agenteamIcon(Profile2User);
 export const IconUsersGroup = agenteamIcon(People);
-export const IconX = agenteamIcon(Add, {style: {rotate: "45deg"}});
+export const IconX = agenteamIcon(Add, {style: {rotate: "45deg"}}, "slate");

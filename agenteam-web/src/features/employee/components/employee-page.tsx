@@ -10,7 +10,6 @@ import {Checkbox} from "@/components/ui/checkbox";
 
 import {PageHeader} from "@/components/ui/page-header";
 
-import Link from "next/link";
 import {Tabs} from "@/components/ui/tabs";
 import {MotionPanel} from "@/components/ui/motion-panel";
 import {SearchInput} from "@/components/ui/search-input";
@@ -18,7 +17,6 @@ import {
   IconAdjustments,
   IconArrowRight,
   IconFileText,
-  IconMessages,
   IconRefresh,
   IconUser,
   IconUsers
@@ -35,6 +33,7 @@ import {Pagination, QueryState} from "@/components/ui/query-state";
 
 import type {Employee} from "../types/employee";
 import {EmployeeDetail} from "./employee-detail";
+import {EmployeeActions} from "./employee-actions";
 import {HireApplicationDetail, HireApplications} from "./hire-applications";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./employee.module.css";
@@ -116,7 +115,7 @@ function EmployeeContent({user, context}: { user: IdentityUser; context: Enterpr
                             onChanged={changed}/>
           : <EmployeeList key={tab} enterpriseId={context.enterprise.id} permissions={context.permissions} tab={tab}
                           query={query} onQuery={(value) => update("query", value, true)}
-                          refresh={refresh} onSelect={(employee) => {
+                          refresh={refresh} onChanged={changed} onSelect={(employee) => {
             setSelectedEmployee(employee);
             update("employee", employee.agentId);
           }}/>}
@@ -133,13 +132,14 @@ function EmployeeContent({user, context}: { user: IdentityUser; context: Enterpr
   </PlatformShell>;
 }
 
-function EmployeeList({enterpriseId, permissions, tab, query, onQuery, refresh, onSelect}: {
+function EmployeeList({enterpriseId, permissions, tab, query, onQuery, refresh, onSelect, onChanged}: {
   enterpriseId: string;
   permissions: string[];
   tab: "market" | "mine";
   query: string;
   onQuery: (value: string) => void;
   refresh: number;
+  onChanged: () => void;
   onSelect: (employee: Employee) => void;
 }) {
   const uiText = useT();
@@ -185,20 +185,18 @@ function EmployeeList({enterpriseId, permissions, tab, query, onQuery, refresh, 
             className={`badge ${employee.hireStatus === "active" ? "mint" : "neutral"}`}>{localizeCatalog(hireLabels, uiText)[employee.hireStatus]}</span>}
         </div>
         <Button className={styles.employeeName} onClick={() => onSelect(employee)}>{employee.name}</Button>
-        <p className={styles.role}>{employee.businessRole}</p><p
-        className={styles.introduction}>{employee.description}</p>
+        {employee.businessRole && <p className={styles.role}>{employee.businessRole}</p>}
+        {employee.description && employee.description.trim() !== employee.businessRole.trim() &&
+          <p className={styles.introduction}>{employee.description}</p>}
         {employee.tags.length > 0 && <div className={ui.chips}>{employee.tags.map((tag) => <span key={tag}
                                                                                                  className={ui.chip}>{tag}</span>)}</div>}
-        {employee.unavailableReason && <p className={styles.reason}>{uiText(employee.unavailableReason)}</p>}
+        {employee.unavailableReason && !(employee.canHire && employee.hireStatus === "none") &&
+          <p className={styles.reason}>{uiText(employee.unavailableReason)}</p>}
         <footer className={styles.cardFooter}><Button className="text-button"
                                                       onClick={() => onSelect(employee)}>{uiText("查看详情")}<IconArrowRight
           size={15}/></Button>
-          {employee.canRun && permissions.includes("conversation.view") ?
-            <Link className={`button small ${styles.startChat}`}
-                  href={`/enterprises/${encodeURIComponent(enterpriseId)}/new-task?agent=${encodeURIComponent(employee.agentId)}`}><IconMessages
-              size={16}/>{uiText("开始对话")}</Link>
-            : (employee.canHire || employee.canResume) && <Button className="button primary small"
-                                                                  onClick={() => onSelect(employee)}>{employee.canResume ? uiText("恢复雇佣") : employee.requiresApproval ? uiText("申请雇佣") : uiText("雇佣员工")}</Button>}
+          <EmployeeActions enterpriseId={enterpriseId} employee={employee} permissions={permissions}
+                           onChanged={onChanged} disabled={list.loading} compact/>
         </footer>
       </article>)}</div>
     </QueryState><Pagination {...list} hasMore={list.data?.hasMore}/>

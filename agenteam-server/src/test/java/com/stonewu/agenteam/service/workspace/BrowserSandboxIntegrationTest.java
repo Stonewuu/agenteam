@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import org.junit.jupiter.api.Tag;
+
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -15,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** 在与生产一致的只读、非特权容器中验证网页脚本执行和代码拉取。 */
+@Tag("external-process")
 class BrowserSandboxIntegrationTest {
     @TempDir
     Path directory;

@@ -81,22 +81,22 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
                   onClick={() => {
                     setFilter(value.id);
                     setQuery("");
-                  }}><span className={styles.providerIcon}><IconPlug
+                  }}><span className={styles.providerIcon} data-icon-surface><IconPlug
             size={21}/></span><span><strong>{value.name}</strong><small>{value.modelCount}{uiText(" 个模型")}{!value.enabled ? uiText(" · 已停用") : ""}</small></span></Button>)}</QueryState>
         </div>
       </aside>
       {current && <div className={styles.providerContent}>
         <section className={styles.connectionCard} aria-label={uiText("{0}的服务连接", [current.name])}>
-          <div className={styles.connectionHeading}><span className="avatar purple"><IconPlug size={25}/></span>
+          <div className={styles.connectionHeading}><span className="avatar purple" data-icon-surface><IconPlug size={25}/></span>
             <div><h2>{current.name}</h2><p>{current.baseUrl}</p></div>
-            {canManage && <DropdownMenu><DropdownMenuTrigger
-              render={<Button className="icon-button" aria-label={uiText("{0}的更多操作", [current.name])}><IconDots
-                size={19}/></Button>}/><DropdownMenuContent align="end"><DropdownMenuItem
-              onClick={() => setProvider(current)}><IconPencil size={16}/>{uiText("编辑连接")}
-            </DropdownMenuItem><DropdownMenuItem disabled={current.modelCount > 0} onClick={() => setDeleting({
+            {canManage && <div className={styles.connectionActions}><Button className={ui.button}
+              onClick={() => setProvider(current)}><IconPencil size={16}/>{uiText("编辑连接")}</Button>
+              <DropdownMenu><DropdownMenuTrigger
+              render={<Button className={ui.button} aria-label={uiText("{0}的更多操作", [current.name])}><IconDots
+                size={16}/>{uiText("更多")}</Button>}/><DropdownMenuContent align="end"><DropdownMenuItem disabled={current.modelCount > 0} onClick={() => setDeleting({
               kind: "provider",
               value: current
-            })}><IconTrash size={16}/>{uiText("删除提供方")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
+            })}><IconTrash size={16}/>{uiText("删除提供方")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>}
           </div>
           <div className={styles.connectionFooter}><span><IconKey
             size={15}/>{current.keyConfigured ? uiText("已配置访问密钥") : uiText("未配置访问密钥")}</span><span
@@ -116,7 +116,7 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
                       empty={query ? uiText("没有匹配的模型。") : canManage ? uiText("此提供方下还没有模型，添加后即可在智能体中选择。") : uiText("此提供方下还没有模型。")}>
             <div className={styles.modelList}>{visible.map((value) => <article className={styles.modelRow}
                                                                                key={value.id}><span
-              className={styles.modelIcon}><IconRobot size={23}/></span>
+              className={styles.modelIcon} data-icon-surface><IconRobot size={23}/></span>
               <div className={styles.modelCopy}><h3>{value.name}</h3><p>{value.modelName}</p>
                 <div className={styles.capabilities}>
                   <span>{value.capabilities.inputTypes.map((type) => type === "image" ? uiText("图片") : uiText("文字")).join("、") + uiText("输入")}</span>{value.capabilities.supportsTools &&

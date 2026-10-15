@@ -19,6 +19,7 @@ import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.security.HttpCredentialService;
 import com.stonewu.agenteam.service.security.PayloadEncryption;
+import com.stonewu.agenteam.service.collaboration.CollaborationToolAuthorization;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.util.JsonUtils;
 import org.slf4j.Logger;
@@ -54,13 +55,14 @@ public class ToolCallTransactions {
     private final ToolSchemaValidation schemas;
     private final FileMapper files;
     private final ToolQueryPolicy queries;
+    private final CollaborationToolAuthorization collaboration;
 
     public ToolCallTransactions(ToolCallMapper calls, RunApprovalMapper approvals, ExecutionToolCatalog catalog,
                                 ExecutionAccessService access,
                                 RunLifecycleService lifecycle, PayloadEncryption encryption, ToolPayloadMapper payloads,
                                 ToolApprovalSummaryMapper summaries, ResourceJson json, Clock clock,
                                 HttpCredentialService credentials, ToolSchemaValidation schemas, FileMapper files,
-                                ToolQueryPolicy queries) {
+                                ToolQueryPolicy queries, CollaborationToolAuthorization collaboration) {
         this.calls = calls;
         this.approvals = approvals;
         this.catalog = catalog;
@@ -75,6 +77,7 @@ public class ToolCallTransactions {
         this.schemas = schemas;
         this.files = files;
         this.queries = queries;
+        this.collaboration = collaboration;
     }
 
     @Transactional
@@ -177,7 +180,7 @@ public class ToolCallTransactions {
             rejectUnknown(call);
             return calls.find(call.enterpriseId(), call.id(), false).orElseThrow();
         }
-        requireApproval(run, call);
+        requireApproval(run, binding, call);
         if (!call.readOnly() && call.status().equals("running") && call.submittedAt() != null && queries.canQuery(
             binding)) {
             calls.resumeQuery(call, lease.version(), clock.instant());
@@ -192,7 +195,7 @@ public class ToolCallTransactions {
         var run = current(lease, binding);
         lifecycle.remaining(run);
         var call = calls.find(lease.enterpriseId(), callId, true).orElseThrow();
-        requireApproval(run, call);
+        requireApproval(run, binding, call);
         if (!call.readOnly() && (call.attemptCount() >= 2 || (call.attemptCount() > 0 && !queries.canRepeat(
             binding)))) {
             throw unknown();
@@ -222,7 +225,7 @@ public class ToolCallTransactions {
         if (!call.runId().equals(run.id()) || !call.status().equals("running")) {
             throw new IllegalStateException("插件调用已经结束");
         }
-        requireApproval(run, call);
+        requireApproval(run, binding, call);
     }
 
     @Transactional
@@ -302,8 +305,16 @@ public class ToolCallTransactions {
         return run;
     }
 
-    private void requireApproval(RunRecord run, ToolCallRecord call) {
+    public boolean internalAction(RunRecord run, ExecutionToolBinding binding, ToolCallRecord call) {
+        return collaboration.isInternalAction(run, binding, call);
+    }
+
+    private void requireApproval(RunRecord run, ExecutionToolBinding binding, ToolCallRecord call) {
         if (call.readOnly()) {
+            return;
+        }
+        collaboration.requireWrite(run, binding, call);
+        if (collaboration.isInternalAction(run, binding, call)) {
             return;
         }
         var found = approvals.forTool(call);

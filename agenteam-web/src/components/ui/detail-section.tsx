@@ -10,7 +10,7 @@ export function DetailHeading({icon, title, description, action, level = "h3"}: 
 }) {
   const Title = level;
   return <header className={styles.heading}>
-    <span className={styles.icon}>{icon}</span>
+    <span className={styles.icon} data-icon-surface>{icon}</span>
     <div className={styles.headingCopy}><Title>{title}</Title>{description && <p>{description}</p>}</div>
     {action && <div className={styles.headingAction}>{action}</div>}
   </header>;
@@ -29,7 +29,7 @@ export function DetailSection({icon, title, description, action, children, class
 export function DetailStatus({children, icon, tone = "neutral"}: {
   children: ReactNode; icon?: ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "accent";
 }) {
-  return <span className={styles.status} data-tone={tone}>{icon}{children}</span>;
+  return <span className={styles.status} data-tone={tone} data-icon-context="inherit">{icon}{children}</span>;
 }
 
 /** 布尔设置统一显示名称、用途及右侧开关，保存行为由所在页面或表单决定。 */
@@ -39,7 +39,7 @@ export function SettingRow({icon, label, description, checked, disabled = false,
 }) {
   const id = useId();
   return <div className={styles.setting} data-disabled={disabled || undefined}>
-    <span className={styles.settingIcon}>{icon}</span>
+    <span className={styles.settingIcon} data-icon-surface>{icon}</span>
     <label htmlFor={id}><strong>{label}</strong>{description && <span id={`${id}-description`}>{description}</span>}</label>
     <Switch id={id} className="agenteam-toggle" checked={checked} disabled={useControlDisabled(disabled)}
       onCheckedChange={onChange} aria-label={label} aria-describedby={description ? `${id}-description` : undefined}/>

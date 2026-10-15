@@ -51,7 +51,7 @@ public class FileInspectionTransactions {
         if (!files.inspected(file, status, errorCode, now)) {
             return;
         }
-        if (status.equals("ready") && file.purpose().equals("attachment")) {
+        if (status.equals("ready") && (file.purpose().equals("attachment") || file.purpose().equals("collaboration_artifact"))) {
             if (text == null) {
                 throw new IllegalStateException("对话附件未解析，不能标记可用");
             }

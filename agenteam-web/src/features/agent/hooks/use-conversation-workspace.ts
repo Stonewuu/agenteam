@@ -15,6 +15,7 @@ import {useConversationList} from "./use-conversation-list";
 import {useConversationStream} from "./use-conversation-stream";
 import {useConversationResultViewed} from "./use-conversation-result-viewed";
 import {useConversationScroll} from "./use-conversation-scroll";
+import {conversationReadingPosition} from "../lib/conversation-reading";
 import {useConversationStepHistory} from "./use-conversation-step-history";
 import {useConversationSkills} from "@/features/skill/hooks/use-conversation-skills";
 import type {SkillOption} from "@/features/skill/types/skill";
@@ -38,7 +39,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const arrival = handoff?.value?.conversationId === conversationId ? handoff.value : null;
   const recent = useApiQuery<HomeSummary>(!conversationId && !params.get("agent") && canRun ? organizationPath(enterpriseId, "/home") : null);
   const selectedAgent = conversationId ? null : params.get("agent") ?? recent.data?.employees[0]?.agentId ?? null;
-  const localList = useConversationList(enterpriseId, !sharedList);
+  const localList = useConversationList(enterpriseId, !sharedList, userId);
   const list = sharedList ?? localList;
   const stream = useConversationStream(enterpriseId, conversationId);
   useConversationResultViewed(enterpriseId, conversationId, stream.state?.latestRun,
@@ -87,6 +88,15 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     hasUnseenContent
   } = useConversationScroll(draftKey, stream.state?.snapshot.messages, stream.state?.steps);
   const currentRoute = useRef(pathname + "?" + params.toString());
+  const historySnapshot = stream.state?.snapshot;
+  useEffect(() => {
+    const position = conversationReadingPosition(draftKey);
+    if (position && !position.atBottom && position.anchorId && historySnapshot?.conversation.id === conversationId
+      && !historySnapshot.messages.some(message => message.id === position.anchorId) && historySnapshot.hasOlderMessages
+      && !stream.loadingOlder && !stream.loading && !stream.error) {
+      void stream.loadOlder();
+    }
+  }, [draftKey, conversationId, historySnapshot, stream]);
   const messages = useMemo(() => displayMessages(stream.state), [stream.state]);
   const base = `/enterprises/${encodeURIComponent(enterpriseId)}`;
 

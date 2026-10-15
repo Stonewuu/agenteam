@@ -32,4 +32,8 @@ public interface IntegrationProvider {
     ChannelAccessToken fetchAccessToken(IntegrationApplication application, String secret);
 
     ChannelApplicationCheck checkApplication(IntegrationApplication application, ChannelAccessToken token);
+
+    default ChannelApplicationCheck verify(IntegrationApplication application, String secret) {
+        return checkApplication(application, fetchAccessToken(application, secret));
+    }
 }

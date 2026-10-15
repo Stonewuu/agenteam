@@ -18,7 +18,7 @@ export function ModelCallDetails({call, onClose}: {call: ModelCall; onClose: () 
     <div className={styles.stack}>
       <div className={styles.toolbar}><p>{call.modelName} · {call.providerName} · {t(usagePurposes[call.purpose] ?? "模型调用")}</p>
         <span className="badge neutral">{t(status[call.callStatus] ?? "已结束")}</span></div>
-      <section className={styles.moneyCard}><span className={styles.moneyIcon}><IconWallet size={24} variant="Bulk"/></span>
+      <section className={styles.moneyCard}><span className={styles.moneyIcon} data-icon-surface><IconWallet size={24} variant="Bulk"/></span>
         <div className={styles.moneyCopy}><span>{call.totalAmount !== null ? t("已计价费用") : call.knownAmount !== null ? t("已确认部分") : t("费用")}</span>
           <div className={styles.moneyValue}><strong title={call.totalAmount ?? call.knownAmount ?? undefined}>
             {call.totalAmount !== null ? usageAmount(call.totalAmount, t.formatLocale) : call.knownAmount !== null ? usageAmount(call.knownAmount, t.formatLocale)

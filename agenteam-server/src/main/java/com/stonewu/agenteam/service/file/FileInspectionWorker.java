@@ -44,6 +44,7 @@ public class FileInspectionWorker {
     private final FileTypeInspection types;
     private final AttachmentTextService attachments;
     private final CsvInspectionService csvFiles;
+    private final CollaborationAttachmentParser collaboration;
 
     public FileInspectionWorker(BackgroundJobService jobs, FileMapper files, FileContentStorage storage,
                                 SkillFileValidation validation,
@@ -52,7 +53,7 @@ public class FileInspectionWorker {
                                 @Value("${files.inspection.enabled:true}") boolean enabled,
                                 BackgroundJobHeartbeat heartbeats,
                                 FileTypeInspection types, AttachmentTextService attachments,
-                                CsvInspectionService csvFiles) {
+                                CsvInspectionService csvFiles, CollaborationAttachmentParser collaboration) {
         this.jobs = jobs;
         this.files = files;
         this.storage = storage;
@@ -66,6 +67,7 @@ public class FileInspectionWorker {
         this.types = types;
         this.attachments = attachments;
         this.csvFiles = csvFiles;
+        this.collaboration = collaboration;
     }
 
     @Scheduled(fixedDelay = 1000)
@@ -130,14 +132,15 @@ public class FileInspectionWorker {
             if (file.purpose().equals("skill_import")) {
                 validation.read(file, storage);
             }
-            var text = file.purpose().equals("attachment") ? attachments.parse(file, guard) : null;
+            var text = file.purpose().equals("attachment") ? attachments.parse(file, guard)
+                : file.purpose().equals("collaboration_artifact") ? collaboration.parse(file, guard) : null;
             var csv = file.purpose().equals("data_import") ? csvFiles.parse(lease, file, guard) : null;
             if (guard.getAsBoolean()) {
                 transactions.finish(lease, file, "ready", null, false, text, csv);
             }
         } catch (ApiException invalid) {
             LOG.warn("文件检查未完成，工作编号 {}，错误代码 {}", lease.id(), invalid.code(), invalid);
-            if (file != null && file.purpose().equals("attachment") && file.mediaType().equals("application/pdf")
+            if (file != null && (file.purpose().equals("attachment") || file.purpose().equals("collaboration_artifact")) && file.mediaType().equals("application/pdf")
                 && invalid.code().equals("FILE_NO_TEXT")) {
                 transactions.finish(lease, file, "ready", "FILE_NO_TEXT", false, new AttachmentText("", false), null);
                 return;

@@ -30,15 +30,19 @@ public class ConversationManagementService {
     private final ExecutionMessageMapper messages;
     private final ConversationQueryService queries;
     private final Clock clock;
+    private final ConversationSourcePolicy sources;
+    private final ConversationGroupFavoriteService groupFavorites;
 
     public ConversationManagementService(EnterpriseAuthorizationService authorization, ConversationMapper conversations,
                                          ExecutionMessageMapper messages, ConversationQueryService queries,
-                                         Clock clock) {
+                                         Clock clock, ConversationSourcePolicy sources, ConversationGroupFavoriteService groupFavorites) {
         this.authorization = authorization;
         this.conversations = conversations;
         this.messages = messages;
         this.queries = queries;
         this.clock = clock;
+        this.sources = sources;
+        this.groupFavorites = groupFavorites;
     }
 
     public ConversationRecord authorize(AuthContext actor, String id) {
@@ -50,6 +54,9 @@ public class ConversationManagementService {
     @Transactional
     public ConversationView update(AuthContext actor, String id, ConversationUpdateInput input, long revision) {
         var row = authorize(actor, id);
+        if (input.approvalPolicy() != null || input.status() != null) {
+            sources.requireWeb(actor, id);
+        }
         revision(row, revision);
         if (row.status().equals("deleted")) {
             throw ResourceAuthorizationService.unavailable();
@@ -78,9 +85,13 @@ public class ConversationManagementService {
                     "请等待当前任务结束，或先停止任务，再修改工具审批策略。");
             }
         }
-        if (title != null || input.favorite() != null || !status.equals(
+        boolean groupFavorite = groupFavorites.update(actor, row, input.favorite());
+        if (groupFavorite) {
+            row = conversations.find(actor.enterpriseId(), actor.userId(), id, true).orElseThrow();
+        }
+        if (title != null || input.favorite() != null && !groupFavorite || !status.equals(
             row.status()) || input.approvalPolicy() != null) {
-            conversations.update(row, title, input.favorite(), status, input.approvalPolicy(), clock.instant());
+            conversations.update(row, title, groupFavorite ? null : input.favorite(), status, input.approvalPolicy(), clock.instant());
         }
         return current(actor, id);
     }
@@ -88,6 +99,7 @@ public class ConversationManagementService {
     @Transactional
     public void delete(AuthContext actor, String id, long revision) {
         var row = authorize(actor, id);
+        sources.requireWeb(actor, id);
         revision(row, revision);
         inactive(row);
         if (!row.status().equals("deleted")) {

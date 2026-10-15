@@ -34,7 +34,7 @@ export function sectionForField(kind: ResourceKind, name: string): EditorSection
     if (/VersionIds|entryWorkflowVersionId/.test(field)) {
       return "capabilities";
     }
-    if (/^(welcomeMessage|suggestedQuestions|publicExamples|attachmentsEnabled|historyMessageLimit)/.test(field)) {
+    if (/^(welcomeMessage|suggestedQuestions|publicExamples|attachmentsEnabled)/.test(field)) {
       return "experience";
     }
     if (/^(temperature|maxSteps|timeoutSeconds|memory|businessTerms|subagent|dynamicSubagent)/.test(field)) {

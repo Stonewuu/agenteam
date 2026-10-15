@@ -41,7 +41,7 @@ export function EmployeeDetail({enterpriseId, id, permissions, refresh, onChange
     </div>}
     <QueryState {...detail} hasData={Boolean(employee)} empty={uiText("无法访问这位员工。")} contentLayout="flow">
       {employee && <div className={styles.content}>
-        {employee.description && <p className={styles.description}>{employee.description}</p>}
+        {employee.description && employee.description.trim() !== employee.businessRole.trim() && <p className={styles.description}>{employee.description}</p>}
         {employee.tags.length > 0 &&
           <div className={styles.tags} aria-label={uiText("员工专长")}>{employee.tags.map((tag) => <span
             key={tag}>{tag}</span>)}</div>}
@@ -55,11 +55,11 @@ export function EmployeeDetail({enterpriseId, id, permissions, refresh, onChange
                                                                                           variant="Bulk"/>{uiText("擅长的技能")}<span>{employee.skills.length}</span>
         </h3>
           <ul className={styles.skills}>{employee.skills.map((skill) => <li key={skill.id}><span
-            className={styles.skillIcon}><IconBook2 size={18} variant="Bulk"/></span>
+            className={styles.skillIcon} data-icon-surface><IconBook2 size={18} variant="Bulk"/></span>
             <div><strong>{skill.name}</strong>{skill.description && <p>{skill.description}</p>}</div>
           </li>)}</ul>
         </section>}
-        {employee.unavailableReason &&
+        {employee.unavailableReason && !(employee.canHire && employee.hireStatus === "none") &&
           <p className={styles.reason}><IconAlertCircle size={18}/><span>{uiText(employee.unavailableReason)}</span>
           </p>}
         {employee.canRun && permissions.includes("agent.run") &&

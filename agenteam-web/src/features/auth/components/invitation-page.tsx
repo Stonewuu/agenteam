@@ -171,7 +171,7 @@ function InvitationForm({token, initialRegister, onChangeCode}: {
   if (joined) {
     return (
       <section className={invitationStyles.result}>
-        <span className={invitationStyles.emblem} aria-hidden="true"><IconCheck size={26}/></span>
+        <span className={invitationStyles.emblem} data-icon-surface aria-hidden="true"><IconCheck size={26}/></span>
         <h1 className={invitationStyles.heading}>{uiText("已加入企业")}</h1>
         <p className={invitationStyles.intro}
            role="status">{preview ? uiText("你已加入「{0}」，现在可以进入工作空间。", [preview.enterpriseName]) : uiText("现在可以进入你的工作空间。")}</p>
@@ -190,7 +190,7 @@ function InvitationForm({token, initialRegister, onChangeCode}: {
           {preview ? <>
             <div className={invitationStyles.summary}>
               <div className={invitationStyles.enterprise}>
-                <span className={invitationStyles.emblem} aria-hidden="true"><IconBuilding size={24}
+                <span className={invitationStyles.emblem} data-icon-surface aria-hidden="true"><IconBuilding size={24}
                                                                                            variant="Bulk"/></span>
                 <div>
                   <p className={invitationStyles.inviter}>{preview.inviterName}{uiText(" 邀请你加入")}</p>

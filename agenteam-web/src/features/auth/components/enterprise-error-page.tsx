@@ -61,7 +61,7 @@ export function EnterpriseErrorPage({
       <section className={styles.card} aria-labelledby={titleId} aria-describedby={messageId}>
         <div className={styles.body}>
           <header className={styles.intro}>
-            <span className={styles.symbol} aria-hidden="true"><IconAlertCircle size={24} variant="Bulk"/></span>
+            <span className={styles.symbol} data-icon-surface aria-hidden="true"><IconAlertCircle size={24} variant="Bulk"/></span>
             <div className={styles.copy}>
               <h1 id={titleId} className={styles.title}>{uiText("页面暂时无法打开")}</h1>
               <p id={messageId} className={styles.message} role="alert">{message}</p>

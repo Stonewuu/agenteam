@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import org.junit.jupiter.api.Tag;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 真实容器验证并行命令、持久文件及单条命令的后台进程清理。
  */
+@Tag("external-process")
 class DockerProjectCommandExecutorTest {
     @TempDir
     Path root;

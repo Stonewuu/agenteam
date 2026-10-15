@@ -68,7 +68,7 @@ export function EnterpriseProfilePanel({enterpriseId, canManage, context}: {
     <QueryState {...query} hasData={Boolean(query.data)} empty={uiText("暂时无法读取企业资料。")}>{query.data &&
       <div className={styles.overviewGrid}>
         <section className={styles.overviewCard}>
-          <div className={styles.overviewIdentity}><span className="avatar purple"><IconBuilding size={25}/></span>
+          <div className={styles.overviewIdentity}><span className="avatar purple" data-icon-surface><IconBuilding size={25}/></span>
             <div><h2>{query.data.name}</h2>{query.data.description && <p>{query.data.description}</p>}</div>
           </div>
           <dl className={styles.detailGrid}>

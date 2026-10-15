@@ -6,6 +6,8 @@ import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.support.MockChannelServer;
+import com.stonewu.agenteam.service.chat.ChatPlatformAdapter.UploadFile;
+import com.stonewu.agenteam.mapper.integration.ChannelResponseMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,9 +17,12 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,6 +46,20 @@ class ChannelRequestDiagnosticsTest {
         logger.detachAppender(events);
         events.stop();
         server.close();
+    }
+
+    @Test
+    void cardUpdateUsesPatchAndLogsPlatformFailureWithoutCardBody() {
+        server.raw(403, "{\"code\":99991672,\"msg\":\"Access denied. permission required\"}", Map.of("X-Tt-Logid", "card-update-trace"));
+        http.patch("test-card-update", server.origin().resolve("/open-apis/im/v1/messages/om_test"),
+            json.createObjectNode().put("content", "private-card-content"), "private-card-token");
+        String output = logs();
+        assertTrue(output.contains("PATCH"));
+        assertTrue(output.contains("99991672"));
+        assertTrue(output.contains("permission required"));
+        assertTrue(output.contains("card-update-trace"));
+        assertFalse(output.contains("private-card-content"));
+        assertFalse(output.contains("private-card-token"));
     }
 
     @Test
@@ -144,5 +163,51 @@ class ChannelRequestDiagnosticsTest {
         return events.list.stream().map(event -> event.getFormattedMessage()
             + (event.getThrowableProxy() == null ? "" : ThrowableProxyUtil.asString(event.getThrowableProxy())))
             .collect(Collectors.joining("\n"));
+    }
+
+    @Test
+    void uploadedFileEchoesAreHiddenWithoutHidingThePermissionReason() {
+        String line = "示例员工甲,20,保密测试工资";
+        byte[] content = ("员工,天数,备注\n" + line + "\n").getBytes(StandardCharsets.UTF_8);
+        server.raw(403, json.createObjectNode().put("code", 99991672)
+            .put("msg", "im:resource:upload permission required; file 私有考勤.csv; content=" + line + "; Bearer upload-private-token").toString(),
+            Map.of("X-Tt-Logid", "upload-denied-trace"));
+        var client = new IntegrationResourceHttpClient(json, null, new ChannelResponseMapper());
+        assertThrows(ChannelProviderException.class, () -> client.upload("file-test", server.origin().resolve("/open-apis/im/v1/files"),
+            "upload-private-token", new UploadFile("私有考勤.csv", "text/csv", content.length, () -> new ByteArrayInputStream(content)), () -> {
+            }));
+        assertTrue(logs().contains("im:resource:upload permission required"));
+        assertTrue(logs().contains("HTTP状态=403"));
+        assertTrue(logs().contains("upload-denied-trace"));
+        assertFalse(logs().contains(line));
+        assertFalse(logs().contains("私有考勤.csv"));
+        assertFalse(logs().contains("upload-private-token"));
+    }
+
+    @Test
+    void websocketNetworkFailurePreservesCauseWithoutConnectionQueryTickets() {
+        var safe = ChannelRequestDiagnostics.networkCause(new IOException("connection timed out at wss://open.example.test/ws?ticket=private-ticket&device=private-device"));
+        assertTrue(safe.getMessage().contains("connection timed out"));
+        assertTrue(safe.getMessage().contains("wss://open.example.test/ws?"));
+        assertFalse(safe.getMessage().contains("private-ticket"));
+        assertFalse(safe.getMessage().contains("private-device"));
+        assertTrue(safe.getStackTrace().length > 0);
+    }
+
+    @Test
+    void encodedWebsocketFileEchoesAreHiddenAfterThePlatformDecodesTheChunk() {
+        String content = "测试员工,考勤,工资\n保密测试员工,20,9876.54\n";
+        String encoded = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
+        var request = json.createObjectNode().put("upload_id", "test-upload").put("base64_data", encoded);
+        var response = json.createObjectNode().put("errcode", 45009)
+            .put("errmsg", "上传暂时限流；回显行：保密测试员工,20,9876.54");
+        response.putObject("headers").put("req_id", "test-chunk-trace");
+        new IntegrationFrameDiagnostics(json).response("test-file", "aibot_upload_media_chunk", request, response);
+        assertTrue(logs().contains("上传暂时限流"));
+        assertTrue(logs().contains("45009"));
+        assertTrue(logs().contains("test-chunk-trace"));
+        assertFalse(logs().contains("保密测试员工"));
+        assertFalse(logs().contains("9876.54"));
+        assertFalse(logs().contains(encoded));
     }
 }

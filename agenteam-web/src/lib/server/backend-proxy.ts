@@ -18,6 +18,7 @@ export async function proxyBackendRequest(request: Request, path: string) {
 }
 
 async function forwardBackendRequest(request: Request, path: string) {
+  const method = request.method.toUpperCase();
   const requestHeaders = new Headers();
   copyRequestHeader(request.headers, requestHeaders, "accept");
   copyRequestHeader(request.headers, requestHeaders, "content-type");
@@ -30,8 +31,12 @@ async function forwardBackendRequest(request: Request, path: string) {
   copyRequestHeader(request.headers, requestHeaders, "if-match");
   copyRequestHeader(request.headers, requestHeaders, "range");
   copyRequestHeader(request.headers, requestHeaders, "if-range");
+  if (method === "POST" && /^\/api\/v1\/chat\/callbacks\/feishu\/[a-f0-9]{32}$/.test(path.split("?")[0])) {
+    copyRequestHeader(request.headers, requestHeaders, "x-lark-request-timestamp");
+    copyRequestHeader(request.headers, requestHeaders, "x-lark-request-nonce");
+    copyRequestHeader(request.headers, requestHeaders, "x-lark-signature");
+  }
 
-  const method = request.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";
   let body: Uint8Array | undefined;
   if (hasBody) {

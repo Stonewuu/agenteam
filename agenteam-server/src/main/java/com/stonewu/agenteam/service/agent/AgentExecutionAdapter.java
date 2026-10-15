@@ -9,6 +9,7 @@ import com.stonewu.agenteam.service.execution.ExecutionTask;
 import com.stonewu.agenteam.service.execution.RunApprovalService;
 import com.stonewu.agenteam.service.execution.RunCheckpointService;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.collaboration.CollaborationRunAccessService;
 import io.agentscope.core.agent.AgentRun;
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.event.AgentResultEvent;
@@ -20,6 +21,7 @@ import io.agentscope.core.message.ToolUseBlock;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
@@ -39,11 +41,12 @@ public class AgentExecutionAdapter {
     private final RunCheckpointService checkpoints;
     private final AgentInputService inputs;
     private final RunApprovalService approvals;
+    private final CollaborationRunAccessService collaboration;
 
     public AgentExecutionAdapter(AgentExecutionFactory factory, AgentStreamEventMapper events,
                                  ExecutionMessageMapper messages,
                                  ExecutionPresentationFactory presentations, RunCheckpointService checkpoints,
-                                 AgentInputService inputs, RunApprovalService approvals) {
+                                 AgentInputService inputs, RunApprovalService approvals, CollaborationRunAccessService collaboration) {
         this.factory = factory;
         this.events = events;
         this.messages = messages;
@@ -51,6 +54,7 @@ public class AgentExecutionAdapter {
         this.checkpoints = checkpoints;
         this.inputs = inputs;
         this.approvals = approvals;
+        this.collaboration = collaboration;
     }
 
     public Task create(RunRecord run, JobLease lease) {
@@ -100,6 +104,7 @@ public class AgentExecutionAdapter {
         private volatile List<ToolUseBlock> pending = List.of();
         private volatile List<ToolUseBlock> external = List.of();
         private volatile Msg result;
+        private volatile boolean collaborationFinished;
 
         private Task(AgentExecutionFactory.Execution execution, FrameEventPersistence persistence, List<Msg> input,
                      RunRecord run, JobLease lease, boolean ownsPersistence) {
@@ -134,12 +139,12 @@ public class AgentExecutionAdapter {
                         && !(event instanceof ExternalExecutionResultEvent)).map(events::map).doOnNext(stream::accept)
                 .takeUntilOther(stop.asMono()).takeUntilOther(persistence.failure().asMono()).then()
                 // 新版用取消异常通知结束，仅把平台主动取消的本次调用转为正常停止。
-                .onErrorComplete(failure -> cancelled.get() && failure instanceof CancellationException)
+                .onErrorComplete(this::normalEnd)
                 .doOnSuccess(ignored -> {
                     stream.finish(cancelled.get() ? "cancelled" : "completed");
                     persistence.flush();
                     execution.tools().requireSuccessful();
-                    if (ownsPersistence && !cancelled.get() && !waiting() && messages.find(run.enterpriseId(),
+                    if (ownsPersistence && !cancelled.get() && !waiting() && !collaborationFinished && messages.find(run.enterpriseId(),
                         run.conversationId(), run.outputMessageId()).orElseThrow().content().isBlank()) {
                         throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_EMPTY_RESULT",
                             "员工没有返回可显示的回复，请稍后重试。");
@@ -150,6 +155,19 @@ public class AgentExecutionAdapter {
                 completion = completion.timeout(execution.timeout());
             }
             return completion.subscribeOn(Schedulers.boundedElastic());
+        }
+
+        private boolean normalEnd(Throwable failure) {
+            var cause = Exceptions.unwrap(failure);
+            if (cancelled.get() && cause instanceof CancellationException) {
+                return true;
+            }
+            if (cause instanceof ApiException api && api.code().equals("COLLABORATION_WORK_FINISHED")
+                && collaboration.hasCommittedRoundEnd(run)) {
+                collaborationFinished = true;
+                return true;
+            }
+            return false;
         }
 
         public void cancel() {

@@ -35,11 +35,22 @@
   </scm>
   <properties>
     <agenteam.build.directory>${project.basedir}/target</agenteam.build.directory>
+    <agenteam.test.forks>0.25C</agenteam.test.forks>
+    <agenteam.test.heap>1024m</agenteam.test.heap>
+    <agenteam.test.processors>4</agenteam.test.processors>
+    <skipTests>false</skipTests>
+    <agenteam.test.skip.processes>${skipTests}</agenteam.test.skip.processes>
+    <agenteam.test.reports>${agenteam.build.directory}/surefire-reports</agenteam.test.reports>
     <java.version>21</java.version>
     <agentscope.version>2.0.4</agentscope.version>
     <aws-sdk.version>2.49.6</aws-sdk.version>
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>com.larksuite.oapi</groupId>
+      <artifactId>oapi-sdk</artifactId>
+      <version>2.8.6</version>
+    </dependency>
     <dependency>
       <groupId>org.pf4j</groupId>
       <artifactId>pf4j</artifactId>
@@ -260,11 +271,33 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <!-- 各类独立执行，结束时释放测试数据库映射及框架静态缓存。 -->
-          <forkCount>1</forkCount>
-          <reuseForks>false</reuseForks>
-          <argLine>-Xmx2g</argLine>
+          <!-- 独立进程并发，类结束后由测试扩展关闭应用并释放缓存，进程内复用容器。 -->
+          <forkCount>${agenteam.test.forks}</forkCount>
+          <reuseForks>true</reuseForks>
+          <reportsDirectory>${agenteam.test.reports}</reportsDirectory>
+          <argLine>-Xmx${agenteam.test.heap} -XX:ActiveProcessorCount=${agenteam.test.processors}</argLine>
         </configuration>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <configuration>
+              <excludedGroups>external-process</excludedGroups>
+            </configuration>
+          </execution>
+          <execution>
+            <id>external-process-tests</id>
+            <phase>test</phase>
+            <goals><goal>test</goal></goals>
+            <configuration>
+                <!-- 真实容器与远程节点测试顺序执行，接口组合类放到后面避开环境启动高峰。 -->
+              <groups>external-process</groups>
+              <skipTests>${agenteam.test.skip.processes}</skipTests>
+              <forkCount>1</forkCount>
+                <runOrder>reversealphabetical</runOrder>
+              <failIfNoTests>false</failIfNoTests>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

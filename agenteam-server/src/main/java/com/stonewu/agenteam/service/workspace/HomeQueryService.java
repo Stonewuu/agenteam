@@ -6,8 +6,10 @@ import com.stonewu.agenteam.mapper.todo.TodoMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.todo.response.TodoView;
 import com.stonewu.agenteam.model.workspace.response.HomeSummaryView;
+import com.stonewu.agenteam.model.execution.response.ConversationNavigationItem;
+import com.stonewu.agenteam.model.execution.response.ConversationView;
 import com.stonewu.agenteam.service.agent.EmployeeQueryService;
-import com.stonewu.agenteam.service.execution.ConversationQueryService;
+import com.stonewu.agenteam.service.execution.ConversationNavigationService;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
 import com.stonewu.agenteam.service.todo.TodoPolicy;
 import com.stonewu.agenteam.service.todo.TodoQueryService;
@@ -22,7 +24,7 @@ import java.util.Set;
 public class HomeQueryService {
     private final EnterpriseAuthorizationService access;
     private final PermissionMapper permissions;
-    private final ConversationQueryService conversations;
+    private final ConversationNavigationService conversations;
     private final EmployeeQueryService employees;
     private final TodoPolicy todoPolicy;
     private final TodoMapper todos;
@@ -30,7 +32,7 @@ public class HomeQueryService {
     private final ScheduleMapper schedules;
 
     public HomeQueryService(EnterpriseAuthorizationService access, PermissionMapper permissions,
-                            ConversationQueryService conversations,
+                            ConversationNavigationService conversations,
                             EmployeeQueryService employees, TodoPolicy todoPolicy, TodoMapper todos,
                             TodoQueryService todoQueries, ScheduleMapper schedules) {
         this.access = access;
@@ -55,10 +57,17 @@ public class HomeQueryService {
             recentTodos = todos.recentOwnedOpen(scope).stream().map(row -> todoQueries.view(actor, row)).toList();
             count = todos.countOwnedOpen(scope);
         }
-        return new HomeSummaryView(
-            codes.contains("conversation.view") ? conversations.list(actor, null, "active", null, null, null, 3)
-                .items() : List.of(),
+        var recent = codes.contains("conversation.view") ? conversations.list(actor, null, "active", null, null, "all", null, 3).items()
+            : List.<ConversationNavigationItem>of();
+        return new HomeSummaryView(recent.stream().map(this::conversation).toList(),
             recentTodos, codes.contains("agent.run") ? employees.recentAvailable(actor) : List.of(), count,
-            codes.contains("schedule.view") ? schedules.countEnabled(actor.enterpriseId(), actor.userId()) : 0);
+            codes.contains("schedule.view") ? schedules.countEnabled(actor.enterpriseId(), actor.userId()) : 0, recent);
+    }
+
+    private ConversationView conversation(ConversationNavigationItem item) {
+        var value = item.conversation();
+        return new ConversationView(value.id(), value.revision(), value.createdAt(), item.updatedAt(), item.title(), value.agentId(),
+            value.agentName(), value.agentIcon(), value.agentColor(), value.mode(), item.favorite(), value.status(), value.activeRunId(),
+            value.canContinue(), value.unavailableReason(), value.approvalPolicy(), value.modelSelection(), value.projectId(), value.collaborationTaskId());
     }
 }

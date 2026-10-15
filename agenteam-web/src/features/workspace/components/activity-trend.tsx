@@ -50,7 +50,7 @@ export function ActivityTrend({enterprise, refresh}: { enterprise: string; refre
   }, []);
   return <section className={styles.card} aria-label={uiText("我的活动趋势")}>
     <header className={styles.header}>
-      <div className={styles.heading}><span className={styles.headingIcon}><IconChartBar size={20}
+      <div className={styles.heading}><span className={styles.headingIcon} data-icon-surface><IconChartBar size={20}
                                                                                          variant="Bulk"/></span>
         <div><h2>{uiText("活动足迹")}</h2><p>{uiText("每一天，留下一点进展")}</p></div>
       </div>

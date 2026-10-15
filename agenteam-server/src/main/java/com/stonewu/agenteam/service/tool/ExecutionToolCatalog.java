@@ -57,8 +57,16 @@ public class ExecutionToolCatalog {
                     for (var tool : tools.list(run.enterpriseId(), version.asText())) {
                         if (tool.enabled()) {
                             var binding = binding(dependency, tool);
+                            if (binding.config().path("builtinCode").asText().equals("group_collaboration")
+                                && !"collaboration".equals(run.executionConfig().path("sourceType").asText())) {
+                                continue;
+                            }
+                            if (run.executionConfig().at("/collaboration/planningOnly").asBoolean() && !binding.readOnly()
+                                && !binding.config().path("builtinCode").asText().equals("group_collaboration")) {
+                                continue;
+                            }
                             boolean platform = binding.config().path("pluginType").asText().equals("builtin")
-                                && Set.of("todo_management", "schedule_management")
+                                && Set.of("todo_management", "schedule_management", "group_collaboration")
                                 .contains(binding.config().path("builtinCode").asText());
                             if (platform && !run.mode().equals("interactive") && !tool.definition().operationClass()
                                 .equals("read")) {

@@ -1,5 +1,7 @@
 "use client";
 
+import {conversationTarget, navigationConversation} from "@/features/agent/lib/conversation-navigation";
+
 import {useT} from "@/lib/i18n/locale-provider";
 
 import {Button} from "@/components/ui/button";
@@ -76,15 +78,15 @@ function HomeContent({user, context}: { user: IdentityUser; context: EnterpriseC
             {allowed("conversation.view") && <section className={styles.section}>
               <header><h2><IconMessages size={18} variant="Bulk"/>{uiText("最近的任务")}</h2><Link
                 href={`${root}/conversations`}>{uiText("查看全部")}<IconArrowRight size={14}/></Link></header>
-              <div className={styles.recentTasks}>{result.data.recentConversations.slice(0, 3).map((conversation) =>
+              <div className={styles.recentTasks}>{(result.data.recentTasks?.map(navigationConversation) ?? result.data.recentConversations).slice(0, 3).map((conversation) =>
                 <Link className={styles.recentTask}
-                      href={`${root}/conversations/${encodeURIComponent(conversation.id)}`}
-                      key={conversation.id}><ResourceAvatar icon={conversation.agentIcon ?? ""}
+                      href={`${root}/conversations/${encodeURIComponent(conversationTarget(conversation, user.id, enterprise))}`}
+                      key={conversation.navigationKey ?? conversation.id}><ResourceAvatar icon={conversation.agentIcon ?? ""}
                                                             color={conversation.agentColor ?? undefined}
-                                                            size="small"/><span><strong>{conversation.title}</strong><small>{conversation.agentName} · <EnterpriseDateTime
+                                                            size="small"/><span><strong>{conversation.title}</strong><small>{conversation.collaboration ? `${uiText("协作任务")} · ${conversation.collaboration.roles.map(role => role.name).join("、")}` : conversation.agentName} · <EnterpriseDateTime
                   value={conversation.updatedAt} dateOnly/></small></span><IconArrowUpRight size={18}/></Link>)}</div>
               {!result.data.recentConversations.length &&
-                <div className={styles.compactEmpty}><span className={styles.emptyIcon}><IconMessages size={25}
+                <div className={styles.compactEmpty}><span className={styles.emptyIcon} data-icon-surface><IconMessages size={25}
                                                                                                       variant="Bulk"/></span>
                   <div><h3>{uiText("从第一个任务开始")}</h3>
                     <p>{uiText("把想完成的工作交给数字员工。")}</p>{allowed("agent.run") && result.data.employees.length > 0 &&
@@ -103,7 +105,7 @@ function HomeContent({user, context}: { user: IdentityUser; context: EnterpriseC
                                                                                                   todo={todo}
                                                                                                   onChanged={changed}
                                                                                                   canManage={allowed("todo.manage")}/>) :
-                  <div className={styles.compactEmpty}><span className={styles.emptyIcon}><IconInbox size={25}
+                  <div className={styles.compactEmpty}><span className={styles.emptyIcon} data-icon-surface><IconInbox size={25}
                                                                                                      variant="Bulk"/></span>
                     <div><h3>{uiText("暂时没有待处理事项")}</h3><p>{uiText("留一点从容，开始下一件事。")}</p><Link
                       className="text-button" href={`${root}/todos`}>{uiText("查看我的待办")}<IconArrowRight size={14}/></Link>

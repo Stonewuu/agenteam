@@ -111,7 +111,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
   const PageIcon = localizeCatalog(platformManagementNavigation, uiText).find((item) => item.path === pathname)?.icon ?? (pathname.startsWith("/settings") ? IconSettings : section === "notifications" ? IconBell : section === "memories" ? IconBookmark
     : area === "management" ? localizeCatalog(managementNavigation, uiText).find((item) => item.id === pageSection)?.icon ?? items[selectedIndex]?.icon ?? IconShield
       : items[selectedIndex]?.icon ?? IconLayoutGrid);
-  const switchSuffix = area === "management" ? "/management" : area === "capabilities" ? "/capabilities" : `/` + (["workspace", "conversations", "employees", "schedules", "todos", "notifications", "memories"].includes(section) ? section : "workspace");
+  const switchSuffix = area === "management" ? "/management" : area === "capabilities" ? "/capabilities" : section === "collaboration" ? "/collaboration/tasks" : `/` + (["workspace", "conversations", "employees", "schedules", "todos", "notifications", "memories"].includes(section) ? section : "workspace");
   const navigation = <>
     <Link className="brand" href={context ? `${root}/workspace` : landingPath(user)}
           aria-label={uiText("AgenTeam 工作台")}>

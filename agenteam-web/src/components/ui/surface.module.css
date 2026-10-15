@@ -24,6 +24,7 @@
 }
 
 .primary {
+  --icon-context-color: currentColor;
   background: var(--primary);
   color: var(--primary-foreground);
   border-color: transparent;
@@ -32,6 +33,7 @@
 }
 
 .danger {
+  --icon-context-color: currentColor;
   color: var(--danger, #b73249);
 }
 

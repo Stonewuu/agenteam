@@ -20,7 +20,7 @@ export function ConversationUserMessage({message, enterprise}: { message: Displa
   }> => block.kind === "status");
   return <div className={styles.content}>
     <div className={styles.meta}><EnterpriseDateTime value={message.createdAt} compact/><span>{uiText("你")}</span><span
-      className={styles.avatar}><IconUser size={18}/></span></div>
+      className={styles.avatar} data-icon-surface><IconUser size={18}/></span></div>
     {(message.content || labels.length > 0) &&
       <div className={styles.bubble}>{message.content && <CollapsibleUserText text={message.content}/>}
         {labels.length > 0 && <div className={skillStyles.selections}>{labels.map((block) => <span key={block.id}

@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.configuration.plugin;
 
 import com.stonewu.agenteam.mapper.plugin.PlatformToolDefinitions;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.service.plugin.PlatformBuiltinPluginAdapter;
 import com.stonewu.agenteam.service.plugin.PlatformBusinessTools;
 import org.springframework.beans.factory.ObjectProvider;
@@ -9,6 +10,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class PlatformBuiltinPlugins {
+
+    @Bean
+    public PlatformBuiltinPluginAdapter groupCollaboration(CollaborationToolDefinitions tools,
+                                                           ObjectProvider<PlatformBusinessTools> business) {
+        return new PlatformBuiltinPluginAdapter("group_collaboration", "团队协作",
+            "在当前协作任务中分配岗位工作、移交负责人、共享成果并等待其他岗位。", tools.tools(), business);
+    }
 
     @Bean
     public PlatformBuiltinPluginAdapter platformBasics(PlatformToolDefinitions tools,

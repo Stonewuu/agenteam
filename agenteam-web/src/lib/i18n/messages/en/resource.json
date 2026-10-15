@@ -47,7 +47,7 @@
   "其他操作已修改此": "Another action has updated this ",
   "内置模板": "Built-in template",
   "再次预览": "Preview again",
-  "切换为任务型后，将清除入口工作流设置，并设为不带入历史消息。": "Switching to a task agent clears the entry workflow and disables conversation history.",
+  "切换为任务型后，将清除入口工作流设置。": "Switching to a task agent clears the entry workflow.",
   "切换为对话型后，将清除入口工作流设置。": "Switching to a chat agent clears the entry workflow.",
   "切换为流程型后，将清除默认模型、思考等级、回复变化程度和子智能体设置，并使用选定工作流。": "Switching to a workflow agent clears the default model, reasoning effort, response variation and subagent settings, and uses the selected workflow.",
   "切换智能体类型？": "Change agent type?",
@@ -102,7 +102,6 @@
   "已选{0} {1}": "Selected {0}: {1}",
   "已选智能体 {0}": "Selected agents: {0}",
   "已选标签 {0}": "Selected tags: {0}",
-  "带入的历史消息条数": "History messages to include",
   "并排查看两次回复，可分别选择模型或停止。": "Compare responses side by side. Choose or stop each model independently.",
   "广场与雇佣": "Listing and hiring",
   "广场与雇佣设置": "Listing and hiring settings",
@@ -286,5 +285,6 @@
   "搜索数据源": "Search data sources",
   "刷新数据源": "Refresh data sources",
   "还没有数据源，可以先创建一个。": "No data sources yet. Create one to get started.",
-  "没有匹配的数据源，请调整筛选条件。": "No data sources match your search. Try different filters."
+  "没有匹配的数据源，请调整筛选条件。": "No data sources match your search. Try different filters.",
+  "流程型（当前不可用）": "Workflow (unavailable)"
 }

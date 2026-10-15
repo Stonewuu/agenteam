@@ -23,6 +23,7 @@ import {
   IconChevronDown,
   IconLock,
   IconLogout,
+  IconPlug,
   IconSun,
   IconUser,
   IconUserCircle
@@ -34,6 +35,7 @@ import ui from "@/components/ui/surface.module.css";
 
 const settings = [
   {id: "profile", label: "个人资料", icon: IconUser}, {id: "security", label: "账号安全", icon: IconLock},
+  {id: "channels", label: "企业账号绑定", icon: IconPlug},
   {id: "appearance", label: "外观与主题", icon: IconSun}, {id: "notifications", label: "通知偏好", icon: IconBell},
   {id: "memory", label: "个人偏好记忆", icon: IconBookmark},
 ];
@@ -68,16 +70,17 @@ export function AccountMenu({user, go}: { user: IdentityUser; go: (action: () =>
 
   return <><DropdownMenu>
     <DropdownMenuTrigger className="account-trigger" aria-label={uiText("个人账户：{0}", [user.displayName])}><span
-      className="account-trigger-avatar"><IconUserCircle size={24} variant="Bulk"/></span><span
+      className="account-trigger-avatar" data-icon-surface><IconUserCircle size={24} variant="Bulk"/></span><span
       className="account-trigger-name">{user.displayName}</span><IconChevronDown size={13}/></DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="agenteam-menu agenteam-popup account-menu">
-      <div className="account-summary"><span className="account-summary-avatar"><IconUserCircle size={30}
+      <div className="account-summary"><span className="account-summary-avatar" data-icon-surface><IconUserCircle size={30}
                                                                                                 variant="Bulk"/></span>
         <div className="account-summary-copy"><strong>{user.displayName}</strong>{user.email &&
           <span>{user.email}</span>}</div>
       </div>
       <DropdownMenuSeparator/>
-      {localizeCatalog(settings, uiText).filter((item) => item.id !== "security" || user.authenticationMethod === "channel" || user.capabilities.includes("account.password.change")).map(({id, label, icon: Icon}) => <DropdownMenuItem key={id} onClick={() => {
+      {localizeCatalog(settings, uiText).filter((item) => (item.id !== "security" || user.authenticationMethod === "channel" || user.capabilities.includes("account.password.change"))
+        && (item.id !== "channels" || user.authenticationMethod === "channel" || user.capabilities.includes("account.external.bind"))).map(({id, label, icon: Icon}) => <DropdownMenuItem key={id} onClick={() => {
         const path = `/settings?tab=${id}`;
         if (window.location.pathname === "/settings") {
           window.history.pushState(null, "", path);

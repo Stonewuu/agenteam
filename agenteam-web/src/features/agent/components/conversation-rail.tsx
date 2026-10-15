@@ -12,7 +12,7 @@ import Link from "next/link";
 import {SearchInput} from "@/components/ui/search-input";
 import {Select} from "@/components/ui/select";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/shadcn/collapsible";
-import {IconAdjustments, IconMessages, IconRefresh, IconStar} from "@/components/ui/icons";
+import {IconAdjustments, IconCollaboration, IconMessages, IconRefresh, IconStar} from "@/components/ui/icons";
 import {ResourceAvatar} from "@/components/ui/resource-avatar";
 import {EmployeeIdentity} from "@/features/employee/components/employee-identity";
 import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
@@ -21,6 +21,8 @@ import {ConversationManagementDialog} from "./conversation-management-dialog";
 import {useConversationNavigation} from "./conversation-navigation-context";
 import type {Conversation} from "../types/execution";
 import {groupConversationsByDate} from "../lib/conversation-date-groups";
+import {conversationSelected, conversationTarget} from "../lib/conversation-navigation";
+import type {ConversationScope} from "../hooks/use-conversation-scope";
 import styles from "./conversation-frame.module.css";
 
 export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
@@ -53,9 +55,13 @@ export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
   const selectedId = pathname.split("/")[3] === "conversations" ? pathname.split("/")[4] : null;
   const canManage = context.permissions.includes("conversation.manage");
   const category = list.filter.status === "deleted" ? "deleted" : list.filter.status === "archived" ? "archived" : list.filter.favorite ? "favorite" : "all";
-  const activeFilters = Number(category !== "all") + Number(Boolean(list.filter.agentId));
+  const activeFilters = Number(category !== "all") + Number(Boolean(list.filter.agentId)) + Number(list.filter.scope !== "all");
   const employees = list.employeeOptions;
-  const groups = groupConversationsByDate(list.items, context.enterprise.timezone, now);
+  const current = navigation.currentConversation;
+  const outside = !list.loading && current && conversationSelected(current, selectedId)
+    && !list.items.some(value => (value.navigationKey ?? value.id) === (current.navigationKey ?? current.id)) ? current : null;
+  const groups = [...(outside ? [{key: "current", label: "正在查看", items: [outside]}] : []),
+    ...groupConversationsByDate(list.items, context.enterprise.timezone, now)];
 
   function changed(conversationId: string) {
     list.refresh();
@@ -94,6 +100,10 @@ export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
         </div>
         <CollapsibleContent className="agenteam-disclosure-content" keepMounted inert={!filtersOpen}>
           <div className={styles.railFilters}>
+            <Select aria-label={uiText("对话类型")} value={list.filter.scope} onChange={event => list.setScope(event.target.value as ConversationScope)}>
+              <option value="all">{uiText("全部类型")}</option><option value="standalone">{uiText("单独对话")}</option>
+              <option value="collaboration">{uiText("协作对话")}</option>
+            </Select>
             <Select aria-label={uiText("对话分类")} value={category} onChange={(event) => list.setFilter((current) => ({
               ...current,
               status: event.target.value === "archived" ? "archived" : event.target.value === "deleted" ? "deleted" : "active",
@@ -127,8 +137,8 @@ export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
           <section key={group.key} className={styles.dateGroup} aria-labelledby={`${groupId}-${group.key}`}>
             <h3 id={`${groupId}-${group.key}`} className={styles.dateGroupTitle}>{uiText(group.label)}</h3>
             {group.items.map((conversation) => (
-              <article key={conversation.id} className={styles.conversationItem}
-                       data-active={conversation.id === selectedId} data-manageable={canManage}>
+              <article key={conversation.navigationKey ?? conversation.id} className={styles.conversationItem}
+                       data-active={conversationSelected(conversation, selectedId)} data-manageable={canManage}>
                 {conversation.status === "deleted" ? (
                   <div className={styles.conversationLink}>
                     <strong title={conversation.title}>{conversation.title}</strong>
@@ -136,11 +146,15 @@ export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
                   </div>
                 ) : (
                   <Link className={styles.conversationLink}
-                        href={`${root}/conversations/${encodeURIComponent(conversation.id)}`}
-                        aria-current={conversation.id === selectedId ? "page" : undefined} onClick={onNavigate}>
+                        href={`${root}/conversations/${encodeURIComponent(conversationTarget(conversation, context.member.userId, enterprise))}`}
+                        aria-current={conversationSelected(conversation, selectedId) ? "page" : undefined} onClick={onNavigate}>
                     <strong title={conversation.title}>{conversation.title}</strong>
                     <span className={styles.conversationMeta}>
-                      {conversation.agentName && <span className={styles.agentName}>
+                      {conversation.collaboration ? <span className={styles.agentName}>
+                        <IconCollaboration size={14}/><small title={conversation.collaboration.roles.map(role => role.name).join("、")}>
+                          {uiText("协作任务")} · {conversation.collaboration.roles.map(role => role.name).join("、")}
+                        </small>
+                      </span> : conversation.agentName && <span className={styles.agentName}>
                         <ResourceAvatar icon={conversation.agentIcon ?? ""} color={conversation.agentColor ?? undefined}
                                         size="tiny"/>
                         <small title={conversation.agentName}>{conversation.agentName}</small>

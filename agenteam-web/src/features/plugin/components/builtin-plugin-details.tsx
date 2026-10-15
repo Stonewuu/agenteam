@@ -20,7 +20,7 @@ import {MutationFeedback} from "@/features/workspace/components/mutation-feedbac
 import {useApiQuery} from "@/lib/http/use-api-query";
 import type {ResourceDetail} from "@/features/resource/types/resource";
 import type {PluginTool} from "../types/plugin";
-import {toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
+import {toolDisplayDescription, toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
 import styles from "./tool-collection.module.css";
 import ui from "@/components/ui/surface.module.css";
 
@@ -59,7 +59,7 @@ export function BuiltinPluginDetails({enterpriseId, detail, onChanged}: {
       <QueryState {...tools} hasData={Boolean(tools.data?.length)}
                   empty={uiText("当前没有可用工具。")}>{tools.data?.map((tool) => <div key={tool.id ?? tool.name}
                                                                                       className={styles.selectedTool}>
-        <span><strong>{toolDisplayName(tool, resource.name, uiText)}</strong><span>{uiText(tool.description)}</span></span><span
+        <span><strong>{toolDisplayName(tool, resource.name, uiText)}</strong><span>{toolDisplayDescription(tool, resource.name, uiText)}</span></span><span
         className={`badge ${tool.operationClass === "read" ? "blue" : "amber"}`}>{uiText(toolOperationLabel(tool.operationClass))}</span>
       </div>)}</QueryState>
     </div>

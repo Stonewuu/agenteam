@@ -4,7 +4,7 @@ import Link from "next/link";
 import {useState} from "react";
 import {Button} from "@/components/ui/button";
 import {SettingRow} from "@/components/ui/detail-section";
-import {IconArrowLeft, IconArrowRight, IconBell, IconKey, IconPlug, IconUserCircle, IconCheck} from "@/components/ui/icons";
+import {IconArrowLeft, IconArrowRight, IconBell, IconKey, IconPlug, IconUserCircle, IconCheck, IconMessages} from "@/components/ui/icons";
 import {QueryState} from "@/components/ui/query-state";
 import {AuthFrame} from "@/features/auth/components/auth-frame";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
@@ -21,9 +21,12 @@ export function ChannelAuthorizationPage() {
   const review = useApiQuery<ChannelAuthorizationReview>("/api/v1/auth/channel-authorization");
   const [receiveEnabled, setReceiveEnabled] = useState(true);
   const [externalLoginEnabled, setExternalLoginEnabled] = useState(false);
+  const [chatEnabled, setChatEnabled] = useState(true);
   const action = useFormAction();
+  const chatAvailable = review.data?.chatAvailable ?? false;
+  const messagingAvailable = review.data?.messagingAvailable ?? true;
   return <AuthFrame className={styles.authPage}><section className={styles.authPanel}>
-    <header className={styles.authHeading}><span><IconPlug size={26} variant="Bulk"/></span>
+    <header className={styles.authHeading}><span data-icon-surface><IconPlug size={26} variant="Bulk"/></span>
       <h1>{t("确认绑定账号")}</h1><p>{t("请确认这两个账号都属于你。")}</p></header>
     <QueryState {...review} hasData={Boolean(review.data)} empty={t("没有待确认的授权，请重新发起绑定。")}>{review.data && <div className={ui.form}>
       <dl className={styles.accountPair}>
@@ -34,8 +37,11 @@ export function ChannelAuthorizationPage() {
           <dd>{review.data.externalDisplayName ?? review.data.externalSubjectId}<small>{review.data.connectionName}</small></dd></div>
       </dl>
       <div className={styles.authOptions}>
-        <SettingRow icon={<IconBell size={18}/>} label={t("接收通知")} description={t("通过此账号接收工作提醒。")}
-          checked={receiveEnabled} disabled={action.busy} onChange={setReceiveEnabled}/>
+        {chatAvailable && <SettingRow icon={<IconMessages size={18}/>} label={t("允许通过此账号使用智能体")}
+          description={t("在机器人私聊或已启用的群聊中发起任务。")}
+          checked={chatEnabled} disabled={action.busy} onChange={setChatEnabled}/>}
+        {messagingAvailable && <SettingRow icon={<IconBell size={18}/>} label={t("接收通知")} description={t("通过此账号接收工作提醒。")}
+          checked={receiveEnabled} disabled={action.busy} onChange={setReceiveEnabled}/>}
         {review.data.loginAvailable && <SettingRow icon={<IconKey size={18}/>} label={t("允许使用此账号登录")}
           description={t("下次可以通过企业账号进入工作空间。")}
           checked={externalLoginEnabled} disabled={action.busy} onChange={setExternalLoginEnabled}/>}
@@ -48,7 +54,8 @@ export function ChannelAuthorizationPage() {
         }, "")}>{t("取消")}</Button>
         <Button className={ui.primary} disabled={action.busy} onClick={() => void action.execute(async () => {
           await action.mutation.run(`${channelsPath(review.data!.enterpriseId)}/confirm`, {method: "POST",
-            body: {authorizationId: review.data!.authorizationId, receiveEnabled, externalLoginEnabled}});
+            body: {authorizationId: review.data!.authorizationId, receiveEnabled: Boolean(messagingAvailable && receiveEnabled),
+              ...(typeof review.data!.chatAvailable === "boolean" ? {chatEnabled: Boolean(chatAvailable && chatEnabled)} : {}), externalLoginEnabled}});
           window.location.replace(`/enterprises/${encodeURIComponent(review.data!.enterpriseId)}/settings/channels`);
         }, "")}><IconCheck size={18}/>{action.busy ? t("正在确认…") : t("确认绑定")}</Button>
       </div>

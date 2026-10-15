@@ -8,6 +8,7 @@ import com.stonewu.agenteam.model.execution.response.ConversationView;
 import com.stonewu.agenteam.model.project.entity.WorkspaceProjectRow;
 import com.stonewu.agenteam.model.project.response.ProjectView;
 import com.stonewu.agenteam.service.execution.ConversationQueryService;
+import com.stonewu.agenteam.service.execution.ConversationSourcePolicy;
 import com.stonewu.agenteam.service.execution.RunSubmissionService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
@@ -29,15 +30,17 @@ public class ConversationProjectService {
     private final EnterpriseAuthorizationService authorization;
     private final ConversationQueryService queries;
     private final Clock clock;
+    private final ConversationSourcePolicy sources;
 
     public ConversationProjectService(ConversationMapper conversations, ProjectMetadataService projects,
                                       EnterpriseAuthorizationService authorization, ConversationQueryService queries,
-                                      Clock clock) {
+                                      Clock clock, ConversationSourcePolicy sources) {
         this.conversations = conversations;
         this.projects = projects;
         this.authorization = authorization;
         this.queries = queries;
         this.clock = clock;
+        this.sources = sources;
     }
 
     @Transactional
@@ -73,6 +76,7 @@ public class ConversationProjectService {
     @Transactional
     public ConversationView select(AuthContext actor, String conversation, String projectId, long revision) {
         authorize(actor, conversation);
+        sources.requireWeb(actor, conversation);
         var row = owned(actor.enterpriseId(), actor.userId(), conversation, true);
         RunSubmissionService.active(row);
         if (row.revision() != revision) {

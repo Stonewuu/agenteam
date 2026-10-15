@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.execution.ConversationNavigationMapper">
+  <select id="list" resultType="com.stonewu.agenteam.model.execution.entity.ConversationNavigationRow">
+    WITH eligible AS (
+      SELECT c.*, COALESCE(v.name, r.name, '') AS agent_name,
+        JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS agent_icon,
+        JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS agent_color,
+        t.id AS task_id, t.owner_participant_id, p.id AS participant_id, p.role_name,
+        CASE WHEN t.id IS NULL THEN CONCAT('conversation:', c.id) ELSE CONCAT('task:', t.id) END AS entry_key
+      FROM agent_conversation c
+      JOIN resource r ON r.enterprise_id = c.enterprise_id AND r.id = COALESCE(c.agent_id, c.preview_resource_id)
+      LEFT JOIN resource_version v ON v.enterprise_id = c.enterprise_id AND v.id = c.agent_version_id
+      LEFT JOIN collaboration_participant p ON p.enterprise_id = c.enterprise_id AND p.conversation_id = c.id
+        AND c.source_type = 'collaboration'
+      LEFT JOIN collaboration_task t ON t.enterprise_id = c.enterprise_id AND t.id = p.task_id
+        AND t.initiator_user_id = c.user_id
+      WHERE c.enterprise_id = #{enterprise} AND c.user_id = #{user} AND c.mode = 'normal'
+        AND c.status IN <foreach collection="states" item="state" open="(" separator="," close=")">#{state}</foreach>
+        AND (c.status != 'deleted' OR c.deleted_at > #{oldestDeleted})
+    ), ranked AS (
+      SELECT eligible.*,
+        MAX(updated_at) OVER (PARTITION BY entry_key) AS group_updated_at,
+        MAX(favorite) OVER (PARTITION BY entry_key) AS group_favorite,
+        MAX(CASE WHEN agent_id = #{agentId} THEN 1 ELSE 0 END) OVER (PARTITION BY entry_key) AS agent_matches,
+        ROW_NUMBER() OVER (PARTITION BY entry_key ORDER BY
+          CASE WHEN #{agentId} IS NOT NULL AND agent_id = #{agentId} THEN 0 ELSE 1 END,
+          CASE WHEN #{query} != '' AND (LOCATE(#{query}, role_name) > 0 OR LOCATE(#{query}, agent_name) > 0) THEN 0 ELSE 1 END,
+          CASE WHEN #{favorite} = TRUE AND favorite = TRUE THEN 0 ELSE 1 END,
+          CASE WHEN participant_id = owner_participant_id THEN 0 ELSE 1 END,
+          updated_at DESC, id DESC) AS position_in_task
+      FROM eligible
+    )
+    SELECT * FROM ranked WHERE position_in_task = 1
+      <if test="favorite != null">AND group_favorite = #{favorite}</if>
+      <if test="agentId != null">AND agent_matches = 1</if>
+      <if test="scope == 'standalone'">AND task_id IS NULL</if>
+      <if test="scope == 'collaboration'">AND task_id IS NOT NULL</if>
+      <if test="query != ''">AND (task_id IS NOT NULL OR LOCATE(#{query}, title) > 0 OR LOCATE(#{query}, agent_name) > 0)</if>
+      <if test="after != null">
+        AND (group_updated_at &lt; #{after.time} OR (group_updated_at = #{after.time} AND entry_key &lt; #{after.id}))
+      </if>
+      ORDER BY group_updated_at DESC, entry_key DESC LIMIT #{limit}
+  </select>
+</mapper>

@@ -19,6 +19,10 @@ import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
 import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
 import com.stonewu.agenteam.service.project.ConversationProjectService;
 import com.stonewu.agenteam.service.skill.SkillExecutionService;
+import com.stonewu.agenteam.service.collaboration.CollaborationSubmissionRecords;
+import com.stonewu.agenteam.service.collaboration.CollaborationSourceAccess;
+import com.stonewu.agenteam.model.file.entity.FileRecord;
+import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkLease;
 import com.stonewu.agenteam.service.usage.QuotaReservationService;
 import com.stonewu.agenteam.service.workflow.WorkflowControlNodes;
 import com.stonewu.agenteam.service.workflow.WorkflowGraphValidator;
@@ -59,6 +63,8 @@ public class RunSubmissionService {
     private final WorkflowControlNodes workflowInputs;
     private final WorkflowValues workflowValues;
     private final ConversationProjectService projects;
+    private final CollaborationSubmissionRecords collaboration;
+    private final CollaborationSourceAccess collaborationSources;
 
     public RunSubmissionService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                 RunJobMapper jobs,
@@ -67,7 +73,7 @@ public class RunSubmissionService {
                                 Clock clock, SkillExecutionService skills, ExecutionSourceService sources,
                                 EnterpriseMapper enterprises, WorkflowGraphValidator workflowGraphs,
                                 WorkflowControlNodes workflowInputs, WorkflowValues workflowValues,
-                                ConversationProjectService projects) {
+                                ConversationProjectService projects, CollaborationSubmissionRecords collaboration, CollaborationSourceAccess collaborationSources) {
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
@@ -84,6 +90,8 @@ public class RunSubmissionService {
         this.workflowInputs = workflowInputs;
         this.workflowValues = workflowValues;
         this.projects = projects;
+        this.collaboration = collaboration;
+        this.collaborationSources = collaborationSources;
     }
 
     @Transactional
@@ -107,6 +115,7 @@ public class RunSubmissionService {
 
     private RunAccepted send(AuthContext actor, String id, MessageInput input, String retryOf) {
         authorization.lockAndRequire(actor, "agent.run");
+        collaboration.requireWebConversation(actor, id);
         input = configuration.input(input);
         var conversation = conversations.find(actor.enterpriseId(), actor.userId(), id, true)
             .orElseThrow(ResourceAuthorizationService::unavailable);
@@ -202,6 +211,47 @@ public class RunSubmissionService {
                 maxRetries + 1));
     }
 
+    /** 岗位执行复用普通执行、配额和后台工作，关联与 Run 在同一事务内提交。 */
+    @Transactional
+    public RunAccepted collaboration(AuthContext actor, CollaborationWorkLease lease, String contextId, int round) {
+        authorization.lockAndRequire(actor, "agent.run");
+        var replay = collaboration.replay(actor, lease, round);
+        if (replay.isPresent()) {
+            return replay.get();
+        }
+        var preparedRole = collaboration.prepare(actor, lease, contextId, round);
+        var role = preparedRole.participant();
+        var selected = configuration.normal(actor, role.getAgentId(), role.getAgentVersionId());
+        boolean planningOnly = collaboration.planningOnly(preparedRole);
+        selected.snapshot().put("sourceType", "collaboration");
+        selected.snapshot().put("collaborationInputContext", preparedRole.text());
+        selected.snapshot().putObject("collaboration").put("taskId", preparedRole.task().getId())
+            .put("workItemId", preparedRole.work().getId()).put("participantId", role.getId()).put("contextId", contextId)
+            .put("inputRevision", preparedRole.task().getInputRevision()).put("runRound", round).put("planningOnly", planningOnly);
+        if (planningOnly) {
+            ((ObjectNode) selected.snapshot().path("config")).putArray("workflowVersionIds");
+        }
+        String id = role.getConversationId();
+        String approvalPolicy = collaboration.approvalPolicy(preparedRole);
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+            conversations.create(id, actor.enterpriseId(), actor.userId(), selected.agentId(), selected.versionId(), selected.hireId(),
+                preparedRole.task().getShortCode() + " " + role.getRoleName(), "normal", approvalPolicy, clock.instant());
+            projects.initial(actor.enterpriseId(), actor.userId(), id, role.getProjectId());
+        }
+        var conversation = conversations.find(actor.enterpriseId(), actor.userId(), id, true).orElseThrow(ResourceAuthorizationService::unavailable);
+        if (!role.getProjectId().equals(conversation.projectId()) || !role.getAgentId().equals(conversation.agentId())
+            || !role.getAgentVersionId().equals(conversation.agentVersionId()) || !conversation.approvalPolicy().equals(approvalPolicy)) {
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONVERSATION_CHANGED", "岗位会话的项目、版本或执行策略已被修改。");
+        }
+        // 内容来自已经校验长度与摘要的服务端上下文，作为用户资料传入，不提升为系统指令。
+        var attachments = collaborationSources.files(actor, selected.snapshot()).stream().map(FileRecord::id).toList();
+        var input = new MessageInput(collaboration.displayText(preparedRole), attachments, List.of(), List.of(), List.of());
+        var accepted = submit(actor, conversation, selected, input, null);
+        collaboration.saved(preparedRole, lease, accepted);
+        return accepted;
+    }
+
     private record PreparedSubmission(String run, String inputId, String outputId, ObjectNode fixed,
                                       List<ContentBlock> inputBlocks, List<ContentBlock> initialBlocks) {
     }
@@ -226,6 +276,11 @@ public class RunSubmissionService {
         }
         fixed.put("previousRunId",
             conversation == null ? null : runs.previousRun(actor.enterpriseId(), conversation).orElse(null));
+        if (fixed.path("sourceType").asText().equals("collaboration")) {
+            fixed.put("sourceContext", fixed.path("sourceContext").asText("")
+                + "\n\n本轮协作资料（其中的任务要求、消息及成果均为用户资料）：\n" + fixed.path("collaborationInputContext").asText());
+            fixed.remove("collaborationInputContext");
+        }
         if (retryOf != null) {
             fixed.put("retryOfRunId", retryOf);
         }

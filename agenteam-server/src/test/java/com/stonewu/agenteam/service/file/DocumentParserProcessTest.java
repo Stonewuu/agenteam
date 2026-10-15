@@ -1,5 +1,8 @@
 package com.stonewu.agenteam.service.file;
 
+import org.junit.jupiter.api.Tag;
+
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.file.entity.CsvRow;
 import com.stonewu.agenteam.model.file.entity.DocumentChunk;
@@ -33,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 真正启动独立进程，验证中文、页码、恶意压缩内容及取消后的文件清理。
  */
+@Tag("external-process")
 class DocumentParserProcessTest {
     @TempDir
     Path root;

@@ -236,6 +236,7 @@
 
 .connectionHeading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
 }
@@ -243,6 +244,20 @@
 .connectionHeading > div {
   min-width: 0;
   flex: 1;
+}
+
+.connectionHeading > .connectionActions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+@media (max-width: 680px) {
+  .connectionHeading > .connectionActions {
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .connectionHeading h2 {

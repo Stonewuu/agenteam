@@ -5,6 +5,7 @@ import {
   IconCalendarClock,
   IconChartBar,
   IconCheckbox,
+  IconCollaboration,
   IconDatabase,
   IconGitBranch,
   IconKey,
@@ -38,7 +39,7 @@ export const managementNavigation: readonly ManagementNavigationItem[] = [
     icon: IconKey
   },
   {id: "models", label: "模型配置", searchTerms: "model settings", permission: "model.view", managePermission: "model.manage", icon: IconSettings},
-  {id: "integrations", label: "消息与登录接入", searchTerms: "messaging sign-in integrations", permission: "integration.view", managePermission: "integration.manage", icon: IconPlug},
+  {id: "integrations", label: "企业协作平台", searchTerms: "messaging sign-in integrations 飞书 企微 机器人 登录 通知", permission: "integration.view", managePermission: "integration.manage", icon: IconPlug},
   {id: "announcements", label: "企业公告", permission: "announcement.view", icon: IconBell},
   {id: "usage", label: "用量统计", searchTerms: "执行用量 模型用量 tokens pricing usage", permission: "usage.view", icon: IconChartBar},
   {id: "tool-logs", label: "调用日志", permission: "tool_log.view", icon: IconListDetails},
@@ -51,7 +52,7 @@ export function canViewManagementSection(item: typeof managementNavigation[numbe
 }
 
 export const platformManagementNavigation: readonly PlatformNavigationItem[] = [
-  {path: "/management/integrations", label: "企业接入", icon: IconPlug},
+  {path: "/management/integrations", label: "企业协作平台", capability: "enterprise.switch", icon: IconPlug},
   {path: "/management/announcements", label: "公告管理", icon: IconBell},
   ...editionNavigationExtension.platform,
 ];
@@ -68,6 +69,7 @@ export const capabilityNavigation = [
 export const workspaceNavigation = [
   {path: "workspace", label: "工作台", permissions: ["workspace.view"], icon: IconLayoutDashboard},
   {path: "conversations", label: "对话任务", permissions: ["conversation.view"], icon: IconMessages},
+  {path: "collaboration/tasks", label: "协作任务", permissions: ["agent.run"], icon: IconCollaboration},
   {
     path: "employees",
     label: "数字员工",

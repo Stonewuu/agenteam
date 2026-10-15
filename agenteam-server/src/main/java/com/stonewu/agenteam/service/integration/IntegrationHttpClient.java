@@ -57,6 +57,12 @@ public class IntegrationHttpClient {
             new ChannelRequestDiagnostics(fields, null, null, json));
     }
 
+    public ChannelHttpResponse patch(String connection, URI address, JsonNode body, String bearer) {
+        var content = RequestBody.create(body.toString(), MediaType.get("application/json; charset=utf-8"));
+        return execute(connection, new Request.Builder().url(address.toString()).patch(content), null, bearer,
+            new ChannelRequestDiagnostics(Map.of(), body, bearer, json));
+    }
+
     public static URI withQuery(URI address, Map<String, String> query) {
         var builder = HttpUrl.get(address).newBuilder();
         query.forEach(builder::addQueryParameter);

@@ -28,14 +28,24 @@ final class ChannelRequestDiagnostics {
             + "corpsecret|app_secret|client_secret|secret|password|authorization|code_verifier|code)[\"']?\\s*[:=]\\s*)"
             + "(?:\"[^\"]*\"|'[^']*'|[^\\s,;&}]+)");
     private static final Pattern BEARER = Pattern.compile("(?i)Bearer\\s+[A-Za-z0-9._~+/=-]+");
-    private static final Pattern URL_QUERY = Pattern.compile("(https?://[^\\s?\"'<>]+)\\?[^\\s\"'<>]*");
+    private static final Pattern URL_QUERY = Pattern.compile("((?:https?|wss?)://[^\\s?\"'<>]+)\\?[^\\s\"'<>]*");
     private static final Set<String> RECIPIENT_ERRORS = Set.of("invaliduser", "invalidparty", "invalidtag", "unlicenseduser");
     private final List<String> privateValues = new ArrayList<>();
+    private String privateFileContent;
 
     ChannelRequestDiagnostics(Map<String, String> parameters, JsonNode body, String bearer, ObjectMapper json) {
         parameters.values().forEach(this::remember);
         remember(bearer);
         rememberBody(body, json);
+    }
+
+    void fileContent(String value) {
+        privateFileContent = value;
+    }
+
+    static Throwable networkCause(Throwable source) {
+        return new ChannelRequestDiagnostics(Map.of(), null, null, new ObjectMapper())
+            .safeCause(source, true, new IdentityHashMap<>());
     }
 
     void response(String connection, Request request, int status, JsonNode body, String trace) {
@@ -72,6 +82,15 @@ final class ChannelRequestDiagnostics {
         }
         log(connection, request, status, code.isValueNode() ? code.asText() : "—",
             reasons.isEmpty() ? "平台未提供错误说明" : String.join("；", reasons), trace);
+    }
+
+    void frame(String connection, String command, JsonNode body) {
+        rememberResponseCredentials(body);
+        if (!body.path("errcode").isIntegralNumber() || body.path("errcode").asLong() != 0) {
+            LOG.warn("渠道长连接返回错误，接入={}，命令={}，平台错误码={}，平台原因={}，平台排障编号={}",
+                clean(connection), clean(command), clean(body.path("errcode").asText()),
+                clean(body.path("errmsg").asText("平台未提供错误说明")), clean(body.path("headers").path("req_id").asText()));
+        }
     }
 
     void failure(String connection, Request request, Integer status, String trace, Throwable cause, boolean malformed) {
@@ -114,6 +133,22 @@ final class ChannelRequestDiagnostics {
             return "—";
         }
         String result = source;
+        if (privateFileContent != null) {
+            // 只在失败响应中逐行检查，不为二十 MiB 文件创建多份编码副本或几十万个凭据条目。
+            result = result.replace(privateFileContent, HIDDEN);
+            boolean encoded = result.contains("%");
+            var lines = privateFileContent.lines().iterator();
+            while (lines.hasNext()) {
+                String line = lines.next();
+                if (!line.isBlank()) {
+                    result = result.replace(line, HIDDEN);
+                    if (encoded && line.length() <= result.length()) {
+                        String escaped = URLEncoder.encode(line, StandardCharsets.UTF_8);
+                        result = result.replace(escaped, HIDDEN).replace(escaped.replace("+", "%20"), HIDDEN);
+                    }
+                }
+            }
+        }
         for (String value : privateValues.stream().distinct().sorted(Comparator.comparingInt(String::length).reversed()).toList()) {
             result = result.replace(value, HIDDEN);
         }

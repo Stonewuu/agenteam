@@ -38,7 +38,7 @@ function TokenGroup({call, direction}: {call: ModelCall; direction: "input" | "o
   const applicable = parts[direction].filter(({meter}) => call.tokens[meter] && call.tokens[meter].state !== "not_applicable");
   return <section className={styles.group} data-direction={direction} data-has-parts={applicable.length > 0}>
     <div className={styles.heading}>
-      <span className={styles.icon}><Icon size={20}/></span>
+      <span className={styles.icon} data-icon-context="inherit"><Icon size={20}/></span>
       <div><h4>{direction === "input" ? t("全部输入") : t("输出")}</h4>
         <p>{direction === "input" ? t("模型读取的内容") : t("模型生成的内容")}</p></div>
     </div>

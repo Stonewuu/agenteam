@@ -3,12 +3,14 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import type {ApiPage} from "@/lib/http/use-api-query";
 import type {
   Conversation,
+  ConversationNavigationItem,
   ConversationFrame,
   ConversationSnapshot,
   MessageHistory,
   MessageInput,
   Run
 } from "../types/execution";
+import {navigationConversation} from "../lib/conversation-navigation";
 import {parseConversationFrame, SnapshotRequired, validateSnapshot} from "../state/conversation-protocol";
 
 export function conversationPath(enterprise: string, conversation?: string) {
@@ -24,6 +26,7 @@ export function textInput(text: string): MessageInput {
 }
 
 export type ConversationFilter = {
+  scope?: "all" | "standalone" | "collaboration";
   query: string;
   status: Conversation["status"];
   favorite: boolean;
@@ -32,6 +35,7 @@ export type ConversationFilter = {
 
 export async function listConversations(enterprise: string, filter: ConversationFilter, cursor?: string | null, signal?: AbortSignal) {
   const params = new URLSearchParams({status: filter.status, limit: "30"});
+  params.set("scope", filter.scope ?? "all");
   if (filter.query) {
     params.set("query", filter.query);
   }
@@ -44,7 +48,8 @@ export async function listConversations(enterprise: string, filter: Conversation
   if (cursor) {
     params.set("cursor", cursor);
   }
-  return apiRequest<ApiPage<Conversation>>(`${conversationPath(enterprise)}?${params}`, {signal});
+  const result = await apiRequest<ApiPage<ConversationNavigationItem>>(`${conversationPath(enterprise)}/navigation?${params}`, {signal});
+  return {...result, items: result.items.map(navigationConversation)};
 }
 
 export async function loadSnapshot(enterprise: string, conversation: string, signal?: AbortSignal) {

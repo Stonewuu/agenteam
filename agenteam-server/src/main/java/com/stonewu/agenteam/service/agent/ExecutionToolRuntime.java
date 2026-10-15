@@ -66,6 +66,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
     private final Map<String, Integer> resultLimits = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> sharedResults = new ConcurrentHashMap<>();
     private final Set<String> invalidArguments = ConcurrentHashMap.newKeySet();
+    private final Map<String, ToolCallRecord> preparedTopLevelCalls = new ConcurrentHashMap<>();
 
     public ExecutionToolRuntime(RunRecord run, JobLease lease, Map<String, ExecutionToolBinding> bindings,
                                 ToolCallTransactions transactions,
@@ -212,6 +213,9 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                 var binding = agentBindings.getOrDefault(agent, Map.of()).get(use.getName());
                 if (binding != null) {
                     var call = transactions.prepare(lease, binding, session, parentCall, use);
+                    if (session.equals(run.conversationId())) {
+                        preparedTopLevelCalls.put(binding.alias() + ":" + json.hash(json.tree(use.getInput())), call);
+                    }
                     if (call.status().equals("failed") && Set.of("TOOL_ARGUMENTS_INVALID", "TOOL_RESULT_UNKNOWN")
                         .contains(call.errorCode() == null ? "" : call.errorCode())) {
                         invalidArguments.add(binding.alias() + ":" + json.hash(json.tree(use.getInput())));
@@ -294,6 +298,9 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                 }
                 if (transactions.rejected(run, binding, json.tree(input))) {
                     return PermissionDecision.deny("用户已拒绝本次操作，不能对相同参数再次请求确认。");
+                }
+                if (transactions.internalAction(run, binding, preparedTopLevelCalls.get(binding.alias() + ":" + json.hash(json.tree(input))))) {
+                    return PermissionDecision.allow("当前岗位可以执行任务范围内的协作动作。");
                 }
                 return ToolApprovalPolicy.forRun(run).requiresApproval(binding.definition().operationClass())
                     ? PermissionDecision.ask("本次工具操作需要由原发起人确认。") : PermissionDecision.allow(

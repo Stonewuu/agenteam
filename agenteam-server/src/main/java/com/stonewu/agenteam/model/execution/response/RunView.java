@@ -15,6 +15,6 @@ public record RunView(String id, String conversationId, String inputMessageId, S
             run.startedAt() == null ? null : run.startedAt().toString(),
             run.finishedAt() == null ? null : run.finishedAt().toString(),
             run.nextAttemptAt() == null ? null : run.nextAttemptAt().toString(),
-            run.errorCode(), run.errorMessage(), canRetry, Long.toString(run.lastSequence()));
+            run.errorCode(), run.errorMessage(), canRetry && !"collaboration".equals(run.executionConfig().path("sourceType").asText()), Long.toString(run.lastSequence()));
     }
 }

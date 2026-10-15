@@ -95,10 +95,11 @@ export function toolBlockStatus(block: Extract<DisplayBlock, {
   return block.status;
 }
 
-/** 准备参数时尚未执行；已经完成确认的调用不能重新显示为准备内容。 */
-export function toolStatusLabel(block: Extract<DisplayBlock, { kind: "tool" }>, status: BlockStatus): string {
-  if (status === "pending" && block.status === "pending" && block.callStatus === "running" && block.resultStatus === "pending") {
-    return "正在准备执行内容";
+/** 调用生成结束后，内容仍可能尚未就绪；已经完成确认的调用不能重新显示为准备内容。 */
+export function toolStatusLabel(block: Extract<DisplayBlock, { kind: "tool" }>, status: BlockStatus, waitingForContent = false): string {
+  if (status === "pending" && block.status === "pending" && block.resultStatus === "pending"
+    && (block.callStatus === "running" || waitingForContent)) {
+    return "正在准备执行任务";
   }
   const labels: Record<BlockStatus, string> = {
     pending: "等待执行", running: "执行中", waiting_approval: "等待确认", completed: "已完成",

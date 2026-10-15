@@ -159,7 +159,8 @@ abstract class FileApiTestSupport {
     }
 
     protected boolean inspectWithoutScanner() {
-        var worker = new FileInspectionWorker(jobs, files, storage, skillFiles, new ClamAvScanService(false, "127.0.0.1", 3310, storage), inspectionTransactions, json, clock, false, heartbeats, types, attachments, csvFiles);
+        var worker = new FileInspectionWorker(jobs, files, storage, skillFiles, new ClamAvScanService(false, "127.0.0.1", 3310, storage), inspectionTransactions, json, clock, false, heartbeats, types, attachments, csvFiles,
+            new CollaborationAttachmentParser(attachments, storage));
         try {
             return worker.runNext();
         } finally {

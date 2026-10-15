@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import {chineseText, loadSource} from "./i18n-test-runtime.mjs";
 
 function loadComponent(file, modules = {}) {
   const exports = {};
@@ -11,6 +12,8 @@ function loadComponent(file, modules = {}) {
   const shared = {
     "react/jsx-runtime": { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: "Fragment" },
     react: { useState: (initial) => [typeof initial === "function" ? initial() : initial, () => {}] },
+    "@/lib/i18n/locale-provider": {useT: () => chineseText},
+    "@/lib/i18n/translate": loadSource("lib/i18n/translate"),
     "@/features/workflow/components/workflow-development": { workflowInDevelopment: true, WorkflowDevelopmentPage: "WorkflowDevelopmentPage", WorkflowDevelopmentNotice: "WorkflowDevelopmentNotice" },
     "@/features/enterprise/api/organization-api": { organizationPath: (enterprise, path) => `/api/v1/enterprises/${enterprise}${path}` },
   };
@@ -31,7 +34,7 @@ const { CapabilitiesPage } = loadComponent("capabilities-page", {
 });
 
 for (const resourceId of [undefined, "new", "existing-workflow"]) {
-  test(`工作流${resourceId ?? "列表"}入口只渲染开发中页面`, () => {
+  test(`工作流${resourceId ?? "列表"}入口只渲染不可用提示`, () => {
     const gate = CapabilitiesPage({ enterpriseId: "enterprise", section: "workflows", resourceId });
     const page = gate.props.children({ user: {}, context: { permissions: ["workflow.view", "workflow.create"], permissionVersion: "1" } });
     const content = nodes(page);
@@ -79,10 +82,18 @@ for (const agentType of ["chat", "workflow"]) {
   });
 }
 
-test("新增智能体不能选择标记为开发中的流程型", () => {
+test("新增智能体不展示不可选择的流程型，已有流程型保留当前值", () => {
   const { AgentConfigForm } = loadComponent("agent-config-form", { "@/lib/http/use-api-query": { useApiQuery: () => ({ data: [], loading: false, error: "" }) } });
-  const tree = nodes(AgentConfigForm({ enterpriseId: "enterprise", value: { agentType: "chat", modelProfileId: null, instructions: "" }, onChange() {}, permissions: [], errors: {}, section: "basic" }));
+  const props = { enterpriseId: "enterprise", value: { agentType: "chat", modelProfileId: null, instructions: "" }, onChange() {}, permissions: [], errors: {}, section: "basic" };
+  assert.equal(nodes(AgentConfigForm(props)).some((node) => node.type === "option" && node.props.value === "workflow"), false);
+  const tree = nodes(AgentConfigForm({...props, value: {...props.value, agentType: "workflow"}}));
   const option = tree.find((node) => node.type === "option" && node.props.value === "workflow");
   assert.equal(option.props.disabled, true);
-  assert.equal(option.props.children, "流程型（开发中）");
+  assert.equal(option.props.children, "流程型（当前不可用）");
+});
+
+test("没有工作流引用的普通智能体不显示工作流占位区域", () => {
+  const { AgentConfigForm } = loadComponent("agent-config-form", { "@/lib/http/use-api-query": { useApiQuery: () => ({ data: [], loading: false, error: "" }) } });
+  const tree = nodes(AgentConfigForm({enterpriseId: "enterprise", value: {agentType: "chat", workflowVersionIds: []}, onChange() {}, permissions: [], errors: {}, section: "capabilities"}));
+  assert.equal(tree.some((node) => node.type === "WorkflowDevelopmentNotice"), false);
 });

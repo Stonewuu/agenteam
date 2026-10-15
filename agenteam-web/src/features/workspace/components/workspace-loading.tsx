@@ -37,7 +37,7 @@ function loadingPage(pathname: string) {
   if (section === "conversations" || section === "new-task") {
     return {title: section === "new-task" ? "新对话" : "对话任务", area: "工作空间", layout: "conversation" as const};
   }
-  const title = workspaceNavigation.find((item) => item.path === section)?.label
+  const title = workspaceNavigation.find((item) => item.path.split("/")[0] === section)?.label
     ?? ({notifications: "通知与公告", memories: "个人偏好记忆"}[section] ?? "工作台");
   return {title, area: "工作空间", layout: !section || section === "workspace" ? "home" as const : "list" as const};
 }

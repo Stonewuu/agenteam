@@ -11,6 +11,8 @@ import com.stonewu.agenteam.service.tool.ToolSchemaValidation;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,19 +48,10 @@ class RemoteMcpSessionTest {
         }
     }
 
-    @Test
-    void eventStreamResumesWithLastEventIdAndNeverRepeatsOriginalPost() throws Exception {
-        try (var remote = new Server("resume"); var session = connect(remote, 4 * 1024 * 1024)) {
-            assertEquals(2, session.listTools().size());
-            assertEquals(1, remote.resumeGets.get());
-            assertEquals("resume-1", remote.lastEventId.get());
-            assertEquals(2, remote.methods.stream().filter(method -> method.equals("tools/list")).count());
-        }
-    }
-
-    @Test
-    void interruptedResponseContinuesReadingWithoutRepeatingTheRequest() throws Exception {
-        try (var remote = new Server("interrupted"); var session = connect(remote, 4 * 1024 * 1024)) {
+    @ParameterizedTest(name = "从事件编号继续读取：{0}")
+    @ValueSource(strings = {"resume", "interrupted"})
+    void eventStreamResumesWithLastEventIdAndNeverRepeatsOriginalPost(String mode) throws Exception {
+        try (var remote = new Server(mode); var session = connect(remote, 4 * 1024 * 1024)) {
             assertEquals(2, session.listTools().size());
             assertEquals(1, remote.resumeGets.get());
             assertEquals("resume-1", remote.lastEventId.get());

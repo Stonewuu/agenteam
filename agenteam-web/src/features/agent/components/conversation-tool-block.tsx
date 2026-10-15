@@ -100,11 +100,11 @@ export function ConversationToolBlock({
                                    {statusText && <span className={status === "completed" ? "sr-only" : styles.status}
                                                         role="status">{statusText}</span>}
                                    {expanded && <div className={styles.modeControl}>{modeButton}</div>}
-                                   <CollapsibleTrigger className={styles.trigger} disabled={waitingForContent}
+                                   {!waitingForContent && <CollapsibleTrigger className={styles.trigger}
                                                        aria-label={(expanded ? uiText("收起") : uiText("查看")) + label + uiText("详情")}>
                                      <span>{expanded ? uiText("收起") : uiText("详情")}</span><IconChevronDown
                                      className={styles.chevron} size={13}/>
-                                   </CollapsibleTrigger>
+                                   </CollapsibleTrigger>}
                                  </div>
                                  {notice && <div className={styles.notice} role="alert">{notice}</div>}
                                  <CollapsibleContent className="agenteam-disclosure-content" data-animate-height

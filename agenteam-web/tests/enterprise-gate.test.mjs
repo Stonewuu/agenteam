@@ -4,6 +4,7 @@ import { setImmediate } from "node:timers/promises";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { chineseText, loadSource } from "./i18n-test-runtime.mjs";
 
 function compile(path) {
   return ts.transpileModule(readFileSync(new URL(path, import.meta.url), "utf8"), {
@@ -42,6 +43,7 @@ function createGate({ identity = async () => user, enterprise = async () => cont
   const navigation = {};
   vm.runInNewContext(navigationCode, { exports: navigation, require: () => ({ applyTheme: () => undefined }), window, URL, URLSearchParams });
   const markers = { loading: () => null, error: () => null };
+  const transition = ({ children }) => children;
   const jsx = (type, props) => ({ type, props });
   const exports = {};
   const imports = {
@@ -67,6 +69,9 @@ function createGate({ identity = async () => user, enterprise = async () => cont
     "next/navigation": { useRouter: () => ({ replace: (value) => redirects.push(value) }) },
     "next/link": { default: "a" },
     "@/components/ui/button": { Button: "button" },
+    "@/components/ui/loading-transition": { LoadingTransition: transition },
+    "@/lib/i18n/locale-provider": { useT: () => chineseText },
+    "@/lib/i18n/ui-message": loadSource("lib/i18n/ui-message"),
     "@/features/workspace/components/workspace-loading": { WorkspaceLoading: markers.loading },
     "../api/identity-api": { loadIdentity: identity, loadEnterpriseContext: enterprise, rememberEnterprise: async () => undefined },
     "../lib/identity-navigation": navigation,
@@ -90,9 +95,10 @@ function createGate({ identity = async () => user, enterprise = async () => cont
     childRenders++;
     return "业务内容";
   } });
+  const identityRoot = root.type === transition ? root.props.children : root;
   function render() {
     stateIndex = 0;
-    return root.type(root.props);
+    return identityRoot.type(identityRoot.props);
   }
   const initialView = render();
   mounting = false;

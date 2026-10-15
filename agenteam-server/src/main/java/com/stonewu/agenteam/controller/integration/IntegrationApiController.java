@@ -38,8 +38,10 @@ public class IntegrationApiController {
     @GetMapping
     public ApiResponse<PageResponse<IntegrationView>> list(@PathVariable String enterpriseId,
             @RequestParam(required = false) String cursor, @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String purpose, @RequestParam(required = false) String providerCode,
+            @RequestParam(defaultValue = "false") boolean unboundBotOnly,
             HttpServletRequest request) {
-        return responses.success(integrations.list(enterpriseId, cursor, limit, request), request);
+        return responses.success(integrations.list(enterpriseId, cursor, limit, purpose, providerCode, unboundBotOnly, request), request);
     }
 
     @GetMapping("/{connectionId}")

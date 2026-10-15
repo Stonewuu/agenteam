@@ -4,5 +4,5 @@ package com.stonewu.agenteam.model.integration.response;
 public record ChannelBindingView(String id, String connectionId, String connectionName, String providerCode,
                                   String providerName, String status, String displayName, boolean receiveEnabled,
                                   boolean externalLoginEnabled, String revision, boolean bindingAvailable,
-                                  boolean loginAvailable, boolean messagingAvailable) {
+                                  boolean loginAvailable, boolean messagingAvailable, boolean chatEnabled) {
 }

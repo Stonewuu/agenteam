@@ -29,7 +29,11 @@ public final class ToolDisplayNameMapper {
             Map.entry("schedule_set_enabled", "启用或暂停计划"),
             Map.entry("schedule_upgrade_version", "更新计划员工版本"),
             Map.entry("schedule_run_once", "立即执行计划"), Map.entry("schedule_delete", "删除计划")),
-        "web_read", Map.of("read_url", "读取网页"));
+        "web_read", Map.of("read_url", "读取网页"),
+        "group_collaboration", Map.of("collab_list_roles", "查看协作岗位", "collab_read_context", "查看任务背景",
+            "collab_read_artifact", "读取协作成果", "collab_publish_artifact", "保存协作成果",
+            "collab_assign", "委派岗位工作", "collab_handoff", "交接负责岗位", "collab_wait", "等待协作成果",
+            "collab_ask_user", "请求补充信息", "collab_submit_result", "提交岗位成果", "collab_complete_task", "完成协作任务"));
 
     private ToolDisplayNameMapper() {
     }

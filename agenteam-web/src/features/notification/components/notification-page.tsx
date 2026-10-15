@@ -147,7 +147,7 @@ function NotificationFeed({context}: { context: EnterpriseContext }) {
           ?? enterprisePath(enterpriseId, `/notifications/${encodeURIComponent(value.id)}`);
         const content = <><h2>{display.title}</h2><p>{display.body}</p></>;
         return <article className={styles.notice} key={value.id} data-unread={!value.readAt}>
-          <span className={styles.categoryIcon}><NotificationIcon targetType={value.targetType} size={21}/></span>
+          <span className={styles.categoryIcon} data-icon-surface><NotificationIcon targetType={value.targetType} size={21}/></span>
           {href ? <Link className={styles.noticeContent} href={href}>{content}</Link> :
             <div className={styles.noticeContent}>{content}</div>}
           <div className={styles.noticeMeta}>{!value.readAt &&

@@ -11,7 +11,7 @@ export function ScheduleRecipients({recipients}: {recipients: ScheduleRecipient[
   const t = useT();
   return <DetailSection title={t("接收人和渠道")} icon={<IconUsers size={19}/>}>
     <div className={styles.recipients}>{recipients.map(person => <div className={styles.recipient} key={person.userId}>
-      <span className={styles.personIcon}><IconUserCircle size={21}/></span>
+      <span className={styles.personIcon} data-icon-surface><IconUserCircle size={21}/></span>
       <div><strong>{person.name}</strong><div className={styles.channels}>
         <span><IconInbox size={14}/>{t("站内通知")}</span>
         {person.channels.map(channel => <span key={channel.connectionId}><IconPlug size={14}/>{channel.name}

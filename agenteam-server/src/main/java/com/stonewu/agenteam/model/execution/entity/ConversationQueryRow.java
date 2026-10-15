@@ -30,6 +30,8 @@ public class ConversationQueryRow {
     private String modelProfileId;
     private String reasoningEffort;
     private String projectId;
+    private String sourceType = "web";
+    private String sourceId;
     private Boolean favorite = false;
     private Long revision = 0L;
     private String previewResourceId;

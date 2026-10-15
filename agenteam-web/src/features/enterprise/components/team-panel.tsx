@@ -63,7 +63,7 @@ export function TeamPanel({enterpriseId, userId, displayName, permissions, query
     <CollectionStatus list={list} empty={query ? uiText("没有匹配的团队。") : uiText("暂无团队。")}>
       <div className={styles.cardGrid}>{list.page?.items.map((team) => <article key={team.id}
                                                                                 className={styles.managementCard}>
-        <div className={styles.cardHeading}><span className="avatar blue"><IconGitBranch size={25}/></span><span
+        <div className={styles.cardHeading}><span className="avatar blue" data-icon-surface><IconGitBranch size={25}/></span><span
           className="badge neutral">{uiText(statusLabel(team.status))}</span></div>
         <h2>{team.name}</h2><p>{team.description}</p>
         <div className={styles.teamOwner}>{uiText("负责人 · ")}{team.owner.displayName}</div>
@@ -71,8 +71,8 @@ export function TeamPanel({enterpriseId, userId, displayName, permissions, query
           <div className={styles.rowActions}><Button className={styles.textButton}
                                                      onClick={() => setEditing(team)}>{canManage ? uiText("管理团队") : uiText("查看")}</Button>
             {canManage && <DropdownMenu><DropdownMenuTrigger
-              render={<Button className="icon-button" aria-label={uiText("{0}的更多操作", [team.name])}><IconDots
-                size={17}/></Button>}/><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setConfirm({
+              render={<Button className={`${styles.textButton} ${styles.moreButton}`} aria-label={uiText("{0}的更多操作", [team.name])}><IconDots
+                size={16}/>{uiText("更多")}</Button>}/><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setConfirm({
               team,
               action: "status"
             })}>{team.status === "active" ? uiText("停用团队") : uiText("启用团队")}</DropdownMenuItem><DropdownMenuItem

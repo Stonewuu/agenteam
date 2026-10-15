@@ -14,6 +14,9 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {useComposerSelection} from "../hooks/use-composer-selection";
 import type {ComposerSelectionContext} from "../lib/composer-selection";
 import {useConversationNavigation} from "./conversation-navigation-context";
+import {useCollaborationConversation} from "../hooks/use-collaboration-conversation";
+import {conversationSelected} from "../lib/conversation-navigation";
+import {ConversationRoleSwitcher} from "./conversation-role-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +72,16 @@ export default function ConversationWorkspace({user, context}: {
   const canUseKnowledge = canRun && context.permissions.includes("knowledge.search");
   const navigation = useConversationNavigation();
   const workspace = useConversationWorkspace(user.id, enterprise, canRun, canUseSkills, canUseKnowledge, navigation?.list, context.permissions.includes("conversation.manage"));
+  const collaboration = useCollaborationConversation(user.id, enterprise, workspace.conversationId, workspace.detail?.collaborationTaskId);
+  const listed = navigation?.list.items.find(value => conversationSelected(value, workspace.conversationId));
+  const group = collaboration.group ?? listed?.collaboration;
+  const title = group?.title ?? workspace.title;
+  const isFavorite = collaboration.item?.favorite ?? listed?.favorite ?? workspace.detail?.favorite ?? false;
+  const setCurrentConversation = navigation?.setCurrentConversation;
+  useEffect(() => {
+    setCurrentConversation?.(collaboration.item);
+    return () => setCurrentConversation?.(null);
+  }, [collaboration.item, setCurrentConversation]);
   const registerNewTaskAction = navigation?.registerNewTaskAction;
   const startNewTask = workspace.startNewTask;
   useEffect(() => registerNewTaskAction?.(startNewTask), [registerNewTaskAction, startNewTask]);
@@ -151,9 +164,10 @@ export default function ConversationWorkspace({user, context}: {
       await favorite.mutation.run(conversationPath(enterprise, detail.id), {
         method: "PATCH",
         revision: detail.revision,
-        body: {favorite: !detail.favorite}
+        body: {favorite: !isFavorite}
       });
       workspace.changed();
+      collaboration.retry();
     }, "");
   }
 
@@ -166,23 +180,26 @@ export default function ConversationWorkspace({user, context}: {
       <div className={styles.main} data-conversation-main
            inert={canViewFiles && sidebar.open && sidebar.full && !sidebar.compact}>
         <header className={styles.mainTopbar}>
-          <div className={controls.heading}><h1 title={workspace.title}>{workspace.title}</h1></div>
-          <div className={styles.accountActions}>
+          <div className={controls.heading}><h1 title={title}>{title}</h1></div>
+          <div className={`${styles.accountActions} ${controls.conversationActions}`}>
+            {workspace.detail?.collaborationTaskId && workspace.conversationId &&
+              <ConversationRoleSwitcher group={group} current={workspace.conversationId} enterprise={enterprise}
+                taskId={workspace.detail.collaborationTaskId}/>}
             <div className={controls.desktopActions}>
               {workspace.detail && <Button className="icon-button" type="button" aria-label={uiText("查看对话累计用量")}
                 title={uiText("查看对话累计用量")} onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={19}/></Button>}
               {workspace.detail && context.permissions.includes("conversation.manage") &&
                 <Button className="icon-button" type="button"
-                        aria-label={workspace.detail.favorite ? uiText("取消收藏对话") : uiText("收藏对话")}
-                        aria-pressed={workspace.detail.favorite} disabled={favorite.busy}
+                        aria-label={isFavorite ? uiText("取消收藏对话") : uiText("收藏对话")}
+                        aria-pressed={isFavorite} disabled={favorite.busy}
                         onClick={toggleFavorite}><IconStar size={19}
-                                                           variant={workspace.detail.favorite ? "Bold" : "Linear"}/></Button>}
+                                                           variant={isFavorite ? "Bold" : "Linear"}/></Button>}
               {workspace.detail && context.permissions.includes("conversation.export") &&
                 <Button className="icon-button" type="button" aria-label={uiText("导出对话")}
                         onClick={() => setExportOpen(true)}><IconDownload size={19}/></Button>}
               {workspace.detail && context.permissions.includes("conversation.manage") &&
                 <Button className="icon-button" aria-label={uiText("管理当前对话")}
-                        onClick={() => setManage(workspace.detail!)}><IconDots size={20}/></Button>}
+                        onClick={() => setManage({...workspace.detail!, title, favorite: isFavorite})}><IconDots size={20}/></Button>}
             </div>
             {workspace.detail &&
               <div className={controls.mobileActions}><DropdownMenu><DropdownMenuTrigger
@@ -191,12 +208,12 @@ export default function ConversationWorkspace({user, context}: {
                 <DropdownMenuItem onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={17}/>{uiText("对话累计用量")}</DropdownMenuItem>
                 {workspace.detail && context.permissions.includes("conversation.manage") &&
                   <DropdownMenuItem disabled={favorite.busy} onClick={toggleFavorite}><IconStar
-                    size={17}/>{workspace.detail.favorite ? uiText("取消收藏") : uiText("收藏对话")}</DropdownMenuItem>}
+                    size={17}/>{isFavorite ? uiText("取消收藏") : uiText("收藏对话")}</DropdownMenuItem>}
                 {workspace.detail && context.permissions.includes("conversation.export") &&
                   <DropdownMenuItem onClick={() => setExportOpen(true)}><IconDownload size={17}/>{uiText("导出对话")}
                   </DropdownMenuItem>}
                 {workspace.detail && context.permissions.includes("conversation.manage") &&
-                  <DropdownMenuItem onClick={() => setManage(workspace.detail!)}><IconDots
+                  <DropdownMenuItem onClick={() => setManage({...workspace.detail!, title, favorite: isFavorite})}><IconDots
                     size={17}/>{uiText("管理当前对话")}</DropdownMenuItem>}
               </DropdownMenuContent></DropdownMenu></div>}
             {canViewFiles && (!sidebar.open || sidebar.compact) &&

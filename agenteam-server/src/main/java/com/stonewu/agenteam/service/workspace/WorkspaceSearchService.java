@@ -10,6 +10,7 @@ import com.stonewu.agenteam.model.workspace.entity.SearchMenu;
 import com.stonewu.agenteam.model.workspace.response.SearchResultView.Group;
 import com.stonewu.agenteam.model.workspace.response.SearchResultView.Item;
 import com.stonewu.agenteam.service.http.ListPagination;
+import com.stonewu.agenteam.service.execution.ConversationNavigationService;
 import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -52,15 +53,17 @@ public class WorkspaceSearchService {
     private final WorkspaceSearchMapper search;
     private final ListPagination pagination;
     private final List<SearchMenuProvider> menuProviders;
+    private final ConversationNavigationService conversations;
 
     public WorkspaceSearchService(PermissionMapper permissions, ResourceAuthorizationService access,
                                   WorkspaceSearchMapper search, ListPagination pagination,
-                                  List<SearchMenuProvider> menuProviders) {
+                                  List<SearchMenuProvider> menuProviders, ConversationNavigationService conversations) {
         this.permissions = permissions;
         this.access = access;
         this.search = search;
         this.pagination = pagination;
         this.menuProviders = List.copyOf(menuProviders);
+        this.conversations = conversations;
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -92,7 +95,10 @@ public class WorkspaceSearchService {
         }
         if (codes.contains("workspace.view")) {
             if (codes.contains("conversation.view")) {
-                add(groups, "conversations", "对话", search.conversations(actor.enterpriseId(), actor.userId(), query));
+                add(groups, "conversations", "对话", conversations.search(actor, query).stream().map(value ->
+                    new Item(value.key(), value.title(), value.collaboration() == null ? value.conversation().agentName()
+                        : "协作任务 · " + String.join("、", value.collaboration().roles().stream().map(role -> role.name()).toList()),
+                        "conversation", value.conversation().id(), null, value.conversation().agentIcon(), value.conversation().agentColor())).toList());
             }
             boolean mine = codes.contains("agent.run");
             var market = codes.contains("agent.market_view") ? access.scope(actor, "agent", "agent.market_view",

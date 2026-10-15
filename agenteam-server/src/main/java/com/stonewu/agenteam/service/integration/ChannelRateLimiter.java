@@ -33,13 +33,22 @@ public class ChannelRateLimiter {
     }
 
     public Duration acquire(IntegrationApplication app, String recipient, List<ChannelRateLimit> limits) {
+        return acquire("agenteam:channel:rate:{" + app.enterpriseId() + ":" + app.id() + "}:", recipient, limits);
+    }
+
+    /** 群额度跨同群机器人共享，与原个人通知的应用额度分开。 */
+    public Duration acquireConversation(IntegrationApplication app, String platformScope, String conversation, List<ChannelRateLimit> limits) {
+        String group = digest(app.providerCode() + ":" + platformScope + ":" + conversation);
+        return acquire("agenteam:chat:rate:{" + app.enterpriseId() + ":" + group + "}:", conversation, limits);
+    }
+
+    private Duration acquire(String prefix, String recipient, List<ChannelRateLimit> limits) {
         if (limits.isEmpty()) {
             return Duration.ZERO;
         }
         var keys = new ArrayList<String>();
         var arguments = new ArrayList<String>();
         arguments.add(UUID.randomUUID().toString());
-        String prefix = "agenteam:channel:rate:{" + app.enterpriseId() + ":" + app.id() + "}:";
         String member = digest(recipient);
         for (var limit : limits) {
             keys.add(prefix + limit.name() + (limit.perRecipient() ? ":" + member : ""));

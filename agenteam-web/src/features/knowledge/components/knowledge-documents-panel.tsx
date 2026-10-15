@@ -78,20 +78,21 @@ export function KnowledgeDocumentsPanel({enterpriseId, resourceId, editable, sea
         <QueryState {...docs} hasData={Boolean(docs.data?.items.length)}
                     empty={query ? uiText("没有找到匹配的文档。") : uiText("还没有文档。")}>
           <ul className={styles.documents}>{docs.data?.items.map((doc) => <li key={doc.id}>
-            <span className={styles.documentIcon}><IconFileText size={24}/></span>
+            <span className={styles.documentIcon} data-icon-surface><IconFileText size={24}/></span>
             <div className={styles.document}>
               <strong>{doc.name}</strong><span>{formatFileSize(doc.sizeBytes, uiText)} · <EnterpriseDateTime
               value={doc.updatedAt} dateOnly/></span>{doc.errorSummary &&
               <p className={ui.error}>{doc.errorSummary}</p>}</div>
             <span
               className={`badge ${doc.status === "failed" ? "red" : doc.status === "ready" ? "mint" : "amber"}`}>{uiText(documentStatus(doc))}</span>
-            <DropdownMenu><DropdownMenuTrigger
-              render={<Button type="button" className="icon-button" aria-label={uiText("{0}的操作", [doc.name])}
-                              disabled={action.busy}><IconDots size={18}/></Button>}/>
+            <div className={styles.documentActions}>
+              <Button type="button" className={ui.button} disabled={action.busy}
+                onClick={() => void action.execute(() => downloadFile(enterpriseId, doc.activeFileId ?? doc.fileId), "")}>
+                <IconDownload size={16}/>{uiText("下载文档")}</Button>
+            {editable && <DropdownMenu><DropdownMenuTrigger
+              render={<Button type="button" className={ui.button} aria-label={uiText("{0}的操作", [doc.name])}
+                              disabled={action.busy}><IconDots size={16}/>{uiText("更多")}</Button>}/>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => void action.execute(() => downloadFile(enterpriseId, doc.activeFileId ?? doc.fileId), "")}><IconDownload
-                  size={16}/>{uiText("下载文档")}</DropdownMenuItem>
                 {editable && <><DropdownMenuItem disabled={dirty || action.busy || doc.pendingGeneration > 0}
                                                  onClick={() => setReplacing(doc)}><IconUpload
                   size={16}/>{uiText("更新文件")}</DropdownMenuItem>
@@ -106,7 +107,8 @@ export function KnowledgeDocumentsPanel({enterpriseId, resourceId, editable, sea
                     }, uiText("已开始重新处理。"))}><IconRefresh size={16}/>{uiText("重新处理")}
                   </DropdownMenuItem><DropdownMenuItem disabled={dirty || action.busy} onClick={() => setRemoving(doc)}><IconTrash
                     size={16}/>{uiText("删除文档")}</DropdownMenuItem></>}
-              </DropdownMenuContent></DropdownMenu>
+              </DropdownMenuContent></DropdownMenu>}
+            </div>
           </li>)}</ul>
         </QueryState>
         <Pagination {...docs} hasMore={docs.data?.hasMore}/>

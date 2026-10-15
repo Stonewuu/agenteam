@@ -71,7 +71,7 @@ public class ProjectInputFileService {
         int changed = files.update(
             new LambdaUpdateWrapper<FileObjectRow>().eq(FileObjectRow::getEnterpriseId, project.enterpriseId())
                 .eq(FileObjectRow::getOwnerUserId, project.userId()).in(FileObjectRow::getId, missing)
-                .eq(FileObjectRow::getPurpose, "attachment")
+                .in(FileObjectRow::getPurpose, "attachment", "collaboration_artifact", "artifact")
                 .eq(FileObjectRow::getStatus, "ready").isNull(FileObjectRow::getDeletedAt)
                 .set(FileObjectRow::getExpiresAt, null).set(FileObjectRow::getUpdatedAt, now));
         if (changed != missing.size()) {

@@ -21,9 +21,14 @@
   flex: 1 1 auto;
 }
 
-.more {
-  flex: 0 0 44px;
-  padding: 0;
+.compact {
+  flex: 0 1 auto;
+  width: auto;
+}
+
+.compact > a, .compact > button {
+  font-size: 12px;
+  padding-inline: 16px;
 }
 
 .actions[aria-busy="true"] {

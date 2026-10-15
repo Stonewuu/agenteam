@@ -63,7 +63,7 @@ export function RolePanel({
           {list.page?.items.map((role) => (
             <article key={role.id} className={styles.managementCard}>
               <div className={styles.cardHeading}>
-                <span className="avatar purple">
+                <span className="avatar purple" data-icon-surface>
                   <IconShieldCheck size={25} />
                 </span>
                 <span className="badge neutral">

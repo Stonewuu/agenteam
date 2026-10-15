@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.knowledge;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -41,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 真实数据库全文索引、文件扫描协议与独立解析进程共同验证知识资料流程。
  */
 @SpringBootTest
-@Import({CapacityInstrumentation.class, SharedEnterpriseTestEdition.class})
+@Import({CapacityInstrumentation.class, SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KnowledgeApiTest extends KnowledgeApiTestSupport {

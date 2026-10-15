@@ -110,7 +110,7 @@
 }
 
 .section h3 > svg {
-  color: var(--accent-text);
+  color: var(--icon-context-color, var(--icon-tone-color, var(--accent-text)));
 }
 
 .section h3 > span {

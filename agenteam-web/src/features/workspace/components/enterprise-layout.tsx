@@ -30,7 +30,7 @@ export function EnterpriseLayout({enterpriseId, children}: { enterpriseId: strin
                                                                                                             }) => {
     const title = platformPage?.label ?? (pathname === "/settings" ? uiText("个人设置") : area === "management" ? localizeCatalog(managementNavigation, uiText).find((item) => item.id === detail)?.label ?? uiText("企业概览")
       : area === "capabilities" ? localizeCatalog(capabilityNavigation, uiText).find((item) => item.path === detail)?.label ?? uiText("能力中心")
-        : localizeCatalog(workspaceNavigation, uiText).find((item) => item.path === section)?.label ?? ({
+        : localizeCatalog(workspaceNavigation, uiText).find((item) => item.path.split("/")[0] === section)?.label ?? ({
         "new-task": uiText("新对话"),
         notifications: uiText("通知与公告"),
         settings: detail === "channels" ? uiText("企业账号绑定") : uiText("个人设置"),

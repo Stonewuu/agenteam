@@ -24,7 +24,6 @@ export type AgentConfig = Appearance & {
   dataVersionIds: string[];
   workflowVersionIds: string[];
   entryWorkflowVersionId: string | null;
-  historyMessageLimit: number;
   memoryEnabled: boolean;
   memoryFields: string[];
   businessTerms: { term: string; meaning: string }[];

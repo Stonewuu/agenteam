@@ -85,7 +85,7 @@ export function Dialog({
                    onSubmit={(event) => event.stopPropagation()}>
       <header className="modal-header">
         <div className="modal-heading"><div className="modal-title-line">
-          {icon && <span className="modal-title-icon">{icon}</span>}<DialogTitle>{title}</DialogTitle>
+          {icon && <span className="modal-title-icon" data-icon-surface>{icon}</span>}<DialogTitle>{title}</DialogTitle>
         </div>{headerDetails}</div>
         <DialogClose className="icon-button" aria-label={uiText("关闭")} disabled={busy}><IconX
           size={20}/></DialogClose>

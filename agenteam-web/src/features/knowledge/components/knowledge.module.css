@@ -91,6 +91,13 @@
   margin: 0;
 }
 
+.documentActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .citation {
   display: grid;
   gap: 6px;

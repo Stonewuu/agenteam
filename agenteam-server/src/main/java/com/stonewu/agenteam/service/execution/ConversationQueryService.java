@@ -1,5 +1,8 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
+import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantRow;
 import com.stonewu.agenteam.mapper.agent.ConversationAppearanceMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
@@ -16,6 +19,7 @@ import com.stonewu.agenteam.model.execution.response.RunView;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.model.http.response.PageResponse;
 import com.stonewu.agenteam.service.audit.AuditEventService;
+import com.stonewu.agenteam.service.collaboration.CollaborationMessageDisplayService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.http.ListPagination;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
@@ -49,12 +53,15 @@ public class ConversationQueryService {
     private final Clock clock;
     private final ResourceVersionMapper versions;
     private final ConversationAppearanceMapper appearances;
+    private final CollaborationParticipantMapper collaborationParticipants;
+    private final CollaborationMessageDisplayService collaborationMessages;
 
     public ConversationQueryService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                     ExecutionConfigurationService configuration,
                                     EnterpriseAuthorizationService authorization,
                                     ListPagination pagination, Clock clock, ResourceVersionMapper versions,
-                                    ConversationAppearanceMapper appearances) {
+                                    ConversationAppearanceMapper appearances, CollaborationParticipantMapper collaborationParticipants,
+                                    CollaborationMessageDisplayService collaborationMessages) {
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
@@ -64,6 +71,8 @@ public class ConversationQueryService {
         this.clock = clock;
         this.versions = versions;
         this.appearances = appearances;
+        this.collaborationParticipants = collaborationParticipants;
+        this.collaborationMessages = collaborationMessages;
     }
 
     public PageResponse<ConversationView> list(AuthContext actor, String query, String status, Boolean favorite,
@@ -82,6 +91,7 @@ public class ConversationQueryService {
             size + 1, clock.instant().minus(Duration.ofDays(30)));
         var page = pagination.page(rows, size, binding, row -> new PagePosition(row.updatedAt(), row.id(), null));
         Map<String, String> availability = new HashMap<>();
+        cacheCollaborationTasks(actor, page.items(), availability);
         return new PageResponse<>(page.items().stream().map(row -> view(actor, row, availability)).toList(),
             page.nextCursor(), page.hasMore());
     }
@@ -107,15 +117,15 @@ public class ConversationQueryService {
             .filter(version -> version.resourceId().equals(row.agentId()))
             .map(version -> version.config().path("attachmentsEnabled").asBoolean()).orElse(false);
         var snapshot = new ConversationSnapshotView(view(actor, row, new HashMap<>()),
-            appearances.messages(actor.enterpriseId(), actor.userId(), id, latest.reversed())
-                .stream().map(ToolPayloadPreview::message).toList(),
+            decorateMessages(actor, id, latest.reversed()),
             run == null ? null : RunView.from(run, false), Long.toString(row.lastSequence()), older, before,
             attachments);
         return new SnapshotBase(row, snapshot, run);
     }
 
     public List<MessageView> decorateMessages(AuthContext actor, String conversation, List<MessageView> values) {
-        return appearances.messages(actor.enterpriseId(), actor.userId(), conversation, values)
+        return appearances.messages(actor.enterpriseId(), actor.userId(), conversation,
+                collaborationMessages.display(actor, conversation, values))
             .stream().map(ToolPayloadPreview::message).toList();
     }
 
@@ -133,8 +143,7 @@ public class ConversationQueryService {
             rows.removeLast();
         }
         return new MessageHistory(
-            appearances.messages(actor.enterpriseId(), actor.userId(), id, rows.reversed()).stream()
-                .map(ToolPayloadPreview::message).toList(),
+            decorateMessages(actor, id, rows.reversed()),
             more ? rows.getLast().id() : null, more);
     }
 
@@ -199,6 +208,9 @@ public class ConversationQueryService {
         }
         var appearance = row.mode().equals("preview") ? appearances.preview(actor.enterpriseId(), actor.userId(),
             row.id()).orElse(null) : null;
+        if ("collaboration".equals(row.sourceType())) {
+            reason = "此对话属于协作任务，请到任务详情补充要求。";
+        }
         return new ConversationView(row.id(), Long.toString(row.revision()), row.createdAt().toString(),
             row.updatedAt().toString(),
             row.title(), row.agentId(),
@@ -206,7 +218,30 @@ public class ConversationQueryService {
             appearance == null ? row.agentIcon() : appearance.icon(),
             appearance == null ? row.agentColor() : appearance.color(), row.mode(),
             row.favorite(), row.status(), row.activeRunId(), reason == null, reason, row.approvalPolicy(),
-            row.modelSelection(), row.projectId());
+            row.modelSelection(), row.projectId(), collaborationTask(actor, row, checked));
+    }
+
+    private String collaborationTask(AuthContext actor, ConversationRecord row, Map<String, String> cache) {
+        if (!"collaboration".equals(row.sourceType())) {
+            return null;
+        }
+        String key = "collaboration:" + row.id();
+        if (!cache.containsKey(key)) {
+            cacheCollaborationTasks(actor, List.of(row), cache);
+        }
+        return cache.get(key);
+    }
+
+    private void cacheCollaborationTasks(AuthContext actor, List<ConversationRecord> rows, Map<String, String> cache) {
+        var conversations = rows.stream().filter(row -> "collaboration".equals(row.sourceType())).map(ConversationRecord::id).toList();
+        if (conversations.isEmpty()) {
+            return;
+        }
+        conversations.forEach(id -> cache.put("collaboration:" + id, null));
+        collaborationParticipants.selectList(new LambdaQueryWrapper<CollaborationParticipantRow>()
+            .eq(CollaborationParticipantRow::getEnterpriseId, actor.enterpriseId())
+            .in(CollaborationParticipantRow::getConversationId, conversations)).forEach(role ->
+                cache.put("collaboration:" + role.getConversationId(), role.getTaskId()));
     }
 
     private void logUnavailable(String conversation, ResponseStatusException failure) {

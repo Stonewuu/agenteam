@@ -39,6 +39,8 @@ node --input-type=module -e 'import {readCommunitySource} from "./scripts/releas
 
 专项测试从 `agenteam-web/package.json` 中选择。例如导航对应 `pnpm test:navigation`，企业通信入口对应 `pnpm test:channel-auth`，定时操作对应 `pnpm test:schedule-actions`。先确认用例确实覆盖本次行为；不要为了数量新增只匹配源码文字的测试。
 
+需要全部前端回归时使用 `pnpm test`，它一次准备所需编译输出并执行全部测试文件。后端完整测试会复用进程、按类清理应用和数据库映射缓存，真实进程与容器测试另外顺序执行；不要开启同一进程内的测试类并发。业务文件接口测试复用真实解析实现，专门的进程测试保留实际隔离、取消和超时验证。调整并发只使用 `agenteam.test.forks`，保留所有默认用例和原有断言。
+
 ## 数据与公开资料
 
 - Flyway（按版本执行数据库迁移脚本的工具）的文件在 `agenteam-server/src/main/resources/db/schema/`。当前应用版本取 `deploy/registry/release.env` 的 `RELEASE_TAG`；新文件使用 `V<版本>.<序号>__简短中文说明.sql`。已发布或已执行文件保持原名和内容，不自动清库、修复历史或关闭校验。

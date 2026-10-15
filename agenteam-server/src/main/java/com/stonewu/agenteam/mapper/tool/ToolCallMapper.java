@@ -95,10 +95,8 @@ public class ToolCallMapper {
     }
 
     public List<ToolCallRecord> sourceResultsForContext(RunRecord run) {
-        int recentRuns = 1 + Math.max(0,
-            Math.min(200, run.executionConfig().at("/config/historyMessageLimit").asInt()));
-        return statements.sourceResultsForContextToolCall(run.enterpriseId(), run.conversationId(), run.userId(),
-            recentRuns).stream().map(this::map).toList();
+        return statements.sourceResultsForContextToolCall(run.enterpriseId(), run.conversationId(), run.userId())
+            .stream().map(this::map).toList();
     }
 
     public void prepare(String id, RunRecord run, String step, ExecutionToolBinding binding, String session,

@@ -74,12 +74,6 @@ jobs:
           pnpm build
       - name: 共有入口与功能检查
         working-directory: agenteam-web
-        run: |
-          pnpm test:i18n
-          pnpm test:navigation
-          pnpm test:channel-auth
-          pnpm test:schedule-actions
-          pnpm test:resource-deletion
-          pnpm test:conversation
+        run: pnpm test
       - name: 镜像输入与文件范围检查
         run: node --test scripts/release/community-backend.test.mjs scripts/release/image-inputs.test.mjs scripts/release/source-archive-inputs.test.mjs scripts/release/mysql-compose.test.mjs

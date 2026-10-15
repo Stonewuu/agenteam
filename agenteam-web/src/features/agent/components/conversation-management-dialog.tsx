@@ -57,7 +57,7 @@ export function ConversationManagementDialog({enterprise, conversation, onClose,
           onClose();
         });
       })}>{uiText("恢复对话")}</Button></> : <>
-        <form className={ui.form} onSubmit={(event) => {
+        {!conversation.collaborationTaskId && <form className={ui.form} onSubmit={(event) => {
           event.preventDefault();
           void update({title: title.trim()});
         }}>
@@ -66,16 +66,16 @@ export function ConversationManagementDialog({enterprise, conversation, onClose,
                                                                               onChange={(event) => setTitle(event.target.value)}/></label>
           <Button className={ui.primary}
                   disabled={action.busy || !title.trim() || title.trim() === conversation.title}>{uiText("保存名称")}</Button>
-        </form>
+        </form>}
         <div className={ui.actions}>
           <Button className={ui.button} disabled={action.busy}
                   onClick={() => void update({favorite: !conversation.favorite})}>{conversation.favorite ? uiText("取消收藏") : uiText("收藏")}</Button>
-          <Button className={ui.button} disabled={action.busy || conversation.activeRunId !== null}
+          {!conversation.collaborationTaskId && <><Button className={ui.button} disabled={action.busy || conversation.activeRunId !== null}
                   onClick={() => void update({status: conversation.status === "archived" ? "active" : "archived"})}>{conversation.status === "archived" ? uiText("取消归档") : uiText("归档")}</Button>
           <Button className={ui.danger} disabled={action.busy || conversation.activeRunId !== null}
-                  onClick={() => setConfirmDelete(true)}>{uiText("删除")}</Button>
+                  onClick={() => setConfirmDelete(true)}>{uiText("删除")}</Button></>}
         </div>
-        {conversation.activeRunId && <p className={ui.description}>{uiText("当前任务结束后可以归档或删除。")}</p>}
+        {conversation.activeRunId && !conversation.collaborationTaskId && <p className={ui.description}>{uiText("当前任务结束后可以归档或删除。")}</p>}
       </>}
       <MutationFeedback action={action} onReload={() => {
         finish(() => {

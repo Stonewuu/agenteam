@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import org.junit.jupiter.api.Tag;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.controller.sandbox.SandboxContainerCleanupController;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -22,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@Tag("external-process")
 class RemoteSandboxContainerCleanupTest {
     private static final String TOKEN = "cleanup-test-token-at-least-thirty-two-characters";
     private static final String SCOPE = "a".repeat(64);

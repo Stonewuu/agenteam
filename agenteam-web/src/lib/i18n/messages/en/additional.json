@@ -38,7 +38,7 @@
   "昨天": "Yesterday",
   "更早": "Earlier",
   "其他日期": "Other dates",
-  "正在准备执行内容": "Preparing to run",
+  "正在准备执行任务": "Preparing to run",
   "执行失败": "Execution failed",
   "此工具可能修改外部数据，请核对全部参数后再决定。": "This tool may change external data. Review all parameters before proceeding.",
   "确认后将修改平台中的待办或定时任务，请核对操作内容。": "This action will change to-dos or schedules. Review the details before approving.",
@@ -208,5 +208,6 @@
   "查看本月已使用和预留的执行次数。": "View executions used and reserved this month.",
   "查看各角色的访问权限和成员数量。": "View access permissions and member counts for each role.",
   "暂无可查看的权限。": "No permissions to display.",
-  "选择可以查看、使用或编辑当前内容的授权对象。": "Choose who can view, use, or edit this content."
+  "选择可以查看、使用或编辑当前内容的授权对象。": "Choose who can view, use, or edit this content.",
+  "更多": "More"
 }

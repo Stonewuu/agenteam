@@ -84,7 +84,6 @@ export function newConfig(kind: ResourceKind): ResourceConfig {
         dataVersionIds: [],
         workflowVersionIds: [],
         entryWorkflowVersionId: null,
-        historyMessageLimit: 20,
         memoryEnabled: false,
         memoryFields: [],
         businessTerms: [],

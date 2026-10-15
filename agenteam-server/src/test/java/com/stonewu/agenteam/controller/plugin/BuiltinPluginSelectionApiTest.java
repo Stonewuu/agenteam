@@ -34,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -81,13 +82,15 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
     @Test
     void newEnterpriseImmediatelyOffersRealPublishedBuiltinPlugins() throws Exception {
         var response = data(mvc.perform(get(base() + "/resources/usable-versions").param("kind", "plugin").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertEquals(4, response.path("items").size());
+        assertEquals(5, response.path("items").size());
+        var builtinCodes = new HashSet<String>();
         int toolCount = 0;
         for (var value : response.path("items")) {
             schemas.validate("UsableVersion", value);
             assertEquals(json.valueToTree(List.of("builtin")), value.path("pluginTypes"));
             String id = value.path("resourceId").asText(), versionId = value.path("versionId").asText();
             var resource = resources.find(enterprise, id, false, false).orElseThrow();
+            builtinCodes.add(resource.config().path("builtinCode").asText());
             assertEquals("builtin", resource.source());
             assertEquals(versionId, resource.publishedVersionId());
             assertEquals(1, value.path("versionNo").asInt());
@@ -96,7 +99,8 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
             toolCount += published.size();
             assertEquals(resource.config().path("enabledToolNames").size(), published.size());
         }
-        assertEquals(31, toolCount);
+        assertEquals(41, toolCount);
+        assertEquals(Set.of("platform_basics", "todo_management", "schedule_management", "web_read", "group_collaboration"), builtinCodes);
         assertFalse(response.toString().contains("inputSchema"));
     }
 
@@ -107,7 +111,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         var config = json.createObjectNode().put("icon", "Box").put("color", "pink").put("pluginType", "mcp").put("endpoint", "https://example.com/mcp");
         resources.create(custom, legacy, ResourceKind.PLUGIN, "待办管理", "已有自定义插件", "mcp", admin, "created", config, Instant.now());
         initialization.run(new DefaultApplicationArguments());
-        assertEquals(4, available(actor(legacy)).size());
+        assertEquals(5, available(actor(legacy)).size());
         var unchanged = resources.find(legacy, custom, false, false).orElseThrow();
         assertEquals(config, unchanged.config());
         assertNull(unchanged.publishedVersionId());
@@ -115,7 +119,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         var first = available(actor(legacy));
         initialization.run(new DefaultApplicationArguments());
         assertEquals(first, available(actor(legacy)));
-        assertEquals(5, pluginCount(legacy));
+        assertEquals(6, pluginCount(legacy));
     }
 
     @Test
@@ -127,7 +131,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
             first.get();
             second.get();
         }
-        assertEquals(4, pluginCount(legacy));
+        assertEquals(5, pluginCount(legacy));
         for (var value : available(actor(legacy))) {
             assertEquals(1, value.versionNo());
             assertEquals(2, resources.find(legacy, value.resourceId(), false, false).orElseThrow().nextVersionNo());
@@ -141,7 +145,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         permissions.replaceRolePermissions(enterprise, role, Set.of("capabilities.view", "agent.edit", "plugin.invoke"));
         var user = EnterpriseTestData.member(users, permissions, enterprise, "selector-" + UUID.randomUUID(), "内置插件选择测试所用独立密码2026!", "配置者", List.of(role));
         var actor = new AuthContext(user, enterprise, Set.of());
-        assertEquals(4, available(actor).size());
+        assertEquals(5, available(actor).size());
         permissions.replaceRolePermissions(enterprise, role, Set.of("capabilities.view", "agent.edit"));
         assertEquals(403, assertThrows(ResponseStatusException.class, () -> available(actor)).getStatusCode().value());
     }
@@ -161,9 +165,9 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         defaults.initialize(enterprise);
         assertEquals("disabled", resources.find(enterprise, disabled.id(), false, false).orElseThrow().status());
         assertTrue(grants.grants(enterprise, restricted.resourceId()).isEmpty());
-        assertEquals(2, available(actor).size());
+        assertEquals(3, available(actor).size());
         assertTrue(options.list(actor, "plugin", null, null, 20, List.of(disabled.publishedVersionId(), restricted.versionId())).items().isEmpty());
-        assertEquals(4, pluginCount(enterprise));
+        assertEquals(5, pluginCount(enterprise));
     }
 
     @Test

@@ -11,15 +11,18 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.request.MessageInput;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
 import com.stonewu.agenteam.model.file.entity.AttachmentText;
+import com.stonewu.agenteam.model.file.entity.FileRecord;
 import com.stonewu.agenteam.model.knowledge.response.CitationView;
 import com.stonewu.agenteam.service.file.FileAccessService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.knowledge.KnowledgeReferenceService;
+import com.stonewu.agenteam.service.collaboration.CollaborationSourceAccess;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 输入资料在提交时固定正文，执行时再次校验原文件及知识引用的访问资格。
@@ -33,10 +36,11 @@ public class ExecutionSourceService {
     private final KnowledgeReferenceService references;
     private final ObjectMapper json;
     private final Clock clock;
+    private final CollaborationSourceAccess collaboration;
 
     public ExecutionSourceService(FileAccessService access, FileMapper files, FileTextMapper texts,
                                   MessageAttachmentMapper attachments,
-                                  KnowledgeReferenceService references, ObjectMapper json, Clock clock) {
+                                  KnowledgeReferenceService references, ObjectMapper json, Clock clock, CollaborationSourceAccess collaboration) {
         this.access = access;
         this.files = files;
         this.texts = texts;
@@ -44,6 +48,7 @@ public class ExecutionSourceService {
         this.references = references;
         this.json = json;
         this.clock = clock;
+        this.collaboration = collaboration;
     }
 
     public List<ContentBlock> freeze(AuthContext actor, ObjectNode fixed, MessageInput input) {
@@ -55,9 +60,10 @@ public class ExecutionSourceService {
         int remaining = 50000;
         StringBuilder content = new StringBuilder();
         var selected = fixed.putArray("inputSourceFiles");
+        var shared = collaboration.files(actor, fixed).stream().collect(Collectors.toMap(value -> value.id(), value -> value));
         for (String id : input.attachmentIds()) {
-            var file = access.uploadOwner(actor, id, true);
-            if (!file.purpose().equals("attachment")) {
+            var file = shared.containsKey(id) ? shared.get(id) : access.uploadOwner(actor, id, true);
+            if (!shared.containsKey(id) && !file.purpose().equals("attachment")) {
                 throw FileAccessService.unavailable();
             }
             if (!file.status().equals("ready")) {
@@ -68,7 +74,7 @@ public class ExecutionSourceService {
                 throw ApiException.invalidField("attachmentIds", "单个附件不能超过二十 MiB，全部附件不能超过五十 MiB。");
             }
             var text = texts.find(file).orElseGet(() -> {
-                if (file.mediaType().equals("application/pdf") && "FILE_NO_TEXT".equals(file.errorCode())) {
+                if (shared.containsKey(id) || file.mediaType().equals("application/pdf") && "FILE_NO_TEXT".equals(file.errorCode())) {
                     return new AttachmentText("", false);
                 }
                 throw notReady();
@@ -134,9 +140,14 @@ public class ExecutionSourceService {
     }
 
     public void requireCurrent(AuthContext actor, RunRecord run) {
+        boolean shared = "collaboration".equals(run.executionConfig().path("sourceType").asText());
+        var currentFiles = shared ? collaboration.filesForRun(actor, run).stream().collect(Collectors.toMap(value -> value.id(), value -> value)) : Map.<String, FileRecord>of();
         for (var source : run.executionConfig().path("inputSourceFiles")) {
-            var file = access.ready(actor, source.path("id").asText());
-            if (!file.ownerUserId().equals(actor.userId()) || !file.purpose().equals("attachment") || !file.sha256()
+            var file = shared ? currentFiles.get(source.path("id").asText()) : access.ready(actor, source.path("id").asText());
+            if (file == null || !shared && !file.purpose().equals("attachment")) {
+                throw FileAccessService.unavailable();
+            }
+            if (!file.ownerUserId().equals(actor.userId()) || !file.sha256()
                 .equals(source.path("sha256").asText())) {
                 throw FileAccessService.unavailable();
             }

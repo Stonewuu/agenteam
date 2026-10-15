@@ -151,6 +151,9 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
           ...snapshot.conversation,
           activeRunId: activeRun?.id ?? null,
           canContinue: false,
+          // 当前执行结束后立即清除已经失效的运行提示；能否再次发送仍等待服务端重新确认。
+          unavailableReason: ended && !activeRun && snapshot.conversation.unavailableReason === "请等待当前任务结束，或先停止任务。"
+            ? null : snapshot.conversation.unavailableReason,
           updatedAt: event.createdAt
         },
         messages: snapshot.messages.map((message) => message.id === run.outputMessageId

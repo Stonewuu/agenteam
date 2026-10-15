@@ -15,7 +15,7 @@ export function PageUnavailable({error, retry}: { error?: Error & { digest?: str
       console.error("页面未能显示", {path: window.location.pathname, requestId: error.digest}, error.stack);
     }
   }, [error]);
-  return <section className="page-unavailable"><span className="page-unavailable-icon">{retry ?
+  return <section className="page-unavailable"><span className="page-unavailable-icon" data-icon-surface>{retry ?
     <IconRefresh size={30}/> : <IconSearch size={30}/>}</span>
     <h1>{retry ? uiText("页面暂时无法打开") : uiText("没有找到此页面")}</h1>
     <p>{retry ? uiText("请重新加载，或返回工作台继续其他工作。") : uiText("页面可能已被移除，也可以从工作台重新进入。")}</p>

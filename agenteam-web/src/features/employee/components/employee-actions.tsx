@@ -7,6 +7,7 @@ import {Textarea} from "@/components/ui/textarea";
 
 import {useState} from "react";
 import Link from "next/link";
+import {useRouter} from "next/navigation";
 import {Dialog, DialogActions, DialogCancel, DialogForm, useDialogControl} from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -35,44 +36,62 @@ import styles from "./employee-actions.module.css";
 
 type Operation = "hire" | "active" | "paused" | "terminated" | "withdraw";
 
-export function EmployeeActions({enterpriseId, employee, permissions, onChanged, disabled = false}: {
+export function EmployeeActions({enterpriseId, employee, permissions, onChanged, disabled = false, compact = false}: {
   enterpriseId: string;
   employee: Employee;
   permissions: string[];
   onChanged: () => void;
-  disabled?: boolean
+  disabled?: boolean;
+  compact?: boolean;
 }) {
   const uiText = useT();
+  const router = useRouter();
+  const quickHire = useFormAction();
   const [operation, setOperation] = useState<Operation | null>(null);
   const canManage = permissions.includes("agent.hire");
   const canRun = employee.canRun && permissions.includes("agent.run");
   const managesHire = canManage && Boolean(employee.hireId) && ["active", "paused"].includes(employee.hireStatus);
   const canWithdraw = canManage && employee.hireStatus === "pending" && Boolean(employee.applicationId);
   const canChat = canRun && permissions.includes("conversation.view");
+  const canOpenChat = permissions.includes("agent.run") && permissions.includes("conversation.view");
+  const chatPath = `/enterprises/${encodeURIComponent(enterpriseId)}/new-task?agent=${encodeURIComponent(employee.agentId)}`;
   const canSchedule = canRun && Boolean(employee.hireId) && permissions.includes("schedule.manage") && permissions.includes("schedule.view");
   if (!canChat && !canSchedule && !managesHire && !canWithdraw && !(canManage && (employee.canHire || employee.canResume))) {
     return null;
   }
   return <>
-    <div className={styles.actions} inert={disabled || operation !== null} aria-busy={disabled}>
+    <div className={`${styles.actions} ${compact ? styles.compact : ""}`} inert={disabled || operation !== null || quickHire.busy} aria-busy={disabled || quickHire.busy}>
       {canChat && <Link className={`${ui.primary} ${styles.primary}`}
                         href={`/enterprises/${encodeURIComponent(enterpriseId)}/new-task?agent=${encodeURIComponent(employee.agentId)}`}><IconMessages
         size={18}/>{uiText("开始对话")}</Link>}
       {canManage && employee.canHire && <Button type="button" className={`${ui.primary} ${styles.primary}`}
-                                                onClick={() => setOperation("hire")}><IconPlus
-        size={18}/>{employee.requiresApproval ? uiText("申请雇佣") : employee.hireStatus === "terminated" ? uiText("重新雇佣") : uiText("雇佣员工")}
+                                                disabled={quickHire.busy} onClick={() => {
+        if (employee.requiresApproval || employee.hireStatus === "terminated") {
+          setOperation("hire");
+          return;
+        }
+        void quickHire.execute(async () => {
+          const result = await quickHire.mutation.run<{kind: "hired" | "approval_required"}>(organizationPath(enterpriseId, "/hires"), {
+            method: "POST", body: {agentId: employee.agentId, note: ""},
+          });
+          onChanged();
+          if (result.kind === "hired" && canOpenChat) {
+            router.push(chatPath);
+          }
+        });
+      }}><IconPlus size={18}/>{quickHire.busy ? uiText("正在雇佣…") : employee.requiresApproval ? uiText("申请雇佣") : employee.hireStatus === "terminated" ? uiText("重新雇佣") : canOpenChat ? uiText("雇佣并对话") : uiText("雇佣员工")}
       </Button>}
       {canManage && employee.canResume && <Button type="button" className={`${ui.primary} ${styles.primary}`}
                                                   onClick={() => setOperation("active")}><IconPlayerPlay
         size={18}/>{uiText("恢复雇佣")}</Button>}
-      {canSchedule && <Link className={ui.button}
+      {!compact && canSchedule && <Link className={ui.button}
                             href={`/enterprises/${encodeURIComponent(enterpriseId)}/schedules?agent=${encodeURIComponent(employee.agentId)}`}><IconCalendar
         size={17}/>{uiText("创建计划")}</Link>}
-      {canWithdraw && <Button type="button" className={ui.button} onClick={() => setOperation("withdraw")}><IconX
+      {!compact && canWithdraw && <Button type="button" className={ui.button} onClick={() => setOperation("withdraw")}><IconX
         size={17}/>{uiText("撤回申请")}</Button>}
-      {managesHire && <DropdownMenu><DropdownMenuTrigger className={`${ui.button} ${styles.more}`}
+      {!compact && managesHire && <DropdownMenu><DropdownMenuTrigger className={ui.button}
                                                          aria-label={uiText("更多雇佣操作")}><IconDots
-        size={19}/></DropdownMenuTrigger>
+        size={17}/>{uiText("更多")}</DropdownMenuTrigger>
         <DropdownMenuContent className="agenteam-menu agenteam-popup" align="end" side="top">
           {employee.hireStatus === "active" && <><DropdownMenuItem
             onClick={() => setOperation("paused")}><IconPlayerPause size={17}/>{uiText("暂停雇佣")}
@@ -82,6 +101,7 @@ export function EmployeeActions({enterpriseId, employee, permissions, onChanged,
         </DropdownMenuContent>
       </DropdownMenu>}
     </div>
+    <MutationFeedback action={quickHire} onReload={onChanged}/>
     {operation && <HireAction key={`${operation}:${employee.hireRevision}:${employee.applicationRevision}`}
                               enterpriseId={enterpriseId} employee={employee} operation={operation}
                               onClose={() => setOperation(null)} onChanged={onChanged}/>}

@@ -63,7 +63,7 @@ export function ScheduleCollection({view, plans, enterpriseId, permissions, onEd
                                                                             className={`${styles.card} ${styles.scheduleCard}`}
                                                                             data-schedule-id={plan.id}
                                                                             aria-label={plan.name}>
-    <div className={styles.cardHeading}><span className={styles.scheduleIcon}>{plan.action.type === "notification.send" ? <IconBell size={22}/> : <IconRobot size={22}/>}</span>
+    <div className={styles.cardHeading}><span className={styles.scheduleIcon} data-icon-surface>{plan.action.type === "notification.send" ? <IconBell size={22}/> : <IconRobot size={22}/>}</span>
       <div>{title(plan)}<ScheduleRule plan={plan}/></div>
     </div>
     {scheduleSummaryText(plan) && <p className={styles.taskSummary}>{scheduleSummaryText(plan)}</p>}

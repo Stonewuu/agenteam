@@ -136,6 +136,7 @@
 }
 
 .primary {
+  --icon-context-color: currentColor;
   padding: 10px 18px;
   border: 1px solid transparent;
   background: var(--primary);
@@ -167,6 +168,14 @@
 
 .textButton:hover {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.moreButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .primary:disabled, .secondary:disabled, .textButton:disabled {

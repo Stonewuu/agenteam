@@ -3,6 +3,7 @@ package com.stonewu.agenteam.mapper.tool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.plugin.PlatformToolDefinitions;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.plugin.PluginToolDefinitionMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginToolViewMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -22,7 +23,8 @@ class ToolDisplayNameMapperTest {
 
     @Test
     void builtinNamesCoverEveryRegisteredActionWithoutChangingCallNames() {
-        var groups = Map.of("platform_basics", platform.basics(), "todo_management", platform.todos(), "schedule_management", platform.schedules());
+        var groups = Map.of("platform_basics", platform.basics(), "todo_management", platform.todos(), "schedule_management", platform.schedules(),
+            "group_collaboration", new CollaborationToolDefinitions(json).tools());
         groups.forEach((code, tools) -> tools.forEach(tool -> {
             var config = json.tree(Map.of("pluginType", "builtin", "builtinCode", code));
             var view = new PluginToolViewMapper(json).map("tool", tool, true, config);

@@ -39,16 +39,16 @@ export function ConversationActions({enterprise, conversation, onManage, onChang
     <DropdownMenuContent className="agenteam-menu agenteam-popup" align="end">
       {conversation.status === "deleted" ?
         <DropdownMenuItem onClick={() => onManage("rename")}>{uiText("恢复对话")}</DropdownMenuItem> : <>
-          <DropdownMenuItem onClick={() => onManage("rename")}><IconPencil size={17}/>{uiText("重命名")}
-          </DropdownMenuItem>
+          {!conversation.collaborationTaskId && <DropdownMenuItem onClick={() => onManage("rename")}><IconPencil size={17}/>{uiText("重命名")}
+          </DropdownMenuItem>}
           <DropdownMenuItem onClick={() => update({favorite: !conversation.favorite})}><IconStar
             size={17}/>{conversation.favorite ? uiText("取消收藏") : uiText("收藏")}</DropdownMenuItem>
-          <DropdownMenuItem disabled={Boolean(conversation.activeRunId)}
+          {!conversation.collaborationTaskId && <><DropdownMenuItem disabled={Boolean(conversation.activeRunId)}
                             onClick={() => update({status: conversation.status === "archived" ? "active" : "archived"})}><IconArchive
             size={17}/>{conversation.status === "archived" ? uiText("取消归档") : uiText("归档")}</DropdownMenuItem>
           <DropdownMenuSeparator/><DropdownMenuItem disabled={Boolean(conversation.activeRunId)} variant="destructive"
                                                     onClick={() => onManage("delete")}><IconTrash
-          size={17}/>{uiText("删除")}</DropdownMenuItem>
+          size={17}/>{uiText("删除")}</DropdownMenuItem></>}
         </>}
     </DropdownMenuContent>
   </DropdownMenu>{action.error &&

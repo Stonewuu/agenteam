@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -50,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 真实附件与知识资料进入既有模型对话流，并验证提交、历史和清理关系。
  */
-@Import(SharedEnterpriseTestEdition.class)
+@Import({SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
 class MessageSourceExecutionTest extends ExecutionApiTestSupport {
 
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();

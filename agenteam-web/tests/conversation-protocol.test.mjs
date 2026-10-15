@@ -8,6 +8,36 @@ const { parseConversationFrame, SnapshotRequired } = load("../.test-build/conver
 const { displayMessages, mergeRunApprovals } = load("../.test-build/conversation/agent/lib/conversation-display.js");
 const time = "2026-09-14T08:00:00Z";
 
+test("执行结束立即清除等待提示，服务端确认前仍不能发送下一条消息", () => {
+  for (const status of ["completed", "failed", "cancelled"]) {
+    const initial = snapshot();
+    initial.conversation.unavailableReason = "请等待当前任务结束，或先停止任务。";
+    const next = apply(fromSnapshot(initial), event("4", `run.${status}`, {...initial.activeRun, status, lastSequence: "4"}));
+    assert.equal(next.snapshot.activeRun, null);
+    assert.equal(next.snapshot.conversation.activeRunId, null);
+    assert.equal(next.snapshot.conversation.unavailableReason, null);
+    assert.equal(next.snapshot.conversation.canContinue, false);
+  }
+});
+
+test("结束事件不清除真实不可用原因，也不移除较新执行的等待提示", () => {
+  for (const reason of ["雇佣已暂停。", "此对话属于协作任务，请到任务详情补充要求。", "此对话已归档。"]) {
+    const initial = snapshot();
+    initial.conversation.unavailableReason = reason;
+    const next = apply(fromSnapshot(initial), event("4", "run.completed", {...initial.activeRun, status: "completed", lastSequence: "4"}));
+    assert.equal(next.snapshot.conversation.unavailableReason, reason);
+    assert.equal(next.snapshot.conversation.canContinue, false);
+  }
+  const initial = snapshot();
+  const oldRun = {...initial.activeRun, status: "completed", lastSequence: "4"};
+  initial.activeRun = {...initial.activeRun, id: "new-run"};
+  initial.conversation.activeRunId = "new-run";
+  initial.conversation.unavailableReason = "请等待当前任务结束，或先停止任务。";
+  const next = apply(fromSnapshot(initial), event("4", "run.completed", oldRun));
+  assert.equal(next.snapshot.activeRun.id, "new-run");
+  assert.equal(next.snapshot.conversation.unavailableReason, initial.conversation.unavailableReason);
+});
+
 test("子助手历史内容保留实际图标和配色", () => {
   const child = { ...block("child-avatar", "subagent"), label: "写作助手", agentIcon: "NotebookPen", agentColor: "mint" };
   const state = fromSnapshot(snapshot("1", [child]));
@@ -398,11 +428,33 @@ test("确认成功后显示等待执行，晚到的待确认查询不能恢复�
 test("工具参数准备、调度等待与实际执行使用不同提示", () => {
   const { toolStatusLabel } = load("../.test-build/conversation/agent/lib/conversation-display.js");
   const tool = { kind: "tool", status: "pending", callStatus: "running", resultStatus: "pending" };
-  assert.equal(toolStatusLabel(tool, "pending"), "正在准备执行内容");
+  assert.equal(toolStatusLabel(tool, "pending"), "正在准备执行任务");
+  // 真实工具事件先结束调用生成，再准备可展示的执行内容，这期间仍没有详情。
+  assert.equal(toolStatusLabel({ ...tool, callStatus: "completed", input: "", result: "" }, "pending", true), "正在准备执行任务");
   assert.equal(toolStatusLabel({ ...tool, callStatus: "completed" }, "pending"), "等待执行");
   assert.equal(toolStatusLabel({ ...tool, status: "waiting_approval" }, "pending"), "等待执行");
+  assert.equal(toolStatusLabel({ ...tool, status: "waiting_approval" }, "pending", true), "等待执行");
   for (const [status, label] of [["waiting_approval", "等待确认"], ["running", "执行中"], ["completed", "已完成"], ["failed", "执行失败"], ["cancelled", "已停止"], ["skipped", "已跳过"]]) {
     assert.equal(toolStatusLabel({ ...tool, status }, status), label);
+    assert.equal(toolStatusLabel({ ...tool, status }, status, true), label);
+  }
+});
+
+test("各类工具及嵌套工具都沿用同一准备提示，不依赖工具名称", () => {
+  const { toolStatusLabel } = load("../.test-build/conversation/agent/lib/conversation-display.js");
+  const names = ["read_file", "view_image", "grep_files", "list_files", "write_file", "edit_file", "execute", "export_file",
+    "read_url", "platform_search", "todo_create", "schedule_create", "collab_publish_artifact", "agent_spawn", "agent_send", "custom_external_tool"];
+  for (const sourceKind of [null, "knowledge", "data"]) {
+    const roots = [block("workflow", "workflow", null, 1), block("agent", "subagent", null, 2)];
+    const raw = names.map((name, index) => ({ ...block(`tool-${index}`, "tool", [null, "workflow", "agent"][index % 3], index + 3),
+      status: "pending", tool: {toolCallId: `call-${index}`, name, sourceKind, input: "", result: "", callStatus: "completed", resultStatus: "pending"} }));
+    const displayed = displayMessages(fromSnapshot(snapshot("3", [...roots, ...raw])))[0].blocks;
+    const tools = displayed.flatMap((item) => item.kind === "tool" ? [item] : item.blocks);
+    assert.equal(tools.length, names.length);
+    for (const tool of tools) {
+      assert.equal(toolStatusLabel(tool, tool.status, true), "正在准备执行任务", `${sourceKind}:${tool.name}`);
+      assert.equal(toolStatusLabel({...tool, status: "running", resultStatus: "running"}, "running", true), "执行中");
+    }
   }
 });
 

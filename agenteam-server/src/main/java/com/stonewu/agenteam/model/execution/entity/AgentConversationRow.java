@@ -73,6 +73,12 @@ public class AgentConversationRow {
     @TableField(value = "event_delivery_mode")
     private String eventDeliveryMode;
 
+    @TableField("source_type")
+    private String sourceType;
+
+    @TableField("source_id")
+    private String sourceId;
+
     @TableField(value = "deleted_at")
     private Instant deletedAt;
 

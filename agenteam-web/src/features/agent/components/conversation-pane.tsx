@@ -161,7 +161,7 @@ export function ConversationPane({
       </Button>}
     <span className={controls.actionAnnouncement}
           role="status">{workspace.hasUnseenContent ? uiText("有新内容，可以回到底部查看。") : ""}</span>
-    {(!loading || workspace.composerHandoff) && (canRun || run) && <ConversationComposer inputRef={composerInput}
+    {!workspace.detail?.collaborationTaskId && (!loading || workspace.composerHandoff) && (canRun || run) && <ConversationComposer inputRef={composerInput}
                                                                                          activePicker={workspace.pickerOpen ? "employee" : workspace.skillPickerOpen ? "skill" : workspace.documentPickerOpen ? "document" : null}
                                                                                          employee={workspace.employeeAppearance}
                                                                                          employeeName={workspace.agentName}

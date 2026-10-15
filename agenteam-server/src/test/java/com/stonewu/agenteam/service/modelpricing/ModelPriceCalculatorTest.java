@@ -14,6 +14,9 @@ import com.stonewu.agenteam.model.modelusage.entity.ModelTokenUsage;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.modelusage.ModelUsageNormalizer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -21,6 +24,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 import com.stonewu.agenteam.service.modelusage.ModelUsageQueryService;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageFilter;
 
@@ -143,28 +147,26 @@ class ModelPriceCalculatorTest {
         assertThatThrownBy(() -> book(base("2", "8", "0", "0"), priority)).isInstanceOf(ApiException.class).hasMessageContaining("未覆盖");
     }
 
-    @Test
-    void unsupportedAudioNeverUsesTextRateForThatComponent() throws Exception {
-        var usage = usage("openai", """
-            {"prompt_tokens":1000,"completion_tokens":100,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":500}}
-            """);
+    @ParameterizedTest(name = "音频输入不使用文本价格：{0}")
+    @MethodSource("audioUsage")
+    void unsupportedAudioNeverUsesTextRateForThatComponent(String protocol, String payload) throws Exception {
+        var usage = usage(protocol, payload);
         var result = calculate(book(base("2", "8", "0", "0")), usage);
         assertThat(result.status()).isEqualTo("partial");
         assertThat(result.items()).extracting(ModelPriceCalculation.Item::meter).containsExactly("output");
         assertThat(result.knownAmount()).isEqualByComparingTo("0.0008");
     }
 
-    @Test
-    void geminiAudioInputDoesNotUseTextInputPrices() throws Exception {
-        var usage = usage("gemini", """
-            {"promptTokenCount":1000,"toolUsePromptTokenCount":0,"cachedContentTokenCount":0,
-             "candidatesTokenCount":100,"thoughtsTokenCount":0,
-             "promptTokensDetails":[{"modality":"AUDIO","tokenCount":500}]}
-            """);
-        var result = calculate(book(base("2", "8", "0", "0")), usage);
-        assertThat(result.status()).isEqualTo("partial");
-        assertThat(result.items()).extracting(ModelPriceCalculation.Item::meter).containsExactly("output");
-        assertThat(result.knownAmount()).isEqualByComparingTo("0.0008");
+    private static Stream<Arguments> audioUsage() {
+        return Stream.of(
+            Arguments.of("openai", """
+                {"prompt_tokens":1000,"completion_tokens":100,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":500}}
+                """),
+            Arguments.of("gemini", """
+                {"promptTokenCount":1000,"toolUsePromptTokenCount":0,"cachedContentTokenCount":0,
+                 "candidatesTokenCount":100,"thoughtsTokenCount":0,
+                 "promptTokensDetails":[{"modality":"AUDIO","tokenCount":500}]}
+                """));
     }
 
     private ModelPriceCalculation calculate(ModelPriceBook book, ModelTokenUsage usage) {

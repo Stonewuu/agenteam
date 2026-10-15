@@ -146,6 +146,17 @@ logging:
     software:
       amazon:
         awssdk: "WARN"
+chat:
+  # 聊天入口、各个平台和内部协作分别启用；已有个人通知不受这些开关影响。
+  enabled: "${AGENTEAM_CHAT_ENABLED:false}"
+  worker-enabled: "${AGENTEAM_CHAT_WORKER_ENABLED:true}"
+  public-base-url: "${AGENTEAM_CHAT_PUBLIC_BASE_URL:${AGENTEAM_PUBLIC_ORIGIN:http://localhost:3000}}"
+  feishu:
+    enabled: "${AGENTEAM_CHAT_FEISHU_ENABLED:false}"
+  wecom-aibot:
+    enabled: "${AGENTEAM_CHAT_WECOM_AIBOT_ENABLED:false}"
+collaboration:
+  enabled: "${AGENTEAM_COLLABORATION_ENABLED:false}"
 network:
   # 内网连接由部署管理员逐个配置完整协议、主机和端口，以逗号分隔；默认不开放。
   allowed-private-origins: "${AGENTEAM_ALLOWED_PRIVATE_ORIGINS:}"

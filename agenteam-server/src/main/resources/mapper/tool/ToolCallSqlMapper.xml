@@ -19,18 +19,6 @@
     status IN ('succeeded','failed','cancelled')
     AND JSON_UNQUOTE(JSON_EXTRACT(result_redacted_json, '$.fileId')) = #{file} ORDER BY created_at, id LIMIT 1
   </select>
-  <select id="sourceResultsForContextToolCall" resultType="com.stonewu.agenteam.model.tool.entity.ToolCallQueryRow">
-    SELECT t.* FROM tool_call t JOIN (
-    SELECT id FROM agent_run WHERE enterprise_id = #{enterpriseId} AND conversation_id = #{conversationId} AND user_id =
-    #{userId}
-    ORDER BY created_at DESC, id DESC LIMIT #{recentRuns}
-    ) recent ON recent.id = t.run_id
-    WHERE t.enterprise_id = #{enterpriseId}
-    AND (t.resource_kind IN ('knowledge','data') OR (t.resource_kind IN ('agent','workflow') AND t.tool_name IN
-    ('read_file','grep_files','list_files','write_file','edit_file','execute','export_file','read_agent_spawn_result','read_agent_send_result','read_workflow_result')))
-    AND t.status IN ('succeeded','failed')
-    ORDER BY t.created_at, t.id
-  </select>
   <insert id="prepareToolCall">
     INSERT INTO tool_call (id, enterprise_id, run_id, attempt_id, step_id, actor_user_id, resource_id, resource_kind,
     resource_version_id, plugin_tool_id,

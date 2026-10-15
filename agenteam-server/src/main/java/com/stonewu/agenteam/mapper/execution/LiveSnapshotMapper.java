@@ -127,6 +127,6 @@ public class LiveSnapshotMapper {
             value.agentId(),
             value.agentName(), value.agentIcon(), value.agentColor(), value.mode(), value.favorite(), value.status(),
             active == null ? null : active.id(), active == null && value.canContinue(), value.unavailableReason(),
-            value.approvalPolicy(), value.modelSelection(), value.projectId());
+            value.approvalPolicy(), value.modelSelection(), value.projectId(), value.collaborationTaskId());
     }
 }

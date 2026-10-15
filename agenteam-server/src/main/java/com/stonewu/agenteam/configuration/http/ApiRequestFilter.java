@@ -86,7 +86,11 @@ public class ApiRequestFilter extends OncePerRequestFilter {
                     "系统尚未初始化，请联系部署人员。");
             }
             if (!SAFE_METHODS.contains(request.getMethod())) {
-                protection.verify(request);
+                // 此唯一平台入口由专用服务验证签名、时间戳、校验令牌和加密正文。
+                boolean platformCallback = request.getMethod().equals("POST") && path.matches("/api/v1/chat/callbacks/feishu/[a-f0-9]{32}");
+                if (!platformCallback) {
+                    protection.verify(request);
+                }
                 if (request.getMethod().equals("PUT") && path.matches(
                     "/api/v1/enterprises/[^/]+/(?:files/[^/]+/content|plugins/java-packages/content)")) {
                     if (request.getContentLengthLong() > 20L * 1024 * 1024) {

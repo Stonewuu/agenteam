@@ -10,5 +10,12 @@ public record ConversationView(String id, String revision, String createdAt, Str
                                String mode,
                                boolean favorite, String status, String activeRunId,
                                boolean canContinue, String unavailableReason, String approvalPolicy,
-                               ModelSelection modelSelection, String projectId) {
+                               ModelSelection modelSelection, String projectId, String collaborationTaskId) {
+    public ConversationView(String id, String revision, String createdAt, String updatedAt,
+                            String title, String agentId, String agentName, String agentIcon, String agentColor,
+                            String mode, boolean favorite, String status, String activeRunId, boolean canContinue,
+                            String unavailableReason, String approvalPolicy, ModelSelection modelSelection, String projectId) {
+        this(id, revision, createdAt, updatedAt, title, agentId, agentName, agentIcon, agentColor, mode, favorite,
+            status, activeRunId, canContinue, unavailableReason, approvalPolicy, modelSelection, projectId, null);
+    }
 }

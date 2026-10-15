@@ -18,7 +18,7 @@ import {apiRequest} from "@/lib/http/api-client";
 import type {PluginConfig, PluginToolSelection, UsableVersion} from "@/features/resource/types/resource";
 import type {PluginTool, ToolSource} from "../types/plugin";
 import {asUsableVersion, changeTool, cleanCollection, collectionSource} from "../lib/plugin-collection";
-import {toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
+import {toolDisplayDescription, toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
 import styles from "./tool-collection.module.css";
 import ui from "@/components/ui/surface.module.css";
 
@@ -54,7 +54,7 @@ export function ToolSelectionDialog({enterpriseId, value, known, onConfirm, onCl
   const unresolved = draft.sources.some((source) => draft.tools.some((tool) => tool.sourceId === source.id) && (!source.versionId || !validVersions.has(source.versionId))) || missing.length > 0;
   const search = query.trim().toLocaleLowerCase();
   const noMatches = search && !unresolved && options.every((source) => !(cache.get(draft.sources.find((item) => item.id === source.resourceId)?.versionId ?? "") ?? source).tools
-    .some((tool) => `${tool.name} ${toolDisplayName(tool, source.code, uiText)} ${uiText(tool.description)} ${uiText(source.name)}`.toLocaleLowerCase().includes(search)));
+    .some((tool) => `${tool.name} ${toolDisplayName(tool, source.code, uiText)} ${toolDisplayDescription(tool, source.code, uiText)} ${uiText(source.name)}`.toLocaleLowerCase().includes(search)));
   const removeSource = (id: string) => setDraft((previous) => ({
     ...previous,
     tools: previous.tools.filter((tool) => tool.sourceId !== id),
@@ -159,7 +159,7 @@ function ToolPickerGroup({
     }
   }, [request.data, onResolved]);
   const normalized = query.trim().toLocaleLowerCase();
-  const choices = source?.tools.filter((tool) => `${tool.displayName ?? tool.name} ${tool.description} ${uiText(source.name)}`.toLocaleLowerCase().includes(normalized)) ?? [];
+  const choices = source?.tools.filter((tool) => `${toolDisplayName(tool, source.code, uiText)} ${toolDisplayDescription(tool, source.code, uiText)} ${uiText(source.name)}`.toLocaleLowerCase().includes(normalized)) ?? [];
   return <section hidden={hidden || Boolean(source && normalized && !choices.length)} className={styles.group}
                   aria-label={uiText(latest.name)}>
     <div className={styles.groupHeading}>
@@ -180,7 +180,7 @@ function ToolPickerGroup({
                 className="sr-only">{uiText(source.name)} · {toolDisplayName(tool, source.code, uiText)}</span>
           <ResourceAvatar icon={source.icon} color={source.color} size="small"/>
           <span
-            className={styles.identity}><strong>{toolDisplayName(tool, source.code, uiText)}</strong><span>{tool.description}</span></span>
+            className={styles.identity}><strong>{toolDisplayName(tool, source.code, uiText)}</strong><span>{toolDisplayDescription(tool, source.code, uiText)}</span></span>
           <span
             className={`badge ${tool.operationClass === "read" ? "blue" : "amber"}`}>{uiText(toolOperationLabel(tool.operationClass))}</span>
         </label>;

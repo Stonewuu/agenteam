@@ -146,6 +146,18 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
+    void confirmationCanAuthorizeChatTogetherWithTheAccountBinding() throws Exception {
+        callback(member, state(begin(member)));
+        var review = data(mvc.perform(get("/api/v1/auth/channel-authorization").cookie(member.cookie())).andExpect(status().isOk()).andReturn());
+        assertTrue(review.path("chatAvailable").asBoolean());
+        var bound = data(writeAs(member, HttpMethod.POST, channels() + "/confirm",
+            Map.of("authorizationId", reviews.get(member.cookie().getValue()), "receiveEnabled", false,
+                "externalLoginEnabled", false, "chatEnabled", true), null, key()).andExpect(status().isCreated()).andReturn());
+        assertTrue(bound.path("chatEnabled").asBoolean());
+        assertFalse(bound.path("externalLoginEnabled").asBoolean());
+    }
+
+    @Test
     void wrongBrowserWrongConnectionAndReplayCannotUseAuthorizationCode() throws Exception {
         String state = state(begin(member));
         var other = anonymous();

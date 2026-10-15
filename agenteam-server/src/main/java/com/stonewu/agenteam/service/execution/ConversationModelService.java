@@ -31,16 +31,18 @@ public class ConversationModelService {
     private final EnterpriseAuthorizationService authorization;
     private final ConversationQueryService queries;
     private final Clock clock;
+    private final ConversationSourcePolicy sources;
 
     public ConversationModelService(ConversationMapper conversations, ExecutionConfigurationService configurations,
                                     ModelProfileCatalog models, EnterpriseAuthorizationService authorization,
-                                    ConversationQueryService queries, Clock clock) {
+                                    ConversationQueryService queries, Clock clock, ConversationSourcePolicy sources) {
         this.conversations = conversations;
         this.configurations = configurations;
         this.models = models;
         this.authorization = authorization;
         this.queries = queries;
         this.clock = clock;
+        this.sources = sources;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +66,7 @@ public class ConversationModelService {
             return new ConversationModelOptions.Option(model.id(), model.name(), model.modelName(),
                 model.capabilities().reasoningEfforts(), reason == null, reason);
         }).toList();
-        return new ConversationModelOptions(true, defaults, selection, options);
+        return new ConversationModelOptions(conversation == null || !"collaboration".equals(conversation.sourceType()), defaults, selection, options);
     }
 
     public ConversationRecord authorize(AuthContext actor, String id, boolean lock) {
@@ -80,6 +82,7 @@ public class ConversationModelService {
     public ConversationView select(AuthContext actor, String id, ModelSelection selection, long revision) {
         InputValidation.validate(selection);
         var conversation = authorize(actor, id, true);
+        sources.requireWeb(actor, id);
         RunSubmissionService.active(conversation);
         if (conversation.revision() != revision) {
             throw ApiException.versionConflict(conversation.revision());

@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -89,6 +90,37 @@ class IntegrationManagementApiTest extends ExecutionApiTestSupport {
     void closeEnvironment() throws Exception {
         PLATFORM.close();
         ENVIRONMENT.close();
+    }
+
+    @Test
+    void botConnectionsAreSeparatedAndCannotEnableEnterpriseLoginOrNotifications() throws Exception {
+        var enterpriseConnection = create();
+        var botInput = new LinkedHashMap<String, Object>(payload());
+        botInput.put("purpose", "chat_bot");
+        botInput.put("bindingEnabled", true);
+        var botConnection = data(write(path(), botInput, key()).andExpect(status().isCreated()).andReturn());
+        assertEquals("chat_bot", botConnection.path("purpose").asText());
+        assertEquals("", botConnection.path("loginUrl").asText());
+        assertFalse(botConnection.path("loginEnabled").asBoolean());
+        assertFalse(botConnection.path("messagingEnabled").asBoolean());
+        assertTrue(botConnection.path("bindingEnabled").asBoolean());
+        var enterpriseList = data(mvc.perform(get(path()).param("purpose", "enterprise").param("providerCode", "feishu")
+            .cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(1, enterpriseList.path("items").size());
+        assertEquals(enterpriseConnection.path("id").asText(), enterpriseList.at("/items/0/id").asText());
+        var botList = data(mvc.perform(get(path()).param("purpose", "chat_bot").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertEquals(1, botList.path("items").size());
+        assertEquals(botConnection.path("id").asText(), botList.at("/items/0/id").asText());
+        change(HttpMethod.PATCH, path() + "/" + botConnection.path("id").asText(), Map.of("loginEnabled", true), "1", key())
+            .andExpect(status().isUnprocessableEntity());
+        change(HttpMethod.PATCH, path() + "/" + botConnection.path("id").asText(), Map.of("messagingEnabled", true), "1", key())
+            .andExpect(status().isUnprocessableEntity());
+        change(HttpMethod.PATCH, path() + "/" + enterpriseConnection.path("id").asText(), Map.of("loginEnabled", true), "1", key())
+            .andExpect(status().isOk());
+        botInput.put("externalAppId", "cli_invalid_bot_login");
+        botInput.put("loginEnabled", true);
+        write(path(), botInput, key()).andExpect(status().isUnprocessableEntity());
     }
 
     @Test

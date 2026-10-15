@@ -49,13 +49,14 @@ public class ChannelBindingService {
     private final AuditEventService audit;
     private final Clock clock;
     private final ChannelDeliveryCancellation cancellations;
+    private final ChannelIdentityScopeService scopes;
 
     public ChannelBindingService(UserChannelBindingMapper bindings, EnterpriseIntegrationMapper connections,
                                   EnterpriseMapper enterprises, AuthMapper users, AuthContextService identity,
                                   LocalAuthenticationService local, ChannelOauthStore flows,
                                   ChannelAuthorizationSecrets secrets, ChannelAuthorizationPolicy policy,
                                   IntegrationProviderRegistry providers, AuditEventService audit, Clock clock,
-                                  ChannelDeliveryCancellation cancellations) {
+                                  ChannelDeliveryCancellation cancellations, ChannelIdentityScopeService scopes) {
         this.bindings = bindings;
         this.connections = connections;
         this.enterprises = enterprises;
@@ -69,6 +70,7 @@ public class ChannelBindingService {
         this.audit = audit;
         this.clock = clock;
         this.cancellations = cancellations;
+        this.scopes = scopes;
     }
 
     @Transactional(readOnly = true)
@@ -82,12 +84,13 @@ public class ChannelBindingService {
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise)
             .and(group -> {
                 group.nested(enabled -> enabled.eq(EnterpriseIntegrationRow::getStatus, "enabled")
-                    .eq(EnterpriseIntegrationRow::getBindingEnabled, true));
+                    .and(capability -> capability.eq(EnterpriseIntegrationRow::getBindingEnabled, true)
+                        .or().eq(EnterpriseIntegrationRow::getIdentityScope, "bot")));
                 if (!current.isEmpty()) {
                     group.or().in(EnterpriseIntegrationRow::getId, current.keySet());
                 }
             }).orderByAsc(EnterpriseIntegrationRow::getName, EnterpriseIntegrationRow::getId));
-        return choices.stream().map(connection -> view(connection, current.get(connection.getId()))).toList();
+        return scopes.choices(choices, current).stream().map(connection -> view(connection, current.get(connection.getId()))).toList();
     }
 
     public ChannelAuthorizationReview review(String id, String nonce, String confirmation, HttpSession session) {
@@ -97,7 +100,8 @@ public class ChannelBindingService {
         var external = secrets.decrypt(flow.getId(), flow.getTransientEncryptedJson()).identity();
         return new ChannelAuthorizationReview(flow.getId(), flow.getEnterpriseId(), connection.getName(), providers.require(connection.getProviderCode()).name(),
             actor.username(), actor.displayName(), external.displayName(), external.subjectId(), flow.getConfirmationExpiresAt().toString(),
-            !actor.superAdmin() && Boolean.TRUE.equals(connection.getLoginEnabled()));
+            !actor.superAdmin() && Boolean.TRUE.equals(connection.getLoginEnabled()), Boolean.TRUE.equals(connection.getMessagingEnabled()),
+            "feishu".equals(connection.getProviderCode()));
     }
 
     public ChannelBindingView confirm(String id, String nonce, String confirmation,
@@ -108,6 +112,10 @@ public class ChannelBindingService {
         var connection = policy.current(flow, session, false);
         var external = secrets.decrypt(id, flow.getTransientEncryptedJson()).identity();
         checkIdentity(connection, external);
+        enterprises.lockEnterprise(flow.getEnterpriseId()).orElseThrow();
+        if (scopes.ownedByAnotherUser(connection, external.unionId(), actor.id())) {
+            throw new ApiException(HttpStatus.CONFLICT, "CHANNEL_BINDING_CONFLICT", "此平台账号已绑定其他群策账号，请先解除原绑定。");
+        }
         if (Boolean.TRUE.equals(input.externalLoginEnabled()) && (actor.superAdmin() || !Boolean.TRUE.equals(connection.getLoginEnabled()))) {
             throw ApiException.invalidField("externalLoginEnabled", "当前账号或企业接入未开放外部登录。");
         }
@@ -122,6 +130,7 @@ public class ChannelBindingService {
         row.setDisplayName(external.displayName());
         row.setStatus("active");
         row.setReceiveEnabled(input.receiveEnabled());
+        row.setChatEnabled(Boolean.TRUE.equals(input.chatEnabled()));
         row.setExternalLoginEnabled(input.externalLoginEnabled());
         row.setAuthorizedAt(clock.instant());
         row.setCreatedAt(clock.instant());
@@ -133,6 +142,7 @@ public class ChannelBindingService {
         } catch (DuplicateKeyException conflict) {
             throw new ApiException(HttpStatus.CONFLICT, "CHANNEL_BINDING_CONFLICT", "本账号或外部身份已有绑定，请先解绑原账号。", conflict);
         }
+        updateSharedChat(connection, row, input.chatEnabled());
         audit.record(flow.getEnterpriseId(), actor, "channel.bind", "channel_binding", row.getId(), "用户确认绑定外部账号", Map.of("connectionId", connection.getId()));
         return view(connection, row);
     }
@@ -142,15 +152,20 @@ public class ChannelBindingService {
         var actor = requireActor(enterprise, session);
         var row = own(enterprise, id, actor.id(), revision);
         var connection = connections.selectById(row.getConnectionId());
+        if ("bot".equals(connection.getIdentityScope()) && (Boolean.TRUE.equals(input.receiveEnabled()) || Boolean.TRUE.equals(input.externalLoginEnabled()))) {
+            throw ApiException.invalidField("receiveEnabled", "企微智能机器人仅提供聊天，不能用于个人通知或外部登录。");
+        }
         if (Boolean.TRUE.equals(input.externalLoginEnabled()) && (actor.superAdmin() || !"enabled".equals(connection.getStatus())
             || !Boolean.TRUE.equals(connection.getLoginEnabled()))) {
             throw ApiException.invalidField("externalLoginEnabled", "当前账号或企业接入未开放外部登录。");
         }
         if (bindings.update(changes(row).set(UserChannelBindingRow::getReceiveEnabled, input.receiveEnabled())
+            .set(input.chatEnabled() != null, UserChannelBindingRow::getChatEnabled, input.chatEnabled())
             .set(UserChannelBindingRow::getExternalLoginEnabled, input.externalLoginEnabled())) != 1) {
             throw ApiException.versionConflict(revision);
         }
         audit.record(enterprise, actor, "channel.binding_update", "channel_binding", id, "更新本人通知和登录选择", Map.of());
+        updateSharedChat(connection, row, input.chatEnabled());
         cancellations.cancel(enterprise, row.getConnectionId(), row.getId(), actor.id(), null);
         return view(connection, bindings.selectById(id));
     }
@@ -158,10 +173,14 @@ public class ChannelBindingService {
     public void revoke(String enterprise, String id, long revision, HttpSession session) {
         var actor = requireActor(enterprise, session);
         var row = own(enterprise, id, actor.id(), revision);
-        if (bindings.update(changes(row).set(UserChannelBindingRow::getStatus, "revoked")
-            .set(UserChannelBindingRow::getRevokedAt, clock.instant()).set(UserChannelBindingRow::getReceiveEnabled, false)
-            .set(UserChannelBindingRow::getExternalLoginEnabled, false)) != 1) {
-            throw ApiException.versionConflict(revision);
+        var connection = connections.selectById(row.getConnectionId());
+        for (var related : scopes.related(connection, row)) {
+            if (bindings.update(changes(related).set(UserChannelBindingRow::getStatus, "revoked")
+                .set(UserChannelBindingRow::getRevokedAt, clock.instant()).set(UserChannelBindingRow::getReceiveEnabled, false)
+                .set(UserChannelBindingRow::getChatEnabled, false).set(UserChannelBindingRow::getExternalLoginEnabled, false)) != 1) {
+                throw ApiException.versionConflict(related.getRevision());
+            }
+            cancellations.cancel(enterprise, related.getConnectionId(), related.getId(), actor.id(), null);
         }
         audit.record(enterprise, actor, "channel.unbind", "channel_binding", id, "用户解除外部账号绑定", Map.of());
         cancellations.cancel(enterprise, row.getConnectionId(), row.getId(), actor.id(), null);
@@ -231,11 +250,25 @@ public class ChannelBindingService {
 
     private ChannelBindingView view(EnterpriseIntegrationRow connection, UserChannelBindingRow row) {
         boolean enabled = "enabled".equals(connection.getStatus());
-        return new ChannelBindingView(row == null ? null : row.getId(), connection.getId(), connection.getName(), connection.getProviderCode(),
+        return new ChannelBindingView(row == null ? null : row.getId(), connection.getId(), scopes.shared(connection) ? "飞书账号" : connection.getName(), connection.getProviderCode(),
             providers.require(connection.getProviderCode()).name(), row == null ? "unbound" : row.getStatus(), row == null ? null : row.getDisplayName(),
             row != null && Boolean.TRUE.equals(row.getReceiveEnabled()), row != null && Boolean.TRUE.equals(row.getExternalLoginEnabled()),
-            row == null ? null : Long.toString(row.getRevision()), enabled && Boolean.TRUE.equals(connection.getBindingEnabled()),
-            enabled && Boolean.TRUE.equals(connection.getLoginEnabled()), enabled && Boolean.TRUE.equals(connection.getMessagingEnabled()));
+            row == null ? null : Long.toString(row.getRevision()), enabled && (Boolean.TRUE.equals(connection.getBindingEnabled()) || "bot".equals(connection.getIdentityScope())),
+            enabled && Boolean.TRUE.equals(connection.getLoginEnabled()), enabled && Boolean.TRUE.equals(connection.getMessagingEnabled()),
+            row != null && Boolean.TRUE.equals(row.getChatEnabled()));
+    }
+
+    private void updateSharedChat(EnterpriseIntegrationRow connection, UserChannelBindingRow row, Boolean enabled) {
+        if (enabled == null) {
+            return;
+        }
+        for (var related : scopes.related(connection, row)) {
+            if (!related.getId().equals(row.getId())) {
+                if (bindings.update(changes(related).set(UserChannelBindingRow::getChatEnabled, enabled)) != 1) {
+                    throw ApiException.versionConflict(related.getRevision());
+                }
+            }
+        }
     }
 
     public record LoginResult(UserEntity user, UserChannelBindingRow binding, long connectionRevision) {

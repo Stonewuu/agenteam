@@ -11,7 +11,17 @@ public record ConversationRecord(String id, String enterpriseId, String userId, 
                                  String mode, String status, boolean favorite, String activeRunId,
                                  long lastSequence, long revision, Instant deletedAt,
                                  Instant createdAt, Instant updatedAt, String previewResourceId, String approvalPolicy,
-                                 ModelSelection modelSelection, String projectId, String eventDeliveryMode) {
+                                 ModelSelection modelSelection, String projectId, String eventDeliveryMode, String sourceType, String sourceId) {
+    public ConversationRecord(String id, String enterpriseId, String userId, String agentId,
+                              String agentVersionId, String hireId, String title, String agentName,
+                              String agentIcon, String agentColor, String mode, String status, boolean favorite,
+                              String activeRunId, long lastSequence, long revision, Instant deletedAt,
+                              Instant createdAt, Instant updatedAt, String previewResourceId, String approvalPolicy,
+                              ModelSelection modelSelection, String projectId, String eventDeliveryMode) {
+        this(id, enterpriseId, userId, agentId, agentVersionId, hireId, title, agentName, agentIcon, agentColor,
+            mode, status, favorite, activeRunId, lastSequence, revision, deletedAt, createdAt, updatedAt,
+            previewResourceId, approvalPolicy, modelSelection, projectId, eventDeliveryMode, "web", null);
+    }
     public ConversationRecord(String id, String enterpriseId, String userId, String agentId,
                               String agentVersionId, String hireId, String title, String agentName,
                               String agentIcon, String agentColor, String mode, String status, boolean favorite,

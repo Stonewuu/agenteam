@@ -30,20 +30,34 @@ public class DocumentParserMain {
                 Runtime.getRuntime().halt(3);
             }
         }, 1, 1, TimeUnit.SECONDS);
-        Path source = Path.of(args[0]), directory = Path.of(args[2]);
+        Path directory = Path.of(args[2]);
+        Result result = parse(Path.of(args[0]), args[1], directory);
+        try {
+            new ObjectMapper().writeValue(directory.resolve("result.json").toFile(), result);
+        } catch (Exception failed) {
+            System.exit(2);
+            return;
+        }
+        System.exit(result.success() ? 0 : 1);
+    }
+
+    /**
+     * 执行同一套格式解析；独立进程入口另外负责期限、父进程检查和退出状态。
+     */
+    public static Result parse(Path source, String format, Path directory) {
         Result result;
         try {
             if (Files.size(source) > 20L * 1024 * 1024) {
                 throw new DocumentParseFailure("FILE_TOO_LARGE");
             }
-            if (args[1].equals("csv")) {
+            if (format.equals("csv")) {
                 result = new Result(true, null, 0, null,
                     new CsvFileParser().parse(source, directory.resolve("rows.jsonl")));
             } else {
                 int count;
                 Integer pages;
                 try (var writer = new DocumentChunkWriter(directory.resolve("chunks.jsonl"))) {
-                    pages = new DocumentTextExtractor().extract(source, args[1], writer);
+                    pages = new DocumentTextExtractor().extract(source, format, writer);
                     writer.finishSection();
                     count = writer.count();
                 }
@@ -59,12 +73,6 @@ public class DocumentParserMain {
         } catch (Exception invalid) {
             result = new Result(false, "FILE_TYPE_INVALID", 0, null, null);
         }
-        try {
-            new ObjectMapper().writeValue(directory.resolve("result.json").toFile(), result);
-        } catch (Exception failed) {
-            System.exit(2);
-            return;
-        }
-        System.exit(result.success() ? 0 : 1);
+        return result;
     }
 }

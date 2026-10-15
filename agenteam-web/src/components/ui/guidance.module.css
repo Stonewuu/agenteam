@@ -1,0 +1,31 @@
+.guidance[data-tone] {
+  --guidance-color: var(--slate-text);
+  --guidance-background: var(--slate-soft);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--guidance-color) 16%, transparent);
+  background: var(--guidance-background);
+  min-width: 0;
+}
+.guidance[data-tone="warning"] {
+  --guidance-color: var(--amber-text);
+  --guidance-background: var(--amber-soft);
+}
+.guidance[data-tone="success"] {
+  --guidance-color: var(--mint-text);
+  --guidance-background: var(--mint-soft);
+}
+.icon { display: flex; padding-top: 2px; flex-shrink: 0; color: var(--guidance-color); }
+.copy { min-width: 0; flex: 1; }
+.copy > strong { display: block; color: var(--guidance-color); font-size: 14px; line-height: 1.6; }
+.description { margin-top: 4px; color: var(--text); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
+.description p { margin: 0; }
+.description p + p { margin-top: 6px; }
+.description strong { font-weight: 650; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+@media (max-width: 640px) {
+  .actions > a, .actions > button { min-height: 44px; }
+}

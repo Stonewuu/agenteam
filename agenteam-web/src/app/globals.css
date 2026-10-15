@@ -1,6 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;450;500;550;600;650;700&display=swap");
 @import "../components/ui/overlays.css";
 @import "../components/ui/theme.css";
+@import "../components/ui/icon-colors.css";
 @import "../components/ui/shadcn.css";
 @import "../components/ui/select.css";
 @import "../components/ui/motion.css";

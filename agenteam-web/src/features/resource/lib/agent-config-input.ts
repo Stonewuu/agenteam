@@ -22,7 +22,6 @@ export function agentConfigInput(value: AgentConfig): AgentConfig {
     dataVersionIds: value.dataVersionIds,
     workflowVersionIds: value.workflowVersionIds,
     entryWorkflowVersionId: value.entryWorkflowVersionId,
-    historyMessageLimit: value.historyMessageLimit,
     memoryEnabled: value.memoryEnabled,
     memoryFields: value.memoryFields,
     businessTerms: value.businessTerms,

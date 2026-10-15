@@ -20,7 +20,7 @@ export function ChannelLoginPage({loginKey}: {loginKey: string}) {
   const info = useApiQuery<{name: string; providerName: string; providerCode: string}>(path);
   const action = useFormAction();
   return <AuthFrame className={styles.authPage}><section className={styles.authPanel}>
-    <header className={styles.authHeading}><span><IconKey size={26} variant="Bulk"/></span>
+    <header className={styles.authHeading}><span data-icon-surface><IconKey size={26} variant="Bulk"/></span>
       <h1>{t("企业账号登录")}</h1><p>{t("使用已绑定的企业账号继续登录。")}</p></header>
     <QueryState {...info} hasData={Boolean(info.data)} empty={t("此企业登录入口暂不可用。")}>{info.data && <div className={ui.form}>
       <div className={styles.loginConnection}><ChannelIdentity name={info.data.name} providerName={info.data.providerName} providerCode={info.data.providerCode}/></div>

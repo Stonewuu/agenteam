@@ -78,7 +78,7 @@ export function ProfileSettings({user, onChange}: SettingsProps) {
         setDraft(null);
       });
     }}>
-      <div className={settings.profileSummary}><span className="avatar large blue"><IconUser size={28}/></span>
+      <div className={settings.profileSummary}><span className="avatar large blue" data-icon-surface><IconUser size={28}/></span>
         <div><h3>{user.displayName}</h3><p>{user.email || user.username}</p></div>
       </div>
       <label className={styles.field}><span className={styles.label}>{uiText("显示名")}</span><Input

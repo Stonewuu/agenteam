@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { chineseText } from "./i18n-test-runtime.mjs";
 
 function compile(path, modules) {
   const source = readFileSync(new URL(path, import.meta.url), "utf8");
@@ -53,6 +54,7 @@ function modelHook(options = {}) {
   }
   const { useConversationModel: readModel } = compile("../src/features/agent/hooks/use-conversation-model.ts", {
     react, console: { error: (...args) => logs.push(args) },
+    "@/lib/i18n/locale-provider": { useT: () => chineseText },
     "@/lib/http/api-client": { ApiError: Error, ApiMutation, errorMessage: (error) => error.message },
     "@/lib/http/use-api-query": { useApiQuery: () => query },
     "@/features/enterprise/api/organization-api": { organizationPath: () => "/models" },

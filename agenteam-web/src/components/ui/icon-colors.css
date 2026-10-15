@@ -1,0 +1,78 @@
+:where(.iconsax-icon[data-icon-tone]) {
+  color: var(--icon-context-color, var(--icon-tone-color, currentColor));
+}
+
+/* 标题、详情、弹窗和空状态共用图标色系；资源头像和业务状态由各自数据决定。 */
+.iconsax-icon[data-icon-tone="copper"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="copper"]) {
+  --icon-tone-color: var(--icon-copper);
+}
+
+.iconsax-icon[data-icon-tone="blue"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="blue"]) {
+  --icon-tone-color: var(--icon-blue);
+}
+
+.iconsax-icon[data-icon-tone="teal"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="teal"]) {
+  --icon-tone-color: var(--icon-teal);
+}
+
+.iconsax-icon[data-icon-tone="violet"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="violet"]) {
+  --icon-tone-color: var(--icon-violet);
+}
+
+.iconsax-icon[data-icon-tone="amber"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="amber"]) {
+  --icon-tone-color: var(--icon-amber);
+}
+
+.iconsax-icon[data-icon-tone="mint"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="mint"]) {
+  --icon-tone-color: var(--icon-mint);
+}
+
+.iconsax-icon[data-icon-tone="rose"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="rose"]) {
+  --icon-tone-color: var(--icon-rose);
+}
+
+.iconsax-icon[data-icon-tone="slate"],
+:is([data-page-icon], [data-icon-surface]):has(> .iconsax-icon[data-icon-tone="slate"]) {
+  --icon-tone-color: var(--icon-slate);
+}
+
+[data-icon-surface]:has(> .iconsax-icon[data-icon-tone]) {
+  --icon-context-color: var(--icon-tone-color);
+  color: var(--icon-tone-color);
+  background: color-mix(in srgb, var(--icon-tone-color) 12%, var(--surface));
+}
+
+/* 保留业务状态、品牌头像与实色按钮的前景色，避免图标配色降低文字与背景的对比。 */
+.avatar,
+.badge,
+[data-slot="toast-icon"],
+.button.primary,
+.button.danger,
+button[data-variant="default"],
+[data-variant="destructive"],
+[role="alert"],
+[disabled],
+[aria-disabled="true"],
+[aria-current="page"],
+[data-icon-context="inherit"] {
+  --icon-context-color: currentColor;
+}
+
+@media (forced-colors: active) {
+  [data-icon-surface]:has(> .iconsax-icon[data-icon-tone]) {
+    color: CanvasText;
+    background: Canvas;
+    --icon-context-color: CanvasText;
+  }
+  .iconsax-icon[data-icon-tone] {
+    color: currentColor;
+    filter: none;
+  }
+}

@@ -100,7 +100,7 @@ public class ConversationMapper {
         }
     }
 
-    private ConversationRecord map(ConversationQueryRow row) {
+    public ConversationRecord map(ConversationQueryRow row) {
         return new ConversationRecord(row.getId(), row.getEnterpriseId(), row.getUserId(),
             row.getAgentId(), row.getAgentVersionId(), row.getHireId(), row.getTitle(),
             row.getAgentName(), row.getAgentIcon(), row.getAgentColor(), row.getMode(), row.getStatus(),
@@ -109,7 +109,7 @@ public class ConversationMapper {
             instant(row.getCreatedAt()), instant(row.getUpdatedAt()), row.getPreviewResourceId(),
             ToolApprovalPolicy.from(row.getApprovalPolicy()).value(),
             row.getModelProfileId() == null ? null : new ModelSelection(row.getModelProfileId(),
-                row.getReasoningEffort()), row.getProjectId(), row.getEventDeliveryMode());
+                row.getReasoningEffort()), row.getProjectId(), row.getEventDeliveryMode(), row.getSourceType(), row.getSourceId());
     }
 
     public void selectModel(ConversationRecord row, ModelSelection selection, Instant now) {

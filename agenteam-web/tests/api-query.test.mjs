@@ -15,6 +15,13 @@ function queryPage() {
   const timers = new Map();
   let stateIndex = 0, effectIndex = 0, timerId = 0, currentPath;
   const react = {
+    useRef(initial) {
+      const index = stateIndex++;
+      if (!(index in states)) {
+        states[index] = { current: initial };
+      }
+      return states[index];
+    },
     useState(initial) {
       const index = stateIndex++;
       if (!(index in states)) {

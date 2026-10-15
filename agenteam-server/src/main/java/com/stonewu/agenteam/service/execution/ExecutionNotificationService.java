@@ -34,6 +34,10 @@ public class ExecutionNotificationService {
             return;
         }
         boolean completed = run.status().equals("completed");
+        // 协作岗位的一轮结束不等于总任务结束，最终答复由原聊天的成果发送流程交付。
+        if (completed && "collaboration".equals(run.executionConfig().path("sourceType").asText())) {
+            return;
+        }
         if (!run.status().equals("failed") && (!completed || !notifications.completionEnabled(run.userId()))) {
             return;
         }

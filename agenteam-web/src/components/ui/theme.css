@@ -36,6 +36,7 @@
   --nav-selected: #30302d;
   --nav-on-selected: #faf7f0;
   --nav-icon-selected: #e4ac85;
+  --nav-icon-tone-weight: 64%;
   --mint: #36866b;
   --mint-soft: #e5f1e9;
   --mint-text: #27664f;
@@ -51,6 +52,14 @@
   --red: #ba554a;
   --red-soft: #fae9e4;
   --red-text: #9f4037;
+  --icon-copper: #a95534;
+  --icon-blue: #4576a8;
+  --icon-teal: #2d807a;
+  --icon-violet: #7c68a4;
+  --icon-amber: #967025;
+  --icon-mint: #328366;
+  --icon-rose: #ac5965;
+  --icon-slate: #63778a;
   --shadow: 0 8px 30px rgb(49 40 28 / 0.045), 0 1px 3px rgb(49 40 28 / 0.025);
   --button-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 4px 10px rgb(77 43 25 / 0.16);
   --overlay: rgb(34 30 24 / 0.35);
@@ -89,6 +98,7 @@
   --nav-selected: #eee5d7;
   --nav-on-selected: #2e2b25;
   --nav-icon-selected: #8a4f2d;
+  --nav-icon-tone-weight: 48%;
   --mint: #82bda0;
   --mint-soft: #213b2f;
   --mint-text: #b1d9c0;
@@ -104,6 +114,14 @@
   --red: #dc8c7e;
   --red-soft: #422c27;
   --red-text: #f0aa9b;
+  --icon-copper: #edb18c;
+  --icon-blue: #8fbbe7;
+  --icon-teal: #81c5bd;
+  --icon-violet: #baa6df;
+  --icon-amber: #dfbd78;
+  --icon-mint: #89c7a7;
+  --icon-rose: #df9ba5;
+  --icon-slate: #a5b8cb;
   --shadow: 0 8px 30px rgb(0 0 0 / 0.14), inset 0 1px 0 rgb(248 242 229 / 0.025);
   --button-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 4px 14px rgb(0 0 0 / 0.2);
   --overlay: rgb(9 8 6 / 0.68);

@@ -182,7 +182,8 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
     void repeatedIdenticalSourcesAreExposedOnceEvenWhenSavedEntriesExceedOneHundred() throws Exception {
         var choices = new LinkedHashMap<String, List<String>>();
         for (var source : directory()) {
-            if (!source.path("code").asText().startsWith("collection_")) {
+            // 此用例验证普通网页执行的工具去重，岗位协作工具仅供内部协作执行使用。
+            if (!source.path("code").asText().startsWith("collection_") && !source.path("code").asText().equals("group_collaboration")) {
                 var names = new ArrayList<String>();
                 source.path("tools").forEach(tool -> names.add(tool.path("name").asText()));
                 choices.put(source.path("code").asText(), names);

@@ -57,8 +57,8 @@ export function ResourceActions({
         <Button className="icon-button" type="button" aria-label={uiText("复制{0}", [resource.name])}
                 onClick={() => setOperation("copy")}><IconCopy size={17}/></Button>}
       {available.length > 0 &&
-        <DropdownMenu><DropdownMenuTrigger className="icon-button" aria-label={uiText("{0}的更多操作", [resource.name])}
-                                           disabled={dirty}><IconDots size={19}/></DropdownMenuTrigger>
+        <DropdownMenu><DropdownMenuTrigger className={compact ? "icon-button" : ui.button} aria-label={uiText("{0}的更多操作", [resource.name])}
+                                           disabled={dirty}><IconDots size={compact ? 19 : 16}/>{!compact && uiText("更多")}</DropdownMenuTrigger>
           <DropdownMenuContent align="end"
                                className="agenteam-menu agenteam-popup">{available.filter((value) => compact || value !== "publish").map((value) =>
             <DropdownMenuItem key={value} variant={value === "delete" ? "destructive" : "default"}

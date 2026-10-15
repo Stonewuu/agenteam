@@ -126,6 +126,7 @@ public class RunLifecycleService {
             throw new ExecutionStoppedException();
         }
         var actor = access.actor(run);
+        access.requireExternalStep(run);
         remaining(run);
         quotas.consume(actor, run.id());
     }
@@ -198,6 +199,17 @@ public class RunLifecycleService {
         var run = locked(actor.enterpriseId(), found.id());
         cancelLocked(run);
         return RunView.from(runs.find(run.enterpriseId(), run.id(), false).orElseThrow(), false);
+    }
+
+    /** 内部协作已经确认取消或权限失效，仅停止匹配的任务执行，不影响用户其他会话。 */
+    @Transactional
+    public void cancelCollaboration(String enterprise, String id, String task) {
+        var run = locked(enterprise, id);
+        if (!"collaboration".equals(run.executionConfig().path("sourceType").asText())
+            || !task.equals(run.executionConfig().path("collaboration").path("taskId").asText())) {
+            throw new IllegalStateException("待停止执行不属于指定协作任务");
+        }
+        cancelLocked(run);
     }
 
     @Transactional

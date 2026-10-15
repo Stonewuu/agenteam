@@ -2,6 +2,8 @@ package com.stonewu.agenteam.service.integration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.yulichang.toolkit.JoinWrappers;
+import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
 import com.stonewu.agenteam.configuration.integration.IntegrationPublicUrls;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
 import com.stonewu.agenteam.mapper.integration.IntegrationConfigurationMapper;
@@ -17,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Set;
 
 /**
  * 管理查询返回脱敏视图；列表批量查询是否配置密钥，不逐条读取密文。
@@ -45,17 +48,44 @@ public class IntegrationQueryService {
     }
 
     public PageResponse<IntegrationView> list(UserEntity actor, String enterprise, boolean system, String cursor, Integer count) {
+        return list(actor, enterprise, system, cursor, count, null, null);
+    }
+
+    public PageResponse<IntegrationView> list(UserEntity actor, String enterprise, boolean system, String cursor, Integer count,
+                                             String purpose, String providerCode) {
+        return list(actor, enterprise, system, cursor, count, purpose, providerCode, false);
+    }
+
+    public PageResponse<IntegrationView> list(UserEntity actor, String enterprise, boolean system, String cursor, Integer count,
+                                             String purpose, String providerCode, boolean unboundBotOnly) {
         policy.require(actor, enterprise, system, "integration.view", false);
+        if (purpose != null && !Set.of("enterprise", "chat_bot").contains(purpose)) {
+            throw ApiException.invalidField("purpose", "请选择企业接入或机器人接入。");
+        }
+        if (providerCode != null) {
+            providers.require(providerCode);
+        }
         int limit = pagination.limit(count);
-        var binding = new ListPagination.Binding(actor.id(), enterprise, system ? "system/integrations" : "integrations", "", "created_desc");
+        String filter = purpose == null && providerCode == null ? "" : (purpose == null ? "" : purpose) + ":" + (providerCode == null ? "" : providerCode);
+        if (unboundBotOnly) {
+            filter += ":unbound-bot";
+        }
+        var binding = new ListPagination.Binding(actor.id(), enterprise, system ? "system/integrations" : "integrations", filter, "created_desc");
         var position = pagination.read(cursor, binding);
-        var criteria = new LambdaQueryWrapper<EnterpriseIntegrationRow>().eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise)
+        var criteria = JoinWrappers.lambda(EnterpriseIntegrationRow.class).selectAll(EnterpriseIntegrationRow.class)
+            .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise)
+            .eq(purpose != null, EnterpriseIntegrationRow::getPurpose, purpose).eq(providerCode != null, EnterpriseIntegrationRow::getProviderCode, providerCode)
             .ne(EnterpriseIntegrationRow::getStatus, "deleted").orderByDesc(EnterpriseIntegrationRow::getCreatedAt, EnterpriseIntegrationRow::getId);
+        if (unboundBotOnly) {
+            criteria.leftJoin(ChatBotBindingRow.class, on -> on.eq(ChatBotBindingRow::getEnterpriseId, EnterpriseIntegrationRow::getEnterpriseId)
+                    .eq(ChatBotBindingRow::getConnectionId, EnterpriseIntegrationRow::getId))
+                .isNull(ChatBotBindingRow::getId).in(EnterpriseIntegrationRow::getProviderCode, "feishu", "wecom_aibot");
+        }
         if (position != null) {
             criteria.and(group -> group.lt(EnterpriseIntegrationRow::getCreatedAt, position.time()).or(equal -> equal
                 .eq(EnterpriseIntegrationRow::getCreatedAt, position.time()).lt(EnterpriseIntegrationRow::getId, position.id())));
         }
-        var rows = connections.selectPage(new Page<EnterpriseIntegrationRow>(1, limit + 1, false), criteria).getRecords();
+        var rows = connections.selectJoinPage(new Page<EnterpriseIntegrationRow>(1, limit + 1, false), EnterpriseIntegrationRow.class, criteria).getRecords();
         var page = pagination.page(rows, limit, binding, row -> new PagePosition(row.getCreatedAt(), row.getId()));
         var configured = secrets.configured(enterprise, page.items().stream().map(EnterpriseIntegrationRow::getId).toList());
         return new PageResponse<>(page.items().stream().map(row -> view(row, configured.contains(row.getId()))).toList(),
@@ -90,9 +120,10 @@ public class IntegrationQueryService {
         return new IntegrationView(row.getId(), row.getEnterpriseId(), row.getProviderCode(), providers.require(row.getProviderCode()).name(),
             row.getName(), row.getExternalTenantId(), row.getExternalAppId(), row.getStatus(), Boolean.TRUE.equals(row.getBindingEnabled()),
             Boolean.TRUE.equals(row.getLoginEnabled()), Boolean.TRUE.equals(row.getMessagingEnabled()), configured,
-            urls.callback(row.getId()).toString(), urls.login(row.getPublicLoginKey()).toString(), row.getLastCheckStatus(),
+            "bot".equals(row.getIdentityScope()) ? "" : urls.callback(row.getId()).toString(),
+            "bot".equals(row.getIdentityScope()) || "chat_bot".equals(row.getPurpose()) ? "" : urls.login(row.getPublicLoginKey()).toString(), row.getLastCheckStatus(),
             time(row.getLastCheckedAt()), row.getLastCheckErrorSummary(), Long.toString(row.getRevision()),
-            time(row.getCreatedAt()), time(row.getUpdatedAt()), configuration.read(row));
+            time(row.getCreatedAt()), time(row.getUpdatedAt()), configuration.read(row), row.getPurpose());
     }
 
     private String time(Instant value) {

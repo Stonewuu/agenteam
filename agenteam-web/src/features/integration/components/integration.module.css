@@ -3,6 +3,10 @@
   gap: 16px;
 }
 
+.platformNavigation { margin-bottom: 18px; }
+.platformContent { display: grid; gap: 16px; min-width: 0; }
+.connectionToolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+
 .card {
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -274,6 +278,10 @@
 .bindingBody {
   border-top: 1px solid var(--border-light);
   padding: 0 22px;
+}
+
+.bindingGuidance {
+  padding-top: 16px;
 }
 
 .bindingFooter {

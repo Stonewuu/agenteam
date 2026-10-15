@@ -25,8 +25,14 @@ public class EnterpriseIntegrationRow {
     @TableField("provider_code")
     private String providerCode;
 
+    @TableField("purpose")
+    private String purpose;
+
     @TableField("installation_type")
     private String installationType;
+
+    @TableField("identity_scope")
+    private String identityScope;
 
     @TableField("region_code")
     private String regionCode;

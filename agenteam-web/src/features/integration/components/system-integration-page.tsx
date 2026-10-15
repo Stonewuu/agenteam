@@ -12,18 +12,19 @@ import {IntegrationPanel} from "./integration-panel";
 
 export function SystemIntegrationPage() {
   const t = useT();
-  return <SystemManagementGate title={t("企业接入")}>{(_context, user) => <EnterpriseIntegrations user={user}/>}</SystemManagementGate>;
+  return <SystemManagementGate title={t("企业协作平台")}>{(context, user) => <EnterpriseIntegrations user={user} currentEnterpriseId={context?.enterprise.id}/>}</SystemManagementGate>;
 }
 
-function EnterpriseIntegrations({user}: {user: IdentityUser}) {
+function EnterpriseIntegrations({user, currentEnterpriseId}: {user: IdentityUser; currentEnterpriseId?: string}) {
   const t = useT();
   const list = useApiQuery<Enterprise[]>("/api/v1/enterprises");
   const [selectedId, setSelectedId] = useState("");
   const enterprises = list.data ?? [];
   const EnterpriseSelection = editionClientExtension.enterpriseSelection;
   const canSelect = Boolean(EnterpriseSelection && user.capabilities.includes("enterprise.switch"));
-  const selected = canSelect ? enterprises.find((value) => value.id === selectedId) ?? enterprises.find((value) => value.status === "active") ?? enterprises[0] : enterprises.length === 1 ? enterprises[0] : undefined;
-  return <QueryState {...list} hasData={enterprises.length > 0} empty={t("暂无可配置的企业。")}>
+  const selected = canSelect ? enterprises.find((value) => value.id === selectedId) ?? enterprises.find((value) => value.status === "active") ?? enterprises[0]
+    : enterprises.find((value) => value.id === currentEnterpriseId) ?? (enterprises.length === 1 ? enterprises[0] : undefined);
+  return <QueryState {...list} hasData={Boolean(selected)} empty={t("暂无可配置的企业。")}>
     {selected && <IntegrationPanel key={selected.id} enterpriseId={selected.id} system canManage={selected.status === "active"}
       enterpriseSelector={canSelect && EnterpriseSelection ? <EnterpriseSelection enterprises={enterprises} selectedId={selected.id} onSelect={setSelectedId}/> : undefined}/>}
   </QueryState>;

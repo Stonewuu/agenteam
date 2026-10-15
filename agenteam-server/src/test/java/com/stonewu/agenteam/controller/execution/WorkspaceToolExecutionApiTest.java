@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
+
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -31,6 +33,7 @@ import com.sun.net.httpserver.HttpExchange;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -57,7 +60,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 真实模型协议、工作空间、容器和文件下载接口共同验证交付流程。
  */
-@Import(SharedEnterpriseTestEdition.class)
+@Import({SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
+@Tag("external-process")
 class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
     private static final FileScanTestServer SCANNER = new FileScanTestServer();

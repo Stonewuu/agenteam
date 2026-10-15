@@ -6,9 +6,8 @@ import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 
 import java.nio.charset.StandardCharsets;
@@ -25,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 使用真实 Docker 容器确认命令隔离、完整输出和实际进程终止。
  */
+@Tag("external-process")
 class DockerWorkspaceRunnerTest {
     @TempDir
     Path directory;
@@ -90,7 +90,8 @@ class DockerWorkspaceRunnerTest {
         var runner = new DockerWorkspaceRunner(settings(), docker);
         try (var control = new ToolCallControl(() -> {
         })) {
-            var result = runner.execute(source(), directory.resolve("result"), directory, "timeout", "printf '超时前输出'; sleep 30", "work", Duration.ofSeconds(4), control);
+            // 总期限还包含容器准备和输出回收；必须让命令真正开始后再验证超时结果。
+            var result = runner.execute(source(), directory.resolve("result"), directory, "timeout", "printf '超时前输出'; sleep 30", "work", Duration.ofSeconds(12), control);
             assertEquals(124, result.exitCode());
             assertTrue(result.timedOut());
             assertEquals("超时前输出", Files.readString(directory.resolve("result").resolve(result.stdoutPath())));
@@ -98,9 +99,9 @@ class DockerWorkspaceRunnerTest {
         assertEquals("", containers());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"/workspace", "/workspace/", "/", "."})
-    void workspaceRootCanRunCommandsWithoutMakingInputsWritable(String workingDirectory) throws Exception {
+    @Test
+    void workspaceRootCanRunCommandsWithoutMakingInputsWritable() throws Exception {
+        // 四种根目录写法由 WorkspaceStoreTest 验证，容器验证统一后的目录及只读约束。
         Path source = source(), output = directory.resolve("root-result");
         Files.writeString(source.resolve("inputs/note.txt"), "只读输入");
         Files.writeString(source.resolve("tool-results/result.txt"), "只读工具结果");
@@ -122,7 +123,7 @@ class DockerWorkspaceRunnerTest {
         try (var control = new ToolCallControl(() -> {
         })) {
             var result = new DockerWorkspaceRunner(settings(), docker).execute(source, output, directory,
-                "root", command, workingDirectory, Duration.ofSeconds(15), control);
+                "root", command, "/workspace", Duration.ofSeconds(15), control);
             assertEquals(0, result.exitCode());
             assertEquals("/workspace", Files.readString(output.resolve(result.stdoutPath())).trim());
             assertEquals("不可修改的已保存内容：根目录执行成功", Files.readString(output.resolve("outputs/from-root.txt")));

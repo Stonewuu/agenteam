@@ -44,7 +44,7 @@ function NotificationDetail({enterpriseId, notificationId, permissions}: {enterp
       actions={<Link className={ui.button} href={enterprisePath(enterpriseId, "/notifications")}><IconArrowLeft size={16}/>{t("返回通知列表")}</Link>}/>
     <QueryState {...query} hasData={Boolean(value)} empty={t("通知不存在或已无法访问。")}>
       {value && content && <div className={styles.content}>
-        <article className={styles.notice}><div className={styles.heading}><span className={styles.noticeIcon}><IconBell size={23}/></span>
+        <article className={styles.notice}><div className={styles.heading}><span className={styles.noticeIcon} data-icon-surface><IconBell size={23}/></span>
           <DetailStatus tone={value.readAt ? "neutral" : "accent"}>{value.readAt ? t("已读") : t("未读")}</DetailStatus></div>
           <h2>{content.title}</h2><p className={styles.meta}><IconClock size={15}/><EnterpriseDateTime value={value.createdAt}/></p>
           {content.body && <p className={styles.body}>{content.body}</p>}

@@ -6,10 +6,13 @@ import com.stonewu.agenteam.model.file.entity.CsvRow;
 import com.stonewu.agenteam.model.file.entity.DocumentChunk;
 import com.stonewu.agenteam.service.file.parser.DocumentParserMain;
 import com.stonewu.agenteam.service.workspace.WorkspaceStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
@@ -17,6 +20,7 @@ import java.util.function.Consumer;
  * 逐块消费解析输出，避免把整份知识资料加载到应用内存。
  */
 public class ParsedDocument implements AutoCloseable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ParsedDocument.class);
     private final Path directory;
     private final Runnable cleanupAction;
     private final ObjectMapper json;
@@ -101,11 +105,34 @@ public class ParsedDocument implements AutoCloseable {
     }
 
     static void cleanup(Path directory) {
+        Path absolute = directory.toAbsolutePath().normalize();
+        boolean interrupted = Thread.interrupted();
         try {
-            Path absolute = directory.toAbsolutePath().normalize();
-            WorkspaceStore.deleteTree(absolute.getParent(), absolute);
+            for (int attempt = 0; ; attempt++) {
+                try {
+                    WorkspaceStore.deleteTree(absolute.getParent(), absolute);
+                    return;
+                } catch (FileSystemException occupied) {
+                    // Windows 在解析进程已退出时仍可能短暂报告目录占用，最多等待两秒。
+                    if (!System.getProperty("os.name").startsWith("Windows") || attempt >= 40) {
+                        throw occupied;
+                    }
+                    if (attempt == 0) {
+                        LOGGER.warn("解析临时目录暂未能清理，短暂等待后重试，目录={}", absolute, occupied);
+                    }
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException cancelled) {
+                        interrupted = true;
+                    }
+                }
+            }
         } catch (IOException unavailable) {
             throw FileStorageKeys.storageUnavailable(unavailable);
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }
