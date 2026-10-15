@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('single', 'split')]
     [string]$Mode = 'single',
     [string]$EnvFile = (Join-Path $PSScriptRoot '.env')
