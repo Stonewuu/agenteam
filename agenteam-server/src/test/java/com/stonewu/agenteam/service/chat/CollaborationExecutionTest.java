@@ -86,6 +86,7 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
         var task = onlyTask();
         var lease = dispatch.claim("test-dispatch").orElseThrow();
         var accepted = dispatch.submit(lease);
+        assertNull(dispatch.submit(lease));
         var run = runs.find(enterprise, accepted.runId(), false).orElseThrow();
         assertEquals(initiator.id(), run.userId());
         assertEquals(version, run.agentVersionId());
@@ -138,6 +139,7 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
         var incoming = receive("answer", "整理本月考勤，工资数据不得直接公开到群");
         routing.route(enterprise, incoming.getId());
         var accepted = dispatch.submit(dispatch.claim("model-dispatch").orElseThrow());
+        String expected = "员工编号 E001，考勤二十天，已完成来源核对。\n".repeat(700);
         var captured = new AtomicReference<JsonNode>();
         allowModelCalls = true;
         modelResponse = exchange -> {
@@ -145,7 +147,7 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
             exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
             var delta = Map.of("id", "collaboration-model", "choices", List.of(Map.of("index", 0,
-                "delta", Map.of("content", "已核对测试资料，考勤合计为二十天。"), "finish_reason", "stop")));
+                "delta", Map.of("content", expected), "finish_reason", "stop")));
             exchange.getResponseBody().write(("data: " + json.writeValueAsString(delta) + "\n\ndata: [DONE]\n\n").getBytes(StandardCharsets.UTF_8));
             exchange.close();
         };
@@ -167,8 +169,10 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
             }
         }
         var link = link(accepted.runId());
-        observer.observe(enterprise, link.getId());
-        observer.observe(enterprise, link.getId());
+        var prepared = generated.prepare(link);
+        assertNotNull(prepared);
+        observer.observe(enterprise, link.getId(), prepared);
+        observer.observe(enterprise, link.getId(), prepared);
         var task = onlyTask();
         assertEquals("completed", task.getStatus());
         assertNotNull(task.getFinalArtifactId());
@@ -177,18 +181,16 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
         assertNull(work.getActiveRunId());
         assertNotNull(link(accepted.runId()).getTerminalObservedAt());
         assertEquals("summary_link", task.getOutputVisibility());
-    }
-
-    @Test
-    void staleDispatchLeaseCannotCreateAnotherConversation() {
-        var incoming = receive("stale", "简单任务");
-        routing.route(enterprise, incoming.getId());
-        var lease = dispatch.claim("first").orElseThrow();
-        var accepted = dispatch.submit(lease);
-        assertNull(dispatch.submit(lease));
-        assertEquals(1, onlyTask().getRunCount());
-        assertEquals(1, databaseAccess.mapper(CollaborationRunLinkMapper.class).selectCount(new LambdaQueryWrapper<CollaborationRunLinkRow>()
-            .eq(CollaborationRunLinkRow::getEnterpriseId, enterprise).eq(CollaborationRunLinkRow::getRunId, accepted.runId())));
+        var answer = databaseAccess.mapper(CollaborationArtifactMapper.class).selectOne(new LambdaQueryWrapper<CollaborationArtifactRow>()
+            .eq(CollaborationArtifactRow::getEnterpriseId, enterprise).eq(CollaborationArtifactRow::getProducerRunId, accepted.runId())
+            .eq(CollaborationArtifactRow::getKind, "file"));
+        assertNotNull(answer);
+        var file = fileAccess.ready(actor, answer.getFileId());
+        assertEquals("collaboration_artifact", file.purpose());
+        assertNull(file.expiresAt(), "已交付成果不能按临时文件到期清理");
+        try (var input = storage.open(file)) {
+            assertEquals(expected, new String(input.readAllBytes(), StandardCharsets.UTF_8));
+        }
     }
 
     @Test
@@ -205,43 +207,6 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
             assertEquals(1, reserved());
             assertEquals(1, databaseAccess.mapper(CollaborationRunLinkMapper.class).selectCount(new LambdaQueryWrapper<CollaborationRunLinkRow>()
                 .eq(CollaborationRunLinkRow::getTaskId, onlyTask().getId())));
-        }
-    }
-
-    @Test
-    void largeChineseAnswerUsesPrivateFileWithoutLosingContent() throws Exception {
-        var incoming = receive("large", "生成完整的考勤明细说明");
-        routing.route(enterprise, incoming.getId());
-        var accepted = dispatch.submit(dispatch.claim("large-dispatch").orElseThrow());
-        String expected = "员工编号 E001，考勤二十天，已完成来源核对。\n".repeat(700);
-        allowModelCalls = true;
-        modelResponse = exchange -> {
-            exchange.getRequestBody().readAllBytes();
-            exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
-            exchange.sendResponseHeaders(200, 0);
-            var delta = Map.of("id", "large-model", "choices", List.of(Map.of("index", 0, "delta", Map.of("content", expected), "finish_reason", "stop")));
-            exchange.getResponseBody().write(("data: " + json.writeValueAsString(delta) + "\n\ndata: [DONE]\n\n").getBytes(StandardCharsets.UTF_8));
-            exchange.close();
-        };
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> runs.find(enterprise, accepted.runId(), false).orElseThrow().terminal());
-        }
-        var link = link(accepted.runId());
-        var prepared = generated.prepare(link);
-        assertNotNull(prepared);
-        observer.observe(enterprise, link.getId(), prepared);
-        assertEquals("completed", onlyTask().getStatus());
-        var answer = databaseAccess.mapper(CollaborationArtifactMapper.class).selectOne(new LambdaQueryWrapper<CollaborationArtifactRow>()
-            .eq(CollaborationArtifactRow::getEnterpriseId, enterprise).eq(CollaborationArtifactRow::getProducerRunId, accepted.runId())
-            .eq(CollaborationArtifactRow::getKind, "file"));
-        assertNotNull(answer);
-        var actor = identities.actor(enterprise, initiator.id(), binding.getId());
-        var file = fileAccess.ready(actor, answer.getFileId());
-        assertEquals("collaboration_artifact", file.purpose());
-        assertNull(file.expiresAt(), "已交付成果不能按临时文件到期清理");
-        try (var input = storage.open(file)) {
-            assertEquals(expected, new String(input.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
 

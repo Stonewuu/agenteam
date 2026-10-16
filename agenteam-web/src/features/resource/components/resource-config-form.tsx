@@ -17,7 +17,6 @@ import type {
   WorkflowConfig
 } from "../types/resource";
 import {WorkflowEditor} from "@/features/workflow/components/workflow-editor";
-import {WorkflowDevelopmentNotice, workflowInDevelopment} from "@/features/workflow/components/workflow-development";
 import {type FieldErrors, NumberField, Section, TextField} from "./resource-fields";
 import {AgentConfigForm} from "./agent-config-form";
 import {VersionPicker} from "./version-picker";
@@ -35,6 +34,10 @@ export function ResourceConfigForm({
                                      readOnly = false,
                                      resource,
                                      busy,
+                                     fillHeight,
+                                     assistantOpen,
+                                     onInspectorOpen,
+                                     onCanvasElement,
                                      section
                                    }: {
   enterpriseId: string;
@@ -46,6 +49,10 @@ export function ResourceConfigForm({
   readOnly?: boolean;
   resource?: ResourceSummary;
   busy?: boolean;
+  fillHeight?: boolean;
+  assistantOpen?: boolean;
+  onInspectorOpen?: () => void;
+  onCanvasElement?: (element: HTMLDivElement | null) => void;
   section?: EditorSection;
 }) {
   const uiText = useT();
@@ -82,9 +89,9 @@ export function ResourceConfigForm({
     return <DataConfigForm enterpriseId={enterpriseId} value={config as DataConfig} onChange={onChange}
                            permissions={permissions} errors={errors} readOnly={readOnly}/>;
   }
-  return workflowInDevelopment ? <WorkflowDevelopmentNotice/> :
-    <WorkflowEditor enterprise={enterpriseId} value={config as WorkflowConfig} onChange={onChange}
-                    permissions={permissions} readOnly={readOnly} resource={resource} busy={busy}/>;
+  return <WorkflowEditor enterprise={enterpriseId} value={config as WorkflowConfig} onChange={onChange}
+                    permissions={permissions} readOnly={readOnly} resource={resource} busy={busy} fillHeight={fillHeight}
+                    assistantOpen={assistantOpen} onInspectorOpen={onInspectorOpen} onCanvasElement={onCanvasElement}/>;
 }
 
 function SkillForm({enterpriseId, value, onChange, permissions, errors, readOnly, section}: {

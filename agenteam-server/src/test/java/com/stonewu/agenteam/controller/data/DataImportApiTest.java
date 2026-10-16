@@ -56,17 +56,18 @@ class DataImportApiTest extends DataImportApiTestSupport {
 
     @Test
     void previewAndConfirmationPreservePreciseValuesAndRepeatedRequestsCreateOneGeneration() throws Exception {
-        String resource = resource("精确数据"), file = upload(resource, "编号,金额,日期,备注\n9007199254740993,0.10,2026-09-15,\"\"\n2,2.50,2026-09-16,\n");
+        String resource = resource("精确数据"), file = upload(resource, "编号,金额,日期,备注\n9007199254740993,0.100000000000000000000000000001,2026-09-15,\"\"\n9007199254740994,0.100000000000000000000000000002,2026-09-16,\n");
         var preview = preview(resource, file, null);
         schemas.validate("DataImportPreview", preview);
         assertEquals(2, preview.path("rowCount").asInt());
         assertEquals("9007199254740993", preview.at("/rows/0/编号").asText());
-        assertEquals("0.1", preview.at("/rows/0/金额").asText());
+        assertEquals("0.100000000000000000000000000001", preview.at("/rows/0/金额").asText());
         assertEquals("", preview.at("/rows/0/备注").asText());
         assertTrue(preview.at("/rows/1/备注").isNull());
         assertEquals(0, count("data_collection"));
         String key = UUID.randomUUID().toString();
         var input = confirmation(preview);
+        input.path("fields").forEach(field -> ((ObjectNode) field).put("filterable", true).put("sortable", true));
         var imported = data(write(path(resource) + "/import", input, key).andExpect(status().isCreated()).andReturn());
         schemas.validate("DataCollection", imported);
         assertEquals(imported, data(write(path(resource) + "/import", input, key).andExpect(status().isCreated()).andReturn()));
@@ -75,9 +76,22 @@ class DataImportApiTest extends DataImportApiTestSupport {
         assertEquals(2, count("data_record"));
         var row = json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(DataRecordMapper.class).selectList(new LambdaQueryWrapper<DataRecordRow>().select(DataRecordRow::getValuesJson).eq(DataRecordRow::getEnterpriseId, (enterprise)).eq(DataRecordRow::getCollectionId, (imported.path("id").asText())).eq(DataRecordRow::getRowNo, 1)).stream().map(fixtureRecord -> fixtureRecord.getValuesJson()).toList()));
         assertEquals("9007199254740993", row.get(0).asText());
-        assertEquals("0.1", row.get(1).asText());
+        assertEquals("0.100000000000000000000000000001", row.get(1).asText());
         write(path(resource) + "/import", input, UUID.randomUUID().toString()).andExpect(status().isConflict());
         assertEquals(1, count("data_generation"));
+        var query = query(imported.path("id").asText(), 1, List.of("编号", "金额"));
+        query.put("filters", List.of(Map.of("field", "金额", "operator", "gt", "value", new BigDecimal("0.100000000000000000000000000001"))));
+        query.put("sort", List.of(Map.of("field", "编号", "direction", "desc")));
+        var result = data(write(path(resource) + "/query", query, UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
+        schemas.validate("DataQueryResult", result);
+        assertEquals(1, result.path("rows").size());
+        assertEquals("9007199254740994", result.at("/rows/0/编号").asText());
+        assertEquals("0.100000000000000000000000000002", result.at("/rows/0/金额").asText());
+        assertFalse(result.get("rows").get(0).has("备注"));
+        query.put("filters", List.of(Map.of("field", "备注", "operator", "contains", "value", "' OR 1=1 --")));
+        assertTrue(data(write(path(resource) + "/query", query, UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn()).path("rows").isEmpty());
+        query.put("fields", List.of("编号) OR 1=1 --"));
+        write(path(resource) + "/query", query, UUID.randomUUID().toString()).andExpect(status().isForbidden());
     }
 
     @Test
@@ -152,27 +166,6 @@ class DataImportApiTest extends DataImportApiTestSupport {
     }
 
     @Test
-    void fileQueriesCompareExactNumbersAndReturnOnlyRequestedFields() throws Exception {
-        String resource = resource("精确筛选"), file = upload(resource, "编号,金额,启用,备注\n9007199254740993,0.100000000000000000000000000001,true,普通资料\n9007199254740994,0.100000000000000000000000000002,false,另一份资料\n");
-        var input = confirmation(preview(resource, file, null));
-        input.path("fields").forEach(field -> ((ObjectNode) field).put("filterable", true).put("sortable", true));
-        String collection = data(write(path(resource) + "/import", input, UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).path("id").asText();
-        var query = query(collection, 1, List.of("编号", "金额"));
-        query.put("filters", List.of(Map.of("field", "金额", "operator", "gt", "value", new BigDecimal("0.100000000000000000000000000001"))));
-        query.put("sort", List.of(Map.of("field", "编号", "direction", "desc")));
-        var result = data(write(path(resource) + "/query", query, UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
-        schemas.validate("DataQueryResult", result);
-        assertEquals(1, result.path("rows").size());
-        assertEquals("9007199254740994", result.at("/rows/0/编号").asText());
-        assertEquals("0.100000000000000000000000000002", result.at("/rows/0/金额").asText());
-        assertFalse(result.get("rows").get(0).has("备注"));
-        query.put("filters", List.of(Map.of("field", "备注", "operator", "contains", "value", "' OR 1=1 --")));
-        assertTrue(data(write(path(resource) + "/query", query, UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn()).path("rows").isEmpty());
-        query.put("fields", List.of("编号) OR 1=1 --"));
-        write(path(resource) + "/query", query, UUID.randomUUID().toString()).andExpect(status().isForbidden());
-    }
-
-    @Test
     void changedFieldsRequireCurrentGenerationAndEnforceRevocationAndMasking() throws Exception {
         String resource = resource("当前字段限制"), file = upload(resource, "编号,备注\n1,需要隐藏的内容\n2,普通资料\n");
         var input = confirmation(preview(resource, file, null));
@@ -204,7 +197,7 @@ class DataImportApiTest extends DataImportApiTestSupport {
 
     @Test
     void resultByteLimitReturnsCompleteRowsAndReportsTruncation() throws Exception {
-        String resource = resource("受限结果"), file = upload(resource, "内容\n" + ("x".repeat(8000) + "\n").repeat(200));
+        String resource = resource("受限结果"), file = upload(resource, "内容\n" + ("x".repeat(8000) + "\n").repeat(132));
         var imported = data(write(path(resource) + "/import", confirmation(preview(resource, file, null)), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
         var query = query(imported.path("id").asText(), 1, List.of("内容"));
         query.put("limit", 200);
@@ -213,7 +206,7 @@ class DataImportApiTest extends DataImportApiTestSupport {
         assertTrue(response.getResponse().getContentAsByteArray().length <= 1024 * 1024);
         assertTrue(result.path("truncated").asBoolean());
         assertTrue(result.path("hasMore").asBoolean());
-        assertTrue(result.path("rows").size() > 0 && result.path("rows").size() < 200);
+        assertTrue(result.path("rows").size() > 0 && result.path("rows").size() < 132);
         result.path("rows").forEach(row -> assertEquals(8000, row.path("内容").asText().length()));
     }
 

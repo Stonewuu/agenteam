@@ -20,11 +20,7 @@ public interface QuotaBucketFixtureMapper extends MPJBaseMapper<QuotaBucketRow> 
 
     default List<String> operationalMetricsApiQuotaMetricsOnlyCountCompletedChecksAndCommittedRepairsObject(@Param("args") Object... args) {
         var criteria = new LambdaQueryWrapper<QuotaBucketRow>().select(QuotaBucketRow::getId).orderByAsc(QuotaBucketRow::getId).eq(QuotaBucketRow::getEnterpriseId, args[0]);
-        long pageSize = 1;
-        if (pageSize == 0) {
-            return List.of();
-        }
-        return selectPage(new Page<QuotaBucketRow>(1, pageSize, false), criteria).getRecords().stream().map(storedRow -> storedRow.getId()).toList();
+        return selectPage(new Page<QuotaBucketRow>(1, 1, false), criteria).getRecords().stream().map(storedRow -> storedRow.getId()).toList();
     }
 
     List<Integer> scheduleRetryApiUsedObject(@Param("args") Object... args);

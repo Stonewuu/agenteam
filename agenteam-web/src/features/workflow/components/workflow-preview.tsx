@@ -18,6 +18,7 @@ import {useWorkflowPreview} from "../hooks/use-workflow-preview";
 import {useWorkflowSteps} from "../hooks/use-workflow-steps";
 import {previewExample} from "../lib/workflow-preview-input";
 import {record} from "../lib/workflow-graph";
+import {workflowNodeSteps} from "../lib/workflow-step-status";
 import {JsonField} from "./workflow-value-fields";
 import {WorkflowGraphCanvas} from "./workflow-graph-canvas";
 import ui from "@/components/ui/surface.module.css";
@@ -45,13 +46,14 @@ export function WorkflowPreview({enterprise, resource, draft, disabled}: {
   const preview = useWorkflowPreview(enterprise, resource.id),
     steps = useWorkflowSteps(enterprise, preview.accepted?.runId ?? null, preview.active);
   const statuses: Record<string, BlockStatus> = {};
-  for (const step of steps.steps) {
+  const nodeSteps = workflowNodeSteps(steps.steps, resource.id);
+  for (const step of nodeSteps) {
     if (step.workflow?.resourceId === resource.id && step.workflow.nodeId) {
       statuses[step.workflow.nodeId] = step.status;
     }
   }
   const messages = displayMessages(preview.stream.state?.snapshot.conversation.id === preview.accepted?.conversationId ? preview.stream.state : null).filter((message) => message.role === "assistant");
-  const current = steps.steps.find((step) => step.workflow?.resourceId === resource.id && step.workflow.nodeId === selected);
+  const current = nodeSteps.find((step) => step.workflow?.nodeId === selected);
   return <>
     <Button type="button" className={ui.button} disabled={disabled} onClick={(event) => {
       if (!event.currentTarget.form || event.currentTarget.form.reportValidity()) {

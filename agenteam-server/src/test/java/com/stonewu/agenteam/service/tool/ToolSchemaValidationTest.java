@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 import java.io.InputStream;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -42,25 +43,16 @@ class ToolSchemaValidationTest {
     }
 
     @Test
-    void invalidSchemaKeepsItsExistingErrorCode() throws Exception {
+    void invalidDefinitionsReturnTheStructureErrorAndKeepThePatternFailureCause() throws Exception {
         var schemas = new ToolSchemaValidation();
-        var schema = json.readTree("{\"type\":\"unknown\"}");
-
-        var error = assertThrows(ApiException.class, () -> schemas.compile(schema));
-
-        assertEquals(HttpStatus.BAD_GATEWAY, error.getStatusCode());
-        assertEquals("MCP_TOOL_STRUCTURE_INVALID", error.code());
-    }
-
-    @Test
-    void invalidRegularExpressionKeepsItsValidationCodeAndOriginalCause() throws Exception {
-        var schemas = new ToolSchemaValidation();
-        var schema = json.readTree("{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"pattern\":\"[\"}}}");
-
-        var error = assertThrows(ApiException.class, () -> schemas.compile(schema));
-
-        assertEquals(HttpStatus.BAD_GATEWAY, error.getStatusCode());
-        assertEquals("MCP_TOOL_STRUCTURE_INVALID", error.code());
-        assertInstanceOf(PatternSyntaxException.class, error.getCause());
+        var invalidType = json.readTree("{\"type\":\"unknown\"}");
+        var invalidPattern = json.readTree("{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"pattern\":\"[\"}}}");
+        var typeError = assertThrows(ApiException.class, () -> schemas.compile(invalidType));
+        var patternError = assertThrows(ApiException.class, () -> schemas.compile(invalidPattern));
+        for (var error : List.of(typeError, patternError)) {
+            assertEquals(HttpStatus.BAD_GATEWAY, error.getStatusCode());
+            assertEquals("MCP_TOOL_STRUCTURE_INVALID", error.code());
+        }
+        assertInstanceOf(PatternSyntaxException.class, patternError.getCause());
     }
 }

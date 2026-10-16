@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.workflow.WorkflowNodes;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -220,7 +222,7 @@ public class FixedDependencyService {
             config.path("pluginVersionIds").forEach(id -> values.add(id.asText()));
         }
         if (kind == ResourceKind.WORKFLOW) {
-            for (var node : config.path("nodes")) {
+            for (var node : WorkflowNodes.all(config)) {
                 if (node.path("type").asText().equals("tool")) {
                     values.add(node.path("config").path("pluginVersionId").asText());
                 }

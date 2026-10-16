@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -31,19 +30,7 @@ public final class PlatformBrowserEnvironment {
         String setupCredential = "isolated-ui-" + UUID.randomUUID();
         try (var isolated = new InvitationHttpTestEnvironment(); var plugin = new PluginTestServer(); var scanner = new FileScanTestServer();
              var model = new PlatformBrowserModel(root.resolve("model-requests.jsonl"), plugin.origin())) {
-            var fixtureJson = new ObjectMapper();
-            plugin.tools = fixtureJson.valueToTree(List.of(Map.of("name", "write_note", "description", "写入验收记录",
-                "inputSchema", Map.of("type", "object", "properties", Map.of("text", Map.of("type", "string", "minLength", 1)), "required", List.of("text"), "additionalProperties", false))));
-            plugin.toolResult = input -> {
-                try {
-                    Files.writeString(root.resolve("plugin-operations.jsonl"), input.toString() + "\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                } catch (Exception failed) {
-                    throw new IllegalStateException("隔离验收记录无法保存");
-                }
-                return fixtureJson.valueToTree(Map.of("content", List.of(Map.of("type", "text", "text", "已保存到本次隔离验收记录。")), "isError", false));
-            };
-            plugin.textPage("/page", "这是本次隔离验收使用的网页资料。\n可以继续整理为结论与下一步。");
-            plugin.textPage("/large", "较长的隔离验收资料。\n".repeat(100000));
+            configurePlugin(plugin, root);
             Map<String, Object> properties = new HashMap<>();
             isolated.properties((name, supplier) -> properties.put(name, supplier.get()));
             properties.put("server.address", "127.0.0.1");
@@ -90,9 +77,8 @@ public final class PlatformBrowserEnvironment {
                 state.put("operationsFile", root.resolve("plugin-operations.jsonl").toString());
                 Files.writeString(Path.of("target", "platform-ui-state.json"), json.writeValueAsString(state), StandardCharsets.UTF_8);
                 System.out.println("隔离界面验收环境已启动，地址信息已保存到 target/platform-ui-state.json");
-                long deadline = System.nanoTime() + Duration.ofHours(4).toNanos();
                 int previousCount = -1;
-                while (!Files.exists(stop) && System.nanoTime() < deadline) {
+                while (!Files.exists(stop)) {
                     var messages = isolated.mailbox().getReceivedMessages();
                     if (messages.length != previousCount) {
                         List<Map<String, String>> values = new ArrayList<>();
@@ -107,5 +93,21 @@ public final class PlatformBrowserEnvironment {
                 }
             }
         }
+    }
+
+    static void configurePlugin(PluginTestServer plugin, Path root) {
+        var fixtureJson = new ObjectMapper();
+        plugin.tools = fixtureJson.valueToTree(List.of(Map.of("name", "write_note", "description", "写入验收记录",
+            "inputSchema", Map.of("type", "object", "properties", Map.of("text", Map.of("type", "string", "minLength", 1)), "required", List.of("text"), "additionalProperties", false))));
+        plugin.toolResult = input -> {
+            try {
+                Files.writeString(root.resolve("plugin-operations.jsonl"), input.toString() + "\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (Exception failed) {
+                throw new IllegalStateException("隔离验收记录无法保存", failed);
+            }
+            return fixtureJson.valueToTree(Map.of("content", List.of(Map.of("type", "text", "text", "已保存到本次隔离验收记录。")), "isError", false));
+        };
+        plugin.textPage("/page", "这是本次隔离验收使用的网页资料。\n可以继续整理为结论与下一步。");
+        plugin.textPage("/large", "较长的隔离验收资料。\n".repeat(100000));
     }
 }

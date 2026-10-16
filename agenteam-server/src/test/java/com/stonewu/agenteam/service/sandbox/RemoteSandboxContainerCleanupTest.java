@@ -49,7 +49,7 @@ class RemoteSandboxContainerCleanupTest {
     }
 
     @Test
-    void cleansBothKindsOnExecutionNodeAndAllowsRepeatedRequests() {
+    void cleansBothKindsAndRetriesTransientFailuresWithoutDiscardingThem() {
         var remote = new RemoteSandboxContainerCleanup(address, TOKEN);
         remote.removeUserContainer(SCOPE, Duration.ofSeconds(5));
         remote.removeUserContainer(SCOPE, Duration.ofSeconds(5));
@@ -59,42 +59,28 @@ class RemoteSandboxContainerCleanupTest {
         }
         verify(containers, times(2)).removeUserContainer(SCOPE, Duration.ofSeconds(30));
         verify(containers).removeForWorkspace(SCOPE, Duration.ofSeconds(30), null);
-    }
-
-    @Test
-    void rejectsMissingOrWrongCredentialsBeforeCleaning() throws Exception {
-        String path = "container-cleanup/user/" + SCOPE;
-        assertEquals(401, request(path, "DELETE", null).statusCode());
-        assertEquals(401, request(path, "DELETE", "wrong-token").statusCode());
-        verifyNoInteractions(containers);
-    }
-
-    @Test
-    void rejectsArbitraryContainerNamesPathsQueriesAndMethods() throws Exception {
-        for (String path : List.of("container-cleanup/user/mysql", "container-cleanup/user/../" + SCOPE,
-            "container-cleanup/other/" + SCOPE, "container-cleanup/user/" + SCOPE + "?force=true")) {
-            assertEquals(404, request(path, "DELETE", TOKEN).statusCode());
-        }
-        assertEquals(405, request("container-cleanup/user/" + SCOPE, "POST", TOKEN).statusCode());
-        var remote = new RemoteSandboxContainerCleanup(address, TOKEN);
-        assertThrows(ApiException.class, () -> remote.removeUserContainer("mysql", Duration.ofSeconds(5)));
-        verifyNoInteractions(containers);
-    }
-
-    @Test
-    void reportsCleanupFailureAndCanRetryWithoutDiscardingIt() {
         doThrow(new IllegalStateException("测试节点暂时无法清理容器")).doNothing()
             .when(containers).removeUserContainer(SCOPE, Duration.ofSeconds(30));
-        var remote = new RemoteSandboxContainerCleanup(address, TOKEN);
         var failure = assertThrows(ApiException.class, () -> remote.removeUserContainer(SCOPE, Duration.ofSeconds(5)));
         assertEquals(503, failure.getStatusCode().value());
         assertNotNull(failure.getCause());
         remote.removeUserContainer(SCOPE, Duration.ofSeconds(5));
-        verify(containers, times(2)).removeUserContainer(SCOPE, Duration.ofSeconds(30));
+        verify(containers, times(4)).removeUserContainer(SCOPE, Duration.ofSeconds(30));
     }
 
     @Test
-    void refusesUnencryptedRemoteAddressAndDoesNotFollowRedirects() {
+    void credentialsPathsMethodsAndRedirectsCannotBypassCleanupRestrictions() throws Exception {
+        String path = "container-cleanup/user/" + SCOPE;
+        assertEquals(401, request(path, "DELETE", null).statusCode());
+        assertEquals(401, request(path, "DELETE", "wrong-token").statusCode());
+        verifyNoInteractions(containers);
+        for (String candidate : List.of("container-cleanup/user/mysql", "container-cleanup/user/../" + SCOPE,
+            "container-cleanup/other/" + SCOPE, "container-cleanup/user/" + SCOPE + "?force=true")) {
+            assertEquals(404, request(candidate, "DELETE", TOKEN).statusCode());
+        }
+        assertEquals(405, request("container-cleanup/user/" + SCOPE, "POST", TOKEN).statusCode());
+        var remote = new RemoteSandboxContainerCleanup(address, TOKEN);
+        assertThrows(ApiException.class, () -> remote.removeUserContainer("mysql", Duration.ofSeconds(5)));
         assertThrows(IllegalArgumentException.class,
             () -> new RemoteSandboxContainerCleanup("http://execution.example.test", TOKEN));
         var redirected = new AtomicInteger();
@@ -108,7 +94,6 @@ class RemoteSandboxContainerCleanupTest {
             exchange.sendResponseHeaders(204, -1);
             exchange.close();
         });
-        var remote = new RemoteSandboxContainerCleanup(address, TOKEN);
         assertThrows(ApiException.class, () -> remote.removeUserContainer(SCOPE, Duration.ofSeconds(5)));
         assertEquals(0, redirected.get());
         verifyNoInteractions(containers);

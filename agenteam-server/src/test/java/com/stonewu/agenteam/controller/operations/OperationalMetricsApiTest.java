@@ -94,8 +94,7 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
         reset(queries);
     }
 
-    @Test
-    void managementPortOnlyExposesHealthAndMetricsWithoutBusinessDetails() throws Exception {
+    private void managementPortOnlyExposesHealthAndMetricsWithoutBusinessDetails() throws Exception {
         int main = port("local.server.port"), management = port("local.management.port");
         assertNotEquals(main, management);
         metrics.collect();
@@ -125,6 +124,7 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
 
     @Test
     void queueAndUnpublishedEventsFollowActualStateAndFailedCollectionDoesNotRetainOldNumbers() throws Exception {
+        managementPortOnlyExposesHealthAndMetricsWithoutBusinessDetails();
         var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         databaseAccess.mapper(RunJobSqlMapper.class).update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getEnterpriseId, (enterprise)).eq(BackgroundJobRow::getKind, "run").eq(BackgroundJobRow::getStatus, "queued").set(BackgroundJobRow::getAvailableAt, (Timestamp.from(Instant.now().minusSeconds(180)))));
         metrics.collect();
@@ -145,10 +145,10 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
         metrics.collect();
         assertEquals(0, registry.get("agenteam.executions").tag("status", "queued").gauge().value());
         assertEquals(0, registry.get("agenteam.background.jobs").tags("kind", "run", "status", "ready").gauge().value());
+        quotaMetricsOnlyCountCompletedChecksAndCommittedRepairs();
     }
 
-    @Test
-    void quotaMetricsOnlyCountCompletedChecksAndCommittedRepairs() throws Exception {
+    private void quotaMetricsOnlyCountCompletedChecksAndCommittedRepairs() throws Exception {
         write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted());
         String bucket = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(QuotaBucketFixtureMapper.class).operationalMetricsApiQuotaMetricsOnlyCountCompletedChecksAndCommittedRepairsObject(enterprise));
         databaseAccess.mapper(QuotaSqlMapper.class).update(new LambdaUpdateWrapper<QuotaBucketRow>().eq(QuotaBucketRow::getId, (bucket)).set(QuotaBucketRow::getUsedCount, 9));

@@ -31,8 +31,6 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -71,11 +69,9 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void toolsFromThreeCapabilitiesAreTheOnlyExposedAndExecutedActions() throws Exception {
+    void publishedCollectionsExecuteSelectedCapabilitiesAndKeepTheirSourceVersions() throws Exception {
         var directory = directory();
         directory.forEach(source -> schemas.validate("ToolSource", source));
-        Files.createDirectories(Path.of("target"));
-        Files.writeString(Path.of("target", "tool-collection-directory.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(directory));
         var config = configuration(directory, Map.of("todo_management", List.of("todo_list"), "schedule_management", List.of("schedule_list"), "platform_basics", List.of("platform_time")));
         var bundle = publish(config);
         var selected = pluginTools.list(enterprise, bundle);
@@ -88,10 +84,36 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
         var actual = calls.forRun(enterprise, run);
         assertEquals(Set.of("todo_list", "schedule_list", "platform_time"), actual.stream().map(call -> call.toolName()).collect(Collectors.toSet()));
         assertTrue(actual.stream().allMatch(call -> call.status().equals("succeeded")));
+        JsonNode origin = null;
+        for (var source : directory) {
+            if (source.path("code").asText().equals("platform_basics")) {
+                origin = source;
+            }
+        }
+        assertNotNull(origin);
+        String original = origin.path("versionId").asText();
+        var resource = resources.find(enterprise, origin.path("resourceId").asText(), false, false).orElseThrow();
+        String next = UUID.randomUUID().toString();
+        versions.publish(next, resource, "验证新版本", admin, List.of(), Instant.now());
+        pluginTools.publish(enterprise, next, pluginTools.list(enterprise, original).stream().map(PluginToolRecord::definition).toList(), Instant.now());
+        resources.publish(resource, next, Instant.now());
+        assertEquals(original, pluginTools.list(enterprise, bundle).stream().filter(tool -> tool.definition().name().equals("platform_time")).findFirst().orElseThrow().source().versionId());
+        var old = data(mvc.perform(get(base() + "/plugins/tool-sources/" + resource.id() + "/versions/" + original).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(original, old.path("versionId").asText());
+        versions.revoke(enterprise, next, Instant.now());
+        var latest = directory();
+        for (var source : latest) {
+            if (source.path("resourceId").asText().equals(resource.id())) {
+                assertEquals(original, source.path("versionId").asText());
+            }
+        }
+        versions.revoke(enterprise, original, Instant.now());
+        mvc.perform(get(base() + "/plugins/tool-sources/" + resource.id() + "/versions/" + original).cookie(cookie)).andExpect(status().is4xxClientError());
+        write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().is4xxClientError());
     }
 
     @Test
-    void identicallyNamedToolsHaveDifferentAliasesAndExecuteTheirOwnSource() throws Exception {
+    void matchingMethodNamesKeepDistinctAgentAliasesAndWorkflowEntries() throws Exception {
         String bundle = publish(configuration(directory(), Map.of("collection_alpha", List.of("lookup"), "collection_beta", List.of("lookup"))));
         var tools = pluginTools.list(enterprise, bundle);
         assertEquals(2, tools.size());
@@ -105,11 +127,35 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
         var options = data(mvc.perform(get(base() + "/workflows/dependency-options/" + bundle).cookie(cookie)).andExpect(status().isOk()).andReturn()).path("tools");
         assertEquals(2, options.size());
         assertNotEquals(options.get(0).path("entryId"), options.get(1).path("entryId"));
+        var selected = pluginTools.list(enterprise, bundle).stream().filter(tool -> tool.source().config().path("builtinCode").asText().equals("collection_beta")).findFirst().orElseThrow();
+        var graph = json.createObjectNode().put("icon", "GitBranch").put("color", "blue");
+        var nodes = graph.putArray("nodes");
+        nodes.add(node("start", "start", Map.of("inputSchema", Map.of("type", "object"))));
+        nodes.add(node("work", "tool", Map.of("pluginVersionId", bundle, "toolId", selected.entryId(), "inputMapping", Map.of())));
+        nodes.add(node("end", "end", Map.of("outputMapping", Map.of())));
+        graph.putArray("edges").add(json.valueToTree(Map.of("edgeId", "one", "source", "start", "target", "work", "branch", "default")))
+            .add(json.valueToTree(Map.of("edgeId", "two", "source", "work", "target", "end", "branch", "default")));
+        var created = data(write(base() + "/resources", Map.of("kind", "workflow", "name", "同名工具流程", "description", "按条目选择第二个来源", "tagIds", List.of(), "config", graph), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
+        String id = created.at("/resource/id").asText();
+        var accepted = data(change(HttpMethod.POST, base() + "/workflows/" + id + "/preview", Map.of("draft", graph, "input", Map.of()), "1", UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        String flowRun = accepted.path("runId").asText();
+        finish(flowRun);
+        var actual = calls.forRun(enterprise, flowRun);
+        assertEquals(1, actual.size());
+        assertEquals(selected.id(), actual.getFirst().pluginToolId());
+        assertEquals("collection_beta", actual.getFirst().resultRedacted().path("provider").asText());
     }
 
     @Test
-    void disablingAnOriginalSourceAfterConfirmationPreventsBusinessWrite() throws Exception {
+    void sourceValidationAndRevocationPreventForgedOrUnauthorizedWrites() throws Exception {
         var config = configuration(directory(), Map.of("todo_management", List.of("todo_create")));
+        ((ObjectNode) config.path("tools").get(0)).put("operationClass", "read");
+        write(base() + "/resources", Map.of("kind", "plugin", "name", "不可伪造确认", "description", "验证工具定义边界", "tagIds", List.of(), "config", config), UUID.randomUUID().toString()).andExpect(status().is(422));
+        ((ObjectNode) config.path("tools").get(0)).remove("operationClass");
+        ((ObjectNode) config.path("tools").get(0)).put("name", "platform_time");
+        String id = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "工具来源核对", "description", "验证实际工具所属来源", "tagIds", List.of(), "config", config), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
+        change(HttpMethod.POST, base() + "/resources/" + id + "/publish", Map.of("releaseNote", "拒绝发布不存在的工具"), "1", UUID.randomUUID().toString()).andExpect(status().is(422));
+        ((ObjectNode) config.path("tools").get(0)).put("name", "todo_create");
         String bundle = publish(config);
         configureAgent(agent -> agent.set("pluginVersionIds", json.valueToTree(List.of(bundle))));
         model(pluginTools.list(enterprise, bundle), Map.of("title", "来源停用后不得创建"));
@@ -132,53 +178,6 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void workflowExecutesOnlyTheSelectedEntryWhenSourceMethodNamesMatch() throws Exception {
-        String bundle = publish(configuration(directory(), Map.of("collection_alpha", List.of("lookup"), "collection_beta", List.of("lookup"))));
-        var selected = pluginTools.list(enterprise, bundle).stream().filter(tool -> tool.source().config().path("builtinCode").asText().equals("collection_beta")).findFirst().orElseThrow();
-        var graph = json.createObjectNode().put("icon", "GitBranch").put("color", "blue");
-        var nodes = graph.putArray("nodes");
-        nodes.add(node("start", "start", Map.of("inputSchema", Map.of("type", "object"))));
-        nodes.add(node("work", "tool", Map.of("pluginVersionId", bundle, "toolId", selected.entryId(), "inputMapping", Map.of())));
-        nodes.add(node("end", "end", Map.of("outputMapping", Map.of())));
-        graph.putArray("edges").add(json.valueToTree(Map.of("edgeId", "one", "source", "start", "target", "work", "branch", "default")))
-            .add(json.valueToTree(Map.of("edgeId", "two", "source", "work", "target", "end", "branch", "default")));
-        var created = data(write(base() + "/resources", Map.of("kind", "workflow", "name", "同名工具流程", "description", "按条目选择第二个来源", "tagIds", List.of(), "config", graph), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
-        String id = created.at("/resource/id").asText();
-        var accepted = data(change(HttpMethod.POST, base() + "/workflows/" + id + "/preview", Map.of("draft", graph, "input", Map.of()), "1", UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        String run = accepted.path("runId").asText();
-        finish(run);
-        var actual = calls.forRun(enterprise, run);
-        assertEquals(1, actual.size());
-        assertEquals(selected.id(), actual.getFirst().pluginToolId());
-        assertEquals("collection_beta", actual.getFirst().resultRedacted().path("provider").asText());
-    }
-
-    @Test
-    void publishedCollectionKeepsItsOriginalSourceVersionAndRejectsRevokedVersions() throws Exception {
-        var config = configuration(directory(), Map.of("platform_basics", List.of("platform_time")));
-        String original = config.at("/sources/0/versionId").asText(), bundle = publish(config);
-        var resource = resources.find(enterprise, config.at("/sources/0/id").asText(), false, false).orElseThrow();
-        String next = UUID.randomUUID().toString();
-        versions.publish(next, resource, "验证新版本", admin, List.of(), Instant.now());
-        pluginTools.publish(enterprise, next, pluginTools.list(enterprise, original).stream().map(PluginToolRecord::definition).toList(), Instant.now());
-        resources.publish(resource, next, Instant.now());
-        assertEquals(original, pluginTools.list(enterprise, bundle).getFirst().source().versionId());
-        var old = data(mvc.perform(get(base() + "/plugins/tool-sources/" + resource.id() + "/versions/" + original).cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertEquals(original, old.path("versionId").asText());
-        versions.revoke(enterprise, next, Instant.now());
-        var latest = directory();
-        for (var source : latest) {
-            if (source.path("resourceId").asText().equals(resource.id())) {
-                assertEquals(original, source.path("versionId").asText());
-            }
-        }
-        configureAgent(agent -> agent.set("pluginVersionIds", json.valueToTree(List.of(bundle))));
-        versions.revoke(enterprise, original, Instant.now());
-        mvc.perform(get(base() + "/plugins/tool-sources/" + resource.id() + "/versions/" + original).cookie(cookie)).andExpect(status().is4xxClientError());
-        write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().is4xxClientError());
-    }
-
-    @Test
     void repeatedIdenticalSourcesAreExposedOnceEvenWhenSavedEntriesExceedOneHundred() throws Exception {
         var choices = new LinkedHashMap<String, List<String>>();
         for (var source : directory()) {
@@ -191,7 +190,9 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
         }
         var config = configuration(directory(), choices);
         var bundles = new ArrayList<String>();
-        for (int index = 0; index < 6; index++) {
+        int toolsPerCollection = config.path("tools").size();
+        assertTrue(toolsPerCollection > 0);
+        for (int index = 0; index <= 100 / toolsPerCollection; index++) {
             bundles.add(publish(config));
         }
         assertTrue(pluginTools.list(enterprise, bundles.getFirst()).size() * bundles.size() > 100);
@@ -217,17 +218,6 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
         String run = submit();
         finish(run);
         assertEquals(1, calls.forRun(enterprise, run).size());
-    }
-
-    @Test
-    void selectedToolMustBelongToItsSourceAndCannotOverrideConfirmationRules() throws Exception {
-        var config = configuration(directory(), Map.of("todo_management", List.of("todo_create")));
-        ((ObjectNode) config.path("tools").get(0)).put("operationClass", "read");
-        write(base() + "/resources", Map.of("kind", "plugin", "name", "不可伪造确认", "description", "验证工具定义边界", "tagIds", List.of(), "config", config), UUID.randomUUID().toString()).andExpect(status().is(422));
-        ((ObjectNode) config.path("tools").get(0)).remove("operationClass");
-        ((ObjectNode) config.path("tools").get(0)).put("name", "platform_time");
-        String id = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "工具来源核对", "description", "验证实际工具所属来源", "tagIds", List.of(), "config", config), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
-        change(HttpMethod.POST, base() + "/resources/" + id + "/publish", Map.of("releaseNote", "拒绝发布不存在的工具"), "1", UUID.randomUUID().toString()).andExpect(status().is(422));
     }
 
     private JsonNode directory() throws Exception {

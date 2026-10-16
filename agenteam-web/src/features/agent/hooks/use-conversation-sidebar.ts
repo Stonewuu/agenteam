@@ -8,9 +8,10 @@ type Preference = { width: number; full: boolean };
 const defaultPreference: Preference = {width: 360, full: false};
 const compactWidth = 880;
 
-export function useConversationSidebar(user: string, enterprise: string, containerRef: RefObject<HTMLDivElement | null>, conversation: string | null) {
+export function useConversationSidebar(user: string, enterprise: string, containerRef: RefObject<HTMLDivElement | null>, conversation: string | null, isolated = false) {
   const id = useId();
-  const navigation = useConversationNavigation();
+  const sharedNavigation = useConversationNavigation();
+  const navigation = isolated ? null : sharedNavigation;
   const [localOpen, setLocalOpen] = useState(false);
   const [localTab, setLocalTab] = useState("files");
   // 开关和标签由不会随会话页面重建的导航层保留，宽度仍只属于当前会话。

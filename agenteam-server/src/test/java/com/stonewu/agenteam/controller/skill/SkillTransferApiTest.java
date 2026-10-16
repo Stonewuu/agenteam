@@ -124,6 +124,9 @@ class SkillTransferApiTest {
 
     @Test
     void importStripsInternalFieldsAndRequiresReviewBeforePublishingUnmatchedDependencies() throws Exception {
+        String futureFile = uploaded("未来格式.json", json.writeValueAsBytes(packageFile().put("formatVersion", 2)));
+        write(HttpMethod.POST, base() + "/skills/import-preview", admin, null, UUID.randomUUID().toString(), Map.of("fileId", futureFile))
+            .andExpect(status().isUnprocessableEntity());
         String foreign = UUID.randomUUID().toString(), secret = "secret-only-in-original-upload";
         var portable = packageFile();
         portable.put("enterpriseId", foreign).put("secret", secret);
@@ -136,6 +139,10 @@ class SkillTransferApiTest {
         assertFalse(preview.toString().contains(secret));
         assertTrue(preview.at("/config/pluginVersionIds").isEmpty());
         assertEquals(1, preview.path("unresolvedDependencies").size());
+        var invalidInput = confirmation(preview);
+        ((ObjectNode) invalidInput.get("config")).set("pluginVersionIds", json.valueToTree(List.of(foreign)));
+        write(HttpMethod.POST, base() + "/skills/import", admin, null, UUID.randomUUID().toString(), invalidInput)
+            .andExpect(status().isConflict());
         assertEquals(0, countSkills());
         String key = UUID.randomUUID().toString();
         var input = confirmation(preview);
@@ -176,20 +183,7 @@ class SkillTransferApiTest {
         assertEquals(2, countSkills());
     }
 
-    @Test
-    void unsupportedPackageAndForeignDependencyAreRejectedWithoutCreatingResources() throws Exception {
-        var invalid = packageFile().put("formatVersion", 2);
-        String file = uploaded("未来格式.json", json.writeValueAsBytes(invalid));
-        write(HttpMethod.POST, base() + "/skills/import-preview", admin, null, UUID.randomUUID().toString(), Map.of("fileId", file)).andExpect(status().isUnprocessableEntity());
-        var portable = packageFile();
-        portable.set("dependencies", json.valueToTree(List.of(Map.of("kind", "plugin", "name", "需要选择插件"))));
-        String valid = uploaded("有效技能.json", json.writeValueAsBytes(portable));
-        var preview = preview(valid);
-        var input = confirmation(preview);
-        ((ObjectNode) input.get("config")).set("pluginVersionIds", json.valueToTree(List.of(UUID.randomUUID().toString())));
-        write(HttpMethod.POST, base() + "/skills/import", admin, null, UUID.randomUUID().toString(), input).andExpect(status().isConflict());
-        assertEquals(0, countSkills());
-    }
+
 
     @Test
     void exportKeepsReleasedContentAndRechecksDependencyVisibilityAtDownload() throws Exception {

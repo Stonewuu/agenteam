@@ -1,5 +1,9 @@
+:root:has(.app-shell) {
+  scrollbar-gutter: auto;
+}
+
 .app-shell {
-  --shell-gutter: 38px;
+  --shell-gutter: 20px;
   --workspace-sidebar-width: 260px;
   --workspace-content-width: 1180px;
   /* 外层仅固定页面框架，禁止锚点或聚焦把顶栏滚出视口。正文在自己的容器内滚动。 */
@@ -518,9 +522,9 @@
 }
 
 .page-content {
-  padding: 35px var(--shell-gutter) 48px;
-  max-width: 1510px;
-  margin: 0 auto;
+  --page-content-inset-end: max(0px, calc(var(--shell-gutter) - var(--workspace-scrollbar-width, 0px)));
+  padding: var(--shell-gutter);
+  padding-inline-end: var(--page-content-inset-end);
   animation: fade-in 280ms ease;
   width: 100%;
   min-height: 100%;
@@ -532,6 +536,7 @@
   min-width: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  /* 滚动条的稳定占位包含在 20px 页边距内，出现或消失均不改变正文宽度。 */
   scrollbar-gutter: stable;
   scroll-padding-block: calc(var(--page-header-height, 0px) + 20px) 24px;
 }
@@ -546,6 +551,13 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+.workspace-viewport-frame,
+.workspace-viewport-frame > [data-loading-content] {
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
 }
 
 .nav-group-row {
@@ -663,15 +675,8 @@
   outline-offset: -3px;
 }
 
-@media (min-width: 1600px) {
-  .app-shell {
-    --shell-gutter: 55px;
-  }
-}
-
 @media (max-width: 1180px) {
   .app-shell {
-    --shell-gutter: 27px;
     --workspace-sidebar-width: 244px;
   }
 
@@ -682,10 +687,6 @@
   .sidebar {
     padding-left: 12px;
     padding-right: 12px;
-  }
-
-  .page-content {
-    padding: 30px var(--shell-gutter);
   }
 
   .brand {
@@ -722,10 +723,6 @@
 }
 
 @media (max-width: 800px) {
-  .app-shell {
-    --shell-gutter: 23px;
-  }
-
   .sidebar {
     display: none;
   }
@@ -740,10 +737,6 @@
 
   .topbar {
     min-height: var(--topbar-height);
-  }
-
-  .page-content {
-    padding: 27px var(--shell-gutter);
   }
 
   .mobile-sidebar .brand {
@@ -773,14 +766,6 @@
 }
 
 @media (max-width: 600px) {
-  .app-shell {
-    --shell-gutter: 17px;
-  }
-
-  .page-content {
-    padding: 24px var(--shell-gutter) 35px;
-  }
-
   .page-heading {
     align-items: flex-start;
     flex-direction: column;

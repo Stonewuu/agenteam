@@ -25,8 +25,9 @@ class AgentStreamEventMapperTest {
     @Test
     void preservesCommonAndEventSpecificFields() {
         AgentStreamEvent mapped = new AgentStreamEventMapper()
-            .map(new AgentStartEvent("session-1", "reply-1", "harness-agent"));
+            .map(new AgentStartEvent("session-1", "reply-1", "harness-agent").withSource("main/researcher"));
 
+        assertEquals("main/researcher", mapped.source());
         assertEquals("AGENT_START", mapped.type());
         assertEquals("reply-1", mapped.replyId());
         assertNotNull(mapped.createdAt());
@@ -42,15 +43,6 @@ class AgentStreamEventMapperTest {
 
         assertEquals("result text", mapped.text());
         assertNotNull(mapped.details().get("result"));
-    }
-
-    @Test
-    void preservesSubagentSourcePath() {
-        AgentStreamEvent mapped = new AgentStreamEventMapper()
-            .map(new AgentStartEvent("session-1", "reply-1", "researcher")
-                .withSource("main/researcher"));
-
-        assertEquals("main/researcher", mapped.source());
     }
 
     @Test

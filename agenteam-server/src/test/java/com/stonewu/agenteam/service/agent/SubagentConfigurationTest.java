@@ -11,8 +11,6 @@ import com.stonewu.agenteam.service.modelprofile.ModelProfileCatalog;
 import com.stonewu.agenteam.service.resource.validation.AgentConfigurationValidator;
 import com.stonewu.agenteam.support.ApiContractAssertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -24,77 +22,59 @@ class SubagentConfigurationTest {
     private final AgentConfigurationValidator validator = new AgentConfigurationValidator(mock(ModelProfileCatalog.class), mock(MemoryContentValidation.class));
 
     @Test
-    void historyLengthIsNotRequiredAndLegacyValuesAreIgnored() throws Exception {
+    void publishedConfigurationsExposeCurrentFieldsWithoutChangingSavedData() throws Exception {
         var current = config();
-        current.remove("researchSubagentEnabled");
         validator.draft(current);
         new ApiContractAssertions().validate("AgentConfig", current);
-        for (int legacy : new int[]{0, 1, 20, 100}) {
-            var old = current.deepCopy().put("historyMessageLimit", legacy);
-            validator.draft(old);
-            var input = InputValidation.read(old, AgentConfigurationInput.class, "config");
-            assertFalse(json.valueToTree(input).has("historyMessageLimit"));
-            assertTrue(old.has("historyMessageLimit"), "读取旧发布配置不能修改其原始内容");
-        }
+        var saved = current.deepCopy().put("historyMessageLimit", 20).put("researchSubagentEnabled", true);
+        saved.putArray("subagents").addObject().put("id", "unused");
+        var original = saved.deepCopy();
+        validator.draft(saved);
+        var input = json.valueToTree(InputValidation.read(saved, AgentConfigurationInput.class, "config"));
+        assertFalse(input.has("historyMessageLimit"));
+        assertFalse(input.has("researchSubagentEnabled"));
+        assertFalse(input.has("subagents"));
+        assertEquals(original, saved);
+        assertTrue(AgentSubagentConfigurationMapper.resolve(saved, json.createArrayNode()).isEmpty());
+        current.put("dynamicSubagentEnabled", true);
+        assertEquals(List.of("general-purpose"), AgentSubagentConfigurationMapper.read(current).stream().map(value -> value.id()).toList());
     }
 
     @Test
-    void stepLimitsAllowZeroAndLargeIntegersButRejectNegativeValues() throws Exception {
-        for (int steps : new int[]{0, 500, Integer.MAX_VALUE}) {
-            var config = config().put("maxSteps", steps).put("dynamicSubagentEnabled", true);
+    void executionBudgetsAllowZeroAndPositiveIntegersButRejectNegativeValues() throws Exception {
+        for (int limit : List.of(0, 1, 500, Integer.MAX_VALUE)) {
+            var config = config().put("maxSteps", limit).put("timeoutSeconds", limit).put("dynamicSubagentEnabled", true);
             validator.draft(config);
-            assertEquals(steps, AgentSubagentConfigurationMapper.read(config).getFirst().maxSteps());
-            config.remove("researchSubagentEnabled");
+            assertEquals(limit, AgentSubagentConfigurationMapper.read(config).getFirst().maxSteps());
             new ApiContractAssertions().validate("AgentConfig", config);
         }
         assertThrows(ApiException.class, () -> validator.draft(config().put("maxSteps", -1)));
-    }
-
-    @Test
-    void timeLimitsAllowZeroAndLongDurationsButRejectNegativeValues() throws Exception {
-        for (int seconds : new int[]{0, 1, 600, 3600, Integer.MAX_VALUE}) {
-            var config = config().put("timeoutSeconds", seconds);
-            validator.draft(config);
-            config.remove("researchSubagentEnabled");
-            new ApiContractAssertions().validate("AgentConfig", config);
-        }
         assertThrows(ApiException.class, () -> validator.draft(config().put("timeoutSeconds", -1)));
     }
 
     @Test
-    void removedAssistantDefinitionsNeverCreateCallableAgents() throws Exception {
-        var config = config();
-        config.putArray("subagents").add(preset("writer", "旧手填助手"));
-        validator.draft(config);
-        assertTrue(AgentSubagentConfigurationMapper.resolve(config, json.createArrayNode()).isEmpty());
-        config.put("dynamicSubagentEnabled", true);
-        assertEquals(List.of("general-purpose"), AgentSubagentConfigurationMapper.read(config).stream().map(value -> value.id()).toList());
-        config.remove(List.of("researchSubagentEnabled", "subagents"));
-        new ApiContractAssertions().validate("AgentConfig", config);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"null-list", "duplicate", "blank", "too-many", "invalid-switch", "unknown-field"})
-    void invalidReferencesCannotBeSaved(String scenario) throws Exception {
-        var config = config();
-        var ids = config.putArray("subagentVersionIds");
-        switch (scenario) {
-            case "null-list" -> config.putNull("subagentVersionIds");
-            case "duplicate" -> {
-                ids.add("one");
-                ids.add("one");
-            }
-            case "blank" -> ids.add("  ");
-            case "too-many" -> {
-                for (int index = 0; index < 9; index++) {
-                    ids.add("agent-" + index);
+    void invalidReferencesCannotBeSaved() throws Exception {
+        for (String scenario : List.of("null-list", "duplicate", "blank", "too-many", "invalid-switch", "unknown-field")) {
+            var config = config();
+            var ids = config.putArray("subagentVersionIds");
+            switch (scenario) {
+                case "null-list" -> config.putNull("subagentVersionIds");
+                case "duplicate" -> {
+                    ids.add("one");
+                    ids.add("one");
                 }
+                case "blank" -> ids.add("  ");
+                case "too-many" -> {
+                    for (int index = 0; index < 9; index++) {
+                        ids.add("agent-" + index);
+                    }
+                }
+                case "invalid-switch" -> config.put("dynamicSubagentEnabled", "true");
+                case "unknown-field" -> config.put("unknownField", true);
+                default -> throw new IllegalArgumentException("测试场景不存在");
             }
-            case "invalid-switch" -> config.put("dynamicSubagentEnabled", "true");
-            case "unknown-field" -> config.put("unknownField", true);
-            default -> throw new IllegalArgumentException("测试场景不存在");
+            assertThrows(ApiException.class, () -> validator.draft(config));
         }
-        assertThrows(ApiException.class, () -> validator.draft(config));
     }
 
     @Test
@@ -102,7 +82,7 @@ class SubagentConfigurationTest {
         var config = config();
         config.put("agentType", "workflow").putNull("modelProfileId");
         validator.draft(config);
-        assertTrue(AgentSubagentConfigurationMapper.read(config).isEmpty(), "旧开关不再创建子智能体");
+        assertTrue(AgentSubagentConfigurationMapper.read(config).isEmpty(), "工作流入口不创建子智能体");
         config.put("dynamicSubagentEnabled", true);
         assertThrows(ApiException.class, () -> validator.draft(config));
     }
@@ -110,7 +90,6 @@ class SubagentConfigurationTest {
     @Test
     void referencesAreFixedDependenciesAndCannotSilentlyFallBackToParentSettings() throws Exception {
         var config = config();
-        config.remove("researchSubagentEnabled");
         config.putArray("subagentVersionIds").add("writer-version");
         validator.validatePublished(config);
         new ApiContractAssertions().validate("AgentConfig", config);
@@ -119,20 +98,6 @@ class SubagentConfigurationTest {
         assertEquals("subagentVersionIds", reference.bindingKey());
         assertEquals("writer-version", reference.versionId());
         assertThrows(ApiException.class, () -> AgentSubagentConfigurationMapper.resolve(config, json.createArrayNode()));
-        config.withArray("subagentVersionIds").add("writer-version");
-        assertThrows(ApiException.class, () -> validator.draft(config));
-        config.putNull("subagentVersionIds");
-        assertThrows(ApiException.class, () -> validator.draft(config));
-        var refs = config.putArray("subagentVersionIds");
-        for (int index = 0; index < 9; index++) {
-            refs.add("version-" + index);
-        }
-        assertThrows(ApiException.class, () -> validator.draft(config));
-    }
-
-    private ObjectNode preset(String id, String name) {
-        return json.createObjectNode().put("id", id).put("name", name).put("description", "核对资料")
-            .put("instructions", "你负责核对资料。").put("maxSteps", 5);
     }
 
     private ObjectNode config() throws Exception {
@@ -142,7 +107,7 @@ class SubagentConfigurationTest {
              "attachmentsEnabled":false,"welcomeMessage":"","suggestedQuestions":[],"skillVersionIds":[],
              "pluginVersionIds":[],"knowledgeVersionIds":[],"dataVersionIds":[],"workflowVersionIds":[],
              "entryWorkflowVersionId":null,"memoryEnabled":false,"memoryFields":[],
-             "businessTerms":[],"researchSubagentEnabled":true,"publicExamples":[]}
+             "businessTerms":[],"dynamicSubagentEnabled":false,"subagentVersionIds":[],"publicExamples":[]}
             """);
     }
 }

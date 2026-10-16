@@ -136,6 +136,18 @@ class MemoryApiTest extends ExecutionApiTestSupport {
         write(path(), input, createKey).andExpect(status().isNotFound());
         change(HttpMethod.PUT, path() + "/" + id, next, "1", updateKey).andExpect(status().isNotFound());
         assertEquals(0, count("agent_memory"));
+        var saved = memories.create(actor(admin), agent, value("语言", "即将过期的偏好"));
+        databaseAccess.mapper(MemorySqlMapper.class).update(new LambdaUpdateWrapper<AgentMemoryRow>().eq(AgentMemoryRow::getId, (saved.id())).set(AgentMemoryRow::getExpiresAt, (Timestamp.from(Instant.now().minusSeconds(1)))));
+        assertTrue(memories.list(actor(admin), agent, null, 30).items().isEmpty());
+        assertTrue(memories.agents(actor(admin), null, null, 30).items().isEmpty());
+        var replacement = memories.create(actor(admin), agent, value("语言", "重新确认的新偏好"));
+        assertFalse(saved.id().equals(replacement.id()));
+        assertEquals(1, count("agent_memory"));
+        assertTrue(Instant.parse(replacement.expiresAt()).isAfter(Instant.now().plusSeconds(179 * 86400)));
+        databaseAccess.mapper(MemorySqlMapper.class).update(new LambdaUpdateWrapper<AgentMemoryRow>().eq(AgentMemoryRow::getId, (replacement.id())).set(AgentMemoryRow::getExpiresAt, (Timestamp.from(Instant.now().minusSeconds(1)))));
+        retention.clean();
+        retention.clean();
+        assertEquals(0, count("agent_memory"));
     }
 
     @Test
@@ -180,22 +192,6 @@ class MemoryApiTest extends ExecutionApiTestSupport {
         assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(MemorySqlMapper.class).selectList(new LambdaQueryWrapper<AgentMemoryRow>().select(AgentMemoryRow::getSourceMessageId).eq(AgentMemoryRow::getId, (saved.path("id").asText()))).stream().map(fixtureRecord -> fixtureRecord.getSourceMessageId()).toList()));
         assertEquals(source.content(), memories.get(actor(admin), agent, saved.path("id").asText()).content());
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentMessageRow>().eq(AgentMessageRow::getId, (message)))));
-    }
-
-    @Test
-    void expiredPreferencesAreNotListedAndTheirTopicsCanBeSavedAgain() throws Exception {
-        var saved = memories.create(actor(admin), agent, value("语言", "即将过期的偏好"));
-        databaseAccess.mapper(MemorySqlMapper.class).update(new LambdaUpdateWrapper<AgentMemoryRow>().eq(AgentMemoryRow::getId, (saved.id())).set(AgentMemoryRow::getExpiresAt, (Timestamp.from(Instant.now().minusSeconds(1)))));
-        assertTrue(memories.list(actor(admin), agent, null, 30).items().isEmpty());
-        assertTrue(memories.agents(actor(admin), null, null, 30).items().isEmpty());
-        var replacement = memories.create(actor(admin), agent, value("语言", "重新确认的新偏好"));
-        assertFalse(saved.id().equals(replacement.id()));
-        assertEquals(1, count("agent_memory"));
-        assertTrue(Instant.parse(replacement.expiresAt()).isAfter(Instant.now().plusSeconds(179 * 86400)));
-        databaseAccess.mapper(MemorySqlMapper.class).update(new LambdaUpdateWrapper<AgentMemoryRow>().eq(AgentMemoryRow::getId, (replacement.id())).set(AgentMemoryRow::getExpiresAt, (Timestamp.from(Instant.now().minusSeconds(1)))));
-        retention.clean();
-        retention.clean();
-        assertEquals(0, count("agent_memory"));
     }
 
     @Test

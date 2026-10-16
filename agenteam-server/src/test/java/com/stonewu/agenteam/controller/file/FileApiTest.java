@@ -62,7 +62,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FileApiTest extends FileApiTestSupport {
 
     @Test
-    void pdfWithoutTextRemainsAnAvailableAttachmentWhenScanningIsDisabled() throws Exception {
+    void attachmentsWithoutScannerHandleTextTextlessAndMalformedDocuments() throws Exception {
         byte[] bytes;
         try (var document = new PDDocument(); var output = new ByteArrayOutputStream()) {
             document.addPage(new PDPage());
@@ -86,6 +86,8 @@ class FileApiTest extends FileApiTestSupport {
         assertEquals(1, databaseAccess.mapper(RunJobSqlMapper.class).selectCount(new LambdaQueryWrapper<BackgroundJobRow>()
             .eq(BackgroundJobRow::getDedupeKey, "file_scan:" + id).eq(BackgroundJobRow::getStatus, "completed")).intValue());
         mvc.perform(get(file(id) + "/download").cookie(session.cookie())).andExpect(status().isOk());
+        wordAttachmentWithoutScannerBecomesReadyAfterItsTextIsParsed();
+        brokenAttachmentStillFailsParsingWithoutScanner();
     }
 
     @Test
@@ -123,15 +125,6 @@ class FileApiTest extends FileApiTestSupport {
         assertArrayEquals(bytes, response.getContentAsByteArray());
         assertTrue(response.getHeader("Content-Disposition").startsWith("attachment;"));
         assertEquals("sandbox", response.getHeader("Content-Security-Policy"));
-    }
-
-    @Test
-    void aMissingObjectReturnsACompleteHttpErrorAfterASuccessfulDownload() throws Exception {
-        byte[] bytes = "恢复文件内容\n".repeat(1024).getBytes(StandardCharsets.UTF_8);
-        String id = uploaded(bytes);
-        complete(id, bytes);
-        assertTrue(inspector.runNext());
-        var download = data(mvc.perform(get(file(id) + "/download").cookie(session.cookie())).andExpect(status().isOk()).andReturn());
         URI address = URI.create(download.path("url").asText());
         var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + address.getRawPath() + "?" + address.getRawQuery())).timeout(Duration.ofSeconds(10)).header("Cookie", session.cookie().getName() + "=" + session.cookie().getValue()).GET().build();
         try (var client = HttpClient.newHttpClient()) {
@@ -150,23 +143,7 @@ class FileApiTest extends FileApiTestSupport {
                 assertEquals("FILE_UNAVAILABLE", json.readTree(body).path("error").path("code").asText());
             }
         }
-    }
 
-    @Test
-    void unavailableScanRemainsPendingAndThenResumesTheSamePersistentJob() throws Exception {
-        byte[] bytes = "整理资料\n请按输入归纳。".getBytes(StandardCharsets.UTF_8);
-        String id = uploaded(bytes);
-        SCANNER.response = "stream: 检查服务暂不可用 ERROR\0";
-        complete(id, bytes);
-        assertTrue(inspector.runNext());
-        assertEquals("scanning", files.find(enterprise, id, false).orElseThrow().status());
-        assertEquals("FILE_SCAN_UNAVAILABLE", files.find(enterprise, id, false).orElseThrow().errorCode());
-        mvc.perform(get(file(id) + "/download").cookie(session.cookie())).andExpect(status().isConflict());
-        SCANNER.response = "stream: OK\0";
-        databaseAccess.mapper(RunJobSqlMapper.class).update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getDedupeKey, ("file_scan:" + id)).set(BackgroundJobRow::getAvailableAt, (Timestamp.from(Instant.now().minusSeconds(1)))));
-        assertTrue(inspector.runNext());
-        assertEquals("ready", files.find(enterprise, id, false).orElseThrow().status());
-        assertEquals(1, Math.toIntExact(databaseAccess.mapper(RunJobSqlMapper.class).selectCount(new LambdaQueryWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getDedupeKey, ("file_scan:" + id)).eq(BackgroundJobRow::getStatus, "completed"))));
     }
 
     @Test
@@ -186,8 +163,7 @@ class FileApiTest extends FileApiTestSupport {
         assertEquals("FILE_TYPE_INVALID", files.find(enterprise, malformed, false).orElseThrow().errorCode());
     }
 
-    @Test
-    void wordAttachmentWithoutScannerBecomesReadyAfterItsTextIsParsed() throws Exception {
+    private void wordAttachmentWithoutScannerBecomesReadyAfterItsTextIsParsed() throws Exception {
         String content = "调研问卷：请说明大模型应用情况。";
         byte[] bytes = wordDocument(content);
         var input = input("调研问卷.docx", bytes);
@@ -225,8 +201,7 @@ class FileApiTest extends FileApiTestSupport {
         assertEquals(1, SCANNER.received.size());
     }
 
-    @Test
-    void brokenAttachmentStillFailsParsingWithoutScanner() throws Exception {
+    private void brokenAttachmentStillFailsParsingWithoutScanner() throws Exception {
         byte[] bytes = "%PDF-1.7\n没有实际文档内容".getBytes(StandardCharsets.UTF_8);
         var input = input("损坏附件.pdf", bytes);
         input.put("purpose", "attachment");
@@ -330,10 +305,14 @@ class FileApiTest extends FileApiTestSupport {
         assertTrue(inspector.runNext());
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(FileTextMapper.class).selectCount(new LambdaQueryWrapper<FileTextRow>().eq(FileTextRow::getFileId, (id)))));
         assertEquals("scanning", files.find(enterprise, id, false).orElseThrow().status());
+        assertEquals("FILE_SCAN_UNAVAILABLE", files.find(enterprise, id, false).orElseThrow().errorCode());
+        mvc.perform(get(file(id) + "/download").cookie(session.cookie())).andExpect(status().isConflict());
         SCANNER.response = "stream: OK\0";
         databaseAccess.mapper(RunJobSqlMapper.class).update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getDedupeKey, ("file_scan:" + id)).set(BackgroundJobRow::getAvailableAt, (Timestamp.from(Instant.now().minusSeconds(1)))));
         assertTrue(inspector.runNext());
         assertEquals("ready", files.find(enterprise, id, false).orElseThrow().status());
+        assertEquals(1, databaseAccess.mapper(RunJobSqlMapper.class).selectCount(new LambdaQueryWrapper<BackgroundJobRow>()
+            .eq(BackgroundJobRow::getDedupeKey, "file_scan:" + id).eq(BackgroundJobRow::getStatus, "completed")));
         assertEquals(50000, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(FileTextFixtureMapper.class).fileApiAttachmentsWaitForScanningAndParsingThenDeleteTheirExtractedTextObject(id)));
         assertTrue(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(FileTextMapper.class).selectList(new LambdaQueryWrapper<FileTextRow>().select(FileTextRow::getTruncated).eq(FileTextRow::getFileId, (id))).stream().map(fixtureRecord -> (fixtureRecord.getTruncated() != null && fixtureRecord.getTruncated() != 0)).toList()));
         write(HttpMethod.DELETE, file(id), session, null, UUID.randomUUID().toString()).andExpect(status().isOk());

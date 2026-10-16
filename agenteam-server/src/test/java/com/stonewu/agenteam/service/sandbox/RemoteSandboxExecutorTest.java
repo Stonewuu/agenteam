@@ -5,11 +5,13 @@ import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.controller.sandbox.SandboxServerController;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -74,55 +76,50 @@ class RemoteSandboxExecutorTest {
                 })) {
                     var task = threads.submit(() -> remote.execute(source, clientRoot.resolve("cancelled"), clientRoot, "remote-cancel",
                         "sleep 60", "work", Duration.ofSeconds(25), control));
-                    Thread.sleep(1500);
+                    awaitJobDirectories(true);
                     control.close();
                     assertThrows(ExecutionException.class, () -> task.get(10, TimeUnit.SECONDS));
                     assertFalse(Files.exists(clientRoot.resolve("cancelled/outputs")));
                 }
-                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-                while (System.nanoTime() < deadline) {
-                    try (var entries = Files.list(directory.resolve("server"))) {
-                        if (entries.noneMatch(Files::isDirectory)) {
-                            break;
-                        }
-                    }
-                    Thread.sleep(100);
-                }
-                try (var entries = Files.list(directory.resolve("server"))) {
-                    assertTrue(entries.noneMatch(Files::isDirectory));
-                }
+                awaitJobDirectories(false);
                 try (var control = new ToolCallControl(() -> {
                 })) {
                     var task = threads.submit(() -> remote.execute(source, clientRoot.resolve("interrupted"), clientRoot, "remote-interrupt",
                         "sleep 60", "work", Duration.ofSeconds(25), control));
-                    long startedDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-                    boolean started = false;
-                    while (System.nanoTime() < startedDeadline) {
-                        try (var entries = Files.list(directory.resolve("server"))) {
-                            started = entries.anyMatch(Files::isDirectory);
-                        }
-                        if (started) {
-                            break;
-                        }
-                        Thread.sleep(100);
-                    }
-                    assertTrue(started, "独立节点应已接收任务");
+                    awaitJobDirectories(true);
                     task.cancel(true);
-                    long cancelledDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-                    boolean empty = false;
-                    while (System.nanoTime() < cancelledDeadline) {
-                        try (var entries = Files.list(directory.resolve("server"))) {
-                            empty = entries.noneMatch(Files::isDirectory);
-                        }
-                        if (empty) {
-                            break;
-                        }
-                        Thread.sleep(100);
-                    }
-                    assertTrue(empty, "调用线程中断后应通知独立节点停止，不能依赖稍后关闭控制对象");
+                    awaitJobDirectories(false);
                 }
             } finally {
                 server.stop(0);
+            }
+        }
+    }
+
+    private void awaitJobDirectories(boolean expected) throws Exception {
+        long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+        do {
+            try (var entries = Files.list(directory.resolve("server"))) {
+                if (entries.anyMatch(Files::isDirectory) == expected) {
+                    return;
+                }
+            }
+            Thread.sleep(50);
+        } while (System.nanoTime() < deadline);
+        fail(expected ? "独立节点未接收到任务" : "任务结束后独立节点没有清理临时目录");
+    }
+
+    @AfterEach
+    void cleanIncompleteJobs() throws Exception {
+        Path root = directory.resolve("server");
+        if (!Files.isDirectory(root)) {
+            return;
+        }
+        try (var jobs = Files.list(root)) {
+            for (var job : jobs.filter(Files::isDirectory).toList()) {
+                if (Files.isRegularFile(job.resolve("sandbox.pending"))) {
+                    new DockerWorkspaceCommands().removeForWorkspace(Utf8Text.revision("workspace", job.toAbsolutePath().normalize().toString()));
+                }
             }
         }
     }

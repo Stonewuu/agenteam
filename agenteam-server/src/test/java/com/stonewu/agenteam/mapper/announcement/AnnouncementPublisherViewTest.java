@@ -29,11 +29,12 @@ class AnnouncementPublisherViewTest {
 
     @Test
     void loadsPublisherNamesForTheEntirePageInOneQuery() {
-        when(publications.selectList(any(Wrapper.class))).thenReturn(List.of(publication(12, "李四"), publication(11, "张三")));
-        var result = views.views(List.of(announcement("first", 11L), announcement("second", 12L), announcement("draft", null)));
+        when(publications.selectList(any(Wrapper.class))).thenReturn(List.of(publication(12, "李四"), publication(11, "张三"), publication(13, null)));
+        var result = views.views(List.of(announcement("first", 11L), announcement("second", 12L), announcement("draft", null), announcement("historical", 13L)));
         assertEquals("张三", result.get(0).publisherName());
         assertEquals("李四", result.get(1).publisherName());
         assertNull(result.get(2).publisherName());
+        assertNull(result.get(3).publisherName());
         verify(publications).selectList(any(Wrapper.class));
         verifyNoMoreInteractions(publications);
     }
@@ -42,12 +43,6 @@ class AnnouncementPublisherViewTest {
     void doesNotQueryPublicationForDrafts() {
         assertNull(views.view(announcement("draft", null)).publisherName());
         verifyNoInteractions(publications);
-    }
-
-    @Test
-    void neverUsesCreatorOrLastEditorAsMissingPublisher() {
-        when(publications.selectList(any(Wrapper.class))).thenReturn(List.of(publication(11, null)));
-        assertNull(views.view(announcement("historical", 11L)).publisherName());
     }
 
     private AnnouncementPublicationRow publication(long sequence, String name) {

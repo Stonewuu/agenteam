@@ -77,7 +77,7 @@ class DockerProjectCommandExecutorTest {
     }
 
     @Test
-    void reusesUserContainerAndKeepsProjectFilesAcrossRecreation() throws Exception {
+    void reusesUserContainerAndPreservesFilesAcrossRecreationTimeoutAndBackgroundCleanup() throws Exception {
         var first = project("alice", "report");
         var second = project("alice", "other");
         Files.writeString(layout().project(first).resolve("inputs/source.txt"), "输入原文");
@@ -113,60 +113,22 @@ class DockerProjectCommandExecutorTest {
             assertEquals(id, state(first, "{{.Id}}"));
             docker.remove(containerName(first));
             assertEquals(0, executor().execute(first, "recreated", "test -f report.txt", "/workspace/projects/report", Duration.ofSeconds(20), control).exitCode());
+            var timedOut = executor().execute(first, "timeout", "printf '超时前保存' > timeout.txt; sleep 40", ".", Duration.ofSeconds(15), control);
+            assertTrue(timedOut.timedOut());
+            assertEquals(124, timedOut.exitCode());
+            assertEquals("超时前保存", Files.readString(layout().project(first).resolve("timeout.txt")));
+            assertEquals("true", state(first, "{{.State.Running}}"));
+            assertEquals(0, executor().execute(first, "background", "sleep 40 & echo $! > background.pid", ".", Duration.ofSeconds(20), control).exitCode());
+            String background = Files.readString(layout().project(first).resolve("background.pid")).trim();
+            assertTrue(background.matches("[0-9]+"));
+            assertEquals(1, docker.run(List.of("exec", containerName(first), "test", "-e", "/proc/" + background), Duration.ofSeconds(5)).exitCode());
         }
         assertEquals("另一项目", Files.readString(layout().project(second).resolve("report.txt")));
         assertFalse(Files.exists(layout().control(first.workspaceId()).resolve("container.pending")));
     }
 
     @Test
-    void commandsFromIndependentExecutorsRunTogetherAndDoNotHoldTheFileLock() throws Exception {
-        var project = project("alice", "shared");
-        String command = """
-            python - <<'PY'
-            from pathlib import Path
-            import time
-            Path('%s').touch()
-            deadline = time.monotonic() + 8
-            while not Path('%s').exists():
-                if time.monotonic() > deadline:
-                    raise RuntimeError('另一条命令未能并行启动')
-                time.sleep(0.05)
-            time.sleep(0.5)
-            PY
-            """;
-        try (var control = new ToolCallControl(() -> {
-        }); var pool = Executors.newVirtualThreadPerTaskExecutor()) {
-            assertEquals(0, executor().execute(project, "ready", "true", ".", Duration.ofSeconds(25), control).exitCode());
-            var first = pool.submit(() -> executor().execute(project, "a", command.formatted("a.ready", "b.ready"), ".", Duration.ofSeconds(25), control));
-            var second = pool.submit(() -> executor().execute(project, "b", command.formatted("b.ready", "a.ready"), ".", Duration.ofSeconds(25), control));
-            assertEquals(0, first.get(30, TimeUnit.SECONDS).exitCode());
-            assertEquals(0, second.get(30, TimeUnit.SECONDS).exitCode());
-            try (var lock = UserWorkspaceLock.acquire(layout(), project.workspaceId(), Duration.ofSeconds(1), control)) {
-                assertTrue(Files.exists(layout().project(project).resolve("a.ready")));
-            }
-        }
-        assertEquals("true", state(project, "{{.State.Running}}"));
-    }
-
-    @Test
-    void timeoutAndBackgroundProcessesStopWhileWrittenFilesRemain() throws Exception {
-        var project = project("alice", "timeout");
-        try (var control = new ToolCallControl(() -> {
-        })) {
-            assertEquals(0, executor().execute(project, "ready", "true", ".", Duration.ofSeconds(20), control).exitCode());
-            // 先确认容器可用，并为 Docker 检查留出时间，避免环境准备超时掩盖命令运行中的超时行为。
-            var result = executor().execute(project, "timeout", "printf '已保存' > report.txt; sleep 40", ".", Duration.ofSeconds(15), control);
-            assertTrue(result.timedOut());
-            assertEquals("已保存", Files.readString(layout().project(project).resolve("report.txt")));
-            assertEquals("true", state(project, "{{.State.Running}}"));
-            executor().execute(project, "background", "(sleep 2; touch late.txt) &", ".", Duration.ofSeconds(20), control);
-            Thread.sleep(2500);
-            assertFalse(Files.exists(layout().project(project).resolve("late.txt")));
-        }
-    }
-
-    @Test
-    void cancellationStopsOnlyItsOwnCommandAndLeavesFilesAvailable() throws Exception {
+    void independentCommandsRunTogetherWithoutFileLocksAndCancellationOnlyStopsItsOwnProcess() throws Exception {
         var project = project("alice", "cancel");
         try (var control = new ToolCallControl(() -> {
         }); var peerControl = new ToolCallControl(() -> {

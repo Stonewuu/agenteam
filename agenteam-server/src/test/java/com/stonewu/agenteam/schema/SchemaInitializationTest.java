@@ -3,7 +3,6 @@ package com.stonewu.agenteam.schema;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stonewu.agenteam.mapper.test.schema.LegacyDemoAccountMapper;
 import com.stonewu.agenteam.mapper.permission.SysPermissionTableMapper;
 import com.stonewu.agenteam.mapper.test.schema.SchemaSnapshotMapper;
 import com.stonewu.agenteam.model.permission.entity.SysPermissionRow;
@@ -63,13 +62,6 @@ class SchemaInitializationTest {
                     row.getMenuLabel(), row.getMenuPath(), row.getSortNo()));
             }
             assertEquals(expected.get("permissions"), permissions, "权限目录内容不能改变");
-            var demoRows = access.mapper(LegacyDemoAccountMapper.class).selectList(Wrappers.emptyWrapper());
-            assertEquals(1, demoRows.size(), "只初始化唯一演示控制记录");
-            var demo = demoRows.getFirst();
-            assertEquals(expected.get("demoAccount"), values(demo.getId(), Boolean.TRUE.equals(demo.getInitialized()) ? 1 : 0,
-                    Boolean.TRUE.equals(demo.getEnabled()) ? 1 : 0, demo.getCleanupStatus(), demo.getCleanupRequestedAt(),
-                    demo.getLastCleanedAt(), demo.getLastCleanedDate(), demo.getPasswordChangedAt(), demo.getRevision()),
-                "演示控制记录不能改变");
             assertEquals(1, snapshot.foreignKeyChecks(), "初始化后仍须启用外键检查");
             assertEquals(0, flyway.migrate().migrationsExecuted, "后续启动不能重复初始化");
             assertTrue(flyway.validateWithResult().validationSuccessful);

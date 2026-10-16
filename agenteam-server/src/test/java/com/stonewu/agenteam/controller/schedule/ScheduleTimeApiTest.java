@@ -64,11 +64,12 @@ class ScheduleTimeApiTest extends ExecutionApiTestSupport {
         assertTrue(result.at("/warnings/0").asText().contains("03:30"));
         assertEquals(0, count("agent_run"));
         assertEquals(0, count("quota_entry"));
+        aPastOneTimeChoiceReturnsNoFutureDatesAndMalformedRulesAreRejected();
+        previewStillRequiresLoginAndRequestForgeryProtection();
         assertEquals(callsBefore, modelCalls.get());
     }
 
-    @Test
-    void aPastOneTimeChoiceReturnsNoFutureDatesAndMalformedRulesAreRejected() throws Exception {
+    private void aPastOneTimeChoiceReturnsNoFutureDatesAndMalformedRulesAreRejected() throws Exception {
         var past = data(write(path(), rule("once", "2026-03-07", "02:30", List.of(), null, "UTC"), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
         assertTrue(past.path("times").isEmpty());
         assertEquals(1, past.path("warnings").size());
@@ -83,8 +84,7 @@ class ScheduleTimeApiTest extends ExecutionApiTestSupport {
         assertEquals("VALIDATION_FAILED", json.readTree(rejected.getResponse().getContentAsString()).at("/error/code").asText());
     }
 
-    @Test
-    void previewStillRequiresLoginAndRequestForgeryProtection() throws Exception {
+    private void previewStillRequiresLoginAndRequestForgeryProtection() throws Exception {
         var body = json.writeValueAsString(rule("daily", null, "09:00", List.of(), null, "UTC"));
         mvc.perform(post(path()).cookie(cookie).header("Origin", "http://localhost:3000").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
         mvc.perform(post(path()).header("Origin", "http://localhost:3000").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());

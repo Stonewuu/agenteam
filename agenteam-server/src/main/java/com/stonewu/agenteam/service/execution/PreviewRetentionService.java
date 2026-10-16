@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.mapper.execution.ExecutionEventCache;
+import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.PreviewRetentionMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.service.agent.ExecutionFileCleanup;
@@ -22,15 +23,17 @@ public class PreviewRetentionService {
     private final RunMapper runs;
     private final ExecutionFileCleanup files;
     private final ExecutionEventCache cache;
+    private final LiveEventCache live;
     private final Clock clock;
     private final FileRetentionService artifacts;
 
     public PreviewRetentionService(PreviewRetentionMapper retention, RunMapper runs, ExecutionFileCleanup files,
-                                   ExecutionEventCache cache, Clock clock, FileRetentionService artifacts) {
+                                   ExecutionEventCache cache, LiveEventCache live, Clock clock, FileRetentionService artifacts) {
         this.retention = retention;
         this.runs = runs;
         this.files = files;
         this.cache = cache;
+        this.live = live;
         this.clock = clock;
         this.artifacts = artifacts;
     }
@@ -51,15 +54,26 @@ public class PreviewRetentionService {
                 if (owner == null) {
                     continue;
                 }
+                String liveOwner = null;
                 try {
-                    if (cache.remove(preview.enterprise(), preview.conversation(), owner)) {
+                    liveOwner = live.claim(preview.enterprise(), preview.conversation());
+                    if (liveOwner == null) {
+                        continue;
+                    }
+                    if (cache.remove(preview.enterprise(), preview.conversation(), owner)
+                        && live.remove(preview.enterprise(), preview.conversation(), liveOwner,
+                            executions.stream().map(run -> run.id()).toList())) {
                         retention.remove(preview, before);
                     }
                 } finally {
+                    if (liveOwner != null) {
+                        live.release(preview.enterprise(), preview.conversation(), liveOwner);
+                    }
                     cache.release(preview.enterprise(), preview.conversation(), owner);
                 }
             } catch (RuntimeException failed) {
-                LOG.warn("到期预览暂时无法清理，下次继续处理", failed);
+                LOG.warn("到期预览暂时无法清理，下次继续处理，企业编号 {}，会话编号 {}",
+                    preview.enterprise(), preview.conversation(), failed);
             }
         }
     }

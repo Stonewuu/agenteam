@@ -10,10 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 
 /**
- * 只合并同一事件类型和关联对象的 delta chunk，保持 start、delta、end 各自独立。
+ * 同一任务中只合并类型、来源和关联对象相同的正文片段。
  */
 final class AgentEventChunkAggregator {
 
@@ -31,19 +30,20 @@ final class AgentEventChunkAggregator {
     private final ConcurrentMap<String, RunState> states = new ConcurrentHashMap<>();
 
     /**
-     * 正式执行在独立事件前保存全部片段，正文总量达到 4 KiB 时立即保存。
+     * 独立事件之前保存全部片段，待保存正文达到 4096 字节时立即保存。
      */
     List<AgentEventRecord> acceptForPersistence(AgentStreamEvent event) {
-        var result = new ArrayList<AgentEventRecord>();
         if (!isDelta(event.type())) {
-            result.addAll(flush(event.runId()));
+            var records = new ArrayList<>(flush(event.runId()));
+            records.add(instantaneous(event));
+            if (RUN_TERMINAL_TYPES.contains(event.type())) {
+                release(event.runId());
+            }
+            return records;
         }
-        result.addAll(accept(event));
-        var state = states.get(event.runId());
-        if (state != null && state.pendingBytes() >= 4096) {
-            result.addAll(flush(event.runId()));
-        }
-        return result;
+        var state = states.computeIfAbsent(event.runId(), ignored -> new RunState());
+        state.add(event);
+        return state.pendingBytes() >= 4096 ? state.flushAll() : List.of();
     }
 
     List<AgentEventRecord> flush(String runId) {
@@ -53,23 +53,6 @@ final class AgentEventChunkAggregator {
 
     void release(String runId) {
         states.remove(runId);
-    }
-
-    List<AgentEventRecord> accept(AgentStreamEvent event) {
-        if (event == null) {
-            return List.of();
-        }
-        if (event.runId() == null || event.runId().isBlank()) {
-            return List.of(instantaneous(event));
-        }
-        RunState state = states.computeIfAbsent(event.runId(), ignored -> new RunState());
-        List<AgentEventRecord> records = RUN_TERMINAL_TYPES.contains(event.type())
-            ? state.closeRun(event)
-            : state.accept(event);
-        if (RUN_TERMINAL_TYPES.contains(event.type())) {
-            states.remove(event.runId(), state);
-        }
-        return records;
     }
 
     private static boolean isDelta(String type) {
@@ -118,112 +101,14 @@ final class AgentEventChunkAggregator {
             return result;
         }
 
-        synchronized List<AgentEventRecord> accept(AgentStreamEvent event) {
-            if (isDelta(event.type())) {
-                String key = chunkKey(event);
-                PendingChunks chunks = pending.get(key);
-                if (chunks == null) {
-                    pending.put(key, new PendingChunks(event.type(), event));
-                } else {
-                    chunks.add(event);
-                }
-                return List.of();
-            }
-
-            List<AgentEventRecord> records = new ArrayList<>();
-            if ("AGENT_END".equals(event.type()) || "MODEL_CALL_END".equals(event.type())) {
-                records.addAll(flushForReply(event));
+        synchronized void add(AgentStreamEvent event) {
+            String key = chunkKey(event);
+            PendingChunks chunks = pending.get(key);
+            if (chunks == null) {
+                pending.put(key, new PendingChunks(event.type(), event));
             } else {
-                records.addAll(flushForBoundary(event));
+                chunks.add(event);
             }
-            records.add(instantaneous(event));
-            return records;
-        }
-
-        synchronized List<AgentEventRecord> closeRun(AgentStreamEvent terminal) {
-            List<AgentEventRecord> records = pending.values().stream()
-                .map(PendingChunks::toRecord)
-                .sorted((left, right) -> Long.compare(left.sequence(), right.sequence()))
-                .collect(Collectors.toCollection(ArrayList::new));
-            pending.clear();
-            records.add(instantaneous(terminal));
-            return records;
-        }
-
-        private List<AgentEventRecord> flushForBoundary(AgentStreamEvent boundary) {
-            List<AgentEventRecord> records = new ArrayList<>();
-            for (String deltaType : matchingDeltaTypes(boundary)) {
-                String key = keyFor(boundary, deltaType, correlationId(boundary, deltaType));
-                PendingChunks chunks = pending.remove(key);
-                if (chunks == null) {
-                    String fallbackKey = findUnambiguousKey(boundary, deltaType);
-                    chunks = fallbackKey == null ? null : pending.remove(fallbackKey);
-                }
-                if (chunks != null) {
-                    records.add(chunks.toRecord());
-                }
-            }
-            records.sort((left, right) -> Long.compare(left.sequence(), right.sequence()));
-            return records;
-        }
-
-        private List<AgentEventRecord> flushForReply(AgentStreamEvent boundary) {
-            List<AgentEventRecord> records = new ArrayList<>();
-            List<String> keys = pending.entrySet().stream()
-                .filter(entry -> entry.getValue().belongsTo(boundary))
-                .map(Map.Entry::getKey)
-                .toList();
-            for (String key : keys) {
-                PendingChunks chunks = pending.remove(key);
-                if (chunks != null) {
-                    records.add(chunks.toRecord());
-                }
-            }
-            records.sort((left, right) -> Long.compare(left.sequence(), right.sequence()));
-            return records;
-        }
-
-        private String findUnambiguousKey(AgentStreamEvent boundary, String deltaType) {
-            String candidate = null;
-            for (Map.Entry<String, PendingChunks> entry : pending.entrySet()) {
-                if (!entry.getValue().eventType().equals(deltaType)
-                    || !entry.getValue().belongsTo(boundary)) {
-                    continue;
-                }
-                if (candidate != null) {
-                    return null;
-                }
-                candidate = entry.getKey();
-            }
-            return candidate;
-        }
-
-        private static List<String> matchingDeltaTypes(AgentStreamEvent boundary) {
-            if (boundary.type() == null) {
-                return List.of();
-            }
-            return switch (boundary.type()) {
-                case "TEXT_BLOCK_START", "TEXT_BLOCK_END" -> List.of("TEXT_BLOCK_DELTA");
-                case "THINKING_BLOCK_START", "THINKING_BLOCK_END" -> List.of("THINKING_BLOCK_DELTA");
-                case "DATA_BLOCK_START", "DATA_BLOCK_END" -> List.of("DATA_BLOCK_DELTA");
-                case "TOOL_CALL_START", "TOOL_CALL_END" -> List.of("TOOL_CALL_DELTA");
-                case "TOOL_RESULT_START", "TOOL_RESULT_END" -> List.of(
-                    "TOOL_RESULT_TEXT_DELTA", "TOOL_RESULT_DATA_DELTA");
-                default -> List.of();
-            };
-        }
-
-        private static String correlationId(AgentStreamEvent event, String deltaType) {
-            return deltaType.startsWith("TOOL_")
-                ? event.toolCallId() : event.blockId();
-        }
-
-        private static String keyFor(
-            AgentStreamEvent event,
-            String deltaType,
-            String correlationId) {
-            return deltaType + "|" + valueOrEmpty(event.source()) + "|"
-                + valueOrEmpty(event.replyId()) + "|" + valueOrEmpty(correlationId);
         }
     }
 
@@ -236,18 +121,6 @@ final class AgentEventChunkAggregator {
         private PendingChunks(String eventType, AgentStreamEvent first) {
             this.eventType = eventType;
             add(first);
-        }
-
-        private String eventType() {
-            return eventType;
-        }
-
-        private boolean belongsTo(AgentStreamEvent boundary) {
-            AgentStreamEvent first = events.getFirst();
-            boolean replyMatches = boundary.replyId() == null || boundary.replyId().isBlank()
-                || valueOrEmpty(first.replyId()).equals(valueOrEmpty(boundary.replyId()));
-            return valueOrEmpty(first.source()).equals(valueOrEmpty(boundary.source()))
-                && replyMatches;
         }
 
         private void add(AgentStreamEvent event) {

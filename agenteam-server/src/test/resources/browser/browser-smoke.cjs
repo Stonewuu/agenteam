@@ -10,6 +10,16 @@ const {promisify} = require("node:util");
 const {readPage, options} = require("/opt/agenteam/browser/browser-cli.cjs");
 const run = promisify(execFile);
 
+async function timed(name, action) {
+  const started = Date.now();
+  process.stderr.write(`${name}开始\n`);
+  try {
+    return await action();
+  } finally {
+    process.stderr.write(`${name}结束，耗时 ${Date.now() - started} 毫秒\n`);
+  }
+}
+
 async function main() {
   const directory = await mkdtemp(join(tmpdir(), "browser-check-"));
   await run("git", ["init", "--bare", join(directory, "git.git")]);
@@ -38,7 +48,7 @@ async function main() {
   const origin = `http://127.0.0.1:${server.address().port}`;
   try {
     const settings = options(["read", `${origin}/redirect`, "--wait-for", "h1", "--wait-ms", "0", "--max-chars", "100"]);
-    const first = await readPage(settings);
+    const first = await timed("首段读取", () => readPage(settings));
     assert.equal(first.title, "动态网页");
     assert.equal(first.url, `${origin}/page`);
     assert.equal(first.status, 200);
@@ -48,18 +58,18 @@ async function main() {
     assert.equal(first.truncated, true);
     assert.equal(first.nextStart, 100);
     assert.equal(first.links[0].url, `${origin}/next`);
-    const remainder = await readPage({...settings, start: first.nextStart, maxChars: 10000});
-    const full = await readPage({...settings, maxChars: 10000});
+    const remainder = await timed("续读", () => readPage({...settings, start: first.nextStart, maxChars: 10000}));
+    const command = await timed("命令行全文读取", () => run("agenteam-browser", ["read", `${origin}/page`, "--wait-for", "h1", "--wait-ms", "0", "--max-chars", "10000"], {timeout: 30000}));
+    const full = JSON.parse(command.stdout);
+    assert.equal(full.isError, false);
     assert.equal(first.content + remainder.content, full.content);
-    const denied = await readPage({...settings, url: `${origin}/denied`});
+    const denied = await timed("拒绝访问", () => readPage({...settings, url: `${origin}/denied`}));
     assert.equal(denied.isError, true);
     assert.equal(denied.status, 403);
-    await assert.rejects(readPage({...settings, selector: "#missing", timeout: 1000}));
+    await assert.rejects(timed("选择器超时", () => readPage({...settings, selector: "#missing", timeout: 1000})));
     assert.throws(() => options(["read", "file:///etc/passwd"]));
     assert.throws(() => options(["read", origin, "--max-chars", "-1"]));
-    const command = await run("agenteam-browser", ["read", `${origin}/page`, "--wait-for", "h1"]);
-    assert.equal(JSON.parse(command.stdout).isError, false);
-    await run("git", ["clone", `${origin}/git.git`, join(directory, "clone")], {timeout: 10000});
+    await timed("Git 拉取", () => run("git", ["clone", `${origin}/git.git`, join(directory, "clone")], {timeout: 10000}));
     assert.ok((await stat(join(directory, "clone/.git"))).isDirectory());
     process.stdout.write("浏览器动态正文、跳转、续读、拒绝、超时及 Git HTTP 克隆检查通过。\n");
   } finally {

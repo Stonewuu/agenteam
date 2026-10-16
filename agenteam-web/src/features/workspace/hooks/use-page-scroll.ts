@@ -17,6 +17,14 @@ export function usePageScroll(pathname: string, enabled: boolean) {
     let lastPosition = destination;
     let restoring = destination > 0;
     let frame = 0;
+    let scrollbarWidth = -1;
+    const alignContent = () => {
+      const width = Math.max(0, element.offsetWidth - element.clientWidth);
+      if (width !== scrollbarWidth) {
+        scrollbarWidth = width;
+        element.style.setProperty("--workspace-scrollbar-width", `${width}px`);
+      }
+    };
     const notify = () => element.dispatchEvent(new Event("page-scroll-restored"));
     const remember = () => {
       if (restoring) {
@@ -55,8 +63,14 @@ export function usePageScroll(pathname: string, enabled: boolean) {
     } else {
       scheduleRestore();
     }
+    // 滚动条包含在页面边距中；内容加载或窗口变化时同步，不额外挤占正文宽度。
+    alignContent();
+    const resize = new ResizeObserver(() => {
+      alignContent();
+      scheduleRestore();
+    });
+    resize.observe(element);
     // 查询结果出现前页面可能不够高，内容加载后再恢复；用户操作会取消等待。
-    const resize = new ResizeObserver(scheduleRestore);
     if (element.firstElementChild) {
       resize.observe(element.firstElementChild);
     }

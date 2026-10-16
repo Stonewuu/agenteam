@@ -227,7 +227,11 @@ test("所有明确标记的界面文案均有英文，参数占位符完整保�
   const missing = [];
   const root = new URL("../src/", import.meta.url);
   for (const name of readdirSync(root, { recursive: true }).filter(name => /\.tsx?$/.test(name) && !name.replaceAll("\\", "/").startsWith("lib/i18n/"))) {
-    const source = ts.createSourceFile(name, readFileSync(new URL(name.replaceAll("\\", "/"), root), "utf8"), ts.ScriptTarget.Latest, true);
+    const content = readFileSync(new URL(name.replaceAll("\\", "/"), root), "utf8");
+    if (!/\b(?:uiText|t)\b/.test(content)) {
+      continue;
+    }
+    const source = ts.createSourceFile(name, content, ts.ScriptTarget.Latest, true);
     const visit = node => {
       if (ts.isCallExpression(node) && /^(uiText|t)$/.test(node.expression.getText(source))) {
         const key = node.arguments[0];

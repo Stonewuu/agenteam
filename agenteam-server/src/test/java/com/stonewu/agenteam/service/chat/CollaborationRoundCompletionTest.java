@@ -90,19 +90,16 @@ class CollaborationRoundCompletionTest extends CollaborationToolTestSupport {
     }
 
     @Test
-    void changedWorkWithoutCommittedActionCannotBeReportedAsSuccessful() {
-        startTask("检查没有成功动作的执行");
+    void newInputAfterCommittedQuestionStillInvalidatesOldRound() {
+        startTask("先等待统计月份");
         var active = startNext();
         databaseAccess.mapper(CollaborationWorkItemMapper.class).update(new LambdaUpdateWrapper<CollaborationWorkItemRow>()
             .eq(CollaborationWorkItemRow::getEnterpriseId, enterprise).eq(CollaborationWorkItemRow::getId, link(active.run().id()).getWorkId())
             .set(CollaborationWorkItemRow::getStatus, "waiting_input"));
         assertFalse(runAccess.hasCommittedRoundEnd(active.run()));
-    }
-
-    @Test
-    void newInputAfterCommittedQuestionStillInvalidatesOldRound() {
-        startTask("先等待统计月份");
-        var active = startNext();
+        databaseAccess.mapper(CollaborationWorkItemMapper.class).update(new LambdaUpdateWrapper<CollaborationWorkItemRow>()
+            .eq(CollaborationWorkItemRow::getEnterpriseId, enterprise).eq(CollaborationWorkItemRow::getId, link(active.run().id()).getWorkId())
+            .set(CollaborationWorkItemRow::getStatus, "running"));
         invoke(active, "ask-first", "collab_ask_user", Map.of("expectedInputRevision", 1, "question", "请确认月份"));
         assertTrue(runAccess.hasCommittedRoundEnd(active.run()));
         var task = onlyTask();

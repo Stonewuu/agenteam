@@ -147,23 +147,7 @@ class TodoApiTest extends ExecutionApiTestSupport {
         assertTrue(queries.list(actor(admin), "mine", null, null, null, null, 30).items().isEmpty());
     }
 
-    @Test
-    void teamReadersCannotTransferOtherPeoplesTodosAndMembershipChangesApplyImmediately() {
-        var reader = member("团队查看人");
-        var outside = member("团队外成员");
-        String team = team(Set.of(admin, reader.userId()));
-        var value = todos.create(actor(admin), input(admin, team, null));
-        assertTrue(queries.get(reader, value.id()).allowedActions().isEmpty());
-        assertThrows(ResponseStatusException.class, () -> todos.transfer(reader, value.id(), new TodoTransferRequest(reader.userId(), ""), 1));
-        assertThrows(ResponseStatusException.class, () -> queries.get(outside, value.id()));
-        assertEquals(1, queries.list(reader, "team", null, team, null, null, 30).items().size());
-        var assigned = todos.create(actor(admin), input(reader.userId(), team, null));
-        assertTrue(queries.get(reader, assigned.id()).allowedActions().contains("complete"));
-        todos.status(reader, assigned.id(), new TodoStatusRequest("completed", "本人完成"), 1);
-        enterprises.replaceTeamMembers(enterprise, team, Set.of(admin), Instant.now());
-        assertThrows(ResponseStatusException.class, () -> queries.get(reader, value.id()));
-        assertThrows(ResponseStatusException.class, () -> queries.get(reader, assigned.id()));
-    }
+
 
     @Test
     void teamMaintenanceStillRequiresMembershipAndAssigneesMustBelongToThatTeam() {
@@ -175,13 +159,23 @@ class TodoApiTest extends ExecutionApiTestSupport {
         permissions.replaceRolePermissions(enterprise, role, Set.of("todo.view", "todo.manage", "todo.team_view", "todo.team_manage"));
         permissions.replaceUserRoles(manager.userId(), enterprise, Set.of(role), Instant.now());
         manager = actor(manager.userId());
-        var value = todos.create(actor(admin), input(admin, team, null));
+        var value = todos.create(actor(admin), input(admin.toUpperCase(Locale.ROOT), team.toUpperCase(Locale.ROOT), null));
         final var currentManager = manager;
         assertTrue(queries.get(manager, value.id()).allowedActions().contains("transfer"));
         assertThrows(ApiException.class, () -> todos.transfer(currentManager, value.id(), new TodoTransferRequest(outsider.userId(), ""), 1));
         var moved = todos.transfer(manager, value.id(), new TodoTransferRequest(manager.userId(), "接手处理"), 1);
         assertEquals(manager.userId(), moved.owner().id());
         assertEquals("接手处理", queries.history(manager, moved.id(), null, 30).items().getFirst().reason());
+        assertEquals(admin, value.owner().id());
+        assertEquals(team, value.teamId());
+        var updated = todos.update(manager, value.id(), input(manager.userId().toUpperCase(Locale.ROOT), team.toUpperCase(Locale.ROOT), null), 2);
+        assertEquals(manager.userId(), updated.owner().id());
+        assertEquals(team, updated.teamId());
+        int history = count("todo_history"), jobs = notificationJobs();
+        var unchanged = todos.transfer(manager, value.id(), new TodoTransferRequest(manager.userId().toUpperCase(Locale.ROOT), "仍由本人处理"), 3);
+        assertEquals("3", unchanged.revision());
+        assertEquals(history, count("todo_history"));
+        assertEquals(jobs, notificationJobs());
     }
 
     @Test
@@ -309,6 +303,10 @@ class TodoApiTest extends ExecutionApiTestSupport {
         assertThrows(ResponseStatusException.class, () -> selections.teams(reader, "assign", null, null, 30));
         var personal = todos.create(actor(admin), input(admin, null, null));
         var shared = todos.create(actor(admin), input(admin, joined, null));
+        assertTrue(queries.get(reader, shared.id()).allowedActions().isEmpty());
+        assertThrows(ResponseStatusException.class, () -> todos.transfer(reader, shared.id(), new TodoTransferRequest(reader.userId(), ""), 1));
+        assertThrows(ResponseStatusException.class, () -> queries.get(outside, shared.id()));
+        assertEquals(1, queries.list(reader, "team", null, joined, null, null, 30).items().size());
         assertThrows(ResponseStatusException.class, () -> selections.assignees(reader, personal.id(), null, null, null, 30));
         assertThrows(ResponseStatusException.class, () -> selections.assignees(reader, shared.id(), joined, null, null, 30));
         var assigned = todos.create(actor(admin), input(reader.userId(), joined, null));
@@ -317,7 +315,11 @@ class TodoApiTest extends ExecutionApiTestSupport {
         var response = data(mvc.perform(get(base() + "/todos/teams").param("purpose", "assign").cookie(cookie)).andExpect(status().isOk()).andReturn());
         assertEquals(1, response.path("items").size());
         schemas.validate("TodoOption", response.path("items").get(0));
+        assertTrue(queries.get(reader, assigned.id()).allowedActions().contains("complete"));
+        todos.status(reader, assigned.id(), new TodoStatusRequest("completed", "本人完成"), 1);
         enterprises.replaceTeamMembers(enterprise, joined, Set.of(admin), Instant.now());
+        assertThrows(ResponseStatusException.class, () -> queries.get(reader, shared.id()));
+        assertThrows(ResponseStatusException.class, () -> queries.get(reader, assigned.id()));
         assertTrue(selections.teams(reader, "filter", null, null, 30).items().isEmpty());
         assertThrows(ResponseStatusException.class, () -> selections.assignees(reader, assigned.id(), joined, null, null, 30));
     }
@@ -357,23 +359,7 @@ class TodoApiTest extends ExecutionApiTestSupport {
         assertEquals(0, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(TodoItemFixtureMapper.class).todoApiConcurrentTransferAndTeamDepartureCannotLeaveAnOpenTodoOwnedOutsideItsTeamObject(enterprise)));
     }
 
-    @Test
-    void assigningAndEditingUseStoredMemberAndTeamIdsAndSelfTransferDoesNotCreateHistory() {
-        var owner = member("编号写法不同的负责人");
-        String team = team(Set.of(admin, owner.userId()));
-        var value = todos.create(actor(admin), input(owner.userId().toUpperCase(Locale.ROOT), team.toUpperCase(Locale.ROOT), null));
-        assertEquals(owner.userId(), value.owner().id());
-        assertEquals(team, value.teamId());
-        assertTrue(queries.get(owner, value.id()).allowedActions().contains("edit"));
-        var updated = todos.update(owner, value.id(), input(owner.userId().toUpperCase(Locale.ROOT), team.toUpperCase(Locale.ROOT), null), 1);
-        assertEquals(team, updated.teamId());
-        assertEquals(owner.userId(), updated.owner().id());
-        int history = count("todo_history"), jobs = notificationJobs();
-        var unchanged = todos.transfer(owner, value.id(), new TodoTransferRequest(owner.userId().toUpperCase(Locale.ROOT), "仍由本人处理"), 2);
-        assertEquals("2", unchanged.revision());
-        assertEquals(history, count("todo_history"));
-        assertEquals(jobs, notificationJobs());
-    }
+
 
     private int organizationAttempt(CountDownLatch start, Runnable action) throws InterruptedException {
         start.await();

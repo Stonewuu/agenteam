@@ -20,9 +20,10 @@ export function EnterpriseLayout({enterpriseId, children}: { enterpriseId: strin
   const uiText = useT();
   const pathname = usePathname();
   const platformPage = localizeCatalog(platformManagementNavigation, uiText).find((item) => item.path === pathname);
-  const [, , , section, detail] = pathname.split("/");
+  const [, , , section, detail, resourceId] = pathname.split("/");
   const area = platformPage || section === "management" ? "management" : section === "capabilities" ? "capabilities" : "user";
-  const fullHeight = section === "new-task" || section === "conversations";
+  const fullHeight = section === "new-task" || section === "conversations" ||
+    section === "capabilities" && detail === "workflows" && Boolean(resourceId);
   return <EnterpriseGate enterpriseId={enterpriseId} onUnavailable={platformPage ? () =>
     <SystemManagementGate title={platformPage.label}>{() => children}</SystemManagementGate> : undefined}>{({
                                                                                                               user,

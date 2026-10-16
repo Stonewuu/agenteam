@@ -165,7 +165,7 @@ OAuth（平台授权协议）使用一次性随机状态与发起浏览器关联
 - 通知可靠性：`ChannelDeliveryWorkerTest`、`ScheduledChannelNotificationTest`，覆盖双平台单独重试、未知结果、接收人变化及停止后的恢复。
 - 定时业务：`ScheduledNotificationManagementApiTest`、`ScheduledNotificationExecutionTest`、原 `ScheduleTriggerApiTest/RevocationApiTest`、`ScheduleNotificationRolloutTest`。
 - 升级：`IntegrationSchemaMigrationTest`，真实 MySQL 中验证空库、带旧计划/发生记录升级、重复启动和约束。
-- 容量：`ScheduleCapacityTest`，同分钟一千条到期计划、两个调度线程和两个工作对象，共享同一 Java 进程与隔离数据库。输出 `target/schedule-capacity-result.json`；此测试没有向真实平台发送，也不代替独立主机和生产资源验证。
+- 批量调度：`ScheduleBatchExecutionTest` 使用 101 条同分钟到期计划，跨越每批 100 条的读取上限，由两个调度线程和两个工作对象并发处理；检查每条只提交一次、完成后没有未释放的状态，同时验证计划列表可读取。50 名接收人的场景验证部分失败仍保留全部结果。输出 `target/schedule-batch-result.json`。
 - 界面：计划表单和外部登录前端测试、类型检查、静态检查、生产构建，以及隔离模拟平台上的桌面和手机浏览器操作。
 
 真实平台回调、应用审批、可见范围及成员实际收到消息，由用户按要求在开发完成后配置并确认；测试账号和模拟平台的通过结果不能写成真实平台已经联调通过。

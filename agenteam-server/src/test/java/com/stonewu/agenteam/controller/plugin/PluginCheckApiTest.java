@@ -126,10 +126,20 @@ class PluginCheckApiTest {
     void checkSelectionAndPublicationPreserveCaseAndReuseCompletedRequests() throws Exception {
         var config = plugin();
         String id = create(config);
+        REMOTE.status = 403;
+        var failed = data(check(id, "1").andExpect(status().isOk()).andReturn());
+        assertFalse(failed.path("success").asBoolean());
+        assertFalse(failed.toString().contains("原始内容"));
+        assertEquals("RESOURCE_CHECK_REQUIRED", error(publish(id, "1").andExpect(status().isConflict()).andReturn()));
+        String other = enterprises.create("其他插件企业", users.findById(user).orElseThrow(), Instant.now()).enterpriseId();
+        write(HttpMethod.POST, "/api/v1/enterprises/" + other + "/plugins/" + id + "/check", session, "1", UUID.randomUUID().toString(), null).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/enterprises/" + other + "/plugins/" + id + "/tools").cookie(session.cookie())).andExpect(status().isNotFound());
+        REMOTE.status = 200;
         String checkKey = UUID.randomUUID().toString();
         var checked = data(write(HttpMethod.POST, checkPath(id), session, "1", checkKey, null).andExpect(status().isOk()).andReturn());
         schemas.validate("ConnectionCheck", checked);
         assertTrue(checked.path("success").asBoolean());
+        long initializations = REMOTE.methods.stream().filter(value -> value.equals("initialize")).count();
         var listed = data(mvc.perform(get(base() + "/plugins/" + id + "/tools").cookie(session.cookie())).andExpect(status().isOk()).andReturn());
         assertEquals(2, listed.size());
         assertFalse(listed.get(0).path("enabled").asBoolean());
@@ -137,7 +147,7 @@ class PluginCheckApiTest {
         config.set("enabledToolNames", json.valueToTree(List.of("Read_Item", "read_item")));
         save(id, "1", config).andExpect(status().isOk());
         assertEquals(checked, data(write(HttpMethod.POST, checkPath(id), session, "1", checkKey, null).andExpect(status().isOk()).andReturn()));
-        assertEquals(1, REMOTE.methods.stream().filter(value -> value.equals("initialize")).count());
+        assertEquals(initializations, REMOTE.methods.stream().filter(value -> value.equals("initialize")).count());
         publish(id, "2").andExpect(status().isConflict());
         check(id, "2").andExpect(status().isOk());
         var detail = data(mvc.perform(get(resource(id)).cookie(session.cookie())).andExpect(status().isOk()).andReturn());
@@ -211,18 +221,7 @@ class PluginCheckApiTest {
         }
     }
 
-    @Test
-    void failedCheckIsSavedWithoutRemoteBodyAndCrossEnterpriseLookupIsDenied() throws Exception {
-        String id = create(plugin());
-        REMOTE.status = 403;
-        var failed = data(check(id, "1").andExpect(status().isOk()).andReturn());
-        assertFalse(failed.path("success").asBoolean());
-        assertFalse(failed.toString().contains("原始内容"));
-        assertEquals("RESOURCE_CHECK_REQUIRED", error(publish(id, "1").andExpect(status().isConflict()).andReturn()));
-        String other = enterprises.create("其他插件企业", users.findById(user).orElseThrow(), Instant.now()).enterpriseId();
-        write(HttpMethod.POST, "/api/v1/enterprises/" + other + "/plugins/" + id + "/check", session, "1", UUID.randomUUID().toString(), null).andExpect(status().isNotFound());
-        mvc.perform(get("/api/v1/enterprises/" + other + "/plugins/" + id + "/tools").cookie(session.cookie())).andExpect(status().isNotFound());
-    }
+
 
     @Test
     void earlierSlowInspectionCannotReplaceARecentlySavedResult() throws Exception {
@@ -282,6 +281,7 @@ class PluginCheckApiTest {
         var created = data(write(HttpMethod.POST, base() + "/credentials", session, null, key, body).andExpect(status().isCreated()).andReturn());
         String credential = created.path("id").asText();
         schemas.validate("CredentialSummary", created);
+        verifyCredentialPermissions(credential);
         assertFalse(created.toString().contains(firstSecret));
         assertEquals(created, data(write(HttpMethod.POST, base() + "/credentials", session, null, key, body).andExpect(status().isCreated()).andReturn()));
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(CredentialSqlMapper.class).selectCount(new LambdaQueryWrapper<CredentialRow>().eq(CredentialRow::getEnterpriseId, (enterprise)))));
@@ -320,10 +320,9 @@ class PluginCheckApiTest {
         assertEquals(0, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(AuditEventFixtureMapper.class).pluginCheckApiCredentialsAreEncryptedRotatedAtNextConnectionAndProtectedByPublishedReferencesObject(enterprise, firstSecret, nextSecret)));
     }
 
-    @Test
-    void enterprisePermissionsProtectCredentials() throws Exception {
-        var created = data(write(HttpMethod.POST, base() + "/credentials", session, null, UUID.randomUUID().toString(), Map.of("name", "权限检查凭据", "kind", "bearer", "secret", "isolated-plugin-key")).andExpect(status().isCreated()).andReturn());
-        String credential = created.path("id").asText();
+
+
+    private void verifyCredentialPermissions(String credential) throws Exception {
         String other = enterprises.create("另一个凭据企业", users.findById(user).orElseThrow(), Instant.now()).enterpriseId();
         write(HttpMethod.POST, "/api/v1/enterprises/" + other + "/credentials/" + credential + "/rotate", session, "1", UUID.randomUUID().toString(), Map.of("secret", "another-isolated-key")).andExpect(status().isNotFound());
         String username = "credential-member-" + UUID.randomUUID();

@@ -62,7 +62,15 @@ class ChatRoutingTest extends CollaborationApiTestSupport {
 
 
     @Test
-    void concurrentRoutingCreatesOnlyOneTaskAndKeepsOriginalActor() throws Exception {
+    void concurrentRoutingFollowupAndOwnerChecksKeepOneTask() throws Exception {
+        var chatterEvent = message("chatter", "chatter", "user", "大家中午吃什么");
+        ((ObjectNode) chatterEvent.at("/event/message")).remove("mentions");
+        ingress.accept(enterprise, bot.getId(), 1L, chatterEvent);
+        normalizeAll();
+        var chatter = onlyMessage();
+        routing.route(enterprise, chatter.getId());
+        assertEquals("ignored", messages().selectById(chatter.getId()).getRoutingStatus());
+        assertEquals(0, taskCount());
         var saved = receive("one", "统计工资和考勤");
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var first = executor.submit(() -> routing.route(enterprise, saved.getId()));
@@ -81,6 +89,27 @@ class ChatRoutingTest extends CollaborationApiTestSupport {
         assertEquals("ready", works.getFirst().getStatus());
         assertEquals("routed", messages().selectById(saved.getId()).getRoutingStatus());
         assertEquals(task.getId(), messages().selectById(saved.getId()).getTaskId());
+        var event = message("followup", "followup", "user", "时间范围更正为上个月");
+        ((ObjectNode) event.at("/event/message")).put("parent_id", "one");
+        ingress.accept(enterprise, bot.getId(), 1L, event);
+        normalizeAll();
+        var followup = messages().selectOne(new LambdaQueryWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, enterprise)
+            .eq(ChatMessageRow::getPlatformMessageId, "followup"));
+        routing.route(enterprise, followup.getId());
+        routing.route(enterprise, followup.getId());
+        var updated = onlyTask();
+        assertEquals(task.getId(), updated.getId());
+        assertEquals(2L, updated.getInputRevision());
+        assertEquals(task.getOwnerWorkId(), updated.getOwnerWorkId());
+        assertEquals("时间范围更正为上个月", cipher.decrypt(enterprise, "task-objective", task.getId(), updated.getObjectiveEncrypted())
+            .at("/additionalRequirements/0/text").asText());
+        var other = EnterpriseTestData.member(users, permissions, enterprise, "other_" + UUID.randomUUID().toString().substring(0, 8),
+            "chat-other-isolated-password", "另一成员", List.of(permissions.builtinRoleId(enterprise, "member")));
+        databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
+            .eq(UserChannelBindingRow::getId, binding.getId()).set(UserChannelBindingRow::getUserId, other.id()));
+        var incoming = receive("forged", task.getShortCode() + " 把结果改成我的要求");
+        assertEquals("COLLABORATION_TASK_UNAVAILABLE", assertThrows(ApiException.class, () -> routing.route(enterprise, incoming.getId())).code());
+        assertEquals(2L, onlyTask().getInputRevision());
     }
 
     @Test
@@ -118,53 +147,6 @@ class ChatRoutingTest extends CollaborationApiTestSupport {
         databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getId, binding.getId()).set(UserChannelBindingRow::getChatEnabled, false));
         assertThrows(ApiException.class, () -> taskAccess.actor(task));
-    }
-
-    @Test
-    void replyingToKnownTaskAddsOneRequirementVersionAndKeepsWork() {
-        var first = receive("original", "统计本月工资");
-        routing.route(enterprise, first.getId());
-        var task = onlyTask();
-        var event = message("followup", "followup", "user", "时间范围更正为上个月");
-        ((ObjectNode) event.at("/event/message")).put("parent_id", "original");
-        ingress.accept(enterprise, bot.getId(), 1L, event);
-        normalizeAll();
-        var followup = messages().selectOne(new LambdaQueryWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, enterprise)
-            .eq(ChatMessageRow::getPlatformMessageId, "followup"));
-        routing.route(enterprise, followup.getId());
-        routing.route(enterprise, followup.getId());
-        var updated = onlyTask();
-        assertEquals(task.getId(), updated.getId());
-        assertEquals(2L, updated.getInputRevision());
-        assertEquals(task.getOwnerWorkId(), updated.getOwnerWorkId());
-        assertEquals("时间范围更正为上个月", cipher.decrypt(enterprise, "task-objective", task.getId(), updated.getObjectiveEncrypted())
-            .at("/additionalRequirements/0/text").asText());
-    }
-
-    @Test
-    void anotherMemberCannotAppendToOwnersTaskByGuessingTaskCode() {
-        var original = receive("original", "工资任务");
-        routing.route(enterprise, original.getId());
-        var task = onlyTask();
-        var other = EnterpriseTestData.member(users, permissions, enterprise, "other_" + UUID.randomUUID().toString().substring(0, 8),
-            "chat-other-isolated-password", "另一成员", List.of(permissions.builtinRoleId(enterprise, "member")));
-        databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
-            .eq(UserChannelBindingRow::getId, binding.getId()).set(UserChannelBindingRow::getUserId, other.id()));
-        var incoming = receive("forged", task.getShortCode() + " 把结果改成我的要求");
-        assertEquals("COLLABORATION_TASK_UNAVAILABLE", assertThrows(ApiException.class, () -> routing.route(enterprise, incoming.getId())).code());
-        assertEquals(1L, onlyTask().getInputRevision());
-    }
-
-    @Test
-    void unmentionedChatterDoesNotCreateTask() {
-        var event = message("chatter", "chatter", "user", "大家中午吃什么");
-        ((ObjectNode) event.at("/event/message")).remove("mentions");
-        ingress.accept(enterprise, bot.getId(), 1L, event);
-        normalizeAll();
-        var saved = onlyMessage();
-        routing.route(enterprise, saved.getId());
-        assertEquals("ignored", messages().selectById(saved.getId()).getRoutingStatus());
-        assertEquals(0, taskCount());
     }
 
 }

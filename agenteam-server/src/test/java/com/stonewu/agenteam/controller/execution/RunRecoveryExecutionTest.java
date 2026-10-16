@@ -8,16 +8,24 @@ import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.execution.*;
+import com.stonewu.agenteam.mapper.usage.QuotaEntryTableMapper;
 import com.stonewu.agenteam.model.execution.entity.AgentMessageRow;
 import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
+import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
 import com.stonewu.agenteam.model.execution.entity.RunCheckpointRow;
+import com.stonewu.agenteam.model.execution.response.ContentBlock;
+import com.stonewu.agenteam.model.execution.response.ContentBlock.ToolBlockDetails;
+import com.stonewu.agenteam.model.usage.entity.QuotaEntryRow;
 import com.stonewu.agenteam.service.agent.ExecutionPaths;
 import com.stonewu.agenteam.service.execution.RunWorker;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
+import com.stonewu.agenteam.support.RunProcessTestFixture;
 import com.sun.net.httpserver.HttpExchange;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -25,6 +33,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -33,12 +42,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 真实模型连接中的损坏、空回复与取消，不得丢失已保存内容或偷偷新建上下文。
+ * 真实执行中的进程恢复、状态损坏、空回复与取消，均保留有效消息和上下文边界。
  */
 @Import(SharedEnterpriseTestEdition.class)
 class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
@@ -54,16 +65,117 @@ class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
     @Autowired
     private RunCheckpointMapper checkpoints;
 
+    @Autowired
+    private ExecutionMessageMapper messages;
+
+    @Autowired
+    private Environment environment;
+
+    @TempDir
+    Path directory;
+
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/p03-recovery-workspace");
-        registry.add("execution.state-root", () -> "target/p03-recovery-state");
+        registry.add("execution.workspace-root", () -> "target/execution-recovery-workspace");
+        registry.add("execution.state-root", () -> "target/execution-recovery-state");
     }
 
     @AfterAll
     void closeEnvironment() throws Exception {
         ENVIRONMENT.close();
+    }
+
+    @Test
+    void freshJavaProcessCompletesThePersistedRetryAndKeepsItsOriginalMessages() throws Exception {
+        modelResponse = exchange -> {
+            var request = json.readTree(exchange.getRequestBody());
+            assertTrue(request.toString().contains("仅供执行器读取的内部指令"));
+            respond(exchange, "新进程读取固定配置后完成任务。");
+        };
+        var original = submit("请执行任务");
+        write(base() + "/runs/" + original.path("runId").asText() + "/cancel", null, UUID.randomUUID().toString())
+            .andExpect(status().isAccepted());
+        var accepted = data(write(base() + "/runs/" + original.path("runId").asText() + "/retry", null,
+            UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        String run = accepted.path("runId").asText();
+        assertEquals("queued", state(accepted));
+        assertEquals(callsBefore, modelCalls.get());
+        allowModelCalls = true;
+        var process = RunProcessTestFixture.start(environment, directory, enterprise, run, "execution-restarted-worker");
+        try {
+            assertNotEquals(ProcessHandle.current().pid(), process.pid());
+            assertTrue(process.waitFor(70, TimeUnit.SECONDS), "新执行进程没有按时结束");
+            assertEquals(0, process.exitValue(), "新进程执行失败，详见 target/execution-restarted-worker.log");
+            assertEquals("completed", state(accepted));
+            var output = messages.find(enterprise, accepted.path("conversationId").asText(),
+                accepted.path("outputMessageId").asText()).orElseThrow();
+            assertEquals("新进程读取固定配置后完成任务。", output.content());
+            assertEquals("重新执行", output.blocks().getFirst().label());
+            assertEquals(2, count("agent_run"));
+            assertEquals(4, count("agent_message"));
+            assertEquals(0, reserved());
+            assertEquals("cancelled", state(original));
+            assertTrue(databaseAccess.mapper(QuotaEntryTableMapper.class).selectCount(new LambdaQueryWrapper<QuotaEntryRow>()
+                .eq(QuotaEntryRow::getRunId, run).eq(QuotaEntryRow::getState, "consumed")) > 0);
+            assertEquals(1, modelCalls.get() - callsBefore);
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                process.waitFor(10, TimeUnit.SECONDS);
+            }
+        }
+    }
+
+    @Test
+    void toolOnlyAndPartialInterruptedRepliesBothRemainInTheNextModelRequest() throws Exception {
+        String toolOnlyResult = "文件检查已找到配置入口 config/application.yml";
+        String partialResult = "接口检查已找到服务入口 src/api.ts";
+        String partial = "已经输出的第一段接入说明。";
+        var first = submit("先检查文件配置");
+        saveInterruptedReply(first, "", toolOnlyResult);
+        saveInterruptedReply(send(first, "再检查接口配置"), partial, partialResult);
+
+        var actualRequest = new AtomicReference<JsonNode>();
+        modelResponse = exchange -> {
+            actualRequest.set(json.readTree(exchange.getRequestBody()));
+            respond(exchange, "继续处理剩余工作。");
+        };
+        var next = send(first, "请接着之前已经完成的内容继续");
+        allowModelCalls = true;
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> runs.find(enterprise, next.path("runId").asText(), false).orElseThrow().terminal());
+        }
+        assertEquals("completed", state(next));
+        String sent = actualRequest.get().path("messages").toString();
+        assertTrue(sent.contains(toolOnlyResult), "没有文字的中断回复也必须保留已完成工具的结果");
+        assertTrue(sent.contains(partialResult) && sent.contains(partial), "中断前的文字和已完成工具结果必须同时保留");
+        assertTrue(sent.contains("read_url") && sent.contains("已停止"), "未完成工具必须以历史停止状态保留");
+        assertFalse(sent.contains("\"tool_calls\""), "中断历史不能作为待执行工具调用恢复");
+        assertEquals(1, modelCalls.get() - callsBefore, "继续提问只发起本轮模型请求");
+    }
+
+    private void saveInterruptedReply(JsonNode accepted, String partial, String result) throws Exception {
+        var lease = lifecycle.claim("中断上下文测试").orElseThrow();
+        assertEquals(accepted.path("runId").asText(), lease.runId());
+        var run = lifecycle.start(lease).orElseThrow();
+        var completed = new ContentBlock("saved-" + run.id(), "tool", null, 0, "1", "", "completed", null,
+            null, null, null, "read_file", new ToolBlockDetails("saved-" + run.id(), "read_file", null,
+            "{\"path\":\"config/application.yml\"}", result, "completed", "completed"));
+        var stopped = new ContentBlock("stopped-" + run.id(), "tool", null, 1, "1", "", "running", null,
+            null, null, null, "read_url", new ToolBlockDetails("stopped-" + run.id(), "read_url", null,
+            "{\"url\":\"https://example.test/pending\"}", "", "completed", "running"));
+        var text = new ContentBlock("partial-" + run.id(), "text", null, 2, "1", partial, "running", null,
+            null, null, null, null, null);
+        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(completed, stopped, text).stream()
+            .map(block -> new ExecutionChange(block, null, "0", null, null, null)).toList());
+        write(base() + "/runs/" + run.id() + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
+        lifecycle.finish(lease, "cancelled", null, null);
+        var persisted = messages.find(enterprise, run.conversationId(), run.outputMessageId()).orElseThrow();
+        assertEquals(partial, persisted.content());
+        assertEquals("cancelled", persisted.status());
+        assertTrue(persisted.blocks().stream().anyMatch(block -> block.tool() != null && block.tool().result().contains(result)));
     }
 
     @Test
@@ -151,7 +263,8 @@ class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
             };
             var stopped = send(first, "中途停止的问题");
             worker.poll();
-            await(() -> "需要保留的部分回复".equals(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getContent).eq(AgentMessageRow::getId, (stopped.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getContent()).toList())));
+            await(() -> "需要保留的部分回复".equals(visibleMessage(stopped.path("conversationId").asText(),
+                stopped.path("outputMessageId").asText()).path("content").asText()));
             write(base() + "/runs/" + stopped.path("runId").asText() + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
             var pollingThread = new AtomicReference<Thread>();
             try (var polling = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -214,7 +327,6 @@ class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
 
     private void respond(HttpExchange exchange, String text) throws IOException {
         try {
-            exchange.getRequestBody().readAllBytes();
             begin(exchange);
             frame(exchange, text, true);
         } finally {

@@ -7,6 +7,7 @@ import com.stonewu.agenteam.model.resource.entity.ResourceKind;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workflow.WorkflowGraphValidator;
 import com.stonewu.agenteam.service.workflow.WorkflowInputValidation;
+import com.stonewu.agenteam.service.workflow.WorkflowNodes;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -33,10 +34,17 @@ public class WorkflowConfigurationValidator implements ResourceConfigValidator {
     @Override
     public void draft(JsonNode config) {
         WorkflowInputValidation.validate(config, false);
+        validateDraftGraph(config);
+    }
+
+    private void validateDraftGraph(JsonNode config) {
         Set<String> nodes = new HashSet<>(), edges = new HashSet<>();
         for (var node : config.path("nodes")) {
             if (!nodes.add(node.path("nodeId").asText())) {
                 throw ApiException.invalidField("config.nodes", "节点编号不能重复。");
+            }
+            if (node.path("type").asText().equals("loop")) {
+                validateDraftGraph(node.path("config").path("body"));
             }
         }
         for (var edge : config.path("edges")) {
@@ -60,8 +68,9 @@ public class WorkflowConfigurationValidator implements ResourceConfigValidator {
     public List<DependencyBinding> dependencies(JsonNode config) {
         var result = new ArrayList<DependencyBinding>();
         int ordinal = 0;
-        for (var node : config.path("nodes")) {
-            String prefix = "nodes/" + node.path("nodeId").asText() + "/config/";
+        for (var entry : WorkflowNodes.entries(config)) {
+            var node = entry.node();
+            String prefix = entry.path() + "/config/";
             var fields = node.path("config");
             DependencyFields.add(result, fields.get("agentVersionId"), "agent", prefix + "agentVersionId", ordinal);
             DependencyFields.add(result, fields.get("skillVersionId"), "skill", prefix + "skillVersionId", ordinal);

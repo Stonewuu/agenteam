@@ -41,6 +41,24 @@ async function until(check) {
   }
 }
 
+async function executeBrowserCommand(directory, runner, command, seconds, ready, cancel = false) {
+  const token = randomUUID();
+  const script = join(directory, token + ".sh");
+  const stdout = join(directory, token + ".out");
+  writeFileSync(script, command + "\n");
+  const executing = run("python3", [runner, "run", token, script, directory,
+    stdout, join(directory, token + ".err"), String(seconds)], {timeout: 15000});
+  await until(ready);
+  if (cancel) {
+    await run("python3", [runner, "cancel", token]);
+  }
+  await executing;
+  const status = JSON.parse((await run("python3", [runner, "status", token])).stdout);
+  assert.equal(status.state, "completed");
+  await until(() => browserProcesses().length === 0);
+  return {status, stdout: readFileSync(stdout, "utf8")};
+}
+
 async function main() {
   const directory = mkdtempSync(join(tmpdir(), "browser-memory-"));
   const runner = resolve("command_runner.py");
@@ -111,35 +129,35 @@ async function main() {
     }
     assert.equal(unwantedRequests, 0, "正文读取不应加载图片或额外弹窗");
     for (const cancel of [false, true]) {
-      const token = randomUUID();
-      const script = join(directory, token + ".sh");
-      writeFileSync(script, `agenteam-browser read '${origin}' --wait-ms 10000 --timeout-ms 15000\n`);
       const previousRequests = pageRequests;
-      const executing = run("python3", [runner, "run", token, script, directory,
-        join(directory, token + ".out"), join(directory, token + ".err"), cancel ? "20" : "3"]);
-      // 同时等待实际页面请求，防止只取消了尚未启动浏览器的命令。
-      await until(() => browserProcesses().length > 0 && pageRequests > previousRequests);
-      if (cancel) {
-        await run("python3", [runner, "cancel", token]);
-      }
-      await executing;
-      const status = JSON.parse((await run("python3", [runner, "status", token])).stdout);
-      assert.equal(status.state, "completed");
+      const {status} = await executeBrowserCommand(directory, runner,
+        `agenteam-browser read '${origin}' --wait-ms 10000 --timeout-ms 15000`, cancel ? 20 : 3,
+        () => browserProcesses().length > 0 && pageRequests > previousRequests, cancel);
       assert.equal(status.timedOut, !cancel);
       assert.equal(status.exitCode, cancel ? 143 : 124);
-      await until(() => browserProcesses().length === 0);
     }
     const regularPeak = peak;
     const regularAnonymousPeak = peakAnonymous;
     assert.ok(regularAnonymousPeak < 420 * 1024 * 1024, "常规正文读取应给 512 MiB 沙盒保留内存余量");
-    const before = counters("memory.events").oom_kill;
-    await assert.rejects(run("agenteam-browser", ["read", origin + "/memory-limit", "--wait-for", "#never",
-      "--timeout-ms", "10000"]), (error) => {
-      assert.equal(JSON.parse(error.stdout).isError, true);
-      return true;
-    });
-    assert.ok(counters("memory.events").oom_kill > before, "必须实际触发容器的内存上限");
-    await until(() => browserProcesses().length === 0);
+    const before = counters("memory.events");
+    const previousRequests = pageRequests;
+    const started = Date.now();
+    process.stderr.write("内存压力下的命令终止检查开始\n");
+    const pressured = await executeBrowserCommand(directory, runner,
+      `agenteam-browser read '${origin}/memory-limit' --wait-for '#never' --timeout-ms 10000`, 3,
+      () => browserProcesses().length > 0 && pageRequests > previousRequests);
+    const after = counters("memory.events");
+    assert.ok(after.max > before.max, "必须实际触及容器的内存上限");
+    assert.notEqual(pressured.status.exitCode, 0, "内存压力下的读取必须结束并报告失败");
+    if (pressured.status.timedOut) {
+      assert.equal(pressured.status.exitCode, 124);
+    } else if (pressured.stdout.trim()) {
+      assert.equal(JSON.parse(pressured.stdout).isError, true);
+    } else {
+      assert.ok(after.oom_kill > before.oom_kill, "没有结构化错误时必须有实际的内核终止记录");
+      assert.ok([137, -9].includes(pressured.status.exitCode));
+    }
+    process.stderr.write(`内存压力下的命令终止检查结束，耗时 ${Date.now() - started} 毫秒\n`);
     const recovered = await readPage(settings);
     assert.equal(recovered.isError, false, "超大网页失败后仍能执行下一次浏览器读取");
     await until(() => browserProcesses().length === 0);

@@ -135,39 +135,14 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         assertEquals(before, modelCalls.get());
     }
 
-    @Test
-    void remoteModelsUseTheSavedProviderWithoutReturningCredentials() throws Exception {
-        var seenKey = new ArrayList<String>();
-        modelServer.createContext("/v1/models", exchange -> {
-            seenKey.add(exchange.getRequestHeaders().getFirst("Authorization"));
-            byte[] body = "{\"data\":[{\"id\":\"remote-chat\"}]}".getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(200, body.length);
-            try (var output = exchange.getResponseBody()) {
-                output.write(body);
-            }
-        });
-        try {
-            String providerId = data(write(base() + "/model-providers", provider("远程列表提供方", "catalog-key", true), UUID.randomUUID().toString())
-                .andExpect(status().isCreated()).andReturn()).path("id").asText();
-            var result = mvc.perform(get(base() + "/model-providers/" + providerId + "/remote-models").cookie(cookie))
-                .andExpect(status().isOk()).andReturn();
-            assertEquals("remote-chat", data(result).get(0).path("id").asText());
-            assertEquals(List.of("Bearer catalog-key"), seenKey);
-            assertFalse(result.getResponse().getContentAsString().contains("catalog-key"));
-            String other = provisioning.create("另一个远程模型企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
-            mvc.perform(get("/api/v1/enterprises/" + other + "/model-providers/" + providerId + "/remote-models").cookie(cookie))
-                .andExpect(status().isNotFound());
-            assertEquals(1, seenKey.size());
-        } finally {
-            modelServer.removeContext("/v1/models");
-        }
-    }
+
 
     @Test
     void modelAdministrationChecksPermissionsEnterpriseOwnershipAndInputConstraints() throws Exception {
         String providerId = data(write(base() + "/model-providers", provider("权限测试提供方", "private-model-key", true), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).path("id").asText();
         String other = provisioning.create("另一个模型企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         write("/api/v1/enterprises/" + other + "/models", model(providerId, "跨企业模型", "model", true), UUID.randomUUID().toString()).andExpect(status().isNotFound());
+        verifyRemoteModels(providerId, other);
         var invalid = model(providerId, "错误能力模型", "model", true);
         invalid.put("capabilities", Map.of("supportsTools", true, "supportsTemperature", true, "maxOutputTokens", 0, "maxContextTokens", 32768, "inputTypes", List.of("text")));
         write(base() + "/models", invalid, UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
@@ -184,6 +159,30 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         mvc.perform(get(base() + "/model-providers").cookie(login.getResponse().getCookie("SESSION"))).andExpect(status().isForbidden());
         mvc.perform(get(base() + "/model-providers/" + providerId + "/remote-models").cookie(login.getResponse().getCookie("SESSION"))).andExpect(status().isForbidden());
         mvc.perform(get(base() + "/models").cookie(login.getResponse().getCookie("SESSION"))).andExpect(status().isForbidden());
+    }
+
+    private void verifyRemoteModels(String providerId, String other) throws Exception {
+        var seenKey = new ArrayList<String>();
+        modelServer.createContext("/v1/models", exchange -> {
+            seenKey.add(exchange.getRequestHeaders().getFirst("Authorization"));
+            byte[] body = "{\"data\":[{\"id\":\"remote-chat\"}]}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(body);
+            }
+        });
+        try {
+            var result = mvc.perform(get(base() + "/model-providers/" + providerId + "/remote-models").cookie(cookie))
+                .andExpect(status().isOk()).andReturn();
+            assertEquals("remote-chat", data(result).get(0).path("id").asText());
+            assertEquals(List.of("Bearer private-model-key"), seenKey);
+            assertFalse(result.getResponse().getContentAsString().contains("private-model-key"));
+            mvc.perform(get("/api/v1/enterprises/" + other + "/model-providers/" + providerId + "/remote-models").cookie(cookie))
+                .andExpect(status().isNotFound());
+            assertEquals(1, seenKey.size());
+        } finally {
+            modelServer.removeContext("/v1/models");
+        }
     }
 
     private Map<String, Object> provider(String name, String key, boolean enabled) {

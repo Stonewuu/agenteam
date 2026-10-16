@@ -2,6 +2,7 @@ package com.stonewu.agenteam.configuration.plugin;
 
 import com.stonewu.agenteam.mapper.plugin.PlatformToolDefinitions;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
+import com.stonewu.agenteam.mapper.workflow.WorkflowToolDefinitions;
 import com.stonewu.agenteam.service.plugin.PlatformBuiltinPluginAdapter;
 import com.stonewu.agenteam.service.plugin.PlatformBusinessTools;
 import org.springframework.beans.factory.ObjectProvider;
@@ -10,6 +11,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class PlatformBuiltinPlugins {
+
+    @Bean
+    public PlatformBuiltinPluginAdapter workflowManagement(WorkflowToolDefinitions tools,
+                                                            ObjectProvider<PlatformBusinessTools> business) {
+        return new PlatformBuiltinPluginAdapter("workflow_management", "工作流管理",
+            "查询、创建和编辑已授权的工作流草稿，选择真实插件与智能体并检查流程。", tools.tools(), business);
+    }
 
     @Bean
     public PlatformBuiltinPluginAdapter groupCollaboration(CollaborationToolDefinitions tools,

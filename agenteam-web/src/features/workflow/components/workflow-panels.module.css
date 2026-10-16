@@ -1,0 +1,158 @@
+.floating {
+  position: absolute;
+  inset: 12px 12px 12px auto;
+  z-index: 15;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgb(0 0 0 / .12);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .floating {
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    backdrop-filter: blur(28px) saturate(1.2);
+  }
+}
+
+.assistant {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100% - 24px));
+  overflow: hidden;
+  transition: transform 200ms ease, opacity 200ms ease, visibility 0s;
+}
+
+.inspector {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  width: min(360px, calc(100% - 24px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 20px;
+  animation: revealInspector 180ms ease-out;
+}
+
+.inspector[hidden] {
+  display: none;
+}
+
+.inspector h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.inspector > :first-child {
+  position: sticky;
+  top: -20px;
+  z-index: 3;
+  margin: -20px -20px 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--glass-background, var(--surface));
+  backdrop-filter: blur(16px);
+}
+
+.inspector > button {
+  justify-self: start;
+}
+
+@keyframes revealInspector {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.assistant[data-open=false] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(24px);
+  transition: transform 200ms ease, opacity 200ms ease, visibility 0s 200ms;
+}
+
+.fixed {
+  position: fixed;
+  top: calc(var(--topbar-height, 64px) + 12px);
+  bottom: 12px;
+  z-index: 45;
+}
+
+.header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.setup {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+
+.setupContent {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px;
+  margin: -4px;
+  overscroll-behavior: contain;
+}
+
+.setup textarea {
+  resize: none;
+  min-height: 150px;
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .floating {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+
+  .inspector > :first-child {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant {
+    transition: none;
+  }
+
+  .inspector {
+    animation: none;
+  }
+}

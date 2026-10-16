@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 记录实际知识查询的三个阶段，并以明确参数重放固定诊断方案。
+ * 记录实际知识查询的三个阶段，并以明确业务参数读取当前查询的执行计划。
  */
 public final class KnowledgeDatabaseTimings {
     private static final String VERSIONS = "当前资料版本";
@@ -23,7 +23,7 @@ public final class KnowledgeDatabaseTimings {
     private final ThreadLocal<Search> current = new ThreadLocal<>();
     private boolean recording = true;
 
-    private record Query(String phase, String sql, KnowledgeQuerySample sample) {
+    private record Query(String phase, KnowledgeQuerySample sample) {
     }
 
     private static final class Search {
@@ -62,7 +62,7 @@ public final class KnowledgeDatabaseTimings {
         return current.get() != null;
     }
 
-    public synchronized void record(String statement, String sql, Object parameters, Object result, long elapsed) {
+    public synchronized void record(String statement, Object result, long elapsed) {
         Search search = current.get();
         if (!recording || search == null || !(result instanceof List<?> rows)) {
             return;
@@ -81,7 +81,7 @@ public final class KnowledgeDatabaseTimings {
         }
         samples.computeIfAbsent(phase, ignored -> new ArrayList<>()).add(elapsed / 1_000_000.0);
         if (!rows.isEmpty()) {
-            queries.putIfAbsent(phase + "：" + search.enterprise, new Query(phase, sql, search.sample()));
+            queries.putIfAbsent(phase + "：" + search.enterprise, new Query(phase, search.sample()));
         }
     }
 
@@ -112,38 +112,10 @@ public final class KnowledgeDatabaseTimings {
         var result = new LinkedHashMap<String, Object>();
         queries.forEach((name, query) -> result.put(name, switch (query.phase()) {
             case VERSIONS -> mapper.explainVersions(query.sample());
-            case RANKS -> mapper.explainRanks(query.sample(), "CURRENT");
+            case RANKS -> mapper.explainRanks(query.sample());
             case CITATIONS -> mapper.explainCitations(query.sample());
             default -> throw new IllegalStateException("没有对应的知识查询诊断");
         }));
-        return result;
-    }
-
-    public synchronized Map<String, Object> compareKnowledgeQueries(MybatisTestDatabase database) {
-        var mapper = database.mapper(KnowledgePlanFixtureMapper.class);
-        var result = new LinkedHashMap<String, Object>();
-        queries.forEach((name, query) -> {
-            if (!query.phase().equals(RANKS)) {
-                return;
-            }
-            var comparison = new LinkedHashMap<String, Object>();
-            for (String variant : List.of("CURRENT", "EXPANDED", "BOOLEAN")) {
-                var elapsed = new ArrayList<Double>();
-                List<Map<String, Object>> rows = List.of();
-                for (int repeat = 0; repeat < 2; repeat++) {
-                    long started = System.nanoTime();
-                    rows = mapper.compareRanks(query.sample(), variant);
-                    elapsed.add((System.nanoTime() - started) / 1_000_000.0);
-                }
-                String label = switch (variant) {
-                    case "CURRENT" -> "当前查询";
-                    case "EXPANDED" -> "逐项检查相同版本";
-                    default -> "普通检索词使用布尔全文模式";
-                };
-                comparison.put(label, Map.of("millis", elapsed, "rows", rows, "plan", mapper.explainRanks(query.sample(), variant)));
-            }
-            result.put(name, Map.of("sql", query.sql(), "parameters", query.sample(), "variants", comparison));
-        });
         return result;
     }
 }

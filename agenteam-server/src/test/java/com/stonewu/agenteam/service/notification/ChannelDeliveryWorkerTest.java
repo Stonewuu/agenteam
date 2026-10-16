@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -9,7 +10,6 @@ import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
-import com.stonewu.agenteam.mapper.integration.UserChannelPreferenceMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationChannelAttemptMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationChannelDeliveryMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
@@ -18,7 +18,6 @@ import com.stonewu.agenteam.model.integration.entity.ChannelRateLimit;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
 import com.stonewu.agenteam.model.integration.entity.UserChannelBindingRow;
-import com.stonewu.agenteam.model.integration.entity.UserChannelPreferenceRow;
 import com.stonewu.agenteam.model.notification.entity.NotificationChannelAttemptRow;
 import com.stonewu.agenteam.model.notification.entity.NotificationChannelDeliveryRow;
 import com.stonewu.agenteam.service.integration.ChannelRateLimiter;
@@ -82,7 +81,7 @@ class ChannelDeliveryWorkerTest extends ExecutionApiTestSupport {
     @Autowired private ChannelRateLimiter limiter;
     @Autowired private EnterpriseIntegrationMapper connections;
     @Autowired private UserChannelBindingMapper bindings;
-    @Autowired private UserChannelPreferenceMapper preferences;
+    @Autowired private BackgroundJobMapper jobQueue;
     @Autowired private NotificationChannelDeliveryMapper deliveries;
     @Autowired private NotificationChannelAttemptMapper attempts;
     @Autowired private BackgroundJobSqlMapper jobs;
@@ -151,6 +150,33 @@ class ChannelDeliveryWorkerTest extends ExecutionApiTestSupport {
         assertEquals(3600, request.path("duplicate_check_interval").asInt());
         assertEquals("failed", current(row).getStatus());
         assertNull(current(row).getAcceptedAt());
+        for (var candidate : inApp.candidates()) {
+            inApp.deliver(candidate);
+        }
+        assertTrue(noticeRows.exists(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getEnterpriseId, enterprise)
+            .eq(NotificationRow::getEventKey, "channel-failure:" + row.getId())));
+        assertEquals(1, deliveries.selectCount(new LambdaQueryWrapper<NotificationChannelDeliveryRow>()
+            .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)));
+        Instant old = Instant.now().minus(Duration.ofDays(181));
+        deliveries.update(new LambdaUpdateWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getId, row.getId())
+            .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise).set(NotificationChannelDeliveryRow::getExpiresAt, old)
+            .set(NotificationChannelDeliveryRow::getUpdatedAt, Instant.now().minus(Duration.ofDays(31))));
+        retention.sweep();
+        assertNull(current(row).getPayloadJson());
+        assertEquals(1, history(row).size());
+        deliveries.update(new LambdaUpdateWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getId, row.getId())
+            .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise).set(NotificationChannelDeliveryRow::getUpdatedAt, old));
+        attempts.update(new LambdaUpdateWrapper<NotificationChannelAttemptRow>().eq(NotificationChannelAttemptRow::getDeliveryId, row.getId())
+            .eq(NotificationChannelAttemptRow::getEnterpriseId, enterprise).set(NotificationChannelAttemptRow::getFinishedAt, old));
+        jobs.update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getId, row.getActiveJobId())
+            .eq(BackgroundJobRow::getEnterpriseId, enterprise).set(BackgroundJobRow::getUpdatedAt, old));
+        retention.sweep();
+        assertNull(current(row));
+        assertTrue(history(row).isEmpty());
+        assertNull(jobs.selectById(row.getActiveJobId()));
+        assertNotNull(noticeRows.selectById(row.getNotificationId()));
+        retention.sweep();
+
     }
 
     @Test
@@ -287,7 +313,7 @@ class ChannelDeliveryWorkerTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void automaticDeliveryRequiresExplicitPreferenceAndDoesNotReplayOldEvents() {
+    void automaticDeliveryRequiresExplicitPreferenceAndDoesNotReplayOldEvents() throws Exception {
         var connection = configure("feishu");
         tx.executeWithoutResult(status -> {
             var first = writer.write(enterprise, admin, notice(), null, null).orElseThrow();
@@ -295,13 +321,13 @@ class ChannelDeliveryWorkerTest extends ExecutionApiTestSupport {
         });
         assertEquals(0, deliveries.selectCount(new LambdaQueryWrapper<NotificationChannelDeliveryRow>()
             .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)));
-        var preference = new UserChannelPreferenceRow();
-        preference.setEnterpriseId(enterprise);
-        preference.setUserId(admin);
-        preference.setConnectionId(connection.getId());
-        preference.setCategory("schedule");
-        preference.setEnabled(true);
-        preferences.insert(preference);
+        String preferencePath = base() + "/me/channel-preferences";
+        var options = data(mvc.perform(get(preferencePath).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertFalse(options.at("/0/categories/0/enabled").asBoolean());
+        var choice = Map.of("connectionId", connection.getId(), "category", "schedule", "enabled", true);
+        change(HttpMethod.PUT, preferencePath, choice, "1", UUID.randomUUID().toString()).andExpect(status().isOk());
+        change(HttpMethod.PUT, preferencePath, choice, "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
+
         tx.executeWithoutResult(status -> {
             var old = writer.write(enterprise, admin, notice(), null, null).orElseThrow();
             routing.automatic(old.notification(), Instant.now().minusSeconds(86401));
@@ -310,6 +336,18 @@ class ChannelDeliveryWorkerTest extends ExecutionApiTestSupport {
         });
         assertEquals(1, deliveries.selectCount(new LambdaQueryWrapper<NotificationChannelDeliveryRow>()
             .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)));
+        String path = base() + "/integrations/" + connection.getId();
+        var recipients = data(mvc.perform(get(path + "/recipients").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(admin, recipients.at("/items/0/id").asText());
+        String key = UUID.randomUUID().toString();
+        var first = data(change(HttpMethod.POST, path + "/test-messages", Map.of("recipientUserId", admin), "1", key)
+            .andExpect(status().isCreated()).andReturn());
+        assertEquals(first, data(change(HttpMethod.POST, path + "/test-messages", Map.of("recipientUserId", admin), "1", key)
+            .andExpect(status().isCreated()).andReturn()));
+        assertFalse(first.toString().contains("payloadJson"));
+        assertFalse(first.toString().contains("ou_test_member"));
+        mvc.perform(get(base() + "/notifications/" + first.at("/delivery/notificationId").asText()).cookie(cookie)).andExpect(status().isOk());
+        verifyQueuedNoticeSnapshots();
     }
 
     @Test
@@ -375,66 +413,39 @@ class ChannelDeliveryWorkerTest extends ExecutionApiTestSupport {
         assertEquals(2, current(row).getMaxAttempts());
     }
 
-    @Test
-    void preferenceAndTestMessageApisUseVersionsAndDoNotExposePayloads() throws Exception {
-        var connection = configure("feishu");
-        String preferencePath = base() + "/me/channel-preferences";
-        var options = data(mvc.perform(get(preferencePath).cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertFalse(options.at("/0/categories/0/enabled").asBoolean());
-        var choice = Map.of("connectionId", connection.getId(), "category", "schedule", "enabled", true);
-        change(HttpMethod.PUT, preferencePath, choice, "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        change(HttpMethod.PUT, preferencePath, choice, "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
-        String path = base() + "/integrations/" + connection.getId();
-        var recipients = data(mvc.perform(get(path + "/recipients").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertEquals(admin, recipients.at("/items/0/id").asText());
-        String key = UUID.randomUUID().toString();
-        var first = data(change(HttpMethod.POST, path + "/test-messages", Map.of("recipientUserId", admin), "1", key)
-            .andExpect(status().isCreated()).andReturn());
-        assertEquals(first, data(change(HttpMethod.POST, path + "/test-messages", Map.of("recipientUserId", admin), "1", key)
-            .andExpect(status().isCreated()).andReturn()));
-        assertFalse(first.toString().contains("payloadJson"));
-        assertFalse(first.toString().contains("ou_test_member"));
-        mvc.perform(get(base() + "/notifications/" + first.at("/delivery/notificationId").asText()).cookie(cookie)).andExpect(status().isOk());
+
+
+    private void verifyQueuedNoticeSnapshots() {
+        long beforeNotices = noticeRows.selectCount(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getEnterpriseId, enterprise));
+        long beforeDeliveries = deliveries.selectCount(new LambdaQueryWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise));
+        var legacy = new Notice("legacy-" + UUID.randomUUID(), "schedule", "升级前已排队", "旧通知正文", null, null);
+        tx.executeWithoutResult(status -> jobQueue.enqueue(UUID.randomUUID().toString(), enterprise, admin,
+            "notification", "legacy-queue-" + UUID.randomUUID(), json.valueToTree(legacy).toString(), Instant.now()));
+        var current = new Notice("current-" + UUID.randomUUID(), "schedule", "升级后新事件", "新通知正文", null, null);
+        tx.executeWithoutResult(status -> inApp.enqueue(enterprise, admin, current));
+        var pending = inApp.candidates().stream().filter(candidate -> candidate.enterprise().equals(enterprise)).toList();
+        assertEquals(2, pending.size());
+        pending.forEach(inApp::deliver);
+        var written = noticeRows.selectList(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getEnterpriseId, enterprise)
+            .in(NotificationRow::getEventKey, List.of(legacy.eventKey(), current.eventKey())));
+        assertEquals(2, written.size());
+        var sent = deliveries.selectList(new LambdaQueryWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)
+            .in(NotificationChannelDeliveryRow::getNotificationId, written.stream().map(NotificationRow::getId).toList()));
+        assertEquals(1, sent.size());
+        String currentId = written.stream().filter(row -> row.getTitle().equals(current.title())).findFirst().orElseThrow().getId();
+        assertEquals(currentId, sent.getFirst().getNotificationId());
+        assertEquals("pending", sent.getFirst().getStatus());
+        assertTrue(inApp.candidates().stream().noneMatch(candidate -> candidate.enterprise().equals(enterprise)));
+        pending.forEach(inApp::deliver);
+        assertEquals(beforeNotices + 2, noticeRows.selectCount(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getEnterpriseId, enterprise)));
+        assertEquals(beforeDeliveries + 1, deliveries.selectCount(new LambdaQueryWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)));
     }
 
     private EnterpriseIntegrationRow configure(String provider) {
         return new ChannelDeliveryFixtures(tx, secrets, queries, connections, bindings).configure(enterprise, admin, provider);
     }
 
-    @Test
-    void retentionPreservesBusinessNoticesAndFailureReminderNeverCreatesAnExternalLoop() {
-        var row = enqueue(configure("feishu"));
-        var lease = transactions.claim("retention-test").orElseThrow();
-        var start = transactions.begin(lease);
-        transactions.complete(lease, start.attemptId(), new ChannelSendResult(ChannelSendResult.Outcome.PERMANENT_FAILURE, "230027", null,
-            "CHANNEL_PERMISSION_DENIED", "没有发送权限。", null, 400, null));
-        for (var candidate : inApp.candidates()) {
-            inApp.deliver(candidate);
-        }
-        assertTrue(noticeRows.exists(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getEnterpriseId, enterprise)
-            .eq(NotificationRow::getEventKey, "channel-failure:" + row.getId())));
-        assertEquals(1, deliveries.selectCount(new LambdaQueryWrapper<NotificationChannelDeliveryRow>()
-            .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)));
-        Instant old = Instant.now().minus(Duration.ofDays(181));
-        deliveries.update(new LambdaUpdateWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getId, row.getId())
-            .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise).set(NotificationChannelDeliveryRow::getExpiresAt, old)
-            .set(NotificationChannelDeliveryRow::getUpdatedAt, Instant.now().minus(Duration.ofDays(31))));
-        retention.sweep();
-        assertNull(current(row).getPayloadJson());
-        assertEquals(1, history(row).size());
-        deliveries.update(new LambdaUpdateWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getId, row.getId())
-            .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise).set(NotificationChannelDeliveryRow::getUpdatedAt, old));
-        attempts.update(new LambdaUpdateWrapper<NotificationChannelAttemptRow>().eq(NotificationChannelAttemptRow::getDeliveryId, row.getId())
-            .eq(NotificationChannelAttemptRow::getEnterpriseId, enterprise).set(NotificationChannelAttemptRow::getFinishedAt, old));
-        jobs.update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getId, row.getActiveJobId())
-            .eq(BackgroundJobRow::getEnterpriseId, enterprise).set(BackgroundJobRow::getUpdatedAt, old));
-        retention.sweep();
-        assertNull(current(row));
-        assertTrue(history(row).isEmpty());
-        assertNull(jobs.selectById(row.getActiveJobId()));
-        assertNotNull(noticeRows.selectById(row.getNotificationId()));
-        retention.sweep();
-    }
+
 
     private NotificationChannelDeliveryRow enqueue(EnterpriseIntegrationRow connection) {
         return enqueue(connection, notice());

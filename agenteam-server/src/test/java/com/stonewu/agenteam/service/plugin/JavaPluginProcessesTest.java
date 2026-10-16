@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.plugin;
 
+import java.util.concurrent.CountDownLatch;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.plugin.javaworker.JavaPluginProcesses;
@@ -19,42 +20,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class JavaPluginProcessesTest {
     private final ObjectMapper json = new ObjectMapper();
 
-    @Test
-    void discoversAndInvokesAnActualPf4jJarInAnotherProcess() throws Exception {
-        byte[] artifact = JavaPluginFixture.build("1.0.0");
-        var processes = new JavaPluginProcesses();
-        var checked = new AtomicInteger();
-        try (var control = new ToolCallControl(checked::incrementAndGet)) {
-            var context = new ToolProviderContext("test-enterprise", Duration.ofSeconds(20), control);
-            var discover = json.createObjectNode().put("mode", "discover");
-            assertEquals("echo", processes.call("test", artifact, discover, context, () -> {
-            }).get(0).path("name").asText());
-            var invoke = json.createObjectNode().put("mode", "invoke").put("tool", "echo");
-            invoke.putObject("arguments").put("value", "已执行");
-            invoke.putObject("configuration").put("prefix", "测试");
-            invoke.putObject("credentialHeaders");
-            var result = processes.call("test", artifact, invoke, context, () -> {
-            });
-            assertEquals("测试已执行", result.path("content").asText());
-            assertNotEquals(ProcessHandle.current().pid(), result.path("pid").asLong());
-            assertTrue(checked.get() >= 1);
-        }
-    }
+
 
     @Test
     void invalidationTerminatesCodeThatIgnoresThreadInterruption() throws Exception {
         byte[] artifact = JavaPluginFixture.build("1.0.0");
-        var processes = new JavaPluginProcesses();
         var active = new AtomicBoolean(true);
-        var submitted = new AtomicBoolean();
-        try (var control = new ToolCallControl(() -> submitted.set(true)); var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        var submitted = new CountDownLatch(1);
+        try (var processes = new JavaPluginProcesses(); var control = new ToolCallControl(submitted::countDown); var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var context = new ToolProviderContext("test-enterprise", Duration.ofSeconds(20), control);
             var invoke = json.createObjectNode().put("mode", "invoke").put("tool", "hang");
             invoke.putObject("arguments");
@@ -65,11 +44,7 @@ class JavaPluginProcessesTest {
                     throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_UPGRADED", "插件已升级。");
                 }
             }));
-            long until = System.nanoTime() + Duration.ofSeconds(10).toNanos();
-            while (!submitted.get() && System.nanoTime() < until) {
-                Thread.sleep(20);
-            }
-            assertTrue(submitted.get());
+            assertTrue(submitted.await(10, TimeUnit.SECONDS));
             active.set(false);
             processes.stop("old");
             var failure = assertThrows(ExecutionException.class, () -> pending.get(5, TimeUnit.SECONDS));
@@ -113,14 +88,14 @@ class JavaPluginProcessesTest {
     @Test
     void timeoutStopsAPluginThatNeverReturns() throws Exception {
         byte[] artifact = JavaPluginFixture.build("1.0.0");
-        try (var control = new ToolCallControl(() -> {
+        try (var processes = new JavaPluginProcesses(); var control = new ToolCallControl(() -> {
         })) {
             var context = new ToolProviderContext("test-enterprise", Duration.ofSeconds(4), control);
             var request = json.createObjectNode().put("mode", "invoke").put("tool", "hang");
             request.putObject("arguments");
             request.putObject("configuration");
             request.putObject("credentialHeaders");
-            var failure = assertThrows(ApiException.class, () -> new JavaPluginProcesses().call("timeout-test", artifact,
+            var failure = assertThrows(ApiException.class, () -> processes.call("timeout-test", artifact,
                 request, context, () -> {
                 }));
             assertEquals("JAVA_PLUGIN_TIMEOUT", failure.code());

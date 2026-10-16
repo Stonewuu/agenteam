@@ -54,7 +54,7 @@ public class LiveEventDelivery {
     public LiveExecutionSession open(RunRecord run, JobLease lease, List<ContentBlock> initial) {
         database.requireLease(run, lease);
         var session = new LiveExecutionSession(this, run, lease, initial, clock);
-        var old = sessions.putIfAbsent(lease.id(), session);
+        var old = sessions.putIfAbsent(LiveEventCache.token(lease), session);
         if (old != null) {
             session.close();
             throw new IllegalStateException("同一次执行资格不能创建多个独立事件入口");
@@ -63,7 +63,7 @@ public class LiveEventDelivery {
     }
 
     public void closed(JobLease lease, LiveExecutionSession session) {
-        sessions.remove(lease.id(), session);
+        sessions.remove(LiveEventCache.token(lease), session);
     }
 
     public LiveConversationState ensure(RunRecord run) {
@@ -162,7 +162,7 @@ public class LiveEventDelivery {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void renewed(ExecutionLeaseRenewed renewed) {
-        var session = sessions.get(renewed.lease().id());
+        var session = sessions.get(LiveEventCache.token(renewed.lease()));
         if (session != null) {
             session.renew(renewed.until());
         }

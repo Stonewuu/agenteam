@@ -63,22 +63,18 @@ class WorkspaceRetentionServiceTest {
     }
 
     @Test
-    void expiresIdleFilesAndKeepsAClearRecordForTheNextRead() throws Exception {
-        assertEquals(1, retention.clean());
-        try (var scope = open()) {
-            assertTrue(scope.cleared());
-            assertFalse(scope.current().exists(RuntimeContext.empty(), "work/report.txt"));
-        }
-    }
-
-    @Test
-    void activeExecutionAndHeldFileLockBothPreventDeletion() throws Exception {
+    void activeExecutionAndHeldFileLockProtectFilesUntilTheyExpire() throws Exception {
         when(conversation.activeRunId()).thenReturn("active-run");
         assertEquals(0, retention.clean());
         when(conversation.activeRunId()).thenReturn(null);
         try (var scope = open()) {
             assertEquals(0, retention.clean());
             assertTrue(scope.current().exists(RuntimeContext.empty(), "work/report.txt"));
+        }
+        assertEquals(1, retention.clean());
+        try (var scope = open()) {
+            assertTrue(scope.cleared());
+            assertFalse(scope.current().exists(RuntimeContext.empty(), "work/report.txt"));
         }
     }
 

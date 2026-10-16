@@ -27,8 +27,6 @@ import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -66,6 +64,13 @@ class CollaborationChatFlowTest extends CollaborationToolTestSupport {
     @Test
     void automaticHireHappensAtExecutionAndDoesNotHireUnusedRoles() {
         removeHire();
+        databaseAccess.mapper(AgentListingMapper.class).save(enterprise, agent, true, "approval", admin, Instant.now());
+        var message = receive("approval", "请核对考勤");
+        assertEquals("AGENT_CHAT_APPROVAL_REQUIRED", assertThrows(ApiException.class, () -> routing.route(enterprise, message.getId())).code());
+        assertTrue(hires.forAgent(enterprise, initiator.id(), agent, false).isEmpty());
+        assertEquals(0, databaseAccess.mapper(AgentHireApplicationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentHireRequestRow>()
+            .eq(AgentHireRequestRow::getEnterpriseId, enterprise).eq(AgentHireRequestRow::getUserId, initiator.id())));
+        databaseAccess.mapper(AgentListingMapper.class).save(enterprise, agent, true, "automatic", admin, Instant.now());
         String financeAgent = separateFinance(initiator.id());
         startTask("先由人事核对考勤");
         assertTrue(hires.forAgent(enterprise, initiator.id(), agent, false).isEmpty());
@@ -97,27 +102,17 @@ class CollaborationChatFlowTest extends CollaborationToolTestSupport {
             .eq(AgentHireRow::getEnterpriseId, enterprise).eq(AgentHireRow::getUserId, initiator.id()).eq(AgentHireRow::getAgentId, agent)));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"paused", "terminated"})
-    void personalStopIsNotAutomaticallyReversed(String status) {
-        databaseAccess.mapper(AgentHireSqlMapper.class).update(new LambdaUpdateWrapper<AgentHireRow>()
-            .eq(AgentHireRow::getEnterpriseId, enterprise).eq(AgentHireRow::getUserId, initiator.id()).eq(AgentHireRow::getAgentId, agent)
-            .set(AgentHireRow::getStatus, status));
-        var message = receive("stopped-hire", "请继续工作");
-        assertEquals("AGENT_CHAT_HIRE_" + status.toUpperCase(), assertThrows(ApiException.class, () -> routing.route(enterprise, message.getId())).code());
-        assertEquals(status, hires.forAgent(enterprise, initiator.id(), agent, false).orElseThrow().status());
-        assertEquals(0, taskCount());
-    }
-
     @Test
-    void approvalIsStillRequiredWithoutCreatingAnUnrequestedApplication() {
-        removeHire();
-        databaseAccess.mapper(AgentListingMapper.class).save(enterprise, agent, true, "approval", admin, Instant.now());
-        var message = receive("approval", "请核对考勤");
-        assertEquals("AGENT_CHAT_APPROVAL_REQUIRED", assertThrows(ApiException.class, () -> routing.route(enterprise, message.getId())).code());
-        assertTrue(hires.forAgent(enterprise, initiator.id(), agent, false).isEmpty());
-        assertEquals(0, databaseAccess.mapper(AgentHireApplicationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentHireRequestRow>()
-            .eq(AgentHireRequestRow::getEnterpriseId, enterprise).eq(AgentHireRequestRow::getUserId, initiator.id())));
+    void personalStopIsNotAutomaticallyReversed() {
+        for (String status : List.of("paused", "terminated")) {
+            databaseAccess.mapper(AgentHireSqlMapper.class).update(new LambdaUpdateWrapper<AgentHireRow>()
+                .eq(AgentHireRow::getEnterpriseId, enterprise).eq(AgentHireRow::getUserId, initiator.id()).eq(AgentHireRow::getAgentId, agent)
+                .set(AgentHireRow::getStatus, status));
+            var message = receive("stopped-hire-" + status, "请继续工作");
+            assertEquals("AGENT_CHAT_HIRE_" + status.toUpperCase(), assertThrows(ApiException.class, () -> routing.route(enterprise, message.getId())).code());
+            assertEquals(status, hires.forAgent(enterprise, initiator.id(), agent, false).orElseThrow().status());
+            assertEquals(0, taskCount());
+        }
     }
 
     @Test

@@ -1,4 +1,5 @@
-import type {Branch, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode} from "../types/workflow";
+import type {Branch, DependencyOptions, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode} from "../types/workflow";
+import {parameterSchema, selectedWorkflowTool, type ParameterSchema, type VariableOption} from "./workflow-parameters";
 
 export const nodeNames: Record<NodeType, string> = {
   start: "开始",
@@ -9,7 +10,8 @@ export const nodeNames: Record<NodeType, string> = {
   transform: "数据整理",
   approval: "人工确认",
   parallel: "并行",
-  join: "汇合",
+  join: "合并",
+  loop: "循环",
   end: "结束"
 };
 export const branchNames: Record<Branch, string> = {
@@ -37,8 +39,9 @@ export function createNode(type: NodeType, id: string, position: WorkflowNode["p
     condition: {condition: {field: "input.text", operator: "exists"}},
     transform: {fields: []},
     approval: {title: "请确认是否继续", description: "", inputMapping: {text: "${input.text}"}},
-    parallel: {joinNodeId: "join"},
-    join: {parallelNodeId: "parallel"},
+    parallel: {joinNodeId: null},
+    join: {parallelNodeId: null},
+    loop: {mode: "count", count: 3, maxIterations: 20, items: "${input.items}", body: loopBody()},
     end: {outputMapping: {text: "${input.text}"}},
   };
   return {
@@ -50,6 +53,24 @@ export function createNode(type: NodeType, id: string, position: WorkflowNode["p
     failurePolicy: "stop",
     config: configs[type]
   };
+}
+
+export function loopBody(): WorkflowGraph & {icon: string; color: string} {
+  // 内层起止节点直接构造，避免创建普通节点时递归生成循环。
+  const common = {timeoutSeconds: 120, failurePolicy: "stop" as const};
+  return {icon: "GitBranch", color: "blue", nodes: [
+    {...common, nodeId: "start", type: "start", name: "本次输入", position: {x: 40, y: 80}, config: {
+      inputSchema: {type: "object", properties: {
+        item: {title: "当前条目"}, index: {type: "integer", title: "条目序号（从 0 开始）"},
+        number: {type: "integer", title: "执行次数"}, parent: {type: "object", title: "循环前的输入"}, previous: {title: "上一次结果"}
+      }}
+    }},
+    {...common, nodeId: "end", type: "end", name: "本次结果", position: {x: 350, y: 80}, config: {outputMapping: {result: "${input.item}"}}}
+  ], edges: [{edgeId: "start_end", source: "start", target: "end", branch: "default"}]};
+}
+
+export function graphNodeCount(graph: WorkflowGraph): number {
+  return graph.nodes.reduce((count, node) => count + 1 + (node.type === "loop" ? graphNodeCount(node.config.body as WorkflowGraph) : 0), 0);
 }
 
 export function initialGraph(): WorkflowGraph {
@@ -101,37 +122,9 @@ export function connectionError(graph: WorkflowGraph, candidate: WorkflowEdge, r
   return "";
 }
 
-export function removeNode(graph: WorkflowGraph, id: string): WorkflowGraph {
-  return {
-    nodes: graph.nodes.filter((node) => node.nodeId !== id),
-    edges: graph.edges.filter((item) => item.source !== id && item.target !== id)
-  };
-}
-
-export function arrangeGraph(graph: WorkflowGraph): WorkflowGraph {
-  const levels = new Map<string, number>(), pending = [...graph.nodes];
-  for (let round = 0; pending.length && round < graph.nodes.length; round++) {
-    for (let index = pending.length - 1; index >= 0; index--) {
-      const node = pending[index],
-        parents = graph.edges.filter((item) => item.target === node.nodeId).map((item) => item.source);
-      if (parents.every((id) => levels.has(id))) {
-        levels.set(node.nodeId, parents.length ? Math.max(...parents.map((id) => levels.get(id)!)) + 1 : 0);
-        pending.splice(index, 1);
-      }
-    }
-  }
-  const columns = new Map<number, number>();
-  return {
-    ...graph, nodes: graph.nodes.map((node) => {
-      const level = levels.get(node.nodeId) ?? 0, column = columns.get(level) ?? 0;
-      columns.set(level, column + 1);
-      return {...node, position: {x: 40 + level * 300, y: 40 + column * 170}};
-    })
-  };
-}
-
-/** 新节点接在选中的一条连接中；并行同时创建两路和相应汇合。 */
-export function insertNode(graph: WorkflowGraph, type: Exclude<NodeType, "start" | "end" | "join">, selected: string): {
+/** 新增始终独立，包含并行与合并；配对只依据用户连线。 */
+export function insertNode(graph: WorkflowGraph, type: Exclude<NodeType, "start" | "end">, selected: string,
+  options: {position?: WorkflowNode["position"]} = {}): {
   graph: WorkflowGraph;
   selected: string
 } {
@@ -143,38 +136,24 @@ export function insertNode(graph: WorkflowGraph, type: Exclude<NodeType, "start"
     return `${kind}_${index}`;
   };
   const sourcePosition = graph.nodes.find((item) => item.nodeId === selected)?.position ?? {x: 40, y: 40};
-  const node = createNode(type, id(type), {
+  const node = createNode(type, id(type), options.position ?? {
     x: sourcePosition.x + 300,
     y: Math.max(0, ...graph.nodes.map((item) => item.position.y)) + 170
   });
-  const previous = graph.edges.find((item) => item.source === selected) ?? graph.edges.find((item) => graph.nodes.find((node) => node.nodeId === item.target)?.type === "end");
-  const nodes = [...graph.nodes, node], edges = graph.edges.filter((item) => item !== previous);
-  if (previous) {
-    edges.push(edge(previous.source, node.nodeId, previous.branch));
-  }
-  const target = previous?.target ?? graph.nodes.find((item) => item.type === "end")!.nodeId;
-  if (type === "parallel") {
-    const join = createNode("join", id("join"), {x: node.position.x + 600, y: node.position.y});
-    const first = createNode("transform", `${node.nodeId}_first`, {x: node.position.x + 300, y: node.position.y}),
-      second = createNode("transform", `${node.nodeId}_second`, {x: node.position.x + 300, y: node.position.y + 170});
-    node.config.joinNodeId = join.nodeId;
-    join.config.parallelNodeId = node.nodeId;
-    first.name = "分支一";
-    second.name = "分支二";
-    nodes.push(first, second, join);
-    edges.push(edge(node.nodeId, first.nodeId), edge(node.nodeId, second.nodeId), edge(first.nodeId, join.nodeId), edge(second.nodeId, join.nodeId), edge(join.nodeId, target));
-  } else {
-    for (const branch of branches(type)) {
-      edges.push(edge(node.nodeId, target, branch));
+  const inputFields = record(record(graph.nodes.find((item) => item.type === "start")?.config.inputSchema).properties);
+  if (Object.hasOwn(inputFields, "item") && !Object.hasOwn(inputFields, "text")) {
+    if (Object.hasOwn(node.config, "inputMapping") && type !== "tool") {
+      node.config.inputMapping = {text: "${input.item}"};
+    }
+    if (type === "condition") {
+      node.config.condition = {field: "input.item", operator: "exists"};
     }
   }
-  return {graph: {nodes, edges}, selected: node.nodeId};
+  const nodes = [...graph.nodes, node], edges = [...graph.edges];
+  return {graph: {...graph, nodes, edges}, selected: node.nodeId};
 }
 
-export function variableOptions(graph: WorkflowGraph, current: string, text: (message: string) => string = (message) => message): {
-  path: string;
-  label: string
-}[] {
+export function upstreamNodeIds(graph: WorkflowGraph, current: string) {
   const ancestors = new Set<string>(), pending = [current];
   while (pending.length) {
     const target = pending.pop();
@@ -185,23 +164,41 @@ export function variableOptions(graph: WorkflowGraph, current: string, text: (me
       }
     }
   }
-  const fields = record(record(graph.nodes.find((node) => node.type === "start")?.config.inputSchema).properties);
+  return ancestors;
+}
+
+export function variableOptions(graph: WorkflowGraph, current: string, text: (message: string) => string = (message) => message,
+  dependencies: Record<string, DependencyOptions> = {}): VariableOption[] {
+  const ancestors = upstreamNodeIds(graph, current);
+  const inputSchema = record(graph.nodes.find((node) => node.type === "start")?.config.inputSchema);
+  const fields = record(inputSchema.properties);
+  const expand = (schema: ParameterSchema, path: string, label: string, group: string, root = schema, depth = 0): VariableOption[] => {
+    const resolved = parameterSchema(schema, root);
+    return [{path, label, group, schema: resolved}, ...(depth < 4 ? Object.entries(record(resolved.properties)).flatMap(([name, field]) =>
+      /^[^\s.{}]+$/.test(name) ? expand(record(field), `${path}.${name}`, `${label} · ${String(record(field).title || name)}`, group, root, depth + 1) : []) : [])];
+  };
   const input = [{
     path: "input",
-    label: text("全部输入")
-  }, ...Object.entries(fields).map(([key, value]) => ({
-    path: `input.${key}`,
-    label: `${text("输入")} · ${String(record(value).title || key)}`
-  }))];
+    label: text("全部输入"), group: text("工作流输入"), schema: inputSchema
+  }, ...Object.entries(fields).flatMap(([key, value]) => /^[^\s.{}]+$/.test(key) ? expand(record(value), `input.${key}`, String(record(value).title || key), text("工作流输入"), inputSchema) : [])];
   return [...input, ...graph.nodes.filter((node) => ancestors.has(node.nodeId) && node.type !== "start").flatMap((node) => {
-    const base = `steps.${node.nodeId}.output`, results = [{path: base, label: `${node.name} · ${text("全部输出")}`}];
-    const fields = node.type === "agent" || node.type === "skill" ? ["text", "result", "citations", "attachments"] : node.type === "transform" ? (node.config.fields as {
+    const base = `steps.${node.nodeId}.output`, results: VariableOption[] = [{path: base, label: `${node.name} · ${text("全部输出")}`, group: node.name}];
+    if (node.type === "tool") {
+      const options = dependencies[String(node.config.pluginVersionId)], tool = selectedWorkflowTool(options?.tools ?? [], node.config);
+      const root = options?.toolOutputRoots?.[String(tool?.entryId ?? tool?.id)];
+      if (tool?.outputSchema && root !== undefined) {
+        return [...results, ...expand(tool.outputSchema, root ? `${base}.${root}` : base, `${node.name} · ${text("结果")}`, node.name).filter((item) => item.path !== base)];
+      }
+    }
+    const fields = node.type === "condition" ? ["matched"] : node.type === "approval" ? ["decision"] : node.type === "loop" ? ["results", "iterations"] : node.type === "agent" || node.type === "skill" ? ["text", "result", "citations", "attachments"] : node.type === "transform" ? (node.config.fields as {
       target: string
     }[]).map((field) => field.target) : [];
-    const labels: Record<string, string> = {text: "文字", result: "结果", citations: "引用", attachments: "附件"};
+    const labels: Record<string, string> = {text: "文字", result: "结果", citations: "引用", attachments: "附件", results: "每次执行结果", iterations: "已执行次数", matched: "条件是否成立", decision: "确认结果"};
     return [...results, ...fields.map((field) => ({
       path: `${base}.${field}`,
-      label: `${node.name} · ${labels[field] ? text(labels[field]) : field}`
+      label: `${node.name} · ${labels[field] ? text(labels[field]) : field}`, group: node.name,
+      schema: field === "text" ? {type: "string"} : field === "matched" ? {type: "boolean"} : field === "decision" ? {type: "string", enum: ["approve", "reject"]}
+        : ["citations", "attachments", "results"].includes(field) ? {type: "array"} : field === "iterations" ? {type: "integer"} : undefined
     }))];
   })];
 }

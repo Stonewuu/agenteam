@@ -67,9 +67,9 @@ class AgentExecutionFactoryTest {
     Path directory;
 
     @ParameterizedTest
-    @CsvSource({"dynamic,20,6,true,30,30", "both,20,6,true,30,30", "disabled,20,6,true,30,30", "unknown,20,6,true,30,30", "references,20,6,true,30,30",
-        "dynamic,0,0,true,30,30", "references,0,0,true,30,30", "references,0,6,true,30,30", "references,20,0,true,30,30", "dynamic,500,6,true,30,30", "disabled,20,6,false,30,30",
-        "dynamic,0,0,true,0,0", "references,0,0,true,0,0", "references,0,6,true,0,20", "references,20,0,true,30,0"})
+    @CsvSource({"dynamic,500,6,true,30,30", "both,0,6,true,0,20", "disabled,20,6,true,30,30",
+        "disabled,20,6,false,30,30", "unknown,20,6,true,30,30", "references,20,6,true,30,20",
+        "references,0,0,true,0,0", "references,20,0,true,30,0"})
     void everyParallelChildFragmentIdentifiesItsOwnSessionAndUsesIsolatedEncryptedState(String mode, int parentSteps, int childSteps, boolean supportsTools,
                                                                                         int parentSeconds, int childSeconds) throws Exception {
         var json = new ObjectMapper();
@@ -78,7 +78,7 @@ class AgentExecutionFactoryTest {
             .put("workspaceProjectDirectory", "projects/reports");
         var config = snapshot.putObject("config").put("agentType", "chat").put("modelProfileId", "model")
             .put("instructions", "固定的执行指令").put("maxSteps", parentSteps).put("timeoutSeconds", parentSeconds)
-            .put("historyMessageLimit", 0).put("researchSubagentEnabled", true).put("temperature", 0.4).put("icon", "Sparkles").put("color", "purple");
+            .put("temperature", 0.4).put("icon", "Sparkles").put("color", "purple");
         config.putArray("businessTerms");
         snapshot.putArray("dependencies");
         config.put("dynamicSubagentEnabled", List.of("dynamic", "both", "unknown").contains(mode));
@@ -93,7 +93,6 @@ class AgentExecutionFactoryTest {
                     .put("maxSteps", childSteps).put("timeoutSeconds", childSeconds);
                 child.put("icon", role.equals("writer") ? "NotebookPen" : "Telescope").put("color", role.equals("writer") ? "mint" : "blue");
                 child.putArray("subagentVersionIds");
-                child.put("researchSubagentEnabled", false);
                 child.putArray("knowledgeVersionIds").add(role + "-knowledge");
                 snapshot.withArray("dependencies").addObject().put("kind", "agent").put("versionId", role + "-version").put("resourceId", role)
                     .put("name", role.equals("writer") ? "写作助手" : "审校助手").set("config", child);
@@ -197,13 +196,15 @@ class AgentExecutionFactoryTest {
                 }
             }
             assertEquals(2, execution.children().size(), "真正调用的子实例必须来自平台注册的工厂");
-            if (mode.equals("references")) {
-                int expected = Math.min(parentSteps == 0 ? Integer.MAX_VALUE : parentSteps, childSteps == 0 ? Integer.MAX_VALUE : childSteps);
-                for (var child : execution.children()) {
-                    assertEquals(expected, child.getDelegate().getMaxIters());
-                    int seconds = parentSeconds == 0 ? childSeconds : childSeconds == 0 ? parentSeconds : Math.min(parentSeconds, childSeconds);
-                    assertEquals(seconds == 0 ? null : Duration.ofSeconds(seconds), child.getDelegate().getGenerateOptions().getExecutionConfig().getTimeout());
-                }
+            for (var child : execution.children()) {
+                boolean referenced = !child.getName().equals("临时助手");
+                int expected = referenced
+                    ? Math.min(parentSteps == 0 ? Integer.MAX_VALUE : parentSteps, childSteps == 0 ? Integer.MAX_VALUE : childSteps)
+                    : parentSteps == 0 ? Integer.MAX_VALUE : parentSteps;
+                assertEquals(expected, child.getDelegate().getMaxIters());
+                int seconds = !referenced ? parentSeconds
+                    : parentSeconds == 0 ? childSeconds : childSeconds == 0 ? parentSeconds : Math.min(parentSeconds, childSeconds);
+                assertEquals(seconds == 0 ? null : Duration.ofSeconds(seconds), child.getDelegate().getGenerateOptions().getExecutionConfig().getTimeout());
             }
             if (mode.equals("references") || mode.equals("both")) {
                 verify(toolExecution, times(mode.equals("both") ? 1 : 2)).invoke(eq(run), eq(lease), any(), any(), any(), any(), any(), any(), anyInt(), any());
@@ -239,7 +240,6 @@ class AgentExecutionFactoryTest {
             when(savedRuns.latestTerminal("enterprise", "conversation")).thenReturn(Optional.of(run.id()));
             when(checkpoints.load(run)).thenReturn(execution.states());
             var nextSnapshot = snapshot.deepCopy().put("previousRunId", run.id());
-            nextSnapshot.withObject("config").put("historyMessageLimit", 20);
             var next = new RunRecord("next", "enterprise", "conversation", "user", "input-next", "output-next", "version", "interactive", "running",
                 nextSnapshot, 1, 1, 5, false, 1, now, null, null, null, null, null, now);
             var nextStates = factory.store(next);
@@ -248,7 +248,7 @@ class AgentExecutionFactoryTest {
             for (var child : savedParent.getToolContext().getSpawnRegistry().values()) {
                 var previousContext = execution.states().get("user", child.sessionId(), "agent_state", AgentState.class).orElseThrow().getContext();
                 var nextContext = nextStates.get("user", child.sessionId(), "agent_state", AgentState.class).orElseThrow().getContext();
-                assertTrue(nextContext.size() > 60, "子智能体历史也不能按旧条数截断");
+                assertTrue(nextContext.size() > 60, "子智能体的完整历史需要保留");
                 assertEquals(previousContext.stream().map(Msg::getId).toList(), nextContext.stream().map(Msg::getId).toList());
             }
             nextSnapshot.put("workspaceProjectId", "second-project").put("workspaceProjectName", "新项目")

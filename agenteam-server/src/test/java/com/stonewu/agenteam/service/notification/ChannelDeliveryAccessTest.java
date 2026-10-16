@@ -115,13 +115,6 @@ class ChannelDeliveryAccessTest extends ExecutionApiTestSupport {
         mvc.perform(get(detailPath).cookie(other.cookie())).andExpect(status().isNotFound());
         mvc.perform(get(detailPath).cookie(cookie)).andExpect(status().isOk());
         mvc.perform(get(base() + "/integrations/" + connection.getId() + "/deliveries").cookie(other.cookie())).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void onlyAuthorizedSenderOrOperatorCanRetryAFailedDelivery() throws Exception {
-        var recipient = member();
-        var other = member();
-        var row = notice(fixture().configure(enterprise, recipient.user(), "feishu"), recipient.user());
         fail(row);
         row = deliveries.selectById(row.getId());
         String path = base() + "/notification-deliveries/" + row.getId() + "/retry";
@@ -130,7 +123,19 @@ class ChannelDeliveryAccessTest extends ExecutionApiTestSupport {
                 .andExpect(status().isNotFound());
         }
         change(HttpMethod.POST, path, Map.of("confirmMayDuplicate", false), row.getRevision().toString(), key()).andExpect(status().isOk());
+        row = deliveries.selectById(row.getId());
+        int previousAttempts = row.getAttemptCount();
+        members.update(new LambdaUpdateWrapper<EnterpriseMemberRow>().eq(EnterpriseMemberRow::getEnterpriseId, enterprise)
+            .eq(EnterpriseMemberRow::getUserId, recipient.user()).set(EnterpriseMemberRow::getStatus, "disabled"));
+        var lease = transactions.claim("revoked-member").orElseThrow();
+        assertEquals(row.getActiveJobId(), lease.id());
+        assertNull(transactions.prepare(lease));
+        assertEquals("blocked", deliveries.selectById(row.getId()).getStatus());
+        assertEquals(previousAttempts, deliveries.selectById(row.getId()).getAttemptCount());
+
     }
+
+
 
     @Test
     void globalAdministratorTestsAnotherEnterpriseWithoutImplicitMembership() throws Exception {
@@ -153,18 +158,7 @@ class ChannelDeliveryAccessTest extends ExecutionApiTestSupport {
             .andExpect(status().isNotFound());
     }
 
-    @Test
-    void memberDisableAfterQueueingBlocksTheRequestBeforeAnAttemptStarts() throws Exception {
-        var recipient = member();
-        var row = notice(fixture().configure(enterprise, recipient.user(), "feishu"), recipient.user());
-        members.update(new LambdaUpdateWrapper<EnterpriseMemberRow>().eq(EnterpriseMemberRow::getEnterpriseId, enterprise)
-            .eq(EnterpriseMemberRow::getUserId, recipient.user()).set(EnterpriseMemberRow::getStatus, "disabled"));
-        var lease = transactions.claim("revoked-member").orElseThrow();
-        assertEquals(row.getActiveJobId(), lease.id());
-        assertNull(transactions.prepare(lease));
-        assertEquals("blocked", deliveries.selectById(row.getId()).getStatus());
-        assertEquals(0, deliveries.selectById(row.getId()).getAttemptCount());
-    }
+
 
     @Test
     void expiredAuthorizationClearsEncryptedMaterialAndLaterRemovesOnlyTheExpiredHistory() throws Exception {

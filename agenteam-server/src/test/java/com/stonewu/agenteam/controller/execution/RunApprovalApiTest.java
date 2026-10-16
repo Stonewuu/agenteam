@@ -56,11 +56,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RunApprovalApiTest extends RunApprovalApiTestSupport {
 
     @Test
-    void nativeApprovalSurvivesWorkerReplacementAndUsesExactlyTheOriginalArgumentsOnce() throws Exception {
+    void approvalSurvivesProcessRestartWithOneOriginalWriteAndRedactedNotificationsAndExports() throws Exception {
         databaseAccess.mapper(UserPreferenceMapper.class).update(new LambdaUpdateWrapper<UserPreferenceRow>().eq(UserPreferenceRow::getUserId, (admin)).set(UserPreferenceRow::getTaskCompletionNotifications, false));
         plugin();
-        var accepted = waiting();
+        allowModelCalls = true;
+        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         String run = accepted.path("runId").asText();
+        var first = RunProcessTestFixture.start(environment, processDirectory, enterprise, run, "approval-before-restart");
+        try {
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
+            while (first.isAlive() && !state(run).equals("waiting_approval") && System.nanoTime() < deadline) {
+                Thread.sleep(100);
+            }
+            assertEquals("waiting_approval", state(run), "独立进程没有保存确认，详见 target/approval-before-restart.log");
+            assertEquals(0, writes.get());
+            first.destroyForcibly();
+            assertTrue(first.waitFor(10, TimeUnit.SECONDS));
+        } finally {
+            if (first.isAlive()) {
+                first.destroyForcibly();
+                first.waitFor(10, TimeUnit.SECONDS);
+            }
+        }
         var approval = approvals(run).get(0);
         schemas.validate("Approval", approval);
         for (var candidate : notifications.candidates().stream().filter(value -> value.enterprise().equals(enterprise)).toList()) {
@@ -94,9 +111,10 @@ class RunApprovalApiTest extends RunApprovalApiTestSupport {
         decision(approval, "approve", UUID.randomUUID().toString()).andExpect(status().isOk());
         decision(approval, "reject", UUID.randomUUID().toString()).andExpect(status().isConflict());
         assertEquals("queued", state(run));
-        try (var resumed = new RunWorker(lifecycle, tasks)) {
-            resumed.poll();
-            await(() -> terminal(run));
+        var resumed = RunProcessTestFixture.start(environment, processDirectory, enterprise, run, "approval-after-restart");
+        try {
+            assertTrue(resumed.waitFor(60, TimeUnit.SECONDS));
+            assertEquals(0, resumed.exitValue(), "独立进程不能继续确认，详见 target/approval-after-restart.log");
             assertEquals("completed", state(run), () -> diagnostic(run));
             assertEquals(1, writes.get());
             assertEquals("原始固定正文", received.get().path("text").asText());
@@ -104,6 +122,7 @@ class RunApprovalApiTest extends RunApprovalApiTestSupport {
             assertEquals("one@example.test", received.get().path("recipient").asText());
             assertEquals(3, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getUsedSteps).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getUsedSteps()).toList()));
             assertEquals(1, count("run_attempt"));
+            assertEquals(1, count("agent_run"));
             assertEquals(1, count("tool_call"));
             assertEquals(1, count("run_approval"));
             assertEquals(callsBefore + 2, modelCalls.get());
@@ -118,6 +137,11 @@ class RunApprovalApiTest extends RunApprovalApiTestSupport {
             assertTrue(logCsv.contains("succeeded"));
             assertFalse(logCsv.contains("原始固定正文"));
             assertFalse(logCsv.contains("original-test-password"));
+        } finally {
+            if (resumed.isAlive()) {
+                resumed.destroyForcibly();
+                resumed.waitFor(10, TimeUnit.SECONDS);
+            }
         }
     }
 
@@ -393,47 +417,6 @@ class RunApprovalApiTest extends RunApprovalApiTestSupport {
             assertEquals(1, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, (enterprise)).eq(AuditEventRow::getAction, "tool_log.details"))));
         } finally {
             permissions.replaceUserRoles(admin, enterprise, Set.of(permissions.builtinRoleId(enterprise, "enterprise-admin")), Instant.now());
-        }
-    }
-
-    @Test
-    void forciblyTerminatedProcessLeavesApprovalThatAFreshJavaProcessCanContinue() throws Exception {
-        plugin();
-        allowModelCalls = true;
-        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        String run = accepted.path("runId").asText();
-        var first = RunProcessTestFixture.start(environment, processDirectory, enterprise, run, "p04-before-approval-process");
-        try {
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
-            while (first.isAlive() && !state(run).equals("waiting_approval") && System.nanoTime() < deadline) {
-                Thread.sleep(100);
-            }
-            assertEquals("waiting_approval", state(run), "独立进程没有保存确认，详见 target/p04-before-approval-process.log");
-            assertEquals(0, writes.get());
-            first.destroyForcibly();
-            assertTrue(first.waitFor(10, TimeUnit.SECONDS));
-        } finally {
-            if (first.isAlive()) {
-                first.destroyForcibly();
-                first.waitFor(10, TimeUnit.SECONDS);
-            }
-        }
-        decision(approvals(run).get(0), "approve", UUID.randomUUID().toString()).andExpect(status().isOk());
-        var second = RunProcessTestFixture.start(environment, processDirectory, enterprise, run, "p04-after-approval-process");
-        try {
-            assertTrue(second.waitFor(60, TimeUnit.SECONDS));
-            assertEquals(0, second.exitValue(), "独立进程不能继续确认，详见 target/p04-after-approval-process.log");
-            assertEquals("completed", state(run));
-            assertEquals(1, writes.get());
-            assertEquals(callsBefore + 2, modelCalls.get());
-            assertEquals(1, count("agent_run"));
-            assertEquals(1, count("tool_call"));
-            assertEquals("原始固定正文", received.get().path("text").asText());
-        } finally {
-            if (second.isAlive()) {
-                second.destroyForcibly();
-                second.waitFor(10, TimeUnit.SECONDS);
-            }
         }
     }
 

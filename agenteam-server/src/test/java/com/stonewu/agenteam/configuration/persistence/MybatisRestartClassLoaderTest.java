@@ -7,7 +7,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -22,25 +21,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class MybatisRestartClassLoaderTest {
     private static final String CONTEXT = "com.github.yulichang.autoconfigure.MybatisPlusJoinAutoConfiguration$MPJSpringContext";
     private static final String ACCESS = "com.github.yulichang.toolkit.SpringContentUtils";
-
-    @Test
-    void sharedLibraryRetainsClosedContextWithoutRestartIncludes() throws Exception {
-        // 单独的父加载器复现依赖一直驻留的情况，不污染其他测试使用的静态缓存。
-        try (var shared = new RestartClassLoader(getClass().getClassLoader(), mybatisJars());
-             var first = new RestartClassLoader(shared, new URL[0]);
-             var next = new RestartClassLoader(shared, new URL[0])) {
-            try (var context = context("第一次启动")) {
-                bind(first, context);
-                assertEquals("第一次启动", read(first));
-            }
-            try (var context = context("第二次启动")) {
-                bind(next, context);
-                var failure = assertThrows(InvocationTargetException.class, () -> read(next));
-                assertInstanceOf(IllegalStateException.class, failure.getCause());
-                assertTrue(failure.getCause().getMessage().contains("has been closed already"));
-            }
-        }
-    }
 
     @Test
     void configuredLibrariesReadNewContextAfterEveryRestart() throws Exception {

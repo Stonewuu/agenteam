@@ -1,3 +1,27 @@
+.compact {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.compact > legend {
+  padding: 0 0 8px;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.compact .selectedRow {
+  padding: 0;
+}
+
+.compact .add {
+  padding-block: 6px;
+  min-height: 32px;
+}
+
 .summary {
   display: flex;
   align-items: center;

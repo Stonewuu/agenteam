@@ -1,0 +1,36 @@
+.stack { display: grid; gap: 14px; min-width: 0; }
+.row { display: grid; gap: 8px; min-width: 0; padding-bottom: 14px; border-bottom: 1px solid var(--border-light); }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.heading > label, .heading > strong { min-width: 0; font-size: 13px; font-weight: 550; }
+.heading small { color: var(--secondary); font-weight: 400; margin-left: 6px; }
+.textAction { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; border: 0; background: none; color: var(--primary); padding: 4px 2px; font-size: 12px; border-radius: 5px; cursor: pointer; }
+.textAction:disabled { opacity: .5; cursor: default; }
+.textAction:hover:not(:disabled) { background: var(--hover); }
+.textAction:focus-visible, .option:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.description { margin: 0; color: var(--secondary); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.reference { width: 100%; justify-content: space-between; text-align: left; min-width: 0; overflow-wrap: anywhere; }
+.picker { width: min(340px, calc(100vw - 32px)); max-height: min(440px, var(--available-height)); }
+.search { display: flex; align-items: center; gap: 8px; }
+.search input { min-width: 0; }
+.options { overflow-y: auto; max-height: 290px; padding: 5px; margin: -5px; }
+.optionGroup { color: var(--secondary); font-size: 11px; padding: 10px 8px 4px; }
+.option { display: block; width: 100%; text-align: left; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); padding: 8px; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.option:hover, .option[aria-pressed="true"] { background: var(--hover); color: var(--primary); }
+.inline { display: flex; gap: 8px; align-items: center; }
+.inline > :first-child { min-width: 0; flex: 1; }
+.nested { display: grid; gap: 12px; padding-left: 12px; border-left: 2px solid var(--border-light); }
+.advanced { border-top: 1px solid var(--border); padding-top: 12px; }
+.toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; background: transparent; padding: 4px 0; font-size: 13px; color: var(--secondary); text-align: left; cursor: pointer; }
+.toggle svg { transition: transform 180ms; }
+.toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.advancedBody { padding-top: 14px; }
+.type { width: 110px; flex: 0 0 110px; }
+.nameInput { font-weight: 550; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.error { color: var(--danger, #b73249); font-size: 12px; margin: 0; }
+@media (max-width: 600px) {
+  .textAction, .option, .toggle { min-height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toggle svg { transition: none; }
+}

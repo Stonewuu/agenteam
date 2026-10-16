@@ -110,6 +110,13 @@ class RegistrationApiTest {
         client.getJson(base() + "/invitations", admin).andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items[0].code").doesNotExist())
             .andExpect(jsonPath("$.data.items[0].tokenHash").doesNotExist());
+        for (String reserved : List.of("test", "TEST", " Test ")) {
+            register(code, reserved).andExpect(status().isBadRequest());
+            manual(reserved, List.of(role)).andExpect(status().isBadRequest());
+        }
+        register(code, "registration-admin").andExpect(status().isConflict());
+        var row = invitations.selectById(first.path("invitation").path("id").asText());
+        assertEquals("pending", row.getStatus());
         String username = "registered-" + UUID.randomUUID();
         var result = register(code, username).andExpect(status().isOk()).andReturn();
         String id = client.data(result).path("id").asText();
@@ -120,20 +127,6 @@ class RegistrationApiTest {
         assertEquals(List.of(role), roles.listUserRoleIds(id, enterprise));
         client.getJson("/api/v1/auth/me", client.session(result.getResponse().getCookie("SESSION"))).andExpect(status().isOk());
         register(code, "duplicate-" + UUID.randomUUID()).andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void reservedNamesAndConflictsDoNotConsumeInvitation() throws Exception {
-        var invite = share(UUID.randomUUID().toString());
-        String code = invite.path("code").asText();
-        for (String reserved : List.of("test", "TEST", " Test ")) {
-            register(code, reserved).andExpect(status().isBadRequest());
-            manual(reserved, List.of(role)).andExpect(status().isBadRequest());
-        }
-        register(code, "registration-admin").andExpect(status().isConflict());
-        var row = invitations.selectById(invite.path("invitation").path("id").asText());
-        assertEquals("pending", row.getStatus());
-        register(code, "valid-" + UUID.randomUUID()).andExpect(status().isOk());
     }
 
     @Test

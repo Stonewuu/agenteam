@@ -52,12 +52,13 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void largeChildReplyKeepsItsSessionAndCanBeSearchedAndReadFromTheSavedResult() throws Exception {
+    void delegatedResultsPreserveSessionsAndExposeFullContentWithoutDuplicateFiles() throws Exception {
         configureAgent(config -> {
             config.put("dynamicSubagentEnabled", true);
             config.put("maxSteps", 20);
         });
         String full = "子任务完整内容🙂\n".repeat(5000) + "委派文件末尾答案是六十三";
+        String smallBody = "子任务资料".repeat(160);
         var parent = new AtomicInteger();
         var path = new AtomicReference<String>();
         var answer = new AtomicReference<String>();
@@ -70,12 +71,14 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
                 }
             }
             if (!root) {
-                frame(exchange, Map.of("content", full), "stop");
+                frame(exchange, Map.of("content", input.toString().contains("返回小型资料") ? smallBody : full), "stop");
                 return;
             }
             switch (parent.getAndIncrement()) {
                 case 0 ->
-                    toolCalls(exchange, List.of(tool(0, "large-child", "agent_spawn", Map.of("agent_id", "general-purpose", "task", "生成长篇资料", "label", "长篇资料"))));
+                    toolCalls(exchange, List.of(
+                        tool(0, "large-child", "agent_spawn", Map.of("agent_id", "general-purpose", "task", "生成长篇资料", "label", "长篇资料")),
+                        tool(1, "small-child", "agent_spawn", Map.of("agent_id", "general-purpose", "task", "返回小型资料", "label", "简短资料"))));
                 case 1 -> {
                     String returned = modelTextForCall(input, "large-child");
                     assertTrue(returned.getBytes(StandardCharsets.UTF_8).length <= 32 * 1024);
@@ -111,44 +114,18 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
         assertTrue(downloaded.endsWith(full));
         assertTrue(snapshot(accepted).at("/messages/1/blocks").findValues("type").stream().anyMatch(type -> type.asText().equals("subagent")));
         assertEquals(0, count("run_approval"));
-    }
-
-    @Test
-    void nativeResultWithoutAFileRecordLoadsItsFullSavedContentOnlyOnDemand() throws Exception {
-        configureAgent(config -> config.put("dynamicSubagentEnabled", true));
-        String body = "子任务资料".repeat(160);
-        var turn = new AtomicInteger();
-        modelResponse = exchange -> {
-            var input = json.readTree(exchange.getRequestBody());
-            boolean root = false;
-            for (var tool : input.path("tools")) {
-                if (tool.at("/function/name").asText().equals("agent_spawn")) {
-                    root = true;
-                }
-            }
-            if (!root) {
-                frame(exchange, Map.of("content", body), "stop");
-            } else if (turn.getAndIncrement() == 0) {
-                toolCalls(exchange, List.of(tool(0, "small-child", "agent_spawn", Map.of("agent_id", "general-purpose", "task", "返回资料"))));
-            } else {
-                frame(exchange, Map.of("content", "已读取子任务结果"), "stop");
-            }
-        };
-        var accepted = submit("查阅子任务资料");
-        finish(accepted);
-        assertEquals(0, count("tool_call"), "小型原生返回不需要单独保存文件结果记录");
         JsonNode saved = null;
         for (var block : snapshot(accepted).at("/messages/1/blocks")) {
-            if (block.at("/tool/name").asText().equals("agent_spawn")) {
+            if (block.at("/tool/toolCallId").asText().equals("small-child")) {
                 saved = block;
             }
         }
         assertNotNull(saved);
         assertTrue(saved.at("/tool/result").asText().getBytes(StandardCharsets.UTF_8).length <= 2048);
-        String url = base() + "/runs/" + accepted.path("runId").asText() + "/steps/" + saved.path("stepId").asText() + "/tool-content";
-        var complete = data(mvc.perform(get(url).cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertTrue(complete.path("content").asText().contains(body));
-        mvc.perform(get(url)).andExpect(status().isUnauthorized());
+        String contentUrl = base() + "/runs/" + accepted.path("runId").asText() + "/steps/" + saved.path("stepId").asText() + "/tool-content";
+        var complete = data(mvc.perform(get(contentUrl).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertTrue(complete.path("content").asText().contains(smallBody));
+        mvc.perform(get(contentUrl)).andExpect(status().isUnauthorized());
     }
 
     private JsonNode submit(String question) throws Exception {

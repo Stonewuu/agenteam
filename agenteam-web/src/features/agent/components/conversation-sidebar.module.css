@@ -86,7 +86,7 @@
   position: absolute;
   z-index: 5;
   top: 10px;
-  right: var(--shell-gutter, 22px);
+  right: calc(var(--shell-gutter, 22px) + var(--conversation-header-actions-width, 0px));
   width: 32px;
   height: 32px;
   min-width: 32px;

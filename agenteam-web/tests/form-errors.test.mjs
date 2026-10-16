@@ -9,7 +9,12 @@ import ts from "typescript";
 
 const moduleUrl = (source) => `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
 const css = moduleUrl("export default new Proxy({}, { get: (_, name) => name });");
+const compiledModules = new Map();
 async function compile(path, imports = {}) {
+  const cacheable = Object.keys(imports).length === 0;
+  if (cacheable && compiledModules.has(path)) {
+    return compiledModules.get(path);
+  }
   const source = await readFile(new URL(`../src/${path}`, import.meta.url), "utf8");
   if (path.endsWith(".json")) {
     return moduleUrl(`export default ${source};`);
@@ -38,7 +43,11 @@ resolved[name] = import.meta.resolve(name);
   for (const [name, target] of Object.entries(resolved)) {
 result = result.replaceAll(`from "${name}"`, `from "${target}"`);
 }
-  return moduleUrl(result);
+  const compiled = moduleUrl(result);
+  if (cacheable) {
+    compiledModules.set(path, compiled);
+  }
+  return compiled;
 }
 const agent = await compile("features/resource/lib/agent-config-input.ts");
 const { agentConfigInput } = await import(agent);
@@ -53,7 +62,7 @@ test("六类资源创建时分别随机初始化外观，读取和保存已有�
   const { resourceIcons, resourceColors } = appearanceValues;
   let index = 0;
   context.mock.method(crypto, "getRandomValues", (values) => {
- values.set([index, index]); index++; return values; 
+ values.set([index, index]); index++; return values;
 });
   for (const [at, kind] of ["agent", "skill", "plugin", "workflow", "knowledge", "data"].entries()) {
     const config = resource.newConfig(kind);
@@ -65,15 +74,6 @@ test("六类资源创建时分别随机初始化外观，读取和保存已有�
   assert.equal(index, 6, "读取已有资源不会再次抽取图标或颜色");
 });
 
-test("保存智能体时清除旧研究开关和手填助手，不转换成任何可调用助手", () => {
-  const old = { ...resource.newConfig("agent"), researchSubagentEnabled: true, subagents: [{ id: "writer", name: "旧助手", instructions: "旧指令" }] };
-  const saved = agentConfigInput(old);
-  assert.equal(saved.researchSubagentEnabled, undefined);
-  assert.equal(saved.subagents, undefined);
-  assert.deepEqual(saved.subagentVersionIds, []);
-  assert.equal(saved.dynamicSubagentEnabled, false);
-  assert.equal(old.subagents.length, 1);
-});
 test("已选智能体只保存固定版本引用，可以与临时助手同时启用", () => {
   const value = { ...resource.newConfig("agent"), subagentVersionIds: ["writer-version", "reviewer-version"], dynamicSubagentEnabled: true };
   const saved = agentConfigInput(value);
@@ -99,16 +99,15 @@ const { MutationFeedback } = await import(await compile("features/workspace/comp
 
 test("智能体草稿读取和保存只保留当前字段，额外字段不会重新提交", () => {
   const config = { ...resource.newConfig("agent"), modelProfileId: "model", instructions: "整理资料", temperature: 0.4,
-    maxOutputTokens: 204800, extraField: "不属于表单" };
+    extraField: "不属于表单" };
   const draft = { name: "资料助手", description: "", tagIds: [], config };
   const saved = resource.draftInput("agent", draft);
-  assert.equal(saved.config.maxOutputTokens, undefined);
   assert.equal(saved.config.extraField, undefined);
   assert.equal(saved.config.temperature, 0.4);
   assert.equal(saved.config.modelProfileId, "model");
   const loaded = resource.draftFrom({ resource: { kind: "agent", name: draft.name, description: "", tags: [] }, draft: config });
   assert.deepEqual(loaded, saved);
-  assert.equal(config.maxOutputTokens, 204800, "不改写读取结果或持久数据");
+  assert.equal(config.extraField, "不属于表单", "不改写读取结果或持久数据");
   assert.equal(resource.draftInput("skill", draft).config, config, "其他资源沿用原有字段结构");
 });
 
@@ -187,9 +186,9 @@ test("异常日志保留原始原因与请求定位信息，移除查询参数",
   const entries = []; const previous = console.error;
   console.error = (...args) => entries.push(args);
   try {
- api.reportRequestFailure(error, "GET", "/api/v1/files/test/content?token=private-test-value"); 
+ api.reportRequestFailure(error, "GET", "/api/v1/files/test/content?token=private-test-value");
 } finally {
- console.error = previous; 
+ console.error = previous;
 }
   assert.equal(error.cause, original);
   assert.deepEqual(entries[0][1], { method: "GET", path: "/api/v1/files/test/content", requestId: "request-789" });
@@ -275,7 +274,7 @@ test("企业请求登录失效时仍抛出异常并通知登录入口，不记�
   } }, { status: 401 }));
   const events = [], previousWindow = globalThis.window;
   globalThis.window = { setTimeout, clearTimeout, dispatchEvent: (event) => {
- events.push(event); return true; 
+ events.push(event); return true;
 } };
   try {
     await assert.rejects(api.apiRequest("/api/v1/enterprises/team%20one/context"), {
@@ -297,7 +296,7 @@ globalThis.window = previousWindow;
 test("字段变化在当前数据页处理，真实登录与企业权限失效仍通知入口", () => {
   const events = [], previousWindow = globalThis.window;
   globalThis.window = { dispatchEvent: (event) => {
- events.push(event); return true; 
+ events.push(event); return true;
 } };
   const path = "/api/v1/enterprises/team%20one/data/collection/query";
   try {

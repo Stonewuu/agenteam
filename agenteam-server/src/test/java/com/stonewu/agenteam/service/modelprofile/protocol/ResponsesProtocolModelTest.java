@@ -70,6 +70,9 @@ class ResponsesProtocolModelTest {
         server.setExecutor(workers);
         server.createContext("/v1/responses", exchange -> {
             try (exchange) {
+                assertEquals("POST", exchange.getRequestMethod());
+                assertEquals("/v1/responses", exchange.getRequestURI().getPath());
+                assertEquals("Bearer test-key", exchange.getRequestHeaders().getFirst("Authorization"));
                 requests.add(json.readTree(exchange.getRequestBody()));
                 String reply = replies.poll();
                 byte[] bytes = (reply == null ? "" : reply).getBytes(StandardCharsets.UTF_8);

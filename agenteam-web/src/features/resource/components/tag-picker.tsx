@@ -36,13 +36,13 @@ export function TagPicker({enterpriseId, selected, onChange, known = [], canMana
   const [editing, setEditing] = useState<Tag | "new" | null>(null);
   const list = useApiPage<Tag>(organizationPath(enterpriseId, `/tags?query=${encodeURIComponent(query)}`), refresh);
   const names = new Map([...known, ...cached, ...(list.data?.items ?? [])].map((tag) => [tag.id, tag.name]));
-  return <Fieldset className={styles.section}>
+  return <Fieldset className={styles.tagPicker}>
     <legend>{uiText("标签")}</legend>
-    <div className={ui.chips}>{selected.map((id, index) => readOnly ?
+    {selected.length > 0 && <div className={ui.chips}>{selected.map((id, index) => readOnly ?
       <span className={ui.chip} key={id}>{names.get(id) ?? uiText("已选标签 {0}", [index + 1])}</span>
       : <Button className={ui.button} type="button" key={id}
                 aria-label={uiText("移除{0}", [names.get(id) ?? uiText("标签 {0}", [index + 1])])}
-                onClick={() => onChange(selected.filter((value) => value !== id))}>{names.get(id) ?? uiText("已选标签 {0}", [index + 1])} ×</Button>)}</div>
+                onClick={() => onChange(selected.filter((value) => value !== id))}>{names.get(id) ?? uiText("已选标签 {0}", [index + 1])} ×</Button>)}</div>}
     {!readOnly && <Button className={ui.button} type="button" onClick={() => setOpen((value) => !value)}
                           aria-expanded={open}>{open ? uiText("收起标签") : uiText("选择标签")}</Button>}
     {open && <div className={styles.options}>

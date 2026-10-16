@@ -66,10 +66,11 @@ class RemoteProjectCommandExecutorTest {
                     HttpResponse.BodyHandlers.discarding()).statusCode());
                 try (var control = new ToolCallControl(() -> {
                 })) {
-                    var result = remote.execute(project, "first", "printf '远程结果' > result.txt", ".", Duration.ofSeconds(20), control);
+                    // 首次请求包含容器启动，使用本测试配置的完整执行时限；不额外等待或重复执行。
+                    var result = remote.execute(project, "first", "printf '远程结果' > result.txt", ".", Duration.ofSeconds(settings.timeoutSeconds()), control);
                     assertEquals(0, result.exitCode());
                     assertEquals("远程结果", Files.readString(layout.project(project).resolve("result.txt")));
-                    assertEquals(result, remote.execute(project, "first", "printf '远程结果' > result.txt", ".", Duration.ofSeconds(20), control));
+                    assertEquals(result, remote.execute(project, "first", "printf '远程结果' > result.txt", ".", Duration.ofSeconds(settings.timeoutSeconds()), control));
                     assertEquals("保留的文件", Files.readString(layout.project(project).resolve("keep.txt")));
                     var unregistered = new ProjectLocation(project.workspaceId(), "missing", enterprise, "user", "projects/missing");
                     assertEquals("PROJECT_STORAGE_UNAVAILABLE", assertThrows(ApiException.class,

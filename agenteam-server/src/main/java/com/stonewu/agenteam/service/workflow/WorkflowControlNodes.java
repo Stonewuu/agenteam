@@ -51,6 +51,26 @@ public class WorkflowControlNodes {
 
     public JsonNode input(WorkflowTraversal workflow, Node node) {
         var config = node.config();
+        if (node.type().equals("loop")) {
+            JsonNode items;
+            if (config.path("mode").asText().equals("count")) {
+                var values = json.createArrayNode();
+                for (int index = 0; index < config.path("count").asInt(); index++) {
+                    values.add(index);
+                }
+                items = values;
+            } else {
+                items = expressions.resolve(config.path("items"), workflow.input(), workflow.outputs());
+            }
+            if (!items.isArray() || items.size() > config.path("maxIterations").asInt()) {
+                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKFLOW_LOOP_INPUT_INVALID",
+                    "循环输入必须是列表，且条目数量不能超过循环上限。");
+            }
+            var input = json.createObjectNode();
+            input.set("items", items);
+            input.set("parent", workflow.input());
+            return input;
+        }
         if (config.has("inputMapping")) {
             return expressions.resolve(config.path("inputMapping"), workflow.input(), workflow.outputs());
         }

@@ -187,7 +187,7 @@ export type WorkflowStepDetails = {
   resourceId: string;
   versionId: string | null;
   nodeId: string | null;
-  nodeType: "start" | "agent" | "skill" | "tool" | "condition" | "transform" | "approval" | "parallel" | "join" | "end" | null;
+  nodeType: "start" | "agent" | "skill" | "tool" | "condition" | "transform" | "approval" | "parallel" | "join" | "loop" | "end" | null;
 };
 export type RunStep = {
   id: string;

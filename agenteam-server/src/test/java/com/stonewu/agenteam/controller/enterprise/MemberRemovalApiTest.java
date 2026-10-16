@@ -245,6 +245,13 @@ class MemberRemovalApiTest extends ExecutionApiTestSupport {
         assertThrows(ApiException.class, () -> remove(departing.userId(), impact, outside.userId(), first.userId(), false));
         assertThrows(ApiException.class, () -> remove(departing.userId(), impact, admin, outside.userId(), false));
         assertEquals(departing.userId(), DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ResourceSqlMapper.class).selectList(new LambdaQueryWrapper<ResourceRow>().select(ResourceRow::getOwnerUserId).eq(ResourceRow::getId, (agent))).stream().map(fixtureRecord -> fixtureRecord.getOwnerUserId()).toList()));
+        change(HttpMethod.PUT, base() + "/teams/" + team + "/members", Map.of("memberIds", List.of(departing.userId())), "1", key()).andExpect(status().isOk());
+        assertEquals("DEPENDENCIES_CHANGED", assertThrows(ApiException.class, () -> remove(departing.userId(), impact, admin, first.userId(), false)).code());
+        var fresh = queries.impact(actor(admin), departing.userId());
+        assertTrue(queries.recipients(actor(admin), departing.userId(), "todo", null, null, 30).items().isEmpty());
+        assertTrue(assertThrows(ApiException.class, () -> remove(departing.userId(), fresh, admin, first.userId(), false)).fieldErrors().containsKey("todoOwnerId"));
+        assertEquals("active", enterprises.findMember(enterprise, departing.userId()).orElseThrow().status());
+        remove(departing.userId(), fresh, admin, null, true);
     }
 
     @Test
@@ -252,6 +259,14 @@ class MemberRemovalApiTest extends ExecutionApiTestSupport {
         var departing = member("凭证校验对象", "member");
         var otherAdmin = member("另一个管理员", "enterprise-admin");
         var impact = queries.impact(actor(admin), departing.userId());
+        String other = provisioning.create("凭证不能跨用的企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
+        users.addMember(other, departing.userId(), "另一企业的同一成员", Instant.now());
+        permissions.replaceUserRoles(departing.userId(), other, Set.of(permissions.builtinRoleId(other, "member")), Instant.now());
+        var actor = new AuthContext(users.findById(admin).orElseThrow(), other, Set.copyOf(permissions.listPermissionCodes(admin, other)));
+        assertEquals("DEPENDENCIES_CHANGED", assertThrows(ApiException.class, () -> removal.remove(actor, departing.userId(), new MemberRemovalRequest(impact.impactToken(), null, null, false), Long.parseLong(impact.memberRevision()))).code());
+        assertTrue(users.isActiveMember(departing.userId(), enterprise));
+        assertTrue(users.isActiveMember(departing.userId(), other));
+
         assertEquals("DEPENDENCIES_CHANGED", assertThrows(ApiException.class, () -> removal.remove(otherAdmin, departing.userId(), new MemberRemovalRequest(impact.impactToken(), null, null, false), Long.parseLong(impact.memberRevision()))).code());
         assertEquals("DEPENDENCIES_CHANGED", assertThrows(ApiException.class, () -> removal.remove(actor(admin), departing.userId(), new MemberRemovalRequest("错误" + impact.impactToken(), null, null, false), Long.parseLong(impact.memberRevision()))).code());
         Instant later = clock.instant().plusSeconds(601);
@@ -329,35 +344,6 @@ class MemberRemovalApiTest extends ExecutionApiTestSupport {
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, (enterprise)).eq(AuditEventRow::getAction, "member.remove"))));
         remove(departing.userId(), impact, admin, recipient.userId(), false);
         assertEquals("removed", enterprises.findMember(enterprise, departing.userId()).orElseThrow().status());
-    }
-
-    @Test
-    void aTokenCannotBeUsedInAnotherEnterpriseForTheSameUser() {
-        var departing = member("同时属于两个企业的成员", "member");
-        var impact = queries.impact(actor(admin), departing.userId());
-        String other = provisioning.create("凭证不能跨用的企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
-        users.addMember(other, departing.userId(), "另一企业的同一成员", Instant.now());
-        permissions.replaceUserRoles(departing.userId(), other, Set.of(permissions.builtinRoleId(other, "member")), Instant.now());
-        var actor = new AuthContext(users.findById(admin).orElseThrow(), other, Set.copyOf(permissions.listPermissionCodes(admin, other)));
-        assertEquals("DEPENDENCIES_CHANGED", assertThrows(ApiException.class, () -> removal.remove(actor, departing.userId(), new MemberRemovalRequest(impact.impactToken(), null, null, false), Long.parseLong(impact.memberRevision()))).code());
-        assertTrue(users.isActiveMember(departing.userId(), enterprise));
-        assertTrue(users.isActiveMember(departing.userId(), other));
-    }
-
-    @Test
-    void aRecipientLosingTeamMembershipInvalidatesThePlanAndCannotReceiveItsTodo() throws Exception {
-        var departing = member("团队资格变化的原负责人", "enterprise-admin");
-        var recipient = member("即将离开团队的接收人", "builder");
-        String team = team(departing.userId(), Set.of(departing.userId(), recipient.userId()));
-        todos.create(departing, todo(departing.userId(), team));
-        var impact = queries.impact(actor(admin), departing.userId());
-        change(HttpMethod.PUT, base() + "/teams/" + team + "/members", Map.of("memberIds", List.of(departing.userId())), "1", key()).andExpect(status().isOk());
-        assertEquals("DEPENDENCIES_CHANGED", assertThrows(ApiException.class, () -> remove(departing.userId(), impact, admin, recipient.userId(), false)).code());
-        var fresh = queries.impact(actor(admin), departing.userId());
-        assertTrue(queries.recipients(actor(admin), departing.userId(), "todo", null, null, 30).items().isEmpty());
-        assertTrue(assertThrows(ApiException.class, () -> remove(departing.userId(), fresh, admin, recipient.userId(), false)).fieldErrors().containsKey("todoOwnerId"));
-        assertEquals("active", enterprises.findMember(enterprise, departing.userId()).orElseThrow().status());
-        remove(departing.userId(), fresh, admin, null, true);
     }
 
     @Test

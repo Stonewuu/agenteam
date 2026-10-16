@@ -73,6 +73,9 @@ class GeminiProtocolModelTest {
         server.setExecutor(workers);
         server.createContext("/v1beta/models/unit:streamGenerateContent", exchange -> {
             try (exchange) {
+                assertEquals("POST", exchange.getRequestMethod());
+                assertEquals("/v1beta/models/unit:streamGenerateContent", exchange.getRequestURI().getPath());
+                assertEquals("test-key", exchange.getRequestHeaders().getFirst("x-goog-api-key"));
                 requests.add(json.readTree(exchange.getRequestBody()));
                 String reply = replies.poll();
                 byte[] data = (reply == null ? "" : reply).getBytes(StandardCharsets.UTF_8);

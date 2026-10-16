@@ -116,6 +116,17 @@ class JavaPluginApiTest {
     void uploadPublishInvokeUpgradeAndUninstallPreserveOldReferencesWithoutExecutingThem() throws Exception {
         String old = upload(firstPackage);
         activate(old, null).andExpect(status().isOk());
+        mvc.perform(put(packages() + "/content").cookie(session.cookie()).header("Origin", "http://localhost:3000")
+            .header("X-CSRF-Token", session.token()).header("Idempotency-Key", UUID.randomUUID().toString())
+            .contentType(MediaType.APPLICATION_OCTET_STREAM).content("不是插件包"))
+            .andExpect(status().isUnprocessableEntity());
+        String duplicate = upload(firstPackage);
+        activate(duplicate, old).andExpect(status().isConflict());
+        String next = upload(secondPackage);
+        activate(next, null).andExpect(status().isConflict());
+        assertEquals(old, registry.current(enterprise, "example").getId());
+        assertNotNull(raw(old).getArtifact());
+
         var configuration = json.readTree("""
             {"icon":"Box","color":"purple","timeoutSeconds":20,"sources":[{"id":"example","type":"java",
             "versionId":"placeholder","credentialId":null,"configuration":{"prefix":"实例配置"}}],
@@ -161,9 +172,11 @@ class JavaPluginApiTest {
             var context = new ToolProviderContext(enterprise, Duration.ofSeconds(20), control);
             var source = new ToolSource("java", "example", old, "1.0.0", Map.of("configuration", Map.of("prefix", "实例配置")));
             var spec = provider.tools(source, context).getFirst();
-            assertEquals("实例配置已执行", provider.invoke(source, spec, Map.of("value", "已执行"), context).get("content"));
+            var result = provider.invoke(source, spec, Map.of("value", "已执行"), context);
+            assertEquals("实例配置已执行", result.get("content"));
+            assertNotEquals(ProcessHandle.current().pid(), ((Number) result.get("pid")).longValue());
         }
-        String next = upload(secondPackage);
+
         activate(next, old).andExpect(status().isOk());
         assertEquals("upgraded", registry.find(enterprise, old).getStatus());
         assertNull(raw(old).getArtifact());
@@ -200,28 +213,14 @@ class JavaPluginApiTest {
         var reinstalledNotice = data(mvc.perform(get(packages() + "/references").param("versionIds", version).cookie(session.cookie()))
             .andExpect(status().isOk()).andReturn());
         assertEquals("upgraded", reinstalledNotice.get(0).path("status").asText());
+        verifyInstallationPermissions(reinstalled);
     }
 
-    @Test
-    void malformedDuplicateAndStaleInstallationsDoNotReplaceTheActivePackage() throws Exception {
-        String old = upload(firstPackage);
-        activate(old, null).andExpect(status().isOk());
-        mvc.perform(put(packages() + "/content").cookie(session.cookie()).header("Origin", "http://localhost:3000")
-            .header("X-CSRF-Token", session.token()).header("Idempotency-Key", UUID.randomUUID().toString())
-            .contentType(MediaType.APPLICATION_OCTET_STREAM).content("不是插件包"))
-            .andExpect(status().isUnprocessableEntity());
-        String duplicate = upload(firstPackage);
-        activate(duplicate, old).andExpect(status().isConflict());
-        String next = upload(secondPackage);
-        activate(next, null).andExpect(status().isConflict());
-        assertEquals(old, registry.current(enterprise, "example").getId());
-        assertNotNull(raw(old).getArtifact());
-    }
 
-    @Test
-    void enterpriseAdministratorsCannotInstallExecutableCodeAndOtherEnterprisesCannotUseIt() throws Exception {
-        String old = upload(firstPackage);
-        activate(old, null).andExpect(status().isOk());
+
+
+
+    private void verifyInstallationPermissions(String old) throws Exception {
         String other = enterprises.create("另一个企业", users.findById(user).orElseThrow(), Instant.now()).enterpriseId();
         assertFalse(registry.available(other, old));
         String name = "plugin-member-" + UUID.randomUUID();

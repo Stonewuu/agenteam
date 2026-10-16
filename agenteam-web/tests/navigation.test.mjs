@@ -7,9 +7,9 @@ import {loadSource} from "./i18n-test-runtime.mjs";
 const extension = loadSource("features/edition/navigation-extension");
 
 const source = readFileSync(new URL("../src/features/auth/lib/identity-navigation.ts", import.meta.url), "utf8");
+const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 function navigation(search = "", pathname = "/", hash = "") {
   const exports = {};
-  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   vm.runInNewContext(code, { exports, require: () => extension, URL, URLSearchParams, window: { location: { origin: "http://localhost:3000", pathname, search, hash } } });
   return exports;
 }

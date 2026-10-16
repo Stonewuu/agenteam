@@ -2,72 +2,43 @@ package com.stonewu.agenteam.mapper.test.enterprise;
 
 import com.github.yulichang.base.MPJBaseMapper;
 import com.stonewu.agenteam.model.resource.entity.ResourceRow;
-import com.stonewu.agenteam.support.TestDatabaseValues;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 
-/**
- * resource 的测试数据准备与实际数据库断言。
- */
+import java.time.Instant;
+
+/** 资源记录的测试数据准备。 */
 @Mapper
 public interface ResourceFixtureMapper extends MPJBaseMapper<ResourceRow> {
-    default int workspaceApiDraftResourceUpdate(@Param("args") Object... args) {
-        var databaseRow = new ResourceRow();
-        databaseRow.setId(TestDatabaseValues.string(args[0]));
-        databaseRow.setEnterpriseId(TestDatabaseValues.string(args[1]));
-        databaseRow.setKind("agent");
-        databaseRow.setName(TestDatabaseValues.string(args[2]));
-        databaseRow.setDescription("真实搜索摘要");
-        databaseRow.setSubtype("chat");
-        databaseRow.setOwnerUserId(TestDatabaseValues.string(args[3]));
-        databaseRow.setSource("created");
-        databaseRow.setStatus("active");
-        databaseRow.setUpdatedAt(TestDatabaseValues.instant(args[4]));
-        return insert(databaseRow);
+    default int insertAgent(String id, String enterprise, String name, String owner) {
+        return insert(agent(id, enterprise, name, owner));
     }
 
-    default int resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate(@Param("args") Object... args) {
-        var databaseRow = new ResourceRow();
-        databaseRow.setId(TestDatabaseValues.string(args[0]));
-        databaseRow.setEnterpriseId(TestDatabaseValues.string(args[1]));
-        databaseRow.setKind("agent");
-        databaseRow.setName("资源草稿");
-        databaseRow.setOwnerUserId("owner");
-        return insert(databaseRow);
+    default int insertSearchableAgent(String id, String enterprise, String name, String owner, Instant updatedAt) {
+        var row = agent(id, enterprise, name, owner);
+        row.setDescription("真实搜索摘要");
+        row.setSubtype("chat");
+        row.setSource("created");
+        row.setStatus("active");
+        row.setUpdatedAt(updatedAt);
+        return insert(row);
     }
 
-    default int resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate12(@Param("args") Object... args) {
-        var databaseRow = new ResourceRow();
-        databaseRow.setId("another");
-        databaseRow.setEnterpriseId("first");
-        databaseRow.setKind("agent");
-        databaseRow.setName("另一个资源");
-        databaseRow.setOwnerUserId("owner");
-        return insert(databaseRow);
+    default int insertDisabledAgent(String id, String enterprise, String owner) {
+        var row = agent(id, enterprise, "已停用的历史员工", owner);
+        row.setDescription("");
+        row.setSubtype("chat");
+        row.setSource("created");
+        row.setStatus("disabled");
+        return insert(row);
     }
 
-    default int resourceAuthorizationResourceUpdate(@Param("args") Object... args) {
-        var databaseRow = new ResourceRow();
-        databaseRow.setId(TestDatabaseValues.string(args[0]));
-        databaseRow.setEnterpriseId(TestDatabaseValues.string(args[1]));
-        databaseRow.setKind("agent");
-        databaseRow.setName(TestDatabaseValues.string(args[2]));
-        databaseRow.setOwnerUserId(TestDatabaseValues.string(args[3]));
-        return insert(databaseRow);
+    private static ResourceRow agent(String id, String enterprise, String name, String owner) {
+        var row = new ResourceRow();
+        row.setId(id);
+        row.setEnterpriseId(enterprise);
+        row.setKind("agent");
+        row.setName(name);
+        row.setOwnerUserId(owner);
+        return row;
     }
-
-    default int enterpriseTestDataConversationUpdate(@Param("args") Object... args) {
-        var databaseRow = new ResourceRow();
-        databaseRow.setId(TestDatabaseValues.string(args[0]));
-        databaseRow.setEnterpriseId(TestDatabaseValues.string(args[1]));
-        databaseRow.setKind("agent");
-        databaseRow.setName("已停用的历史员工");
-        databaseRow.setDescription("");
-        databaseRow.setSubtype("chat");
-        databaseRow.setOwnerUserId(TestDatabaseValues.string(args[2]));
-        databaseRow.setSource("created");
-        databaseRow.setStatus("disabled");
-        return insert(databaseRow);
-    }
-
 }

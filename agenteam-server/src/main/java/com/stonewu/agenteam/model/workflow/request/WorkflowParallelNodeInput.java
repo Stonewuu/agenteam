@@ -21,6 +21,6 @@ public record WorkflowParallelNodeInput(
     }
 
     public record Config(
-        @NotNull(message = "请填写必填项。") @Size(min = 1, max = 64, message = "文字长度不符合要求。") String joinNodeId) {
+        @Size(min = 1, max = 64, message = "文字长度不符合要求。") String joinNodeId) {
     }
 }

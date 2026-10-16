@@ -16,7 +16,7 @@ import java.util.function.BooleanSupplier;
 
 /**
  * 业务接口测试仍解析原始文件和校验实际结果，避免每次上传都重启 Java。
- * 进程隔离、超时、取消及危险文档由 DocumentParserProcessTest 使用真实子进程验证。
+ * 格式和危险内容使用真实解析实现；进程协议、超时与取消由独立子进程验证。
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class InProcessDocumentParsing {
@@ -26,6 +26,15 @@ public class InProcessDocumentParsing {
                                                 @Value("${files.parser-root:${files.root:.agenteam/files}/.parsing}") String root,
                                                 DocumentSandboxService sandbox,
                                                 @Value("${files.parser.sandbox-enabled:true}") boolean sandboxEnabled) {
+        return create(storage, json, root, sandbox, sandboxEnabled);
+    }
+
+    public static DocumentParserProcess create(FileContentStorage storage, ObjectMapper json, String root) {
+        return create(storage, json, root, null, false);
+    }
+
+    private static DocumentParserProcess create(FileContentStorage storage, ObjectMapper json, String root,
+                                                DocumentSandboxService sandbox, boolean sandboxEnabled) {
         return new DocumentParserProcess(storage, json, root, sandbox, sandboxEnabled) {
             @Override
             protected int executeParser(Path directory, Path source, String format, String purpose,

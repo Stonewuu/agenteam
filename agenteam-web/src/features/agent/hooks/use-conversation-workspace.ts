@@ -2,7 +2,7 @@
 
 import {useT} from "@/lib/i18n/locale-provider";
 
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
 import {useApiQuery} from "@/lib/http/use-api-query";
@@ -22,17 +22,30 @@ import type {SkillOption} from "@/features/skill/types/skill";
 import type {DocumentOption} from "@/features/knowledge/types/knowledge";
 import {useFileUploads} from "@/features/file/hooks/use-file-uploads";
 import type {HomeSummary} from "@/features/workspace/types/workspace";
-import {useGuardedNavigation} from "@/features/workspace/components/navigation-guard";
+import {useBlockNavigation, useGuardedNavigation} from "@/features/workspace/components/navigation-guard";
 import {useConversationApprovalPolicy} from "./use-conversation-approval-policy";
 import {useConversationModel} from "./use-conversation-model";
 import {useComposerHandoff} from "../components/composer-handoff-context";
 import {useConversationProject} from "@/features/project/hooks/use-conversation-project";
 
-export function useConversationWorkspace(userId: string, enterpriseId: string, canRun: boolean, canUseSkills: boolean, canUseKnowledge: boolean, sharedList?: ReturnType<typeof useConversationList>, canManage = false) {
+export type ConversationLocation = {
+  pathname: string;
+  search?: string;
+  active?: boolean;
+  navigate: (path: string, replace: boolean) => void;
+};
+
+export function useConversationWorkspace(userId: string, enterpriseId: string, canRun: boolean, canUseSkills: boolean, canUseKnowledge: boolean, sharedList?: ReturnType<typeof useConversationList>, canManage = false, location?: ConversationLocation) {
   const uiText = useT();
-  const pathname = usePathname();
-  const params = useSearchParams();
-  const guarded = useGuardedNavigation();
+  const browserPathname = usePathname();
+  const browserParams = useSearchParams();
+  const pathname = location?.pathname ?? browserPathname;
+  const embedded = location !== undefined;
+  const search = location?.search;
+  const params = useMemo(() => embedded ? new URLSearchParams(search ?? "") : browserParams,
+    [embedded, search, browserParams]);
+  const scope = useId();
+  const guarded = useGuardedNavigation(embedded ? scope : undefined);
   const parts = pathname.split("/");
   const conversationId = parts[3] === "conversations" && parts[4] ? decodeURIComponent(parts[4]) : null;
   const handoff = useComposerHandoff();
@@ -43,7 +56,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const list = sharedList ?? localList;
   const stream = useConversationStream(enterpriseId, conversationId);
   useConversationResultViewed(enterpriseId, conversationId, stream.state?.latestRun,
-    Boolean(stream.state && !stream.state.replaying && !stream.loading && !stream.error));
+    location?.active !== false && Boolean(stream.state && !stream.state.replaying && !stream.loading && !stream.error));
   const steps = useConversationStepHistory(enterpriseId, stream.state?.snapshot.messages, stream.historyVersion, stream.historySequence);
   const detail = stream.state?.snapshot.conversation;
   const skills = useConversationSkills(userId, enterpriseId, detail?.agentId ?? selectedAgent, conversationId, params.get("skill"), canUseSkills);
@@ -79,6 +92,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     : selectedDocuments.length && !canUseKnowledge ? uiText("当前无法引用资料，请移除所选资料。") : "";
   const sourcesReady = !sourceError && (!files.items.length || files.ready);
   const draft = drafts[draftKey] ?? "";
+  useBlockNavigation(Boolean(draft) || files.items.length > 0 || selectedDocuments.length > 0, submitting, embedded ? scope : undefined);
   const {
     conversationRef,
     shouldStickToBottomRef,
@@ -174,6 +188,10 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     setActionError("");
     setSkillPickerOpen(false);
     setDocumentPickerOpen(false);
+    if (location) {
+      location.navigate(path, replace);
+      return;
+    }
     if (replace) {
       window.history.replaceState(null, "", path);
     } else {

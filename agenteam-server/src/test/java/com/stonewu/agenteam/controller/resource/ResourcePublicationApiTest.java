@@ -140,6 +140,22 @@ class ResourcePublicationApiTest {
         var created = create("agent", "资料助手", configuration);
         String id = created.at("/resource/id").asText();
         assertFalse(created.at("/resource/listing/listed").asBoolean());
+        int audits = Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise)));
+        int requests = Math.toIntExact(databaseAccess.mapper(ApiRequestMapper.class).selectCount(new LambdaQueryWrapper<ApiRequestRow>().eq(ApiRequestRow::getEnterpriseId, enterprise)));
+        publish(id, "1", Map.of("releaseNote", "不应发布", "grants", List.of(Map.of("subjectType", "user", "subjectId", "missing-member", "capability", "use")), "listing", Map.of("listed", true, "hirePolicy", "automatic")), UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
+        assertUnpublished(id);
+        assertEquals(audits, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise))));
+        assertEquals(requests, Math.toIntExact(databaseAccess.mapper(ApiRequestMapper.class).selectCount(new LambdaQueryWrapper<ApiRequestRow>().eq(ApiRequestRow::getEnterpriseId, enterprise))));
+        var listingSkill = create("skill", "不能上架的技能", skill());
+        String listingSkillId = listingSkill.at("/resource/id").asText();
+        audits = Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise)));
+        publish(listingSkillId, "1", Map.of("releaseNote", "整体撤销", "grants", List.of(Map.of("subjectType", "enterprise", "subjectId", enterprise, "capability", "use")), "listing", Map.of("listed", true, "hirePolicy", "automatic")), UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
+        assertUnpublished(listingSkillId);
+        assertEquals(audits, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise))));
+        var nullGrants = json.createObjectNode().put("releaseNote", "不可把空值当作省略").putNull("grants");
+        publish(id, "1", nullGrants, UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
+        assertUnpublished(id);
+
         String key = UUID.randomUUID().toString();
         var body = Map.of("releaseNote", "固定首版配置", "grants", List.of(Map.of("subjectType", "enterprise", "subjectId", enterprise, "capability", "use")), "listing", Map.of("listed", true, "hirePolicy", "approval"));
         CountDownLatch ready = new CountDownLatch(2);
@@ -172,26 +188,7 @@ class ResourcePublicationApiTest {
         assertEquals(published.at("/version/id").asText(), detail(id).at("/resource/publishedVersion/id").asText());
     }
 
-    @Test
-    void rejectedGrantOrListingLeavesNoVersionGrantAuditOrCompletedRequest() throws Exception {
-        var created = create("agent", "权限失败测试", agent());
-        String id = created.at("/resource/id").asText();
-        int audits = Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise)));
-        int requests = Math.toIntExact(databaseAccess.mapper(ApiRequestMapper.class).selectCount(new LambdaQueryWrapper<ApiRequestRow>().eq(ApiRequestRow::getEnterpriseId, enterprise)));
-        publish(id, "1", Map.of("releaseNote", "不应发布", "grants", List.of(Map.of("subjectType", "user", "subjectId", "missing-member", "capability", "use")), "listing", Map.of("listed", true, "hirePolicy", "automatic")), UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
-        assertUnpublished(id);
-        assertEquals(audits, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise))));
-        assertEquals(requests, Math.toIntExact(databaseAccess.mapper(ApiRequestMapper.class).selectCount(new LambdaQueryWrapper<ApiRequestRow>().eq(ApiRequestRow::getEnterpriseId, enterprise))));
-        var skill = create("skill", "不能上架的技能", skill());
-        String skillId = skill.at("/resource/id").asText();
-        audits = Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise)));
-        publish(skillId, "1", Map.of("releaseNote", "整体撤销", "grants", List.of(Map.of("subjectType", "enterprise", "subjectId", enterprise, "capability", "use")), "listing", Map.of("listed", true, "hirePolicy", "automatic")), UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
-        assertUnpublished(skillId);
-        assertEquals(audits, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise))));
-        var nullGrants = json.createObjectNode().put("releaseNote", "不可把空值当作省略").putNull("grants");
-        publish(id, "1", nullGrants, UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
-        assertUnpublished(id);
-    }
+
 
     @Test
     void resourceUseDoesNotRevealDraftsAndForeignVersionsCannotBeReadOrPublished() throws Exception {

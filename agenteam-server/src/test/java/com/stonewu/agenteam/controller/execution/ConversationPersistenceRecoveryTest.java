@@ -65,7 +65,7 @@ class ConversationPersistenceRecoveryTest extends ExecutionApiTestSupport {
         var attempts = new AtomicInteger();
         doAnswer(invocation -> {
             List<ExecutionChange> changes = invocation.getArgument(2);
-            if (changes.stream().anyMatch(change -> change.delta() != null) && attempts.incrementAndGet() <= 2) {
+            if (changes.stream().anyMatch(change -> change.block() != null && change.block().type().equals("text") && !change.block().text().isEmpty()) && attempts.incrementAndGet() <= 2) {
                 throw new DataAccessResourceFailureException("仅供验证的数据库短时不可用");
             }
             return invocation.callRealMethod();
@@ -92,18 +92,19 @@ class ConversationPersistenceRecoveryTest extends ExecutionApiTestSupport {
             assertEquals("completed", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getStatus).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
             assertTrue(attempts.get() >= 3);
             assertEquals(expected, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getContent).eq(AgentMessageRow::getId, (accepted.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getContent()).toList()));
-            StringBuilder deltas = new StringBuilder();
+            int savedTextBlocks = 0;
             long sequence = 0;
             for (var event : events.after(enterprise, conversation, 0, 1000)) {
                 assertEquals(Long.toString(++sequence), event.sequence());
                 schemas.validate("ExecutionEvent", json.valueToTree(event));
-                if (event.type().equals("message.delta")) {
-                    String delta = json.valueToTree(event.payload()).path("delta").asText();
-                    assertTrue(delta.getBytes(StandardCharsets.UTF_8).length <= 4096);
-                    deltas.append(delta);
+                var block = json.valueToTree(event.payload()).path("block");
+                if (event.type().equals("block.updated") && block.path("type").asText().equals("text")) {
+                    assertEquals(expected, block.path("text").asText());
+                    savedTextBlocks++;
                 }
+                assertTrue(!event.type().equals("message.delta"), "实时正文只在完整内容块结束后保存");
             }
-            assertEquals(expected, deltas.toString());
+            assertEquals(1, savedTextBlocks);
             assertEquals(1, modelCalls.get() - callsBefore);
         } finally {
             worker.close();

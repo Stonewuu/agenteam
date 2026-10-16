@@ -34,13 +34,11 @@ final class KnowledgeSqlTimingInterceptor implements Interceptor {
             return invocation.proceed();
         }
         var statement = (MappedStatement) invocation.getArgs()[0];
-        Object parameters = invocation.getArgs()[1];
         measuring.set(true);
         try {
             long start = System.nanoTime();
             Object result = invocation.proceed();
-            var bound = invocation.getArgs().length == 6 ? (BoundSql) invocation.getArgs()[5] : statement.getBoundSql(parameters);
-            timing.record(statement.getId(), bound.getSql(), parameters, result, System.nanoTime() - start);
+            timing.record(statement.getId(), result, System.nanoTime() - start);
             return result;
         } finally {
             measuring.remove();

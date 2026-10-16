@@ -31,12 +31,14 @@
   top: calc(-1 * var(--header-collapse-height) * var(--header-progress));
   z-index: 20;
   height: var(--header-expanded-height);
-  margin-inline: calc(-1 * var(--shell-gutter, 0px));
+  margin-inline-start: calc(-1 * var(--shell-gutter, 0px));
+  margin-inline-end: calc(-1 * var(--page-content-inset-end, var(--shell-gutter, 0px)));
   align-self: start;
 }
 
 .frame[data-ready=true] .surface {
-  padding-inline: var(--shell-gutter, 0px);
+  padding-inline-start: var(--shell-gutter, 0px);
+  padding-inline-end: var(--page-content-inset-end, var(--shell-gutter, 0px));
   height: calc(var(--header-expanded-height) - var(--header-collapse-height) * var(--header-progress));
   transform: translateY(calc(var(--header-collapse-height) * var(--header-progress)));
   background: color-mix(in srgb, var(--bg) calc(var(--header-progress) * 78%), transparent);

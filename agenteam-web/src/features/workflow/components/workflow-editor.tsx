@@ -1,74 +1,167 @@
 "use client";
 
-import {localizeUiMessage} from "@/lib/i18n/ui-message";
-
+import {useEffect, useRef, useState} from "react";
 import {useT} from "@/lib/i18n/locale-provider";
+import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {localizeCatalog} from "@/lib/i18n/translate";
-
 import {Button} from "@/components/ui/button";
-
-import {Select} from "@/components/ui/select";
+import {Input} from "@/components/ui/input";
 import {Popover, PopoverContent, PopoverTitle, PopoverTrigger} from "@/components/ui/shadcn/popover";
-import {IconCheck, IconPlus, IconTrash, IconX} from "@/components/ui/icons";
-
-
-import {useRef, useState} from "react";
+import {IconArrowLeft, IconArrowRight, IconCheck, IconCopy, IconLayoutGrid, IconPlus, IconStack, IconTrash, IconX} from "@/components/ui/icons";
 import {Dialog, DialogActions} from "@/components/ui/dialog";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import type {ResourceSummary, WorkflowConfig} from "@/features/resource/types/resource";
 import type {NodeType, WorkflowGraph, WorkflowNode, WorkflowValidation} from "../types/workflow";
-import {
-  arrangeGraph,
-  branches,
-  branchNames,
-  connectionError,
-  edge,
-  insertNode,
-  nodeNames,
-  removeNode
-} from "../lib/workflow-graph";
-import {WorkflowGraphCanvas, workflowIcons} from "./workflow-graph-canvas";
+import {graphNodeCount, nodeNames} from "../lib/workflow-graph";
+import {commandFitsLimits, executeWorkflowCommand, type ConnectionOrigin, type WorkflowCommand} from "../lib/workflow-commands";
+import {arrangeWorkflow} from "../lib/workflow-layout";
+import {graphAtPath, replaceGraph, validGraphPath} from "../lib/workflow-editor-state";
+import {useWorkflowHistory} from "../hooks/use-workflow-history";
+import {WorkflowGraphCanvas} from "./workflow-graph-canvas";
+import {workflowIcons, nodeChoices} from "./workflow-node-catalog";
 import {WorkflowNodeFields} from "./workflow-node-fields";
-import {WorkflowConnectionsEditor} from "./workflow-connections-editor";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./workflow.module.css";
+import panels from "./workflow-panels.module.css";
 
-type Addable = Exclude<NodeType, "start" | "end" | "join">;
+type Addable = Exclude<NodeType, "start" | "end">;
+type EditorProps = {
+  enterprise: string; value: WorkflowConfig; onChange: (value: WorkflowConfig) => void;
+  permissions: string[]; readOnly: boolean; resource?: ResourceSummary; busy?: boolean; fillHeight?: boolean;
+  assistantOpen?: boolean; onInspectorOpen?: () => void; onCanvasElement?: (element: HTMLDivElement | null) => void;
+};
 
-export function WorkflowEditor({enterprise, value, onChange, permissions, readOnly, resource, busy = false}: {
-  enterprise: string;
-  value: WorkflowConfig;
-  onChange: (value: WorkflowConfig) => void;
-  permissions: string[];
-  readOnly: boolean;
-  resource?: ResourceSummary;
-  busy?: boolean;
-}) {
+export function WorkflowEditor({onCanvasElement, ...props}: EditorProps) {
+  const text = useT();
+  const [path, setPath] = useState<string[]>([]);
+  const history = useWorkflowHistory(props.value, props.onChange);
+  const validPath = validGraphPath(props.value, path);
+  if (validPath.length !== path.length) {
+    setPath(validPath);
+  }
+  const graph = graphAtPath(props.value, path);
+  const change = (next: WorkflowGraph, key = "") => history.commit({...props.value, ...replaceGraph(props.value, path, next)}, key ? `${path.join("/")}:${key}` : "");
+  return <div className={`${styles.fields} ${props.fillHeight ? styles.fillHeight : ""}`} ref={onCanvasElement}>
+    {path.length > 0 && <nav className={styles.breadcrumb} aria-label={text("循环步骤位置")}>
+      <Button type="button" className={ui.button} onClick={() => setPath([])}>{text("完整流程")}</Button>
+      {path.map((id, index) => <Button type="button" className={ui.button} key={path.slice(0, index + 1).join("/")} onClick={() => setPath(path.slice(0, index + 1))}>
+        {graphAtPath(props.value, path.slice(0, index)).nodes.find((node) => node.nodeId === id)?.name}
+      </Button>)}
+    </nav>}
+    <WorkflowEditorView {...props} key={path.join("/")} value={{icon: props.value.icon, color: props.value.color, ...graph}}
+      resource={path.length ? undefined : props.resource} totalCount={graphNodeCount(props.value)} depth={path.length}
+      onOpenLoop={(id) => setPath([...path, id])} changeGraph={change} history={history}/>
+  </div>;
+}
+
+type ViewProps = EditorProps & {totalCount: number; depth: number; onOpenLoop: (id: string) => void;
+  changeGraph: (graph: WorkflowGraph, key?: string) => void; history: ReturnType<typeof useWorkflowHistory>};
+
+function WorkflowEditorView({enterprise, value, permissions, readOnly, resource, busy = false, totalCount, depth,
+  onOpenLoop, assistantOpen, onInspectorOpen, changeGraph, history}: ViewProps) {
   const uiText = useT();
-  const [selected, setSelected] = useState(""), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState<string | null>(null);
+  const [fitKey, setFitKey] = useState(0);
+  const [selected, setSelected] = useState("");
+  const [selection, setSelection] = useState<string[]>([]);
   const [selectedEdge, setSelectedEdge] = useState("");
-  const [validation, setValidation] = useState<{
-    config: string;
-    result: WorkflowValidation
-  } | null>(null), [checking, setChecking] = useState(false), [error, setError] = useState("");
-  const mutation = useRef(new ApiMutation()), panel = useRef<HTMLDivElement>(null);
-  const node = value.nodes.find((node) => node.nodeId === selected), serialized = JSON.stringify(value),
-    current = validation?.config === serialized ? validation.result : null;
-  const connection = value.edges.find((item) => item.edgeId === selectedEdge);
-  const locked = readOnly || busy || checking;
-  const graphChange = (graph: WorkflowGraph) => onChange({...value, ...graph});
+  const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string[]>([]);
+  const [validation, setValidation] = useState<{config: string; result: WorkflowValidation} | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [arranging, setArranging] = useState(false);
+  const [error, setError] = useState("");
+  const mutation = useRef(new ApiMutation());
+  const panel = useRef<HTMLDivElement>(null);
+  const latest = useRef(value);
+  useEffect(() => {
+    latest.current = value;
+  }, [value]);
+  const node = value.nodes.find((node) => node.nodeId === selected);
+  const group = value.groups?.find((group) => group.groupId === selected);
+  const serialized = JSON.stringify(value);
+  const current = validation?.config === serialized ? validation.result : null;
+  const locked = readOnly || busy || checking || arranging;
   const fieldsValid = () => Array.from(panel.current?.querySelectorAll<HTMLTextAreaElement>("textarea[data-workflow-json]") ?? []).every((field) => field.reportValidity());
+  const graphChange = (graph: WorkflowGraph, key = "") => {
+    if (!locked) {
+      changeGraph(graph, key);
+    }
+  };
   const select = (id: string) => {
     if (fieldsValid()) {
       setSelected(id);
+      setSelectedEdge("");
+      if (id) {
+        onInspectorOpen?.();
+      }
     }
   };
-  const changeNode = (next: WorkflowNode) => onChange({
-    ...value,
-    nodes: value.nodes.map((item) => item.nodeId === next.nodeId ? next : item)
-  });
-
+  const dispatch = (command: WorkflowCommand, key = "") => {
+    if (locked || !fieldsValid()) {
+      return;
+    }
+    const result = executeWorkflowCommand(value, command);
+    if (result.error) {
+      setError(uiText(result.error));
+      return;
+    }
+    if (!commandFitsLimits(totalCount, value, result.graph)) {
+      setError(uiText("包含循环内部步骤在内，最多允许 50 个节点，100 条连接。"));
+      return;
+    }
+    setError("");
+    graphChange(result.graph, key);
+    if (result.selected) {
+      setSelection(result.selected);
+      select(result.selected.length === 1 ? result.selected[0] : "");
+    }
+  };
+  const canAdd = (type: Addable) => totalCount + (type === "loop" ? 3 : 1) <= 50 && (type !== "loop" || depth < 3);
+  const add = (type: Addable, position?: WorkflowNode["position"], origin?: ConnectionOrigin) => {
+    if (!canAdd(type)) {
+      return;
+    }
+    dispatch({type: "add", kind: type, position, origin});
+    setAdding(false);
+    if (!position) {
+      setFitKey((key) => key + 1);
+    }
+  };
+  const arrange = async () => {
+    if (locked || !fieldsValid()) {
+      return;
+    }
+    setArranging(true);
+    setError("");
+    try {
+      const next = await arrangeWorkflow(value);
+      if (JSON.stringify(latest.current) === serialized) {
+        changeGraph(next);
+        setFitKey((key) => key + 1);
+      }
+    } catch (failed) {
+      console.error("整理工作流布局失败", {resourceId: resource?.id}, failed);
+      setError(uiText("整理布局失败，请重试。"));
+    } finally {
+      setArranging(false);
+    }
+  };
+  const undo = (redo = false) => {
+    if (!locked && fieldsValid()) {
+      history.undo(redo);
+      setSelected("");
+      setSelectedEdge("");
+      setSelection([]);
+    }
+  };
+  const copy = (ids: string[]) => dispatch({type: "copy", ids});
+  const requestDelete = (ids: string[]) => {
+    if (!locked && fieldsValid()) {
+      setDeleting(value.nodes.filter((node) => ids.includes(node.nodeId) && !["start", "end"].includes(node.type)).map((node) => node.nodeId));
+    }
+  };
+  const changeNode = (node: WorkflowNode) => dispatch({type: "update", node}, `node:${node.nodeId}`);
   async function validate() {
     if (!resource || !fieldsValid() || checking) {
       return;
@@ -76,14 +169,11 @@ export function WorkflowEditor({enterprise, value, onChange, permissions, readOn
     setChecking(true);
     setError("");
     try {
-      const result = await mutation.current.run<WorkflowValidation>(organizationPath(enterprise, `/workflows/${encodeURIComponent(resource.id)}/validate`), {
-        method: "POST",
-        body: value
-      });
+      const result = await mutation.current.run<WorkflowValidation>(organizationPath(enterprise, `/workflows/${encodeURIComponent(resource.id)}/validate`), {method: "POST", body: value});
       setValidation({config: serialized, result});
       const first = result.errors.find((error) => error.nodeId || error.edgeId);
       if (first) {
-        setSelected(first.nodeId ?? value.edges.find((edge) => edge.edgeId === first.edgeId)?.source ?? selected);
+        select(first.nodeId ?? value.edges.find((edge) => edge.edgeId === first.edgeId)?.source ?? "");
       }
     } catch (failed) {
       console.error("校验工作流失败", {resourceId: resource.id}, failed);
@@ -92,152 +182,117 @@ export function WorkflowEditor({enterprise, value, onChange, permissions, readOn
       setChecking(false);
     }
   }
-
-  return <section className={styles.editor} aria-label={uiText("工作流编辑")}>
+  return <section className={styles.editor} aria-label={uiText("工作流编辑")} onBlurCapture={history.endEdit}
+    onKeyDown={(event) => {
+      if (event.key === "Escape" && selected) {
+        event.stopPropagation();
+        select("");
+        return;
+      }
+      if ((event.target as HTMLElement).closest("input,textarea,select,[contenteditable=true]")) {
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        undo(event.shiftKey);
+      }
+    }}>
     <div className={styles.toolbar}>
       <div className={ui.actions}>
-        {!readOnly && <><Popover open={adding} onOpenChange={setAdding}><PopoverTrigger className={ui.primary}
-                                                                                        disabled={locked || value.nodes.length >= 50}><IconPlus
-          size={16}/>{uiText("添加节点")}</PopoverTrigger><PopoverContent align="start"
-                                                                          className={styles.nodeLibrary}><PopoverTitle>{uiText("选择节点")}</PopoverTitle>
-          {(["agent", "skill", "tool", "condition", "transform", "approval", "parallel"] as Addable[]).map((type) => {
-            const Icon = workflowIcons[type];
-            return <Button className={styles.libraryItem} type="button" key={type}
-                           disabled={value.nodes.length + (type === "parallel" ? 4 : 1) > 50} onClick={() => {
-              if (!fieldsValid()) {
-                return;
-              }
-              const next = insertNode(value, type, node?.nodeId ?? "");
-              graphChange(next.graph);
-              setSelected(next.selected);
-              setSelectedEdge("");
-              setAdding(false);
-            }}><Icon size={19}/>{type === "parallel" ? uiText("并行与汇合") : localizeCatalog(nodeNames, uiText)[type]}
-            </Button>;
-          })}
-        </PopoverContent></Popover><Button className={ui.button} type="button" disabled={locked}
-                                           onClick={() => graphChange(arrangeGraph(value))}>{uiText("整理布局")}</Button></>}
-        <span
-          className={styles.graphCount}>{value.nodes.length}{uiText(" 个节点 · ")}{value.edges.length}{uiText(" 条连接")}</span>
+        {!readOnly && <><Popover open={adding} onOpenChange={setAdding}>
+          <PopoverTrigger className={ui.primary} disabled={locked || totalCount >= 50}><IconPlus size={16}/>{uiText("添加节点")}</PopoverTrigger>
+          <PopoverContent align="start" className={styles.nodeLibrary}><PopoverTitle>{uiText("选择节点")}</PopoverTitle>
+            {nodeChoices.map(({type, description}) => {
+              const Icon = workflowIcons[type];
+              return <Button className={styles.libraryItem} type="button" key={type} disabled={!canAdd(type)} onClick={() => add(type)}>
+                <Icon size={19}/><span><strong>{uiText(nodeNames[type])}</strong><small>{uiText(description)}</small></span>
+              </Button>;
+            })}
+          </PopoverContent></Popover>
+          <Button className={ui.button} type="button" disabled={locked} onClick={() => void arrange()}><IconLayoutGrid size={16}/>{uiText(arranging ? "正在整理…" : "整理布局")}</Button>
+          <span className={styles.historyControls}>
+            <Button type="button" className="icon-button" disabled={locked || !history.canUndo} aria-label={uiText("撤销")} title={uiText("撤销（Ctrl+Z）")} onClick={() => undo()}><IconArrowLeft size={18}/></Button>
+            <Button type="button" className="icon-button" disabled={locked || !history.canRedo} aria-label={uiText("重做")} title={uiText("重做（Ctrl+Shift+Z）")} onClick={() => undo(true)}><IconArrowRight size={18}/></Button>
+          </span></>}
+        <span className={styles.graphCount}>{value.nodes.length}{uiText(" 个节点 · ")}{value.edges.length}{uiText(" 条连接")}</span>
       </div>
-      <div className={ui.actions}>
-        {!readOnly && <Button className={ui.button} type="button" disabled={!resource || locked}
-                              title={!resource ? uiText("保存草稿后检查") : undefined}
-                              onClick={() => void validate()}><IconCheck
-          size={16}/>{checking ? uiText("正在检查…") : uiText("检查结构")}</Button>}
-      </div>
+      {!readOnly && depth === 0 && <Button className={ui.button} type="button" disabled={!resource || locked}
+        title={!resource ? uiText("保存草稿后检查") : undefined} onClick={() => void validate()}><IconCheck size={16}/>{uiText(checking ? "正在检查…" : "检查结构")}</Button>}
     </div>
-    <div className={`${styles.layout} ${node || connection ? styles.withPanel : ""}`}><WorkflowGraphCanvas graph={value}
-                                                                                                           selected={node?.nodeId}
-                                                                                                           onSelect={select}
-                                                                                                           selectedEdge={selectedEdge}
-                                                                                                           onSelectEdge={setSelectedEdge}
-                                                                                                           invalidNodes={current?.errors.flatMap((error) => error.nodeId ? [error.nodeId] : [])}
-                                                                                                           onConnect={locked ? undefined : (source, target, branch) => {
-                                                                                                             const candidate = edge(source, target, branch);
-                                                                                                             const issue = value.edges.length >= 100 ? uiText("流程最多包含 100 条连接。") : connectionError(value, candidate);
-                                                                                                             setError(issue);
-                                                                                                             if (!issue) {
-                                                                                                               graphChange({
-                                                                                                                 ...value,
-                                                                                                                 edges: [...value.edges, candidate]
-                                                                                                               });
-                                                                                                             }
-                                                                                                           }}
-                                                                                                           onMove={locked ? undefined : (id, position) => {
-                                                                                                             const moving = value.nodes.find((node) => node.nodeId === id);
-                                                                                                             if (moving) {
-                                                                                                               changeNode({
-                                                                                                                 ...moving,
-                                                                                                                 position
-                                                                                                               });
-                                                                                                             }
-                                                                                                           }}/>
-      {node && <div className={`${styles.panel} ${styles.configuration}`} ref={panel}>
+    <div className={styles.layout}><div className={styles.graphArea}>
+      <WorkflowGraphCanvas graph={value} fitKey={fitKey} onAdd={locked ? undefined : add} canAdd={canAdd}
+        onCopy={locked ? undefined : copy} onDelete={locked ? undefined : requestDelete} onArrange={locked ? undefined : () => void arrange()}
+        onGroup={locked ? undefined : (ids) => dispatch({type: "group", ids, name: uiText("分组")})}
+        onUngroup={locked ? undefined : (id) => dispatch({type: "ungroup", id})}
+        inspectorOpen={Boolean((node || group) && !assistantOpen)}
+        onReconnect={locked ? undefined : (id, source, target, branch) => dispatch({type: "reconnect", id, source, target, branch})}
+        onDeleteEdge={locked ? undefined : (id) => {
+          dispatch({type: "deleteEdge", id});
+          setSelectedEdge("");
+        }}
+        selected={selected} selection={selection} onSelection={(ids) => {
+          if (fieldsValid()) {
+            setSelection(ids);
+            if (ids.length !== 1) {
+              setSelected("");
+            }
+          }
+        }} onSelect={select} selectedEdge={selectedEdge} onSelectEdge={(id) => {
+          if (fieldsValid()) {
+            setSelectedEdge(id);
+          }
+        }} invalidNodes={current?.errors.flatMap((error) => error.nodeId ? [error.nodeId] : [])}
+        onConnect={locked ? undefined : (source, target, branch) => dispatch({type: "connect", source, target, branch})}
+        onMove={locked ? undefined : (positions) => dispatch({type: "move", positions})}/>
+      {(current || error) && <aside className={styles.canvasFeedback} aria-label={uiText("画布提示")}>
+        <Button className={`icon-button ${styles.dismissFeedback}`} type="button" aria-label={uiText("关闭画布提示")} onClick={() => {
+          setValidation(null);
+          setError("");
+        }}><IconX size={16}/></Button>
+        {current?.valid && <p className={styles.validation} role="status"><IconCheck size={16}/>{uiText("当前流程校验通过。")}</p>}
+        {error && <p className={ui.error} role="alert">{localizeUiMessage(error, uiText)}</p>}
+        {current && !current.valid && <ul className={styles.errors} aria-label={uiText("流程中需要修正的问题")}>
+          {current.errors.map((issue, index) => <li key={index}><Button type="button" onClick={() => {
+            const id = issue.nodeId ?? value.edges.find((edge) => edge.edgeId === issue.edgeId)?.source;
+            if (id) {
+              select(id);
+            }
+          }}>{issue.nodeId ? `${value.nodes.find((node) => node.nodeId === issue.nodeId)?.name ?? uiText("节点")}：` : ""}{issue.message}</Button></li>)}
+        </ul>}
+      </aside>}
+    </div>
+      {node && <div className={`${panels.floating} ${panels.inspector} ${styles.configuration}`} ref={panel} hidden={assistantOpen} inert={assistantOpen}>
         <div className={styles.heading}><h3>{localizeCatalog(nodeNames, uiText)[node.type]}</h3><Button
           className="icon-button" type="button" aria-label={uiText("关闭节点配置")} onClick={() => select("")}><IconX
           size={18}/></Button></div>
         <WorkflowNodeFields key={node.nodeId} enterprise={enterprise} graph={value} node={node}
-                            permissions={permissions} onChange={changeNode} readOnly={locked}
-                            onPair={(id) => {
-                              const pair = value.nodes.find((node) => node.nodeId === id);
-                              if (!pair) {
-                                return;
+                            onOpenLoop={() => {
+                              if (fieldsValid()) {
+                                onOpenLoop(node.nodeId);
                               }
-                              onChange({
-                                ...value,
-                                nodes: value.nodes.map((item) => item.nodeId === node.nodeId ? {
-                                    ...item,
-                                    config: {
-                                      ...item.config,
-                                      [node.type === "parallel" ? "joinNodeId" : "parallelNodeId"]: id
-                                    }
-                                  }
-                                  : item.nodeId === id ? {
-                                    ...item,
-                                    config: {
-                                      ...item.config,
-                                      [pair.type === "parallel" ? "joinNodeId" : "parallelNodeId"]: node.nodeId
-                                    }
-                                  } : item)
-                              });
-                            }}/>
-        <WorkflowConnectionsEditor key={`connections:${node.nodeId}`} graph={value} node={node} onChange={graphChange}
-                                   onSelect={select} readOnly={locked}/>
+                            }}
+                            permissions={permissions} onChange={changeNode} readOnly={locked}/>
+        {node.type === "loop" && readOnly && <Button className={ui.button} type="button" onClick={() => onOpenLoop(node.nodeId)}>{uiText("查看循环内的步骤")}</Button>}
         {!locked && !["start", "end"].includes(node.type) &&
-          <Button className={ui.danger} type="button" onClick={() => setDeleting(node.nodeId)}><IconTrash
-            size={16}/>{uiText("删除节点")}</Button>}
+          <div className={ui.actions}><Button className={ui.button} type="button" onClick={() => copy([node.nodeId])}><IconCopy size={16}/>{uiText("复制节点")}</Button>
+          <Button className={ui.danger} type="button" onClick={() => requestDelete([node.nodeId])}><IconTrash
+            size={16}/>{uiText("删除节点")}</Button></div>}
       </div>}
-      {connection && <div className={`${styles.panel} ${styles.configuration}`}>
-        <div className={styles.heading}><h3>{uiText("连接设置")}</h3><Button type="button" className="icon-button"
-                                                                             aria-label={uiText("关闭连接设置")}
-                                                                             onClick={() => setSelectedEdge("")}><IconX
-          size={18}/></Button></div>
-        <p>{value.nodes.find((item) => item.nodeId === connection.source)?.name} → {value.nodes.find((item) => item.nodeId === connection.target)?.name}</p>
-        <label className={ui.field}><span>{uiText("分支")}</span><Select value={connection.branch} disabled={locked}
-                                                                         onChange={(event) => {
-                                                                           const candidate = {
-                                                                             ...connection,
-                                                                             branch: event.target.value as typeof connection.branch
-                                                                           };
-                                                                           const issue = connectionError(value, candidate, connection.edgeId);
-                                                                           setError(issue);
-                                                                           if (!issue) {
-                                                                             graphChange({
-                                                                               ...value,
-                                                                               edges: value.edges.map((item) => item.edgeId === connection.edgeId ? candidate : item)
-                                                                             });
-                                                                           }
-                                                                         }}>{branches(value.nodes.find((item) => item.nodeId === connection.source)!.type).map((branch) =>
-          <option value={branch} key={branch}>{localizeCatalog(branchNames, uiText)[branch]}</option>)}</Select></label>
-        {!locked && <Button type="button" className={ui.danger} onClick={() => {
-          graphChange({...value, edges: value.edges.filter((item) => item.edgeId !== connection.edgeId)});
-          setSelectedEdge("");
-        }}><IconTrash size={16}/>{uiText("删除连接")}</Button>}
+      {group && <div className={`${panels.floating} ${panels.inspector} ${styles.configuration}`} hidden={assistantOpen} inert={assistantOpen}>
+        <div className={styles.heading}><h3><IconStack size={18}/>{uiText("分组")}</h3><Button type="button" className="icon-button" aria-label={uiText("关闭分组配置")} onClick={() => select("")}><IconX size={18}/></Button></div>
+        <label className={ui.field}><span>{uiText("分组名称")}</span><Input value={group.name} maxLength={50} required disabled={locked}
+          onChange={(event) => dispatch({type: "renameGroup", id: group.groupId, name: event.target.value}, `group:${group.groupId}`)}/></label>
+        <p className={ui.description}>{uiText("{0} 个节点", [group.nodeIds.length])}</p>
+        {!locked && <Button type="button" className={ui.button} onClick={() => dispatch({type: "ungroup", id: group.groupId})}><IconStack size={16}/>{uiText("取消分组")}</Button>}
       </div>}
     </div>
-    {current?.valid && <p className={styles.validation}>{uiText("当前流程校验通过。")}</p>}
-    {error && <p className={ui.error} role="alert">{localizeUiMessage(error ?? "", uiText)}</p>}
-    {current && !current.valid &&
-      <ul className={styles.errors} aria-label={uiText("流程中需要修正的问题")}>{current.errors.map((error, index) =>
-        <li key={index}><Button type="button" onClick={() => {
-          const id = error.nodeId ?? value.edges.find((edge) => edge.edgeId === error.edgeId)?.source;
-          if (id) {
-            select(id);
-          }
-          panel.current?.scrollIntoView({block: "nearest"});
-        }}>{error.nodeId ? `${value.nodes.find((node) => node.nodeId === error.nodeId)?.name ?? uiText("节点")}：` : ""}{error.message}</Button>
-        </li>)}</ul>}
-    {deleting && <Dialog title={uiText("删除“{0}”？", [value.nodes.find((node) => node.nodeId === deleting)?.name])}
-                         onClose={() => setDeleting(null)}><p
-      className={ui.description}>{uiText("同时移除 ")}{value.edges.filter((edge) => edge.source === deleting || edge.target === deleting).length}{uiText(" 条连接。")}</p>
-      <DialogActions className={ui.footer}><Button className={ui.button} type="button"
-                                                   onClick={() => setDeleting(null)}>{uiText("保留节点")}</Button><Button
-        className={ui.danger} type="button" onClick={() => {
-        graphChange(removeNode(value, deleting));
-        setDeleting(null);
-        setSelected(value.nodes.find((node) => node.type === "start")!.nodeId);
-      }}>{uiText("删除节点及连接")}</Button></DialogActions>
+    {deleting.length > 0 && <Dialog title={deleting.length === 1 ? uiText("删除“{0}”？", [value.nodes.find((node) => node.nodeId === deleting[0])?.name]) : uiText("删除所选的 {0} 个节点？", [deleting.length])}
+      onClose={() => setDeleting([])}><p className={ui.description}>{uiText("同时移除 ")}{value.edges.filter((edge) => deleting.includes(edge.source) || deleting.includes(edge.target)).length}{uiText(" 条连接。")}</p>
+      <DialogActions className={ui.footer}><Button className={ui.button} type="button" onClick={() => setDeleting([])}>{uiText("保留节点")}</Button>
+        <Button className={ui.danger} type="button" onClick={() => {
+          dispatch({type: "delete", ids: deleting});
+          setDeleting([]);
+        }}>{uiText("删除节点及连接")}</Button></DialogActions>
     </Dialog>}
   </section>;
 }

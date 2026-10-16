@@ -71,32 +71,11 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void expiredReceiveProbesAreRemovedWithoutChangingBusinessConfiguration() throws Exception {
-        capabilities.receive(initiator, enterprise, bot.getId(), new ChatCheckRequest(1L, group.getId(), "text", binding.getId()));
-        var config = (ObjectNode) json.readTree(bots.require(enterprise, bot.getId()).getConfigJson());
-        config.withObject("/receiveProbe").put("expiresAt", Instant.now().minusSeconds(1).toString());
-        databaseAccess.mapper(ChatBotBindingMapper.class).update(new LambdaUpdateWrapper<ChatBotBindingRow>().eq(ChatBotBindingRow::getId, bot.getId())
-            .set(ChatBotBindingRow::getConfigJson, config.toString()));
-        capabilities.expireProbes();
-        var current = bots.require(enterprise, bot.getId());
-        assertFalse(json.readTree(current.getConfigJson()).has("receiveProbe"));
-        assertEquals(1L, current.getRevision());
-        assertEquals("enabled", current.getStatus());
-    }
-
-    @Test
-    void testMemberChoicesContainOnlyExplicitlyEnabledBindingsOfThisApplication() {
+    void enabledSharedIdentityCanVerifyTwoBotsWithOneAccountBinding() {
         var page = testMembers.list(admin, enterprise, bot.getId(), null, null, 30);
         assertEquals(1, page.items().size());
         assertEquals(binding.getId(), page.items().getFirst().bindingId());
         assertEquals(initiator.username(), page.items().getFirst().username());
-        databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
-            .eq(UserChannelBindingRow::getId, binding.getId()).set(UserChannelBindingRow::getChatEnabled, false));
-        assertTrue(testMembers.list(admin, enterprise, bot.getId(), null, null, 30).items().isEmpty());
-    }
-
-    @Test
-    void sharedFeishuIdentityCanVerifyTwoBotsWithOneAccountBinding() {
         var finance = secondBot();
         databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getId, binding.getId()).set(UserChannelBindingRow::getExternalUnionId, "on_joint_member"));
@@ -114,6 +93,9 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
         assertTrue(bots.capability(bots.require(enterprise, bot.getId()), "crossBotIdentity"));
         assertTrue(bots.capability(bots.require(enterprise, finance.getId()), "crossBotIdentity"));
         assertEquals(0, taskCount());
+        databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
+            .eq(UserChannelBindingRow::getId, binding.getId()).set(UserChannelBindingRow::getChatEnabled, false));
+        assertTrue(testMembers.list(admin, enterprise, bot.getId(), null, null, 30).items().isEmpty());
     }
 
     @Test
@@ -202,6 +184,11 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
         assertFalse(bots.capability(bots.require(enterprise, bot.getId()), "receiveMention"));
         assertEquals(0, messageCount());
         assertEquals(0, taskCount());
+        capabilities.expireProbes();
+        var current = bots.require(enterprise, bot.getId());
+        assertFalse(json.readTree(current.getConfigJson()).has("receiveProbe"));
+        assertEquals(1L, current.getRevision());
+        assertEquals("enabled", current.getStatus());
     }
 
     @Test
@@ -229,7 +216,7 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void fiveWrongPairingAttemptsInvalidateTheCode() throws Exception {
+    void failedAndExpiredPairingCodesCannotBindAnAccount() throws Exception {
         wecom();
         String code = pairingCode();
         String wrong = code.substring(0, code.indexOf('.') + 1) + "incorrect";
@@ -241,17 +228,12 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
         var flow = databaseAccess.mapper(ChannelOauthSessionMapper.class).selectById(code.substring(0, code.indexOf('.')));
         assertEquals("failed", flow.getStatus());
         assertEquals(5, flow.getPairingAttempts());
-    }
-
-    @Test
-    void anExpiredPrivatePairingCodeCannotBindAnAccount() throws Exception {
-        wecom();
-        String code = pairingCode();
+        String expiredCode = pairingCode();
         databaseAccess.mapper(ChannelOauthSessionMapper.class).update(new LambdaUpdateWrapper<ChannelOauthSessionRow>()
-            .eq(ChannelOauthSessionRow::getId, code.substring(0, code.indexOf('.')))
+            .eq(ChannelOauthSessionRow::getId, expiredCode.substring(0, code.indexOf('.')))
             .set(ChannelOauthSessionRow::getCreatedAt, Instant.now().minusSeconds(600))
             .set(ChannelOauthSessionRow::getExpiresAt, Instant.now().minusSeconds(1)));
-        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("expired-private-code", code, true));
+        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("expired-private-code", expiredCode, true));
         assertEquals(0, activeBindings());
         assertEquals(0, taskCount());
     }

@@ -11,6 +11,7 @@ export type NodeType =
   | "approval"
   | "parallel"
   | "join"
+  | "loop"
   | "end";
 export type Branch = "default" | "true" | "false" | "approve" | "reject";
 export type WorkflowNode = {
@@ -18,7 +19,8 @@ export type WorkflowNode = {
   failurePolicy: "stop" | "continue"; config: Record<string, unknown>
 };
 export type WorkflowEdge = { edgeId: string; source: string; target: string; branch: Branch };
-export type WorkflowGraph = { nodes: WorkflowNode[]; edges: WorkflowEdge[] };
+export type WorkflowGroup = {groupId: string; name: string; nodeIds: string[]};
+export type WorkflowGraph = { nodes: WorkflowNode[]; edges: WorkflowEdge[]; groups?: WorkflowGroup[] };
 export type WorkflowValidation = {
   valid: boolean;
   errors: { nodeId: string | null; edgeId: string | null; field: string; code: string; message: string }[]
@@ -27,7 +29,8 @@ export type DependencyOptions = {
   kind: "agent" | "plugin";
   agentType: "chat" | "task" | "workflow" | null;
   skills: UsableVersion[];
-  tools: PluginTool[]
+  tools: PluginTool[];
+  toolOutputRoots?: Record<string, string>;
 };
 export type Comparison = {
   field: string;

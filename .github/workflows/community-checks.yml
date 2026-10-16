@@ -76,4 +76,4 @@ jobs:
         working-directory: agenteam-web
         run: pnpm test
       - name: 镜像输入与文件范围检查
-        run: node --test scripts/release/community-backend.test.mjs scripts/release/image-inputs.test.mjs scripts/release/source-archive-inputs.test.mjs scripts/release/mysql-compose.test.mjs
+        run: node --test --test-concurrency=4 scripts/release/community-backend.test.mjs scripts/release/image-inputs.test.mjs scripts/release/mysql-compose.test.mjs

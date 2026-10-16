@@ -75,20 +75,9 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void actualBuiltinDirectoryIncludesUsableBusinessTools() throws Exception {
-        var result = data(mvc.perform(get(base() + "/plugins/builtins").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        var codes = new HashSet<String>();
-        for (var plugin : result) {
-            schemas.validate("BuiltinPlugin", plugin);
-            codes.add(plugin.path("code").asText());
-            assertFalse(plugin.path("toolNames").isEmpty());
-        }
-        assertTrue(codes.containsAll(Set.of("web_read", "platform_basics", "todo_management", "schedule_management")));
-    }
-
-    @Test
-    void todoCreationRequiresConfirmationAndIsVisibleInTheRealTodoList() throws Exception {
-        String run = prepare("todo_management", "todo_create", Map.of("title", "工具创建的待办", "description", "需要整理的事项", "dueDate", "2027-01-02"));
+    void approvedTodoReplayCreatesOneRecordAndReturnsItToTheModel() throws Exception {
+        bind("todo_management", "todo_create");
+        String run = prepare("todo_create", Map.of("title", "工具创建的待办", "description", "需要整理的事项", "dueDate", "2027-01-02"));
         var approval = data(mvc.perform(get(base() + "/runs/" + run + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn()).get(0);
         assertEquals("平台业务插件 · 创建待办", approval.path("summary").path("title").asText());
         var conversation = data(mvc.perform(get(base() + "/conversations/" + runs.find(enterprise, run, false).orElseThrow().conversationId()).cookie(cookie))
@@ -96,58 +85,11 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
         assertTrue(conversation.toString().contains("平台业务插件 · 创建待办"));
         assertEquals(0, todos().size());
         decision(run, "approve");
-        finish(run);
-        var todo = todos().get(0);
-        assertEquals("工具创建的待办", todo.path("title").asText());
-        assertEquals(admin, todo.path("owner").path("id").asText());
-        assertEquals("message", todo.path("sourceType").asText());
-        assertEquals("2027-01-02", todo.path("dueDate").asText());
-        assertTrue(modelResult.get().contains("待办已创建"));
-        assertEquals("succeeded", calls.forRun(enterprise, run).getFirst().status());
-    }
-
-    @Test
-    void rejectedOrRevokedOperationsDoNotCreateBusinessRecords() throws Exception {
-        String rejected = prepare("todo_management", "todo_create", Map.of("title", "不得创建"));
-        decision(rejected, "reject");
-        finish(rejected);
-        assertTrue(todos().isEmpty());
-        String revoked = prepare("todo_management", "todo_create", Map.of("title", "失去资格后不得创建"));
-        decision(revoked, "approve");
-        permissions.replaceUserRoles(admin, enterprise, Set.of(), Instant.now());
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> terminal(revoked));
-        }
-        assertNotEquals("completed", state(revoked));
-        assertEquals(0, count("todo_item"));
-    }
-
-    @Test
-    void failureAfterBusinessMutationRollsBackTheRecordAndItsHistory() throws Exception {
-        String run = prepare("todo_management", "todo_create", Map.of("title", "事务回滚验证"));
-        doAnswer(invocation -> {
-            invocation.callRealMethod();
-            throw new IllegalStateException("模拟业务写入后保存结果之前失败");
-        }).when(business).call(any(), eq("todo_create"), any());
-        decision(run, "approve");
-        finish(run);
-        assertTrue(todos().isEmpty());
-        assertEquals(0, count("todo_history"));
-        var call = calls.forRun(enterprise, run).getFirst();
-        assertEquals("failed", call.status());
-        assertNull(call.submittedAt(), "业务与提交标记应一起回滚，不能冒充结果未知");
-    }
-
-    @Test
-    void simultaneousReplayCannotDuplicateRecordsAndLaterReplayReadsTheSavedResult() throws Exception {
-        String id = prepare("todo_management", "todo_create", Map.of("title", "只创建一次"));
-        decision(id, "approve");
         var lease = lifecycle.claim("builtin-replay-test").orElseThrow();
-        var run = lifecycle.start(lease).orElseThrow();
+        var active = lifecycle.start(lease).orElseThrow();
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var first = executor.submit(() -> invoke(run, lease));
-            var second = executor.submit(() -> invoke(run, lease));
+            var first = executor.submit(() -> invoke(active, lease));
+            var second = executor.submit(() -> invoke(active, lease));
             JsonNode saved = null;
             for (var result : List.of(first, second)) {
                 try {
@@ -164,20 +106,68 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
                 }
             }
             assertNotNull(saved);
-            assertEquals(saved, invoke(run, lease));
+            assertEquals(saved, invoke(active, lease));
         }
         assertEquals(1, todos().size());
-        var call = calls.forRun(enterprise, id).getFirst();
+        var call = calls.forRun(enterprise, run).getFirst();
         assertEquals(1, call.attemptCount());
         assertFalse(transactions.failed(lease, call.id(), "SIMULATED_FAILURE", "模拟提交后出现错误"));
         assertEquals("succeeded", calls.find(enterprise, call.id(), false).orElseThrow().status());
-        lifecycle.finish(lease, "completed", null, null);
+        try (var task = tasks.create(active, lease)) {
+            task.completion().block(Duration.ofSeconds(10));
+            task.saveCheckpoint();
+            lifecycle.finish(lease, "completed", null, null);
+        }
+        assertEquals("completed", state(run), () -> diagnostic(run));
+        var todo = todos().get(0);
+        assertEquals("工具创建的待办", todo.path("title").asText());
+        assertEquals(admin, todo.path("owner").path("id").asText());
+        assertEquals("message", todo.path("sourceType").asText());
+        assertEquals("2027-01-02", todo.path("dueDate").asText());
+        assertTrue(modelResult.get().contains("待办已创建"));
+        assertEquals("succeeded", calls.forRun(enterprise, run).getFirst().status());
     }
 
     @Test
-    void scheduleCreationUsesTheRealHireAndOnlyChangesFutureSettings() throws Exception {
+    void rejectedOrRevokedOperationsDoNotCreateBusinessRecords() throws Exception {
+        bind("todo_management", "todo_create");
+        String rejected = prepare("todo_create", Map.of("title", "不得创建"));
+        decision(rejected, "reject");
+        finish(rejected);
+        assertTrue(todos().isEmpty());
+        String revoked = prepare("todo_create", Map.of("title", "失去资格后不得创建"));
+        decision(revoked, "approve");
+        permissions.replaceUserRoles(admin, enterprise, Set.of(), Instant.now());
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> terminal(revoked));
+        }
+        assertNotEquals("completed", state(revoked));
+        assertEquals(0, count("todo_item"));
+    }
+
+    @Test
+    void failureAfterBusinessMutationRollsBackTheRecordAndItsHistory() throws Exception {
+        bind("todo_management", "todo_create");
+        String run = prepare("todo_create", Map.of("title", "事务回滚验证"));
+        doAnswer(invocation -> {
+            invocation.callRealMethod();
+            throw new IllegalStateException("模拟业务写入后保存结果之前失败");
+        }).when(business).call(any(), eq("todo_create"), any());
+        decision(run, "approve");
+        finish(run);
+        assertTrue(todos().isEmpty());
+        assertEquals(0, count("todo_history"));
+        var call = calls.forRun(enterprise, run).getFirst();
+        assertEquals("failed", call.status());
+        assertNull(call.submittedAt(), "业务与提交标记应一起回滚，不能冒充结果未知");
+    }
+
+    @Test
+    void approvedSchedulesPreserveTheirEmployeeOrExplicitRecipientTargets() throws Exception {
+        bind("schedule_management", "schedule_create", "schedule_action_create");
         String hire = hires.forAgent(enterprise, admin, agent, false).orElseThrow().id();
-        String run = prepare("schedule_management", "schedule_create", Map.of("name", "每天整理资料", "hireId", hire,
+        String run = prepare("schedule_create", Map.of("name", "每天整理资料", "hireId", hire,
             "inputText", "整理当天资料", "frequency", "daily", "localTime", "09:00", "enabled", false));
         assertTrue(schedules().isEmpty());
         decision(run, "approve");
@@ -188,10 +178,40 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
         assertFalse(saved.path("enabled").asBoolean());
         assertEquals("Asia/Shanghai", saved.path("timezone").asText());
         assertFalse(saved.path("agentVersionId").asText().isBlank());
+        String notificationRun = prepare("schedule_action_create", Map.of("name", "每天例会通知", "frequency", "daily",
+            "localTime", "09:15", "enabled", false, "action", Map.of("type", "notification.send", "schemaVersion", 1,
+                "config", Map.of("title", "参加例会", "body", "请准备会议资料。", "recipients", List.of(Map.of("userId", admin, "connectionIds", List.of()))))));
+        assertEquals(1, schedules().size());
+        assertEquals(0, count("notification"));
+        decision(notificationRun, "approve");
+        finish(notificationRun);
+        var listed = schedules();
+        assertEquals(2, listed.size());
+        JsonNode notification = null;
+        for (var candidate : listed) {
+            if (candidate.at("/action/type").asText().equals("notification.send")) {
+                notification = candidate;
+            }
+        }
+        assertNotNull(notification);
+        assertEquals("notification.send", notification.at("/action/type").asText());
+        assertEquals(admin, notification.at("/action/recipients/0/userId").asText());
+        assertTrue(notification.path("hireId").isNull());
+        assertTrue(notification.path("agentVersionId").isNull());
+        assertTrue(modelResult.get().contains("定时任务已创建"));
+        assertEquals("succeeded", calls.forRun(enterprise, notificationRun).getFirst().status());
     }
 
     @Test
-    void defaultBuiltinCanBeSelectedPublishedAndExecutedWithoutCreatingPluginDraft() throws Exception {
+    void builtinDirectoryAndSelectionsExposeOnlyPermittedToolsForEachMode() throws Exception {
+        var result = data(mvc.perform(get(base() + "/plugins/builtins").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        var codes = new HashSet<String>();
+        for (var plugin : result) {
+            schemas.validate("BuiltinPlugin", plugin);
+            codes.add(plugin.path("code").asText());
+            assertFalse(plugin.path("toolNames").isEmpty());
+        }
+        assertTrue(codes.containsAll(Set.of("web_read", "platform_basics", "todo_management", "schedule_management")));
         var choices = data(mvc.perform(get(base() + "/resources/usable-versions").param("kind", "plugin").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("items");
         String selected = null;
         for (var choice : choices) {
@@ -210,36 +230,14 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
         assertTrue(modelResult.get().contains("Asia/Shanghai"));
         assertEquals(0, count("run_approval"));
         assertEquals("read", calls.forRun(enterprise, run).getFirst().operationClass());
-    }
-
-    @Test
-    void notificationActionToolRequiresConfirmationAndPersistsExplicitRecipientsWithoutAnAgent() throws Exception {
-        String run = prepare("schedule_management", "schedule_action_create", Map.of("name", "每天例会通知", "frequency", "daily",
-            "localTime", "09:15", "enabled", false, "action", Map.of("type", "notification.send", "schemaVersion", 1,
-                "config", Map.of("title", "参加例会", "body", "请准备会议资料。", "recipients", List.of(Map.of("userId", admin, "connectionIds", List.of()))))));
-        assertTrue(schedules().isEmpty());
-        assertEquals(0, count("notification"));
-        decision(run, "approve");
-        finish(run);
-        var saved = schedules().get(0);
-        assertEquals("notification.send", saved.at("/action/type").asText());
-        assertEquals(admin, saved.at("/action/recipients/0/userId").asText());
-        assertTrue(saved.path("hireId").isNull());
-        assertTrue(saved.path("agentVersionId").isNull());
-        assertTrue(modelResult.get().contains("定时任务已创建"));
-        assertEquals("succeeded", calls.forRun(enterprise, run).getFirst().status());
-    }
-
-    @Test
-    void previewAndScheduledModesExposeOnlyTheReadPartOfBusinessPlugins() throws Exception {
         bind("todo_management", "todo_list", "todo_create");
-        String id = submit();
-        var run = runs.find(enterprise, id, false).orElseThrow();
-        assertEquals(2, catalog.list(run).values().stream().filter(tool -> tool.resourceKind().equals("plugin")).count());
+        String restrictedId = submit();
+        var restricted = runs.find(enterprise, restrictedId, false).orElseThrow();
+        assertEquals(2, catalog.list(restricted).values().stream().filter(tool -> tool.resourceKind().equals("plugin")).count());
         for (String mode : List.of("preview", "scheduled", "manual_schedule")) {
-            var variant = new RunRecord(run.id(), run.enterpriseId(), run.conversationId(), run.userId(), run.inputMessageId(), run.outputMessageId(),
-                run.agentVersionId(), mode, run.status(), run.executionConfig(), run.currentAttemptNo(), run.maxAttempts(), run.leaseVersion(),
-                run.hasStepErrors(), run.lastSequence(), run.startedAt(), run.finishedAt(), run.cancelRequestedAt(), run.nextAttemptAt(), run.errorCode(), run.errorMessage(), run.createdAt());
+            var variant = new RunRecord(restricted.id(), restricted.enterpriseId(), restricted.conversationId(), restricted.userId(), restricted.inputMessageId(), restricted.outputMessageId(),
+                restricted.agentVersionId(), mode, restricted.status(), restricted.executionConfig(), restricted.currentAttemptNo(), restricted.maxAttempts(), restricted.leaseVersion(),
+                restricted.hasStepErrors(), restricted.lastSequence(), restricted.startedAt(), restricted.finishedAt(), restricted.cancelRequestedAt(), restricted.nextAttemptAt(), restricted.errorCode(), restricted.errorMessage(), restricted.createdAt());
             var tools = catalog.list(variant);
             assertEquals(List.of("todo_list"), tools.values().stream().filter(tool -> tool.resourceKind().equals("plugin")).map(tool -> tool.definition().name()).toList());
         }
@@ -251,8 +249,7 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
         return toolExecution.invoke(run, lease, binding, call.frameworkSessionId(), transactions.originalCall(call), Duration.ofSeconds(30), new AtomicReference<ToolCallControl>(), () -> false);
     }
 
-    private String prepare(String code, String tool, Map<String, Object> args) throws Exception {
-        bind(code, tool);
+    private String prepare(String tool, Map<String, Object> args) throws Exception {
         model(args, tool);
         String run = submit();
         try (var worker = new RunWorker(lifecycle, tasks)) {
@@ -311,7 +308,8 @@ class PlatformBuiltinToolApiTest extends ExecutionApiTestSupport {
     }
 
     private String diagnostic(String run) {
-        return runs.find(enterprise, run, false).orElseThrow().toString();
+        var value = runs.find(enterprise, run, false).orElseThrow();
+        return "状态：" + value.status() + "，错误码：" + value.errorCode() + "，原因：" + value.errorMessage();
     }
 
     private boolean terminal(String run) {

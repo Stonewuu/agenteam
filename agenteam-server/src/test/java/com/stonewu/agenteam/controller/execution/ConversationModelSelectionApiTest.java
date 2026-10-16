@@ -117,9 +117,17 @@ class ConversationModelSelectionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void savedSelectionSurvivesReloadAndRetryWhileBusyAndStaleWritesAreRejected() throws Exception {
+    void selectionDefaultsChangesRetriesAndExplicitResetRespectConversationState() throws Exception {
         String alternative = reasoningModel(enterprise, "saved");
+        String configured = reasoningModel(enterprise, "default");
+        configureAgent(config -> {
+            config.put("modelProfileId", configured).put("reasoningEffort", "high");
+            config.remove("temperature");
+        });
+        assertEquals(selection(configured, "high"), options(null).path("defaultSelection"));
         var accepted = create(null);
+        assertEquals("high", runs.find(enterprise, accepted.path("runId").asText(), false).orElseThrow()
+            .executionConfig().at("/config/reasoningEffort").asText());
         String conversation = accepted.path("conversationId").asText();
         String path = path(conversation) + "/model-selection";
         String busyRevision = snapshot(conversation).at("/conversation/revision").asText();
@@ -141,25 +149,14 @@ class ConversationModelSelectionApiTest extends ExecutionApiTestSupport {
         cancel(retried);
         var next = data(write(path(conversation) + "/messages", input("继续"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         assertEquals("low", runs.find(enterprise, next.path("runId").asText(), false).orElseThrow().executionConfig().at("/config/reasoningEffort").asText());
-    }
-
-    @Test
-    void agentReasoningDefaultAppliesToLegacyClientsAndNullExplicitlyResetsIt() throws Exception {
-        String configured = reasoningModel(enterprise, "default");
-        configureAgent(config -> {
-            config.put("modelProfileId", configured).put("reasoningEffort", "high");
-            config.remove("temperature");
-        });
-        assertEquals(selection(configured, "high"), options(null).path("defaultSelection"));
-        var accepted = create(null);
-        String conversation = accepted.path("conversationId").asText();
-        assertEquals("high", runs.find(enterprise, accepted.path("runId").asText(), false).orElseThrow().executionConfig().at("/config/reasoningEffort").asText());
-        cancel(accepted);
-        var row = snapshot(conversation).path("conversation");
-        change(HttpMethod.PUT, path(conversation) + "/model-selection", selection(configured, null), row.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
-        var next = data(write(path(conversation) + "/messages", input("使用模型默认设置"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        assertFalse(runs.find(enterprise, next.path("runId").asText(), false).orElseThrow().executionConfig().path("config").has("reasoningEffort"));
         cancel(next);
+        var row = snapshot(conversation).path("conversation");
+        change(HttpMethod.PUT, path, selection(alternative, null), row.path("revision").asText(), UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        var reset = data(write(path(conversation) + "/messages", input("使用模型默认设置"), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        assertFalse(runs.find(enterprise, reset.path("runId").asText(), false).orElseThrow().executionConfig().path("config").has("reasoningEffort"));
+        cancel(reset);
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>()
             .eq(AgentConversationRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getId, conversation)
             .set(AgentConversationRow::getModelProfileId, null).set(AgentConversationRow::getReasoningEffort, null));

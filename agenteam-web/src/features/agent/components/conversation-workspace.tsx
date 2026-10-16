@@ -10,7 +10,7 @@ import {Button} from "@/components/ui/button";
 import {AssistantRuntimeProvider, useExternalStoreRuntime} from "@assistant-ui/react";
 import {useRouter} from "next/navigation";
 import {toast} from "@/components/ui/toast";
-import {useCallback, useEffect, useRef, useState} from "react";
+import {type ReactNode, useCallback, useEffect, useRef, useState} from "react";
 import {useComposerSelection} from "../hooks/use-composer-selection";
 import type {ComposerSelectionContext} from "../lib/composer-selection";
 import {useConversationNavigation} from "./conversation-navigation-context";
@@ -29,7 +29,7 @@ import type {EnterpriseContext, IdentityUser} from "@/features/auth/types/identi
 import type {Employee} from "@/features/employee/types/employee";
 import type {Conversation} from "../types/execution";
 import {appendMessageText, toAssistantMessage} from "../lib/conversation-ui-adapter";
-import {useConversationWorkspace} from "../hooks/use-conversation-workspace";
+import {type ConversationLocation, useConversationWorkspace} from "../hooks/use-conversation-workspace";
 import {DocumentPickerDialog} from "@/features/knowledge/components/document-picker-dialog";
 
 import {ConversationPane} from "./conversation-pane";
@@ -58,11 +58,11 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {ExportControl} from "@/features/export/components/export-control";
 
 
-import {useBlockNavigation} from "@/features/workspace/components/navigation-guard";
 
 
-export default function ConversationWorkspace({user, context}: {
-  user: IdentityUser; context: EnterpriseContext;
+export default function ConversationWorkspace({user, context, location, headerActions, onRunFinished}: {
+  user: IdentityUser; context: EnterpriseContext; location?: ConversationLocation;
+  headerActions?: ReactNode; onRunFinished?: () => void;
 }) {
   const uiText = useT();
   const enterprise = context.enterprise.id;
@@ -70,8 +70,9 @@ export default function ConversationWorkspace({user, context}: {
   const router = useRouter();
   const canUseSkills = canRun && context.permissions.includes("skill.use");
   const canUseKnowledge = canRun && context.permissions.includes("knowledge.search");
-  const navigation = useConversationNavigation();
-  const workspace = useConversationWorkspace(user.id, enterprise, canRun, canUseSkills, canUseKnowledge, navigation?.list, context.permissions.includes("conversation.manage"));
+  const sharedNavigation = useConversationNavigation();
+  const navigation = location ? null : sharedNavigation;
+  const workspace = useConversationWorkspace(user.id, enterprise, canRun, canUseSkills, canUseKnowledge, sharedNavigation?.list, context.permissions.includes("conversation.manage"), location);
   const collaboration = useCollaborationConversation(user.id, enterprise, workspace.conversationId, workspace.detail?.collaborationTaskId);
   const listed = navigation?.list.items.find(value => conversationSelected(value, workspace.conversationId));
   const group = collaboration.group ?? listed?.collaboration;
@@ -89,7 +90,7 @@ export default function ConversationWorkspace({user, context}: {
   const sidebarToggle = useRef<HTMLButtonElement>(null);
   const sidebarContainer = useRef<HTMLDivElement>(null);
   const sidebarPanels = useRef<ConversationSidebarHandle>(null);
-  const sidebar = useConversationSidebar(user.id, enterprise, sidebarContainer, workspace.conversationId);
+  const sidebar = useConversationSidebar(user.id, enterprise, sidebarContainer, workspace.conversationId, Boolean(location));
   const setSidebarOpen = sidebar.setOpen;
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
@@ -114,7 +115,6 @@ export default function ConversationWorkspace({user, context}: {
     workspace.setDocumentPickerOpen(false);
   });
   const favorite = useFormAction();
-  useBlockNavigation(Boolean(workspace.draft) || workspace.files.items.length > 0 || workspace.selectedDocuments.length > 0, workspace.submitting);
   const {conversationRef, ...view} = workspace;
   const [manage, setManage] = useState<Conversation | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -133,6 +133,14 @@ export default function ConversationWorkspace({user, context}: {
   });
   const active = workspace.stream.state?.snapshot.activeRun;
   const canStop = active?.mode === "preview" ? context.permissions.includes("agent.preview") : canRun;
+  const notifiedRun = useRef<string | null>(null);
+  const finishedRun = workspace.stream.state?.latestRun;
+  useEffect(() => {
+    if (finishedRun && ["completed", "failed", "cancelled"].includes(finishedRun.status) && notifiedRun.current !== finishedRun.id) {
+      notifiedRun.current = finishedRun.id;
+      onRunFinished?.();
+    }
+  }, [finishedRun, onRunFinished]);
 
   function selected(employee: Employee) {
     selection.consume();
@@ -174,7 +182,7 @@ export default function ConversationWorkspace({user, context}: {
   return <ConversationFileProvider enterprise={enterprise} conversation={workspace.conversationId}
                                    openFile={canViewFiles ? openFile : undefined}><AssistantRuntimeProvider
     runtime={runtime}>
-    <div className={`${styles.shell} ${sidebarStyles.layout}`} ref={sidebarContainer}
+    <div className={`${styles.shell} ${sidebarStyles.layout}`} ref={sidebarContainer} data-embedded={Boolean(location)}
          data-sidebar-open={canViewFiles && sidebar.open} data-sidebar-compact={sidebar.compact}
          data-sidebar-full={canViewFiles && sidebar.open && sidebar.full && !sidebar.compact}>
       <div className={styles.main} data-conversation-main
@@ -218,6 +226,7 @@ export default function ConversationWorkspace({user, context}: {
               </DropdownMenuContent></DropdownMenu></div>}
             {canViewFiles && (!sidebar.open || sidebar.compact) &&
               <span className={sidebarStyles.toggleSpace} aria-hidden="true"/>}
+            {headerActions}
           </div>
         </header>
         <NotificationOpenedMarker enterpriseId={enterprise} targetType="conversation"

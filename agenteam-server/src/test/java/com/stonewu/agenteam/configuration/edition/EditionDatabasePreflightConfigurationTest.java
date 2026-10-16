@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class EditionDatabasePreflightConfigurationTest {
     @Test
-    void rejectsLegacyDataBeforeAnyMigrationBeanCanWriteAndDoesNotDependOnFlywayEnabled() throws Exception {
+    void preflightProtectsExistingDataAndAllowsTheMatchingEditionMigration() throws Exception {
         try (var database = new IsolatedDatabase()) {
             var access = database.databaseAccess();
             var legacy = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
@@ -37,16 +37,6 @@ class EditionDatabasePreflightConfigurationTest {
                 .run(application -> assertThat(application).hasFailed());
             assertThat(access.mapper(SchemaSnapshotMapper.class).tables()).containsExactlyInAnyOrderElementsOf(tables);
             assertThat(legacy.info().applied()).hasSize(4);
-        }
-    }
-
-    @Test
-    void allowsCommercialPackageToReachItsMigrationForExistingDatabase() throws Exception {
-        try (var database = new IsolatedDatabase()) {
-            var access = database.databaseAccess();
-            Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
-                .target("0.1.1.2").cleanDisabled(true).load().migrate();
-            var attempted = new AtomicBoolean();
             runner(access.getDataSource(), ProductEdition.PRO).withUserConfiguration(MigrationProbe.class)
                 .withBean(AtomicBoolean.class, () -> attempted).run(application -> {
                     assertThat(application).hasNotFailed();

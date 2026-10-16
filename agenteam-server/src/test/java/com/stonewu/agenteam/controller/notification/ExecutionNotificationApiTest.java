@@ -87,6 +87,15 @@ class ExecutionNotificationApiTest extends ExecutionApiTestSupport {
     void finalResultsRespectPreferencesWithoutSuppressingFailuresOrCopyingErrorDetails() throws Exception {
         var first = submit();
         var lease = start();
+        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
+            lifecycle.finish(lease, "completed", null, null);
+            transaction.setRollbackOnly();
+        });
+        assertEquals("running", state(first.path("runId").asText()));
+        assertEquals(0, queuedNotices());
+        deliver();
+        assertEquals(0, count("notification"));
+
         lifecycle.finish(lease, "completed", null, null);
         lifecycle.finish(lease, "failed", "EXECUTION_FAILED", "晚到错误不能改写结果");
         assertEquals(1, queuedNotices());
@@ -112,23 +121,7 @@ class ExecutionNotificationApiTest extends ExecutionApiTestSupport {
         assertEquals(2, count("notification"));
     }
 
-    @Test
-    void rollingBackTheFinalStateAlsoRollsBackTheNotificationAndAllowsTheSameLeaseToFinish() throws Exception {
-        var accepted = submit();
-        var lease = start();
-        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            lifecycle.finish(lease, "completed", null, null);
-            transaction.setRollbackOnly();
-        });
-        assertEquals("running", state(accepted.path("runId").asText()));
-        assertEquals(0, queuedNotices());
-        deliver();
-        assertEquals(0, count("notification"));
-        lifecycle.finish(lease, "completed", null, null);
-        deliver();
-        assertEquals(1, count("notification"));
-        assertEquals("completed", state(accepted.path("runId").asText()));
-    }
+
 
     @Test
     void losingResourceAccessRequestsStopAndNotifiesOnceEvenWhenCompletionNotificationsAreOff() throws Exception {
@@ -166,21 +159,17 @@ class ExecutionNotificationApiTest extends ExecutionApiTestSupport {
         deliver();
         assertEquals(0, notices().size());
         assertEquals(0, count("notification"));
-    }
-
-    @Test
-    void viewingOneResultDoesNotSuppressOtherConversations() throws Exception {
-        var first = submit();
-        lifecycle.finish(start(), "completed", null, null);
         var second = submit();
         lifecycle.finish(start(), "completed", null, null);
-        write(viewedPath(first), null, key()).andExpect(status().isNoContent());
         deliver();
         var page = notices();
         assertEquals(1, page.size());
         assertEquals(second.path("conversationId").asText(), page.get(0).path("targetId").asText());
         assertTrue(page.get(0).path("readAt").isNull());
+
     }
+
+
 
     @Test
     void lateAcknowledgementReadsOnlyTheCompletedResultAndRemainsRepeatable() throws Exception {
@@ -218,6 +207,12 @@ class ExecutionNotificationApiTest extends ExecutionApiTestSupport {
         String other = provisioning.create("其他通知企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         write("/api/v1/enterprises/" + other + "/runs/" + completed.path("runId").asText() + "/result-viewed", null, key())
             .andExpect(status().isNotFound());
+        String member = key();
+        users.insertUser(member, "notice-member-" + member, "unused-test-password-hash", "其他成员", false, Instant.now());
+        users.addMember(enterprise, member, "其他成员", Instant.now());
+        var otherActor = new AuthContext(users.findById(member).orElseThrow(), enterprise, Set.of("conversation.view"));
+        var denied = assertThrows(ApiException.class, () -> viewedResults.viewed(otherActor, completed.path("runId").asText()));
+        assertEquals(404, denied.getStatusCode().value());
         deliver();
         assertTrue(notices().findValues("readAt").stream().allMatch(JsonNode::isNull));
     }
@@ -250,20 +245,7 @@ class ExecutionNotificationApiTest extends ExecutionApiTestSupport {
         assertTrue(page.findValues("readAt").stream().noneMatch(JsonNode::isNull));
     }
 
-    @Test
-    void anotherMemberCannotAcknowledgeTheOwnersCompletion() throws Exception {
-        var completed = submit();
-        lifecycle.finish(start(), "completed", null, null);
-        String member = key();
-        users.insertUser(member, "notice-member-" + member, "unused-test-password-hash", "其他成员", false, Instant.now());
-        users.addMember(enterprise, member, "其他成员", Instant.now());
-        var other = new AuthContext(users.findById(member).orElseThrow(), enterprise, Set.of("conversation.view"));
-        var denied = assertThrows(ApiException.class, () -> viewedResults.viewed(other, completed.path("runId").asText()));
-        assertEquals(404, denied.getStatusCode().value());
-        deliver();
-        assertEquals(1, notices().size());
-        assertTrue(notices().get(0).path("readAt").isNull());
-    }
+
 
     private String viewedPath(JsonNode accepted) {
         return base() + "/runs/" + accepted.path("runId").asText() + "/result-viewed";

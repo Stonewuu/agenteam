@@ -48,7 +48,9 @@ public final class RunProcessTestFixture {
     public static Process start(Path properties, Path log, String enterprise, String run) throws IOException {
         String executable = Path.of(System.getProperty("java.home"), "bin", System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java").toString();
         String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
-        var arguments = List.of("-cp", classpath, RestartedRunWorker.class.getName(), properties.toString(), enterprise, run);
+        var arguments = List.of("-Xmx512m", "-XX:ActiveProcessorCount=2",
+            "-XX:TieredStopAtLevel=" + System.getProperty("agenteam.test.compiler-level", "1"),
+            "-cp", classpath, RestartedRunWorker.class.getName(), properties.toString(), enterprise, run);
         Path argumentFile = properties.resolveSibling(properties.getFileName() + ".args");
         // 依赖增加后完整类路径可能超过 Windows 命令行长度，交给 Java 从参数文件读取。
         Files.writeString(argumentFile, String.join("\n", arguments.stream()

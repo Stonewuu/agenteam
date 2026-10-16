@@ -65,6 +65,14 @@ class ChatReplyInteractionTest extends CollaborationToolTestSupport {
         var task = onlyTask();
         var source = outgoing("accepted").getFirst();
         markSent(source);
+        for (String field : List.of("app_id", "open_chat_id", "open_message_id")) {
+            var invalidEvent = callback(source, "wrong-" + field, "reply_mode_open");
+            invalidEvent.withObject(field.equals("app_id") ? "/header" : "/event/context").put(field, "wrong-value");
+            assertThrows(ApiException.class, () -> accept(invalidEvent));
+        }
+        var invalidEvent = callback(source, "wrong-lease", "reply_mode_open");
+        assertThrows(ApiException.class, () -> cards.accept(enterprise, bot.getId(), 999L, bots.application(bot).credentialRevision(), bot.getRevision(), invalidEvent));
+        assertTrue(outgoing("reply_settings_update").isEmpty());
         var event = callback(source, "save-one", "reply_mode_save");
         event.withObject("/event/action/value").put("outputVisibility", "summary_link").put("expectedRevision", 0).put("expectedDefaultRevision", 0);
         event.withObject("/event/action/form_value").put("saveDefault", true);
@@ -100,21 +108,6 @@ class ChatReplyInteractionTest extends CollaborationToolTestSupport {
         var stale = event.deepCopy();
         stale.withObject("/header").put("event_id", "stale-setting");
         assertEquals("VERSION_CONFLICT", assertThrows(ApiException.class, () -> accept(stale)).code());
-    }
-
-    @Test
-    void callbackRejectsWrongApplicationChatMessageAndExpiredConnection() {
-        startTask("整理合成计划");
-        var source = outgoing("accepted").getFirst();
-        markSent(source);
-        for (String field : List.of("app_id", "open_chat_id", "open_message_id")) {
-            var event = callback(source, "wrong-" + field, "reply_mode_open");
-            event.withObject(field.equals("app_id") ? "/header" : "/event/context").put(field, "wrong-value");
-            assertThrows(ApiException.class, () -> accept(event));
-        }
-        var event = callback(source, "wrong-lease", "reply_mode_open");
-        assertThrows(ApiException.class, () -> cards.accept(enterprise, bot.getId(), 999L, bots.application(bot).credentialRevision(), bot.getRevision(), event));
-        assertTrue(outgoing("reply_settings_update").isEmpty());
     }
 
     @Test

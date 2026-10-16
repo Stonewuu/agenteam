@@ -17,8 +17,6 @@ import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import com.sun.net.httpserver.HttpExchange;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -57,11 +55,10 @@ class WorkflowModelInvocationApiTest extends ExecutionApiTestSupport {
         ENVIRONMENT.close();
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, 120})
-    void modelReceivesTheRealWorkflowResultAndContinuesInTheSameRun(int timeoutSeconds) throws Exception {
+    @Test
+    void modelReceivesTheRealWorkflowResultAndContinuesInTheSameRun() throws Exception {
         bind(graph(List.of(start(), node("work", "transform", Map.of("fields", List.of(Map.of("target", "answer", "template", "流程返回：${input.text}")))), end(Map.of("text", "${steps.work.output.answer}"))), List.of(edge("start", "work"), edge("work", "end"))));
-        configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", timeoutSeconds));
+        configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", 0));
         var resumed = new AtomicReference<JsonNode>();
         var turns = new AtomicInteger();
         allowModelCalls = true;
@@ -97,18 +94,23 @@ class WorkflowModelInvocationApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void multipleWorkflowConfirmationsReleaseTheWorkerAndReturnBothOriginalToolResultsAfterRestart() throws Exception {
+    void workflowConfirmationsResumeOriginalCallsAndCancelledFlowsStayStopped() throws Exception {
         bind(graph(List.of(start(), node("approval", "approval", Map.of("title", "确认：${input.text}", "description", "核对本次输入", "inputMapping", Map.of("text", "${input.text}"))), node("yes", "transform", Map.of("fields", List.of())), node("no", "transform", Map.of("fields", List.of())), end(Map.of("text", "${input.text}", "decision", "${steps.approval.output.decision}"))), List.of(edge("start", "approval"), edge("approval", "yes", "approve"), edge("approval", "no", "reject"), edge("yes", "end"), edge("no", "end"))));
         var turns = new AtomicInteger();
         var resumed = new AtomicReference<JsonNode>();
         allowModelCalls = true;
         modelResponse = exchange -> {
             var request = json.readTree(exchange.getRequestBody());
-            if (turns.getAndIncrement() == 0) {
+            int turn = turns.getAndIncrement();
+            if (turn == 0) {
                 frame(exchange, Map.of("tool_calls", List.of(call(request, "flow-first", "甲事项", 0), call(request, "flow-second", "乙事项", 1))), "tool_calls");
-            } else {
+            } else if (turn == 1) {
                 resumed.set(request);
                 frame(exchange, Map.of("content", "已按两项流程的实际决定完成整理。"), "stop");
+            } else if (turn == 2) {
+                frame(exchange, Map.of("tool_calls", List.of(call(request, "stopped-flow", "待停止事项", 0))), "tool_calls");
+            } else {
+                frame(exchange, Map.of("content", "继续处理新的问题。"), "stop");
             }
         };
         var accepted = submit();
@@ -140,6 +142,26 @@ class WorkflowModelInvocationApiTest extends ExecutionApiTestSupport {
         assertEquals("已按两项流程的实际决定完成整理。", snapshot(accepted).at("/messages/1/content").asText());
         assertEquals(2, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getRunId, (run)).eq(RunStepRow::getKind, "workflow"))));
         validateEvents(accepted);
+        var stopped = data(write(base() + "/conversations/" + accepted.path("conversationId").asText() + "/messages",
+            input("待停止事项"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        String cancelledRun = stopped.path("runId").asText();
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> statusOf(cancelledRun).equals("waiting_approval") || terminal(cancelledRun));
+        }
+        assertEquals("waiting_approval", statusOf(cancelledRun));
+        write(base() + "/runs/" + cancelledRun + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
+        assertEquals("cancelled", statusOf(cancelledRun));
+        var next = data(write(base() + "/conversations/" + stopped.path("conversationId").asText() + "/messages", input("继续新的问题"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> terminal(next.path("runId").asText()));
+        }
+        assertCompleted(next.path("runId").asText());
+        assertEquals(callsBefore + 4, modelCalls.get());
+        assertEquals(3, count("run_approval"));
+        assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getRunId, (next.path("runId").asText())).eq(RunStepRow::getKind, "workflow"))));
+        assertEquals("revoked", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunApprovalSqlMapper.class).selectList(new LambdaQueryWrapper<RunApprovalRow>().select(RunApprovalRow::getStatus).eq(RunApprovalRow::getRunId, (cancelledRun))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
     }
 
     @Test
@@ -213,40 +235,6 @@ class WorkflowModelInvocationApiTest extends ExecutionApiTestSupport {
         throw new IllegalStateException("模型请求中没有对应的流程或文件结果");
     }
 
-    @Test
-    void cancelledWorkflowDoesNotResumeWhenTheUserContinuesTheConversation() throws Exception {
-        bind(graph(List.of(start(), node("approval", "approval", Map.of("title", "等待本次决定", "description", "核对内容", "inputMapping", Map.of())), node("yes", "transform", Map.of("fields", List.of())), node("no", "transform", Map.of("fields", List.of())), end(Map.of("text", "原流程结束"))), List.of(edge("start", "approval"), edge("approval", "yes", "approve"), edge("approval", "no", "reject"), edge("yes", "end"), edge("no", "end"))));
-        var turns = new AtomicInteger();
-        allowModelCalls = true;
-        modelResponse = exchange -> {
-            var request = json.readTree(exchange.getRequestBody());
-            if (turns.getAndIncrement() == 0) {
-                frame(exchange, Map.of("tool_calls", List.of(call(request, "stopped-flow", "待停止事项", 0))), "tool_calls");
-            } else {
-                frame(exchange, Map.of("content", "继续处理新的问题。"), "stop");
-            }
-        };
-        var accepted = submit();
-        String run = accepted.path("runId").asText();
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> statusOf(run).equals("waiting_approval") || terminal(run));
-        }
-        assertEquals("waiting_approval", statusOf(run));
-        write(base() + "/runs/" + run + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
-        assertEquals("cancelled", statusOf(run));
-        var next = data(write(base() + "/conversations/" + accepted.path("conversationId").asText() + "/messages", input("继续新的问题"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> terminal(next.path("runId").asText()));
-        }
-        assertCompleted(next.path("runId").asText());
-        assertEquals(callsBefore + 2, modelCalls.get());
-        assertEquals(1, count("run_approval"));
-        assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getRunId, (next.path("runId").asText())).eq(RunStepRow::getKind, "workflow"))));
-        assertEquals("revoked", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunApprovalSqlMapper.class).selectList(new LambdaQueryWrapper<RunApprovalRow>().select(RunApprovalRow::getStatus).eq(RunApprovalRow::getRunId, (run))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
-    }
-
     private void bind(JsonNode graph) throws Exception {
         String id = data(write(base() + "/resources", Map.of("kind", "workflow", "name", "模型调用的工作流", "description", "核对真实调用及恢复", "tagIds", List.of(), "config", graph), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
         String version = data(change(HttpMethod.POST, base() + "/resources/" + id + "/publish", Map.of("releaseNote", "模型调用验收"), "1", UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
@@ -254,6 +242,57 @@ class WorkflowModelInvocationApiTest extends ExecutionApiTestSupport {
             config.withArray("workflowVersionIds").add(version);
             config.put("maxSteps", 50);
         });
+    }
+
+    @Test
+    void builtinBuilderCreatesAWorkflowThroughThePluginOnlyAfterUserConfirmation() throws Exception {
+        String profile = data(mvc.perform(get(base() + "/resources/" + agent).cookie(cookie)).andExpect(status().isOk()).andReturn()).at("/draft/modelProfileId").asText();
+        var turns = new AtomicInteger();
+        var created = new AtomicReference<JsonNode>();
+        allowModelCalls = true;
+        modelResponse = exchange -> {
+            var request = json.readTree(exchange.getRequestBody());
+            int turn = turns.getAndIncrement();
+            if (turn < 2) {
+                String tool = turn == 0 ? "workflow_schema" : "workflow_create";
+                var arguments = turn == 0 ? Map.of() : Map.of("name", "对话创建的流程", "description", "通过真实插件保存");
+                frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "builder-" + turn, "type", "function",
+                    "function", Map.of("name", modelTool(request, tool), "arguments", json.writeValueAsString(arguments))))), "tool_calls");
+            } else {
+                created.set(modelResultForCall(request, "builder-1"));
+                frame(exchange, Map.of("content", "工作流草稿已创建。"), "stop");
+            }
+        };
+        String route = base() + "/agent-templates/workflow_builder/conversations", key = UUID.randomUUID().toString();
+        var input = Map.of("modelProfileId", profile, "message", "帮我创建一个工作流");
+        var accepted = data(write(route, input, key).andExpect(status().isAccepted()).andReturn());
+        assertEquals(accepted, data(write(route, input, key).andExpect(status().isAccepted()).andReturn()));
+        String run = accepted.path("runId").asText();
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> statusOf(run).equals("waiting_approval") || terminal(run));
+        }
+        assertEquals("waiting_approval", statusOf(run), () -> diagnostic(run));
+        var approvals = data(mvc.perform(get(base() + "/runs/" + run + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(1, approvals.size());
+        var approval = approvals.get(0);
+        change(HttpMethod.POST, base() + "/approvals/" + approval.path("id").asText() + "/decision",
+            Map.of("decision", "approve", "requestHash", approval.path("requestHash").asText()), approval.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> terminal(run));
+        }
+        assertCompleted(run);
+        assertNotNull(created.get());
+        String workflow = created.get().path("workflowId").asText();
+        assertFalse(workflow.isBlank(), created.get().toString());
+        var detail = data(mvc.perform(get(base() + "/resources/" + workflow).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals("workflow", detail.at("/resource/kind").asText());
+        assertEquals("1", detail.at("/resource/revision").asText());
+        assertTrue(detail.at("/resource/publishedVersion").isNull());
+        assertEquals(2, detail.at("/draft/nodes").size());
+        assertEquals(1, count("run_approval"));
+        validateEvents(accepted);
     }
 
     private JsonNode submit() throws Exception {

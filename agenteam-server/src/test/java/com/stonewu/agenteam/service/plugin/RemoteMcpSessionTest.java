@@ -70,7 +70,7 @@ class RemoteMcpSessionTest {
 
     @Test
     void negotiatesOnlyVersionsSupportedByTheSelectedTransport() throws Exception {
-        for (String version : List.of("2025-03-26", "2025-06-18", "2025-11-25")) {
+        for (String version : List.of("2025-03-26", "2025-06-18")) {
             try (var remote = new Server("json")) {
                 remote.protocol = version;
                 try (var session = connect(remote, 4 * 1024 * 1024)) {

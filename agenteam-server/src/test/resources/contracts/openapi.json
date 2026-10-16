@@ -56976,15 +56976,12 @@
                 "type": "object",
                 "properties": {
                   "joinNodeId": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "minLength": 1,
                     "maxLength": 64
                   }
                 },
-                "additionalProperties": false,
-                "required": [
-                  "joinNodeId"
-                ]
+                "additionalProperties": false
               }
             },
             "additionalProperties": false,
@@ -57043,15 +57040,12 @@
                 "type": "object",
                 "properties": {
                   "parallelNodeId": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "minLength": 1,
                     "maxLength": 64
                   }
                 },
-                "additionalProperties": false,
-                "required": [
-                  "parallelNodeId"
-                ]
+                "additionalProperties": false
               }
             },
             "additionalProperties": false,
@@ -57129,6 +57123,99 @@
                 "required": [
                   "outputMapping"
                 ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "nodeId",
+              "name",
+              "position",
+              "timeoutSeconds",
+              "failurePolicy",
+              "type",
+              "config"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "position": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              "timeoutSeconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1800
+              },
+              "failurePolicy": {
+                "const": "stop"
+              },
+              "type": {
+                "const": "loop"
+              },
+              "config": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode",
+                  "maxIterations",
+                  "body"
+                ],
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "count",
+                      "items"
+                    ]
+                  },
+                  "count": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "items": {
+                    "type": [
+                      "string",
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "maxIterations": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "body": {
+                    "$ref": "#/components/schemas/WorkflowConfig"
+                  }
+                }
               }
             },
             "additionalProperties": false,
@@ -57240,6 +57327,44 @@
             },
             "maxItems": 100,
             "minItems": 1
+          },
+          "groups": {
+            "type": "array",
+            "maxItems": 25,
+            "description": "仅用于画布整理，不改变执行顺序。",
+            "items": {
+              "type": "object",
+              "properties": {
+                "groupId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                },
+                "nodeIds": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 50,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                }
+              },
+              "required": [
+                "groupId",
+                "name",
+                "nodeIds"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "additionalProperties": false,
@@ -61613,7 +61738,8 @@
                   "approval",
                   "parallel",
                   "join",
-                  "end"
+                  "end",
+                  "loop"
                 ]
               },
               {
@@ -64324,6 +64450,10 @@
             "maxItems": 100,
             "minItems": 0
           },
+          "toolOutputRoots": {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+          },
           "tools": {
             "type": "array",
             "items": {
@@ -64338,7 +64468,8 @@
           "kind",
           "agentType",
           "skills",
-          "tools"
+          "tools",
+          "toolOutputRoots"
         ]
       },
       "ScheduleRule": {
@@ -65942,15 +66073,12 @@
                 "type": "object",
                 "properties": {
                   "joinNodeId": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "minLength": 1,
                     "maxLength": 64
                   }
                 },
-                "additionalProperties": false,
-                "required": [
-                  "joinNodeId"
-                ]
+                "additionalProperties": false
               }
             },
             "additionalProperties": false,
@@ -66009,15 +66137,12 @@
                 "type": "object",
                 "properties": {
                   "parallelNodeId": {
-                    "type": "string",
+                    "type": ["string", "null"],
                     "minLength": 1,
                     "maxLength": 64
                   }
                 },
-                "additionalProperties": false,
-                "required": [
-                  "parallelNodeId"
-                ]
+                "additionalProperties": false
               }
             },
             "additionalProperties": false,
@@ -66095,6 +66220,99 @@
                 "required": [
                   "outputMapping"
                 ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "nodeId",
+              "name",
+              "position",
+              "timeoutSeconds",
+              "failurePolicy",
+              "type",
+              "config"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "position": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              "timeoutSeconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1800
+              },
+              "failurePolicy": {
+                "const": "stop"
+              },
+              "type": {
+                "const": "loop"
+              },
+              "config": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode",
+                  "maxIterations",
+                  "body"
+                ],
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "count",
+                      "items"
+                    ]
+                  },
+                  "count": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "items": {
+                    "type": [
+                      "string",
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "maxIterations": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "body": {
+                    "$ref": "#/components/schemas/WorkflowDraftConfig"
+                  }
+                }
               }
             },
             "additionalProperties": false,

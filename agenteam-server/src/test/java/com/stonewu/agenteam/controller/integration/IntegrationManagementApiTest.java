@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.integration;
 
+import java.util.HashSet;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -148,12 +149,6 @@ class IntegrationManagementApiTest extends ExecutionApiTestSupport {
         assertFalse(list.toString().contains("test-private-app-secret"));
         change(HttpMethod.PATCH, path() + "/" + id + "/status", Map.of("status", "enabled"), "1", key())
             .andExpect(status().isConflict());
-    }
-
-    @Test
-    void actualCheckEnablesConfigurationAndRotationRequiresANewCheck() throws Exception {
-        var created = create();
-        String id = created.path("id").asText();
         PLATFORM.reply("feishu.token");
         PLATFORM.reply("feishu.tenant");
         String requestKey = key();
@@ -179,7 +174,39 @@ class IntegrationManagementApiTest extends ExecutionApiTestSupport {
         change(HttpMethod.PATCH, path() + "/" + id + "/status", Map.of("status", "enabled"), "4", key())
             .andExpect(status().isConflict());
         change(HttpMethod.PATCH, path() + "/" + id, Map.of("name", "过时修改"), "1", key()).andExpect(status().isConflict());
+        var app = queries.application(queries.require(enterprise, id));
+        var previousKeys = new HashSet<>(redis.keys("agenteam:integration:token:" + enterprise + ":" + id + ":*"));
+        PLATFORM.reply("feishu.token");
+        var first = tokens.get(app);
+        PLATFORM.take();
+        assertEquals(first.value(), tokens.get(app).value());
+        assertEquals(0, PLATFORM.remainingRequests());
+        var keys = new HashSet<>(redis.keys("agenteam:integration:token:" + enterprise + ":" + id + ":*"));
+        keys.removeAll(previousKeys);
+        assertEquals(1, keys.size());
+        String stored = redis.opsForValue().get(keys.iterator().next());
+        assertNotNull(stored);
+        assertFalse(stored.contains(first.value()));
+        assertTrue(redis.getExpire(keys.iterator().next()) > 1700);
+        tokens.invalidate(app, first);
+        PLATFORM.raw(200, "{\"code\":0,\"tenant_access_token\":\"test-refreshed-token\",\"expire\":1800}", Map.of());
+        var refreshed = tokens.get(app);
+        PLATFORM.take();
+        tokens.invalidate(app, first);
+        assertEquals(refreshed.value(), tokens.get(app).value());
+        assertEquals(0, PLATFORM.remainingRequests());
+        change(HttpMethod.POST, path() + "/" + id + "/rotate-secret", Map.of("secret", "next-test-secret"), queries.require(enterprise, id).getRevision().toString(), key())
+            .andExpect(status().isOk());
+        var changed = queries.application(queries.require(enterprise, id));
+        assertNotEquals(app.credentialRevision(), changed.credentialRevision());
+        PLATFORM.reply("feishu.token");
+        tokens.get(changed);
+        var request = json.readTree(PLATFORM.take().body());
+        assertEquals("next-test-secret", request.path("app_secret").asText());
+
     }
+
+
 
     @Test
     void lateCheckCannotApproveReplacedCredentialsAndFailureIsRecorded() throws Exception {
@@ -214,13 +241,16 @@ class IntegrationManagementApiTest extends ExecutionApiTestSupport {
         assertFalse(users.isActiveMember(admin, target));
         write("/api/v1/enterprises/" + target + "/integrations", payload(), key()).andExpect(status().isForbidden());
         mvc.perform(get(path() + "/" + configured.path("id").asText()).cookie(cookie)).andExpect(status().isNotFound());
+        verifyOrdinaryMemberBoundaries(other.username(), "channel-owner-test-password");
     }
 
-    @Test
-    void ordinaryMemberCannotManageEitherEnterpriseOrSystemEntry() throws Exception {
-        String username = "channel_member_" + key().substring(0, 8), password = "channel-member-test-password";
-        EnterpriseTestData.member(users, permissions, enterprise, username, password, "普通成员",
-            List.of(permissions.builtinRoleId(enterprise, "member")));
+
+
+
+
+
+
+    private void verifyOrdinaryMemberBoundaries(String username, String password) throws Exception {
         var anonymous = mvc.perform(get("/api/v1/auth/csrf")).andExpect(status().isOk()).andReturn();
         Cookie browser = anonymous.getResponse().getCookie("SESSION");
         String initialCsrf = data(anonymous).path("token").asText();
@@ -236,47 +266,6 @@ class IntegrationManagementApiTest extends ExecutionApiTestSupport {
                 .header("Idempotency-Key", key()).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(payload())))
                 .andExpect(status().isForbidden());
         }
-    }
-
-    @Test
-    void applicationTokenIsEncryptedAndCredentialRotationUsesANewCache() throws Exception {
-        String id = create().path("id").asText();
-        var app = queries.application(queries.require(enterprise, id));
-        PLATFORM.reply("feishu.token");
-        var first = tokens.get(app);
-        PLATFORM.take();
-        assertEquals(first.value(), tokens.get(app).value());
-        assertEquals(0, PLATFORM.remainingRequests());
-        var keys = redis.keys("agenteam:integration:token:" + enterprise + ":" + id + ":*");
-        assertEquals(1, keys.size());
-        String stored = redis.opsForValue().get(keys.iterator().next());
-        assertNotNull(stored);
-        assertFalse(stored.contains(first.value()));
-        assertTrue(redis.getExpire(keys.iterator().next()) > 1700);
-        change(HttpMethod.POST, path() + "/" + id + "/rotate-secret", Map.of("secret", "next-test-secret"), "1", key())
-            .andExpect(status().isOk());
-        var changed = queries.application(queries.require(enterprise, id));
-        assertNotEquals(app.credentialRevision(), changed.credentialRevision());
-        PLATFORM.reply("feishu.token");
-        tokens.get(changed);
-        var request = json.readTree(PLATFORM.take().body());
-        assertEquals("next-test-secret", request.path("app_secret").asText());
-    }
-
-    @Test
-    void lateTokenInvalidationCannotDeleteAFresherToken() throws Exception {
-        String id = create().path("id").asText();
-        var app = queries.application(queries.require(enterprise, id));
-        PLATFORM.reply("feishu.token");
-        var old = tokens.get(app);
-        PLATFORM.take();
-        tokens.invalidate(app, old);
-        PLATFORM.raw(200, "{\"code\":0,\"tenant_access_token\":\"test-refreshed-token\",\"expire\":1800}", Map.of());
-        var refreshed = tokens.get(app);
-        PLATFORM.take();
-        tokens.invalidate(app, old);
-        assertEquals(refreshed.value(), tokens.get(app).value());
-        assertEquals(0, PLATFORM.remainingRequests());
     }
 
     private JsonNode create() throws Exception {

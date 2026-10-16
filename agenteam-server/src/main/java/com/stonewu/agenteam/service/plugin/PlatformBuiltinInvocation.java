@@ -76,7 +76,7 @@ public class PlatformBuiltinInvocation {
         }
         if (!run.mode().equals("interactive")) {
             throw new ApiException(HttpStatus.CONFLICT, "PLATFORM_WRITE_MODE_UNSUPPORTED",
-                "请在普通对话中确认并修改待办或计划，预览和计划执行不能修改这些内容。");
+                "请在普通对话中确认并修改平台内容，预览和计划执行不能修改这些内容。");
         }
         var actor = access.actor(run);
         catalog.requireCurrent(run, binding);

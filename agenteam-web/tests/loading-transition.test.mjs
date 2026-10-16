@@ -4,6 +4,9 @@ import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 
+const source = readFileSync(new URL("../src/components/ui/loading-size-transition.ts", import.meta.url), "utf8");
+const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+
 function environment(reduced = false, surface = false) {
   const observers = [];
   const listeners = new Map();
@@ -19,8 +22,6 @@ function environment(reduced = false, surface = false) {
       this.disconnected = true;
     }
   }
-  const source = readFileSync(new URL("../src/components/ui/loading-size-transition.ts", import.meta.url), "utf8");
-  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
   vm.runInNewContext(compiled, {
     exports, ResizeObserver: Observer, MutationObserver: Observer, window: { matchMedia: () => media },

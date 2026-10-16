@@ -97,34 +97,26 @@ class RestrictedHttpClientTest {
             assertNull(received.get().get("Authorization"));
             assertNull(received.get().get("X-api-key"));
             assertNull(received.get().get("Mcp-session-id"));
+            try (var restricted = new RestrictedHttpClient(new OutboundAddressPolicy(origin))
+                .open(origin, Map.of("Authorization", "Bearer test-secret"), Duration.ofSeconds(3))) {
+                assertEquals("NETWORK_ADDRESS_DENIED", assertThrows(ApiException.class,
+                    () -> restricted.execute("GET", origin, null, Map.of())).code());
+            }
+            assertEquals(1, count.get());
         } finally {
             first.stop(0);
             second.stop(0);
         }
     }
 
-    @Test
-    void redirectCannotReachUnlistedLoopbackPort() throws Exception {
-        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        String origin = "http://127.0.0.1:" + server.getAddress().getPort();
-        server.createContext("/", exchange -> {
-            exchange.getResponseHeaders().add("Location", "http://127.0.0.1:1/");
-            exchange.sendResponseHeaders(307, -1);
-            exchange.close();
-        });
-        server.start();
-        try (var scope = new RestrictedHttpClient(new OutboundAddressPolicy(origin)).open(origin, Map.of(), Duration.ofSeconds(3))) {
-            assertEquals("NETWORK_ADDRESS_DENIED", assertThrows(ApiException.class, () -> scope.execute("GET", origin, null, Map.of())).code());
-        } finally {
-            server.stop(0);
-        }
-    }
+
 
     @Test
     void stalledDnsLookupIsBoundedByTheOperationTimeout() throws Exception {
+        var release = new CountDownLatch(1);
         var policy = new OutboundAddressPolicy("", ignored -> {
             try {
-                Thread.sleep(5000);
+                release.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException cancelled) {
                 Thread.currentThread().interrupt();
             }
@@ -134,6 +126,8 @@ class RestrictedHttpClientTest {
         try (var scope = new RestrictedHttpClient(policy).open("https://example.com", Map.of(), Duration.ofMillis(150))) {
             assertEquals("REMOTE_TIMEOUT", assertThrows(ApiException.class, () -> scope.execute("GET", "https://example.com", null, Map.of())).code());
             assertTrue(Duration.ofNanos(System.nanoTime() - began).compareTo(Duration.ofSeconds(2)) < 0);
+        } finally {
+            release.countDown();
         }
     }
 

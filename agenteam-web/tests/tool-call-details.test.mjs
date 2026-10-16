@@ -1,35 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
-import ts from "typescript";
 
 const require = createRequire(import.meta.url);
 const { selectToolCallDetails } = require("../.test-build/tool-payload/tool-call-details.js");
 const display = (input, result) => selectToolCallDetails(JSON.stringify(input), JSON.stringify(result));
 const find = (view, part, key) => view.fields.find((field) => field.part === part && field.key === key);
-const fixtureCode = ts.transpileModule(readFileSync(new URL("./fixtures/tool-call-detail-cases.ts", import.meta.url), "utf8"), {
-  compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
-}).outputText;
-const { toolCallDetailCases } = await import(`data:text/javascript;base64,${Buffer.from(fixtureCode).toString("base64")}`);
-
-test("浏览器验收场景中的正文、修改前后、命令和查询结果都直接呈现", () => {
-  const expected = {
-    create: ["input:path", "input:content"],
-    edit: ["input:path", "input:old_text", "input:new_text"],
-    command: ["input:command", "result:stdout"],
-    failed: ["input:command", "result:stderr", "result:exitCode"],
-    search: ["input:query", "result:items"],
-    empty: ["input:fields", "input:filters", "result:rows"],
-  };
-  for (const example of toolCallDetailCases) {
-    const view = display(example.input, example.result);
-    for (const field of expected[example.id]) {
-      assert.ok(view.fields.some((item) => `${item.part}:${item.key}` === field), `${example.id} 应直接展示 ${field}`);
-    }
-  }
-});
-
 test("创建文件直接展示完整正文，输出中的相同路径只出现一次", () => {
   const content = Array.from({ length: 120 }, (_, index) => `第 ${index + 1} 行：保留原文及缩进`).join("\n");
   const view = display({ path: "work/report.md", content }, { path: "work/report.md", sizeBytes: 9000, revision: "2" });

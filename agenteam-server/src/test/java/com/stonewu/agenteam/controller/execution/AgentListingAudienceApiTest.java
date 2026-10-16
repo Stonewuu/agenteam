@@ -69,7 +69,7 @@ class AgentListingAudienceApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void listingDefaultsToEnterpriseUseButDoesNotGrantConfigurationAccess() {
+    void listingDefaultsAndFailedAudienceChangesPreserveUseWithoutConfigurationAccess() throws Exception {
         var member = member();
         assertTrue(market(member).isEmpty());
         listings.update(owner(), agent, new AgentListingRequest(true, "automatic"), 2);
@@ -79,6 +79,13 @@ class AgentListingAudienceApiTest extends ExecutionApiTestSupport {
         assertEquals(List.of(new ResourceGrantSpec("enterprise", enterprise, "use")), authorizations.grants(enterprise, agent));
         assertEquals(403, assertThrows(ResponseStatusException.class,
             () -> resourcePolicy.authorize(member, agent, "view", false, false)).getStatusCode().value());
+        var invalid = new ResourceGrantSpec("enterprise", "another-enterprise", "use");
+        assertEquals(422, assertThrows(ApiException.class,
+            () -> listings.update(owner(), agent, new AgentListingRequest(false, "approval", List.of(invalid)), 3)).getStatusCode().value());
+        assertTrue(listingRecords.find(enterprise, agent).listed());
+        assertEquals("automatic", listingRecords.find(enterprise, agent).hirePolicy());
+        assertEquals(List.of(agent), market(member));
+        assertTrue(employees.detail(member, agent).canHire());
         assertInstanceOf(Hired.class, hiresService.hire(member, new HireAgentRequest(agent, null)));
         assertTrue(employees.detail(member, agent).canRun());
         listings.update(owner(), agent, new AgentListingRequest(false, "automatic"), 3);
@@ -114,19 +121,6 @@ class AgentListingAudienceApiTest extends ExecutionApiTestSupport {
         assertTrue(market(member).isEmpty());
         publications.publish(owner(), agent, new ResourcePublishRequest("继续保留私有范围", null, new AgentListingRequest(true, "automatic")), 3);
         assertTrue(market(member).isEmpty());
-    }
-
-    @Test
-    void invalidAudienceRollsBackListingAndPreservesExistingUseGrants() {
-        var member = member();
-        listings.update(owner(), agent, new AgentListingRequest(true, "automatic"), 2);
-        var invalid = new ResourceGrantSpec("enterprise", "another-enterprise", "use");
-        assertEquals(422, assertThrows(ApiException.class,
-            () -> listings.update(owner(), agent, new AgentListingRequest(false, "approval", List.of(invalid)), 3)).getStatusCode().value());
-        assertTrue(listingRecords.find(enterprise, agent).listed());
-        assertEquals("automatic", listingRecords.find(enterprise, agent).hirePolicy());
-        assertEquals(List.of(agent), market(member));
-        assertTrue(employees.detail(member, agent).canHire());
     }
 
     private List<String> market(AuthContext actor) {

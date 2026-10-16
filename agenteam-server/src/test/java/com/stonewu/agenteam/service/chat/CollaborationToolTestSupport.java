@@ -107,21 +107,31 @@ abstract class CollaborationToolTestSupport extends CollaborationApiTestSupport 
             .andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
         String fixed = data(change(HttpMethod.POST, base() + "/resources/" + plugin + "/publish", Map.of("releaseNote", "发布测试协作插件"), "1", UUID.randomUUID().toString())
             .andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
-        config.put("builtinCode", "todo_management");
-        config.set("enabledToolNames", json.valueToTree(List.of("todo_create")));
-        String ordinary = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "一般业务测试插件", "description", "验证业务写入仍需确认", "tagIds", List.of(), "config", config), UUID.randomUUID().toString())
-            .andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
-        String ordinaryVersion = data(change(HttpMethod.POST, base() + "/resources/" + ordinary + "/publish", Map.of("releaseNote", "发布一般业务工具"), "1", UUID.randomUUID().toString())
-            .andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
+        var pluginIds = new ArrayList<>(List.of(plugin));
+        var pluginVersions = new ArrayList<>(List.of(fixed));
+        if (requiresBusinessTool()) {
+            config.put("builtinCode", "todo_management");
+            config.set("enabledToolNames", json.valueToTree(List.of("todo_create")));
+            String ordinary = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "一般业务测试插件", "description", "验证业务写入仍需确认", "tagIds", List.of(), "config", config), UUID.randomUUID().toString())
+                .andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
+            String ordinaryVersion = data(change(HttpMethod.POST, base() + "/resources/" + ordinary + "/publish", Map.of("releaseNote", "发布一般业务工具"), "1", UUID.randomUUID().toString())
+                .andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
+            pluginIds.add(ordinary);
+            pluginVersions.add(ordinaryVersion);
+        }
         configureAgent(value -> {
-            value.set("pluginVersionIds", json.valueToTree(List.of(fixed, ordinaryVersion)));
+            value.set("pluginVersionIds", json.valueToTree(pluginVersions));
             value.put("attachmentsEnabled", true);
         });
-        databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().in(ResourceRow::getId, List.of(plugin, ordinary))
+        databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().in(ResourceRow::getId, pluginIds)
             .eq(ResourceRow::getEnterpriseId, enterprise).set(ResourceRow::getOwnerUserId, initiator.id()));
         databaseAccess.mapper(ChatBotBindingMapper.class).update(new LambdaUpdateWrapper<ChatBotBindingRow>()
             .eq(ChatBotBindingRow::getId, bot.getId()).set(ChatBotBindingRow::getPinnedVersionId, version));
         finance = secondBot();
+    }
+
+    protected boolean requiresBusinessTool() {
+        return false;
     }
 
     protected void startTask(String text) {
@@ -136,10 +146,10 @@ abstract class CollaborationToolTestSupport extends CollaborationApiTestSupport 
         return new Active(lifecycle.start(lease).orElseThrow(), lease);
     }
 
-    protected void legacyApprovalPolicy() throws Exception {
+    protected void requireBusinessApproval() throws Exception {
         var task = onlyTask();
         var policy = (ObjectNode) json.readTree(task.getPolicySnapshot());
-        policy.remove("approvalPolicy");
+        policy.put("approvalPolicy", "default");
         databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
             .eq(CollaborationTaskRow::getEnterpriseId, enterprise).eq(CollaborationTaskRow::getId, task.getId())
             .set(CollaborationTaskRow::getPolicySnapshot, policy.toString()));

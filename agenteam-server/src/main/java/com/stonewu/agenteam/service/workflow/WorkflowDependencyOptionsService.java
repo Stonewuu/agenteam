@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * 工作流作者可读取有权使用的固定能力，不能借编辑节点读取整个资源配置。
@@ -65,10 +67,16 @@ public class WorkflowDependencyOptionsService {
             config.path("skillVersionIds").forEach(value -> ids.add(value.asText()));
             var skills = ids.isEmpty() || !actor.permissions().contains("skill.use") ? List.<UsableVersionView>of()
                 : usable.selected(access.usageScope(actor, "skill"), ids);
-            return new WorkflowDependencyOptions("agent", config.path("agentType").asText(), skills, List.of());
+            return new WorkflowDependencyOptions("agent", config.path("agentType").asText(), skills, List.of(), Map.of());
+        }
+        var available = tools.list(actor.enterpriseId(), versionId).stream().filter(tool -> tool.enabled()).toList();
+        Map<String, String> roots = new LinkedHashMap<>();
+        for (var tool : available) {
+            String provider = tool.source() == null ? config.path("pluginType").asText() : tool.source().type();
+            // MCP 返回的结构化数据位于 structuredContent，其他提供方直接返回工具声明的结果。
+            roots.put(tool.entryId() == null ? tool.id() : tool.entryId(), provider.equals("mcp") ? "structuredContent" : "");
         }
         return new WorkflowDependencyOptions("plugin", null, List.of(),
-            tools.list(actor.enterpriseId(), versionId).stream()
-                .filter(tool -> tool.enabled()).map(tool -> views.map(tool, config)).toList());
+            available.stream().map(tool -> views.map(tool, config)).toList(), roots);
     }
 }

@@ -178,37 +178,11 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void writeWaitsForTheExistingApprovalAndExecutesOnlyAfterConfirmation() throws Exception {
-        var step = new AtomicInteger();
-        modelResponse = exchange -> {
-            exchange.getRequestBody().readAllBytes();
-            if (step.getAndIncrement() == 0) {
-                tool(exchange, "approved-write", "write_file", Map.of("path", "work/approved.txt", "content", "已确认的写入"));
-            } else {
-                answer(exchange, "已创建文件。");
-            }
-        };
-        allowModelCalls = true;
-        var accepted = submit("default");
-        String runId = accepted.path("runId").asText();
-        finish(runId);
-        var run = runs.find(enterprise, runId, false).orElseThrow();
-        assertEquals("waiting_approval", run.status());
-        assertFalse(Files.exists(projectMarker(run)));
-        var approval = data(mvc.perform(get(base() + "/runs/" + runId + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn()).get(0);
-        change(HttpMethod.POST, base() + "/approvals/" + approval.path("id").asText() + "/decision", Map.of("decision", "approve", "requestHash", approval.path("requestHash").asText()),
-            approval.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
-        finish(runId);
-        assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
-        assertEquals(1, calls.forRun(enterprise, runId).size());
-        assertEquals("succeeded", calls.forRun(enterprise, runId).getFirst().status());
-        assertTrue(Files.exists(projectMarker(run)));
-    }
-
-    @Test
-    void commandFailureReturnsToTheAssistantWhichCorrectsItAndCompletesTheTask() throws Exception {
+    void commandErrorsAndTimeoutsKeepTheirOutputAndAllowCorrectedCommandsAndFiles() throws Exception {
+        configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", 0));
         var step = new AtomicInteger();
         var failure = new AtomicReference<JsonNode>();
+        var timeout = new AtomicReference<JsonNode>();
         var recovered = new AtomicReference<String>();
         modelResponse = exchange -> {
             var input = json.readTree(exchange.getRequestBody());
@@ -217,13 +191,18 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
                     tool(exchange, "bad-command", "execute", Map.of("command", "printf '需要修正命令' >&2; exit 7", "timeout_seconds", 15));
                 case 1 -> {
                     failure.set(result(input, "bad-command"));
+                    tool(exchange, "slow-command", "execute", Map.of("command", "printf '已开始处理'; sleep 30", "timeout_seconds", 6));
+                }
+                case 2 -> {
+                    timeout.set(result(input, "slow-command"));
                     tool(exchange, "fixed-command", "execute", Map.of("command", "printf '已修正' > outputs/recovered.txt", "timeout_seconds", 15));
                 }
-                case 2 -> tool(exchange, "read-recovered", "read_file", Map.of("path", "outputs/recovered.txt"));
-                default -> {
+                case 3 -> tool(exchange, "read-recovered", "read_file", Map.of("path", "outputs/recovered.txt"));
+                case 4 -> {
                     recovered.set(result(input, "read-recovered").path("content").asText());
-                    answer(exchange, "已根据工具错误修正命令并完成任务。");
+                    tool(exchange, "alternative", "write_file", Map.of("path", "outputs/alternative.txt", "content", "已改用文件工具完成。"));
                 }
+                default -> answer(exchange, "已根据命令错误与超时结果完成处理。");
             }
         };
         allowModelCalls = true;
@@ -233,13 +212,21 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         assertTrue(failure.get().path("isError").asBoolean());
         assertEquals(7, failure.get().path("exitCode").asInt());
         assertEquals("需要修正命令", failure.get().path("stderr").asText());
+        assertTrue(timeout.get().path("isError").asBoolean());
+        assertTrue(timeout.get().path("timedOut").asBoolean());
+        assertEquals(124, timeout.get().path("exitCode").asInt());
+        assertEquals("已开始处理", timeout.get().path("stdout").asText());
         assertEquals("已修正", recovered.get());
         assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
-        assertEquals(List.of("failed", "succeeded", "succeeded"), calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
+        assertEquals(List.of("failed", "failed", "succeeded", "succeeded", "succeeded"),
+            calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
+        var saved = workspaces.read(enterprise, admin, accepted.path("conversationId").asText(),
+            snapshot -> snapshot.files().bytes("outputs/alternative.txt"));
+        assertEquals("已改用文件工具完成。", new String(saved, StandardCharsets.UTF_8));
     }
 
     @Test
-    void invalidArgumentsReturnToTheAssistantAndOnlyTheCorrectedWriteAsksForApproval() throws Exception {
+    void correctedWritesUseOneApprovalAndCreateFilesOnlyAfterConfirmation() throws Exception {
         var step = new AtomicInteger();
         var failure = new AtomicReference<String>();
         modelResponse = exchange -> {
@@ -271,38 +258,9 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         finish(runId);
         assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
         assertEquals(List.of("failed", "succeeded"), calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
+        assertTrue(Files.exists(projectMarker(run)));
         var saved = workspaces.read(enterprise, admin, run.conversationId(), snapshot -> snapshot.files().bytes("work/corrected.txt"));
         assertEquals("修正后的内容", new String(saved, StandardCharsets.UTF_8));
-    }
-
-    @Test
-    void commandTimeoutReturnsItsOutputAndTheAssistantCanContinueUsingFileTools() throws Exception {
-        configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", 0));
-        var step = new AtomicInteger();
-        var timeout = new AtomicReference<JsonNode>();
-        modelResponse = exchange -> {
-            var input = json.readTree(exchange.getRequestBody());
-            switch (step.getAndIncrement()) {
-                case 0 -> tool(exchange, "start-sandbox", "execute", Map.of("command", "true", "timeout_seconds", 15));
-                case 1 ->
-                    tool(exchange, "slow-command", "execute", Map.of("command", "printf '已开始处理'; sleep 30", "timeout_seconds", 6));
-                case 2 -> {
-                    timeout.set(result(input, "slow-command"));
-                    tool(exchange, "alternative", "write_file", Map.of("path", "outputs/alternative.txt", "content", "已改用文件工具完成。"));
-                }
-                default -> answer(exchange, "命令超时后已改用文件工具继续完成任务。");
-            }
-        };
-        allowModelCalls = true;
-        var accepted = submit("auto_approve");
-        String runId = accepted.path("runId").asText();
-        finish(runId);
-        assertTrue(timeout.get().path("isError").asBoolean());
-        assertTrue(timeout.get().path("timedOut").asBoolean());
-        assertEquals(124, timeout.get().path("exitCode").asInt());
-        assertEquals("已开始处理", timeout.get().path("stdout").asText());
-        assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
-        assertEquals(List.of("succeeded", "failed", "succeeded"), calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
     }
 
     @Test

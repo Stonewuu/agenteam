@@ -47,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 使用实际数据库和 Redis 验证正式事件连接，控制事件不占用正文序号。
+ * 验证持久事件数据的编号、续读和到期清理，控制事件不占用正文序号。
  */
 @Import(SharedEnterpriseTestEdition.class)
 class ConversationEventApiTest extends ExecutionApiTestSupport {
@@ -75,6 +75,7 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
+        registry.add("execution.events.live-enabled", () -> "false");
     }
 
     @AfterAll
@@ -83,7 +84,7 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void replayUsesDecimalIdsAndReadyHasNoIdThenConnectionCloses() throws Exception {
+    void replayValidatesPositionsAndPreservesExactEventIds() throws Exception {
         var accepted = submitAndCancel();
         String conversation = accepted.path("conversationId").asText();
         var saved = events.after(enterprise, conversation, 0, 100);
@@ -103,11 +104,6 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
         var resumed = frames(read(conversation, saved.getLast().sequence(), null));
         assertEquals(1, resumed.size());
         assertEquals("stream.ready", resumed.getFirst().get("event"));
-    }
-
-    @Test
-    void rejectsOldRedisIdsConflictingHeadersAndForeignConversation() throws Exception {
-        String conversation = submitAndCancel().path("conversationId").asText();
         for (String after : List.of("123456-0", "01", "-1", "9223372036854775808", "", "1.0")) {
             mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", after)).andExpect(status().isBadRequest());
         }
@@ -115,12 +111,35 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
         String other = provisioning.create("无法读取其他企业的对话", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         mvc.perform(get("/api/v1/enterprises/" + other + "/conversations/" + conversation + "/events").cookie(cookie)).andExpect(status().isNotFound());
         assertReset(conversation, "999", "sequence_invalid");
+        var original = events.after(enterprise, conversation, 0, 100);
+        long offset = 9_007_199_254_740_992L;
+        for (var value : original.reversed()) {
+            long sequence = offset + Long.parseLong(value.sequence());
+            var shifted = new ExecutionEvent(value.protocolVersion(), value.eventId(), value.enterpriseId(), value.conversationId(), value.runId(), Long.toString(sequence), value.createdAt(), value.type(), value.payload());
+            var encoded = codec.encode(shifted);
+            databaseAccess.mapper(ExecutionEventSqlMapper.class).update(new LambdaUpdateWrapper<AgentEventRow>().eq(AgentEventRow::getEventId, (value.eventId())).set(AgentEventRow::getConversationSequence, (sequence)).set(AgentEventRow::getPayloadJson, (encoded.data())).set(AgentEventRow::getPayloadHash, (encoded.hash())));
+        }
+        databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getLastSequence, (offset + original.size())));
+        publisher.publish(enterprise, conversation);
+        publisher.publish(enterprise, conversation);
+        var shiftedFrames = frames(read(conversation, Long.toString(offset), null));
+        assertEquals(Long.toString(offset + 1), shiftedFrames.getFirst().get("id"));
+        assertEquals(offset + original.size(), cache.last(enterprise, conversation).sequence());
+        assertEquals(original.size() + 1, shiftedFrames.size());
     }
 
     @Test
-    void redisPublishingIsRepeatableAndCacheLossOrFailureStillReadsDatabase() throws Exception {
+    void publishingRecoversFromAcknowledgementAndCacheFailuresWithoutDuplicatingEvents() throws Exception {
         String conversation = submitAndCancel().path("conversationId").asText();
         int savedCount = events.after(enterprise, conversation, 0, 100).size();
+        doThrow(new DataAccessResourceFailureException("仅模拟分发结果暂时无法保存")).when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
+        try {
+            assertThrows(DataAccessResourceFailureException.class, () -> publisher.publish(enterprise, conversation));
+        } finally {
+            doCallRealMethod().when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
+        }
+        assertEquals(savedCount, events.unpublished(enterprise, conversation, 100).size());
+        assertEquals(savedCount, redis.opsForStream().size(cache.key(enterprise, conversation)));
         publisher.publish(enterprise, conversation);
         publisher.publish(enterprise, conversation);
         String key = cache.key(enterprise, conversation);
@@ -138,14 +157,6 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
         }
         assertEquals(savedCount, count("agent_event"));
         assertEquals(2, count("agent_message"));
-    }
-
-    @Test
-    void corruptCacheFallsBackButMissingOrCorruptDatabaseEventsRequestSnapshot() throws Exception {
-        String conversation = submitAndCancel().path("conversationId").asText();
-        publisher.publish(enterprise, conversation);
-        var expected = frames(read(conversation, "0", null));
-        String key = cache.key(enterprise, conversation);
         redis.delete(key);
         redis.opsForStream().add(StreamRecords.string(Map.of("data", "{}", "hash", "invalid")).withStreamKey(key).withId(RecordId.of("1-0")));
         assertEquals(expected, frames(read(conversation, "0", null)));
@@ -171,27 +182,7 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void sequenceBeyondJavascriptIntegerRangeRemainsExactInRedisAndSse() throws Exception {
-        String conversation = submitAndCancel().path("conversationId").asText();
-        var original = events.after(enterprise, conversation, 0, 100);
-        long offset = 9_007_199_254_740_992L;
-        for (var value : original.reversed()) {
-            long sequence = offset + Long.parseLong(value.sequence());
-            var shifted = new ExecutionEvent(value.protocolVersion(), value.eventId(), value.enterpriseId(), value.conversationId(), value.runId(), Long.toString(sequence), value.createdAt(), value.type(), value.payload());
-            var encoded = codec.encode(shifted);
-            databaseAccess.mapper(ExecutionEventSqlMapper.class).update(new LambdaUpdateWrapper<AgentEventRow>().eq(AgentEventRow::getEventId, (value.eventId())).set(AgentEventRow::getConversationSequence, (sequence)).set(AgentEventRow::getPayloadJson, (encoded.data())).set(AgentEventRow::getPayloadHash, (encoded.hash())));
-        }
-        databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getLastSequence, (offset + original.size())));
-        publisher.publish(enterprise, conversation);
-        publisher.publish(enterprise, conversation);
-        var frames = frames(read(conversation, Long.toString(offset), null));
-        assertEquals(Long.toString(offset + 1), frames.getFirst().get("id"));
-        assertEquals(offset + original.size(), cache.last(enterprise, conversation).sequence());
-        assertEquals(original.size() + 1, frames.size());
-    }
-
-    @Test
-    void readySeparatesReplayFromLiveEventsAndDisconnectDoesNotCancelRun() throws Exception {
+    void liveConnectionsPreserveReadinessAndIgnoreDisconnectsAndEarlierTerminalEvents() throws Exception {
         var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         String conversation = accepted.path("conversationId").asText();
         var actor = new AuthContext(users.findById(admin).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
@@ -206,36 +197,13 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
         assertFalse(frames.get(3).containsKey("id"));
         assertEquals("3", json.readTree(frames.get(3).get("data")).path("lastSequence").asText());
         assertEquals("run.cancelled", frames.getLast().get("event"));
-    }
-
-    @Test
-    void failureAfterRedisAcknowledgementCanRetryWithoutDuplicatingEvents() throws Exception {
-        String conversation = submitAndCancel().path("conversationId").asText();
-        int size = count("agent_event");
-        doThrow(new DataAccessResourceFailureException("仅模拟分发结果暂时无法保存")).when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
-        try {
-            assertThrows(DataAccessResourceFailureException.class, () -> publisher.publish(enterprise, conversation));
-        } finally {
-            doCallRealMethod().when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
-        }
-        assertEquals(size, events.unpublished(enterprise, conversation, 100).size());
-        assertEquals(size, redis.opsForStream().size(cache.key(enterprise, conversation)));
-        publisher.publish(enterprise, conversation);
-        assertEquals(size, redis.opsForStream().size(cache.key(enterprise, conversation)));
-        assertEquals(0, events.unpublished(enterprise, conversation, 100).size());
-    }
-
-    @Test
-    void replayingAnOlderTerminalDoesNotCloseTheCurrentRunConnection() throws Exception {
-        var previous = submitAndCancel();
-        String conversation = previous.path("conversationId").asText();
         var current = data(write(base() + "/conversations/" + conversation + "/messages", input("继续当前任务"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        var pending = mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", "0")).andExpect(request().asyncStarted()).andReturn();
-        await(() -> new String(pending.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8).contains("stream.ready"));
-        assertThrows(IllegalStateException.class, () -> pending.getAsyncResult(100));
+        var currentConnection = mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", "0")).andExpect(request().asyncStarted()).andReturn();
+        await(() -> new String(currentConnection.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8).contains("stream.ready"));
+        assertThrows(IllegalStateException.class, () -> currentConnection.getAsyncResult(100));
         write(base() + "/runs/" + current.path("runId").asText() + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
-        pending.getAsyncResult(5000);
-        var received = frames(mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+        currentConnection.getAsyncResult(5000);
+        var received = frames(mvc.perform(asyncDispatch(currentConnection)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
         assertEquals(2, received.stream().filter(frame -> "run.cancelled".equals(frame.get("event"))).count());
         assertEquals(current.path("runId"), json.readTree(received.getLast().get("data")).path("runId"));
     }

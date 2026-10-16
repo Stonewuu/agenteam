@@ -6,6 +6,7 @@ import com.stonewu.agenteam.service.security.PayloadEncryption;
 import io.agentscope.core.message.UserMessage;
 import io.agentscope.core.state.AgentState;
 import io.agentscope.core.state.AgentStateStore;
+import io.agentscope.core.state.State;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,7 +23,7 @@ class EncryptedAgentStateStoreTest {
     Path directory;
 
     @Test
-    void storedFrameworkStateIsEncryptedVersionedAndBoundToItsRun() throws Exception {
+    void frameworkAndApplicationStateStayEncryptedVersionedAndBoundToTheirRuns() throws Exception {
         byte[] secret = new byte[32];
         new SecureRandom().nextBytes(secret);
         String key = Base64.getEncoder().encodeToString(secret);
@@ -48,5 +49,25 @@ class EncryptedAgentStateStoreTest {
         assertEquals(state.getContext().getFirst().getId(), restored.getId());
         assertEquals(state.getContext().getFirst().getRole(), restored.getRole());
         assertEquals("只应存在于加密状态中的完整输入", restored.getTextContent());
+        var application = new EncryptedAgentStateStore(directory.resolve("application"), "application-run", encryption, json);
+        var applicationState = new ProbeState("approval", "{\"number\":9007199254740993,\"secret\":\"仅保存在加密文件\"}");
+        application.save("user", "session", "workflow_state", applicationState);
+        assertTrue(application.exists("user", "session"));
+        assertEquals(1, application.getVersioned("user", "session", "workflow_state", ProbeState.class).version());
+        var copied = new EncryptedAgentStateStore(directory.resolve("copy"), "resumed-run", encryption, json);
+        application.copyTo(copied);
+        var opened = new EncryptedAgentStateStore(directory.resolve("copy"), "resumed-run", encryption, json);
+        assertEquals(applicationState, opened.get("user", "session", "workflow_state", ProbeState.class).orElseThrow());
+        assertTrue(copied.matches(copied.manifest()));
+        for (String name : copied.manifest().keySet()) {
+            var content = Files.readString(directory.resolve("copy").resolve(name));
+            assertFalse(content.contains("仅保存在加密文件"));
+            assertFalse(content.contains("9007199254740993"));
+        }
+        var mismatched = new EncryptedAgentStateStore(directory.resolve("copy"), "other-run", encryption, json);
+        assertThrows(IllegalStateException.class, () -> mismatched.get("user", "session", "workflow_state", ProbeState.class));
+    }
+
+    public record ProbeState(String next, String output) implements State {
     }
 }

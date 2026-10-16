@@ -91,12 +91,6 @@ class ScheduleManagementApiTest extends ExecutionApiTestSupport {
         var list = data(mvc.perform(get(path() + "?query=每日&limit=1").cookie(cookie)).andExpect(status().isOk()).andReturn());
         assertEquals(1, list.path("items").size());
         assertTrue(data(mvc.perform(get(path() + "/" + created.path("id").asText() + "/occurrences").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("items").isEmpty());
-    }
-
-    @Test
-    void editingKeepsTheFixedVersionUntilTheUserExplicitlyUpgradesIt() throws Exception {
-        var input = payload(true);
-        var created = create(input);
         String id = created.path("id").asText(), first = created.path("agentVersionId").asText();
         assertEquals("Sparkles", created.path("agentIcon").asText());
         assertEquals("purple", created.path("agentColor").asText());
@@ -122,22 +116,21 @@ class ScheduleManagementApiTest extends ExecutionApiTestSupport {
         assertEquals(edited.path("nextRunAt"), upgraded.path("nextRunAt"));
         assertEquals(0, count("agent_run"));
         change(HttpMethod.PUT, path() + "/" + id, input, "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
-    }
-
-    @Test
-    void deletionRequiresPausingAndItsRepeatedRequestRemainsReadable() throws Exception {
-        var created = create(payload(true));
-        String id = created.path("id").asText();
-        change(HttpMethod.DELETE, path() + "/" + id, null, "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
-        var paused = data(change(HttpMethod.PATCH, path() + "/" + id + "/enabled", Map.of("enabled", false), "1", UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
+        change(HttpMethod.DELETE, path() + "/" + id, null, upgraded.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isConflict());
+        var paused = data(change(HttpMethod.PATCH, path() + "/" + id + "/enabled", Map.of("enabled", false), upgraded.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
         assertFalse(paused.path("enabled").asBoolean());
         assertTrue(paused.path("nextRunAt").isNull());
-        String key = UUID.randomUUID().toString();
-        change(HttpMethod.DELETE, path() + "/" + id, null, paused.path("revision").asText(), key).andExpect(status().isOk());
-        change(HttpMethod.DELETE, path() + "/" + id, null, paused.path("revision").asText(), key).andExpect(status().isOk());
+        String deleteKey = UUID.randomUUID().toString();
+        change(HttpMethod.DELETE, path() + "/" + id, null, paused.path("revision").asText(), deleteKey).andExpect(status().isOk());
+        change(HttpMethod.DELETE, path() + "/" + id, null, paused.path("revision").asText(), deleteKey).andExpect(status().isOk());
         mvc.perform(get(path() + "/" + id).cookie(cookie)).andExpect(status().isNotFound());
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(ScheduleSqlMapper.class).selectCount(new LambdaQueryWrapper<ScheduledTaskRow>().eq(ScheduledTaskRow::getId, (id)).isNotNull(ScheduledTaskRow::getDeletedAt))));
+
     }
+
+
+
+
 
     @Test
     void anotherMembersPlanAndHireStayPrivateEvenFromAnEnterpriseAdministrator() throws Exception {

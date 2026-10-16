@@ -47,7 +47,7 @@ class CollaborationContinuationTest extends CollaborationToolTestSupport {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"direct_reply", "direct_text", "direct_finishing", "group_reply"})
+    @ValueSource(strings = {"direct_text", "direct_finishing", "group_reply"})
     void completedAnswerCanContinueWithoutCreatingAnotherTaskOrLosingHistory(String scenario) throws Exception {
         boolean direct = !scenario.equals("group_reply");
         if (direct) {

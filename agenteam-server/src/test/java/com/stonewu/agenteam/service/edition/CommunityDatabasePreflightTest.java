@@ -40,30 +40,6 @@ class CommunityDatabasePreflightTest {
             assertThat(after.getRevision()).isEqualTo(before.getRevision());
             assertThat(after.getInstallationId()).isNull();
             assertThat(after.getInitialEnterpriseId()).isNull();
-        }
-    }
-
-    @Test
-    void rejectsLegacyDatabaseBeforeChangingMigrationHistoryOrCreatingNewTables() throws Exception {
-        try (var database = new IsolatedDatabase()) {
-            var access = database.databaseAccess();
-            var legacy = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
-                .target("0.1.1.2").cleanDisabled(true).load();
-            assertThat(legacy.migrate().migrationsExecuted).isEqualTo(4);
-            var tables = access.mapper(SchemaSnapshotMapper.class).tables();
-            assertThatThrownBy(() -> preflight.verify(access.getDataSource()))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("没有社区版部署记录");
-            assertThat(access.mapper(SchemaSnapshotMapper.class).tables()).containsExactlyInAnyOrderElementsOf(tables);
-            assertThat(legacy.info().applied()).hasSize(4);
-            assertThat(legacy.validateWithResult().validationSuccessful).isTrue();
-        }
-    }
-
-    @Test
-    void acceptsFixedEnterpriseAndRejectsAdditionalEnterpriseAndCommercialMarker() throws Exception {
-        try (var database = new IsolatedDatabase()) {
-            database.initialize();
-            var access = database.databaseAccess();
             String owner = user(access);
             String first = enterprise(access, owner);
             var administrator = new SystemSuperAdminLockRow();
@@ -88,8 +64,27 @@ class CommunityDatabasePreflightTest {
                 .set(InstallationRow::getEdition, "pro").set(InstallationRow::getRevision, 3L))).isEqualTo(1);
             assertThatThrownBy(() -> preflight.verify(access.getDataSource()))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("属于商业版");
+
         }
     }
+
+    @Test
+    void rejectsLegacyDatabaseBeforeChangingMigrationHistoryOrCreatingNewTables() throws Exception {
+        try (var database = new IsolatedDatabase()) {
+            var access = database.databaseAccess();
+            var legacy = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
+                .target("0.1.1.2").cleanDisabled(true).load();
+            assertThat(legacy.migrate().migrationsExecuted).isEqualTo(4);
+            var tables = access.mapper(SchemaSnapshotMapper.class).tables();
+            assertThatThrownBy(() -> preflight.verify(access.getDataSource()))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("没有社区版部署记录");
+            assertThat(access.mapper(SchemaSnapshotMapper.class).tables()).containsExactlyInAnyOrderElementsOf(tables);
+            assertThat(legacy.info().applied()).hasSize(4);
+            assertThat(legacy.validateWithResult().validationSuccessful).isTrue();
+        }
+    }
+
+
 
     private String user(MybatisTestDatabase database) {
         var user = new AppUserRow();

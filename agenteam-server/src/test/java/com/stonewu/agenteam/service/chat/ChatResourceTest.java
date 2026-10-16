@@ -267,8 +267,13 @@ class ChatResourceTest extends CollaborationApiTestSupport {
         String taskId = onlyTask().getId();
         var original = unmentionedFile("ou_user");
         routing.route(enterprise, original.getId());
+        databaseAccess.mapper(ChatMessageResourceMapper.class).update(new LambdaUpdateWrapper<ChatMessageResourceRow>()
+            .eq(ChatMessageResourceRow::getEnterpriseId, enterprise).eq(ChatMessageResourceRow::getMessageId, original.getId())
+            .set(ChatMessageResourceRow::getStatus, "failed").set(ChatMessageResourceRow::getErrorCode, "CHANNEL_BINDING_REQUIRED"));
         var reply = fileReply("supplement-file", onlyTask().getShortCode() + "：补充本人上传的考勤文件");
         routing.route(enterprise, reply.getId());
+        assertEquals("pending", savedResource().getStatus());
+        assertNull(savedResource().getErrorCode());
         fetchReferencedCsv();
         routing.route(enterprise, reply.getId());
         assertEquals(1, taskCount());
@@ -290,20 +295,6 @@ class ChatResourceTest extends CollaborationApiTestSupport {
         assertFalse(downloader.runOnce());
         assertEquals(0, taskCount());
         assertEquals(0, PLATFORM.remainingRequests());
-    }
-
-    @Test
-    void ownFileAwaitingIdentityCanResumeWhenExplicitlyReferenced() {
-        var original = unmentionedFile("ou_user");
-        routing.route(enterprise, original.getId());
-        databaseAccess.mapper(ChatMessageResourceMapper.class).update(new LambdaUpdateWrapper<ChatMessageResourceRow>()
-            .eq(ChatMessageResourceRow::getEnterpriseId, enterprise).eq(ChatMessageResourceRow::getMessageId, original.getId())
-            .set(ChatMessageResourceRow::getStatus, "failed").set(ChatMessageResourceRow::getErrorCode, "CHANNEL_BINDING_REQUIRED"));
-        var reply = fileReply("later-file-reference", "现在使用我上传的附件");
-        routing.route(enterprise, reply.getId());
-        assertEquals("pending", savedResource().getStatus());
-        assertNull(savedResource().getErrorCode());
-        assertEquals(0, taskCount());
     }
 
     private ChatMessageRow unmentionedFile(String sender) {

@@ -28,6 +28,7 @@ import com.stonewu.agenteam.model.todo.entity.TodoItemRow;
 import com.stonewu.agenteam.model.todo.request.TodoWriteRequest;
 import com.stonewu.agenteam.model.workflow.request.WorkflowPreviewInput;
 import com.stonewu.agenteam.service.execution.PreviewRetentionService;
+import com.stonewu.agenteam.service.execution.ConversationSnapshotService;
 import com.stonewu.agenteam.service.execution.RunApprovalService;
 import com.stonewu.agenteam.service.execution.RunSubmissionService;
 import com.stonewu.agenteam.service.execution.RunWorker;
@@ -77,6 +78,9 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
     private RunSubmissionService submissions;
 
     @Autowired
+    private ConversationSnapshotService snapshotReader;
+
+    @Autowired
     private RunApprovalService decisions;
 
     @Autowired
@@ -116,9 +120,17 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void testsUnsavedContentOnceAndKeepsTheWorkflowIdentityWithoutCreatingAnEmployee() throws Exception {
+    void draftPreviewValidationIdentityAndRetentionPreserveConfirmedUserResults() throws Exception {
         var original = graph(false);
         String resource = create(original);
+        change(HttpMethod.POST, path(resource), Map.of("draft", original, "input", Map.of()), "1", UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
+        var conflict = change(HttpMethod.POST, path(resource), Map.of("draft", original, "input", Map.of("text", "测试")), "9", UUID.randomUUID().toString()).andExpect(status().isConflict()).andReturn();
+        assertEquals("VERSION_CONFLICT", json.readTree(conflict.getResponse().getContentAsString()).at("/error/code").asText());
+        change(HttpMethod.POST, path(agent), Map.of("draft", original, "input", Map.of("text", "测试")), "2", UUID.randomUUID().toString()).andExpect(status().isNotFound());
+        String other = provisioning.create("另一测试企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
+        change(HttpMethod.POST, "/api/v1/enterprises/" + other + "/workflows/" + resource + "/preview", Map.of("draft", original, "input", Map.of("text", "测试")), "1", UUID.randomUUID().toString()).andExpect(status().isNotFound());
+        assertEquals(0, count("agent_run"));
+        assertEquals(0, reserved());
         int employees = employees(), hiresBefore = count("agent_hire");
         var draft = original.deepCopy();
         ((ObjectNode) draft.at("/nodes/1/config/fields/0")).put("template", "仅本次：${input.text}");
@@ -130,18 +142,12 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
         String run = accepted.path("runId").asText();
         assertEquals(employees, employees());
         assertEquals(hiresBefore, count("agent_hire"));
-        var conversation = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ConversationSqlMapper.class).selectMaps(new LambdaQueryWrapper<AgentConversationRow>().select(AgentConversationRow::getAgentId, AgentConversationRow::getPreviewResourceId, AgentConversationRow::getAgentVersionId, AgentConversationRow::getHireId).eq(AgentConversationRow::getId, (accepted.path("conversationId").asText()))).stream().map(fixtureValues -> {
-            Map<String, Object> fixtureRow = new LinkedCaseInsensitiveMap<>();
-            fixtureRow.put("agent_id", fixtureValues.get("agent_id"));
-            fixtureRow.put("preview_resource_id", fixtureValues.get("preview_resource_id"));
-            fixtureRow.put("agent_version_id", fixtureValues.get("agent_version_id"));
-            fixtureRow.put("hire_id", fixtureValues.get("hire_id"));
-            return fixtureRow;
-        }).toList());
-        assertNull(conversation.get("agent_id"));
-        assertNull(conversation.get("agent_version_id"));
-        assertNull(conversation.get("hire_id"));
-        assertEquals(resource, conversation.get("preview_resource_id"));
+        var identity = databaseAccess.mapper(ConversationSqlMapper.class).selectOne(new LambdaQueryWrapper<AgentConversationRow>()
+            .eq(AgentConversationRow::getId, accepted.path("conversationId").asText()));
+        assertNull(identity.getAgentId());
+        assertNull(identity.getAgentVersionId());
+        assertNull(identity.getHireId());
+        assertEquals(resource, identity.getPreviewResourceId());
         assertEquals(original, json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ResourceDraftTableMapper.class).selectList(new LambdaQueryWrapper<ResourceDraftRow>().select(ResourceDraftRow::getConfigJson).eq(ResourceDraftRow::getResourceId, (resource))).stream().map(fixtureRecord -> fixtureRecord.getConfigJson()).toList())));
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ResourceVersionSqlMapper.class).selectCount(new LambdaQueryWrapper<ResourceVersionRow>().eq(ResourceVersionRow::getResourceId, (resource)))));
         try (var worker = new RunWorker(lifecycle, tasks)) {
@@ -161,70 +167,48 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
         assertEquals(100, config.at("/limits/maxSteps").asInt());
         assertEquals(1800, config.at("/limits/timeoutSeconds").asInt());
         assertEquals("preview", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getMode).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getMode()).toList()));
-    }
-
-    @Test
-    void rejectsInvalidInputsStaleRevisionsWrongResourceKindsAndAnotherEnterpriseBeforeSubmission() throws Exception {
-        var graph = graph(false);
-        String resource = create(graph);
-        change(HttpMethod.POST, path(resource), Map.of("draft", graph, "input", Map.of()), "1", UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
-        var conflict = change(HttpMethod.POST, path(resource), Map.of("draft", graph, "input", Map.of("text", "测试")), "9", UUID.randomUUID().toString()).andExpect(status().isConflict()).andReturn();
-        assertEquals("VERSION_CONFLICT", json.readTree(conflict.getResponse().getContentAsString()).at("/error/code").asText());
-        change(HttpMethod.POST, path(agent), Map.of("draft", graph, "input", Map.of("text", "测试")), "2", UUID.randomUUID().toString()).andExpect(status().isNotFound());
-        String other = provisioning.create("另一测试企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
-        change(HttpMethod.POST, "/api/v1/enterprises/" + other + "/workflows/" + resource + "/preview", Map.of("draft", graph, "input", Map.of("text", "测试")), "1", UUID.randomUUID().toString()).andExpect(status().isNotFound());
-        assertEquals(0, count("agent_run"));
-        assertEquals(0, reserved());
-    }
-
-    @Test
-    void workflowPreviewPermissionAloneAllowsConfirmationAndStoppingOwnTest() throws Exception {
-        var graph = graph(true);
-        String resource = create(graph);
-        String role = UUID.randomUUID().toString();
-        permissions.insertRole(role, enterprise, "workflow-preview-only", "仅测试工作流", "不授予员工运行或预览权限", DataScope.ENTERPRISE, false, Instant.now());
-        permissions.replaceRolePermissions(enterprise, role, Set.of("workflow.preview", "conversation.view"));
-        var user = EnterpriseTestData.member(users, permissions, enterprise, "workflow-preview-" + UUID.randomUUID(), "工作流测试所用的独立口令", "工作流测试者", List.of(role));
-        grants.replace(actor(admin), resource, 1, List.of(new ResourceGrantSpec("user", user.id(), "edit")));
-        var actor = actor(user.id());
-        assertFalse(actor.permissions().contains("agent.preview"));
-        assertFalse(actor.permissions().contains("agent.run"));
-        var input = new WorkflowPreviewInput(graph, json.valueToTree(Map.of("text", "等待决定")));
-        var accepted = submissions.workflowPreview(actor, resource, input);
-        String run = accepted.runId();
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> state(run).equals("waiting_approval") || terminal(run));
-        }
-        assertEquals("waiting_approval", state(run));
-        var approval = approvalRecords.forRun(enterprise, run).getFirst();
-        decisions.authorizeDecision(actor, approval.id());
-        decisions.decide(actor, approval.id(), approval.revision(), new ApprovalDecisionRequest("approve", approval.requestHash(), null));
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> terminal(run));
-        }
-        assertCompleted(run);
-        var second = submissions.workflowPreview(actor, resource, input);
-        assertEquals("cancelled", lifecycle.cancel(actor, second.runId()).status());
-        assertEquals(0, reserved());
-    }
-
-    @Test
-    void disablingTheWorkflowCountsAndStopsItsPreviewAndExpiredTestsCanBeRemoved() throws Exception {
-        var graph = graph(false);
-        String resource = create(graph);
-        var accepted = data(change(HttpMethod.POST, path(resource), Map.of("draft", graph, "input", Map.of("text", "测试")), "1", UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        String run = accepted.path("runId").asText(), conversation = accepted.path("conversationId").asText();
-        var impact = data(mvc.perform(get(base() + "/resources/" + resource + "/impact").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        String conversation = accepted.path("conversationId").asText();
+        String message = snapshot.at("/messages/1/id").asText();
+        var todo = todos.create(actor(admin), new TodoWriteRequest("确认后保存的工作流事项", "用户确认保留的摘要", admin, null, null, "normal", "workflow", conversation, message, run));
+        assertTrue(todo.sourceAccessible());
+        assertEquals("workflow", todo.sourceType());
+        var queued = data(change(HttpMethod.POST, path(resource), Map.of("draft", original, "input", Map.of("text", "待停止预览")),
+            "1", UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        String queuedRun = queued.path("runId").asText(), queuedConversation = queued.path("conversationId").asText();
+        var impact = data(mvc.perform(get(base() + "/resources/" + resource + "/impact").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
         assertEquals(1, impact.path("activeRunCount").asInt());
-        change(HttpMethod.PATCH, base() + "/resources/" + resource + "/status", Map.of("status", "disabled"), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertEquals("cancelled", state(run));
+        change(HttpMethod.PATCH, base() + "/resources/" + resource + "/status", Map.of("status", "disabled"), "1",
+            UUID.randomUUID().toString()).andExpect(status().isOk());
+        assertEquals("cancelled", state(queuedRun));
         assertEquals(0, reserved());
-        databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
+        databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().in(AgentConversationRow::getId, List.of(conversation, queuedConversation)).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
+        var before = Instant.now().minusSeconds(7 * 86400);
+        var preview = new PreviewRetentionMapper.Preview(enterprise, admin, conversation);
+        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
+            retentionRecords.remove(preview, before);
+            transaction.setRollbackOnly();
+        });
+        assertEquals(conversation, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(TodoTableMapper.class).selectList(new LambdaQueryWrapper<TodoItemRow>().select(TodoItemRow::getSourceConversationId).eq(TodoItemRow::getId, (todo.id()))).stream().map(fixtureRecord -> fixtureRecord.getSourceConversationId()).toList()));
+        assertEquals(1, Math.toIntExact(databaseAccess.mapper(ConversationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)))));
         retention.clean();
-        assertEquals(0, Math.toIntExact(databaseAccess.mapper(ConversationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)))));
+        retention.clean();
+        var kept = todoQueries.get(actor(admin), todo.id());
+        assertEquals(todo.description(), kept.description());
+        assertEquals(todo.revision(), kept.revision());
+        assertFalse(kept.sourceAccessible());
+        assertNull(kept.sourceConversationId());
+        assertEquals(1, todoQueries.history(actor(admin), todo.id(), null, 30).items().size());
+        var sources = databaseAccess.mapper(TodoTableMapper.class).selectById(todo.id());
+        assertNull(sources.getSourceConversationId());
+        assertNull(sources.getSourceMessageId());
+        assertNull(sources.getSourceRunId());
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getId, (run)))));
+        assertEquals(0, Math.toIntExact(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentMessageRow>().eq(AgentMessageRow::getId, (message)))));
+        assertEquals(0, databaseAccess.mapper(ConversationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentConversationRow>()
+            .eq(AgentConversationRow::getId, queuedConversation)));
+        assertEquals(0, databaseAccess.mapper(RunSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentRunRow>()
+            .eq(AgentRunRow::getId, queuedRun)));
     }
 
     @Test
@@ -283,53 +267,60 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
         assertEquals("独立模型节点已完成", snapshot.at("/messages/1/content").asText());
     }
 
+    private AuthContext actor(String id) {
+        return new AuthContext(users.findById(id).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(id, enterprise)));
+    }
+
     @Test
-    void confirmedWorkflowTodoKeepsItsBodyAndHistoryWhenTheExpiredSourceIsPermanentlyRemoved() throws Exception {
-        var draft = graph(false);
-        String resource = create(draft);
-        var accepted = data(change(HttpMethod.POST, path(resource), Map.of("draft", draft, "input", Map.of("text", "待办来源结果")), "1", UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        String run = accepted.path("runId").asText(), conversation = accepted.path("conversationId").asText();
+    void previewOnlyPermissionsAllowLoopDecisionsAndStoppingWithoutRepeatingIterations() throws Exception {
+        var body = graph(true);
+        ((ObjectNode) body.at("/nodes/0/config")).set("inputSchema", json.valueToTree(Map.of("type", "object")));
+        ((ObjectNode) body.at("/nodes/1/config")).put("title", "确认第 ${input.number} 项");
+        ((ObjectNode) body.at("/nodes/1/config")).set("inputMapping", json.valueToTree(Map.of("item", "${input.item}")));
+        ((ObjectNode) body.at("/nodes/2/config/fields/0")).put("template", "条目：${input.item}");
+        var graph = graph(false);
+        ((ObjectNode) graph.at("/nodes/1")).put("type", "loop").set("config",
+            json.valueToTree(Map.of("mode", "items", "items", List.of("甲", "乙"), "maxIterations", 3, "body", body)));
+        ((ObjectNode) graph.at("/nodes/2/config")).set("outputMapping", json.valueToTree(Map.of("result", "${steps.work.output}")));
+        var resource = create(graph);
+        String role = UUID.randomUUID().toString();
+        permissions.insertRole(role, enterprise, "workflow-preview-only", "仅测试工作流", "不授予员工运行或预览权限", DataScope.ENTERPRISE, false, Instant.now());
+        permissions.replaceRolePermissions(enterprise, role, Set.of("workflow.preview", "conversation.view"));
+        var user = EnterpriseTestData.member(users, permissions, enterprise, "workflow-preview-" + UUID.randomUUID(), "工作流测试所用的独立口令", "工作流测试者", List.of(role));
+        grants.replace(actor(admin), resource, 1, List.of(new ResourceGrantSpec("user", user.id(), "edit")));
+        var viewer = actor(user.id());
+        assertFalse(viewer.permissions().contains("agent.preview"));
+        assertFalse(viewer.permissions().contains("agent.run"));
+        var input = new WorkflowPreviewInput(graph, json.valueToTree(Map.of("text", "循环测试")));
+        var accepted = submissions.workflowPreview(viewer, resource, input);
+        String run = accepted.runId();
+        for (int index = 0; index < 2; index++) {
+            try (var worker = new RunWorker(lifecycle, tasks)) {
+                worker.poll();
+                await(() -> state(run).equals("waiting_approval") || terminal(run));
+            }
+            assertEquals("waiting_approval", state(run));
+            var pending = approvalRecords.forRun(enterprise, run).stream().filter(item -> item.status().equals("pending")).toList();
+            assertEquals(1, pending.size());
+            assertEquals(index + 1, approvalRecords.forRun(enterprise, run).size());
+            var approval = pending.getFirst();
+            decisions.authorizeDecision(viewer, approval.id());
+            decisions.decide(viewer, approval.id(), approval.revision(), new ApprovalDecisionRequest(index == 0 ? "approve" : "reject", approval.requestHash(), null));
+        }
         try (var worker = new RunWorker(lifecycle, tasks)) {
             worker.poll();
             await(() -> terminal(run));
         }
         assertCompleted(run);
-        var snapshot = data(mvc.perform(get(base() + "/conversations/" + conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
-        String message = snapshot.at("/messages/1/id").asText();
-        var todo = todos.create(actor(admin), new TodoWriteRequest("确认后保存的工作流事项", "用户确认保留的摘要", admin, null, null, "normal", "workflow", conversation, message, run));
-        assertTrue(todo.sourceAccessible());
-        assertEquals("workflow", todo.sourceType());
-        databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
-        var before = Instant.now().minusSeconds(7 * 86400);
-        var preview = new PreviewRetentionMapper.Preview(enterprise, admin, conversation);
-        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            retentionRecords.remove(preview, before);
-            transaction.setRollbackOnly();
-        });
-        assertEquals(conversation, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(TodoTableMapper.class).selectList(new LambdaQueryWrapper<TodoItemRow>().select(TodoItemRow::getSourceConversationId).eq(TodoItemRow::getId, (todo.id()))).stream().map(fixtureRecord -> fixtureRecord.getSourceConversationId()).toList()));
-        assertEquals(1, Math.toIntExact(databaseAccess.mapper(ConversationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)))));
-        retention.clean();
-        retention.clean();
-        var kept = todoQueries.get(actor(admin), todo.id());
-        assertEquals(todo.description(), kept.description());
-        assertEquals(todo.revision(), kept.revision());
-        assertFalse(kept.sourceAccessible());
-        assertNull(kept.sourceConversationId());
-        assertEquals(1, todoQueries.history(actor(admin), todo.id(), null, 30).items().size());
-        var sources = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(TodoTableMapper.class).selectMaps(new LambdaQueryWrapper<TodoItemRow>().select(TodoItemRow::getSourceConversationId, TodoItemRow::getSourceMessageId, TodoItemRow::getSourceRunId).eq(TodoItemRow::getId, (todo.id()))).stream().map(fixtureValues -> {
-            Map<String, Object> fixtureRow = new LinkedCaseInsensitiveMap<>();
-            fixtureRow.put("source_conversation_id", fixtureValues.get("source_conversation_id"));
-            fixtureRow.put("source_message_id", fixtureValues.get("source_message_id"));
-            fixtureRow.put("source_run_id", fixtureValues.get("source_run_id"));
-            return fixtureRow;
-        }).toList());
-        assertTrue(sources.values().stream().allMatch(value -> value == null));
-        assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getId, (run)))));
-        assertEquals(0, Math.toIntExact(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentMessageRow>().eq(AgentMessageRow::getId, (message)))));
-    }
-
-    private AuthContext actor(String id) {
-        return new AuthContext(users.findById(id).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(id, enterprise)));
+        assertEquals(2, approvalRecords.forRun(enterprise, run).size());
+        var snapshot = json.valueToTree(snapshotReader.read(viewer, accepted.conversationId()));
+        schemas.validate("ConversationSnapshot", snapshot);
+        assertTrue(snapshot.at("/messages/1/content").asText()
+            .matches("(?s).*\"iterations\"\\s*:\\s*2\\s*[,}].*"));
+        assertEquals(0, count("tool_call"));
+        var second = submissions.workflowPreview(viewer, resource, input);
+        assertEquals("cancelled", lifecycle.cancel(viewer, second.runId()).status());
+        assertEquals(0, reserved());
     }
 
     private String path(String id) {

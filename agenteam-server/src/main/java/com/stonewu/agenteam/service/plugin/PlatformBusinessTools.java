@@ -27,6 +27,7 @@ import java.time.Clock;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 业务规则沿用原有服务，不构造浏览器请求，不借用资源维护者权限。
@@ -49,6 +50,7 @@ public class PlatformBusinessTools {
     private final ScheduleSelectionService scheduleSelections;
     private final ScheduleOccurrenceCancellation cancellations;
     private final CollaborationToolService collaboration;
+    private final Map<String, PlatformToolHandler> handlers;
 
     public PlatformBusinessTools(TodoManagementService todos, TodoQueryService todoQueries,
                                  TodoSelectionService selections,
@@ -57,7 +59,7 @@ public class PlatformBusinessTools {
                                  EmployeeQueryService employees, WorkspaceSearchService search,
                                  EnterpriseMapper enterprises, PlatformToolInputMapper input, ResourceJson json,
                                  Clock clock, ScheduleSelectionService scheduleSelections, ScheduleOccurrenceCancellation cancellations,
-                                 CollaborationToolService collaboration) {
+                                 CollaborationToolService collaboration, List<PlatformToolHandler> extensions) {
         this.todos = todos;
         this.todoQueries = todoQueries;
         this.selections = selections;
@@ -74,9 +76,21 @@ public class PlatformBusinessTools {
         this.scheduleSelections = scheduleSelections;
         this.cancellations = cancellations;
         this.collaboration = collaboration;
+        var registered = new HashMap<String, PlatformToolHandler>();
+        for (var extension : extensions) {
+            for (String name : extension.toolNames()) {
+                if (registered.putIfAbsent(name, extension) != null) {
+                    throw new IllegalStateException("平台业务工具处理器重复登记：" + name);
+                }
+            }
+        }
+        this.handlers = Map.copyOf(registered);
     }
 
     public JsonNode call(BuiltinExecutionContext context, String name, JsonNode args) {
+        if (handlers.containsKey(name)) {
+            return handlers.get(name).call(context, name, args);
+        }
         if (name.startsWith("collab_")) {
             return collaboration.call(context, name, args);
         }

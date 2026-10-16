@@ -1,0 +1,128 @@
+.query,
+.query > [data-loading-transition],
+.query > [data-loading-transition] > [data-loading-content] {
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+  --shell-gutter: 0px;
+}
+
+.workspace > div:has(> [data-motion-workflow]) {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.header {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header [data-header-title-line] > h1 {
+  flex-shrink: 1;
+}
+
+.header [data-header-actions] {
+  max-width: none;
+  padding: 4px;
+  margin: -4px;
+}
+
+.header [data-header-actions] > div {
+  flex-wrap: nowrap;
+}
+
+.header [data-header-actions] :is(button, a) {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.workspace [data-motion-workflow],
+.workspace [data-motion-workflow] > form {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  gap: 0;
+}
+
+.feedback {
+  position: absolute;
+  left: 76px;
+  bottom: 16px;
+  z-index: 12;
+  width: min(440px, calc(100% - 92px));
+  max-height: min(260px, 40%);
+  padding: 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.feedback:empty, .feedback[hidden] {
+  display: none;
+}
+
+:global(.app-shell):has(.workspace[data-focused=true]) > :global(.sidebar),
+:global(.app-shell):has(.workspace[data-focused=true]) > :global(.main-shell) > :global(.topbar) {
+  display: none;
+}
+
+:global(.app-shell):has(.workspace[data-focused=true]) > :global(.main-shell) {
+  margin-left: 0;
+}
+
+@media (max-width: 1250px) {
+  .header > div {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .header [data-header-actions] {
+    justify-content: flex-start;
+    max-width: calc(100% + 8px);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 8px 12px;
+  }
+
+  .header [data-header-metadata] {
+    flex: 0 0 auto;
+  }
+
+  .header [data-header-actions] :is(button, a) {
+    min-height: 44px;
+  }
+
+  .header [data-header-actions] button[form] {
+    order: -1;
+  }
+
+  .header [data-header-actions] > div {
+    width: max-content;
+  }
+}

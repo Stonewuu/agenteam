@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.workflow.WorkflowNodes;
 import org.springframework.stereotype.Component;
 
 /**
@@ -20,7 +21,7 @@ public class WorkflowToolSelectionMapper {
 
     public JsonNode normalize(AuthContext actor, JsonNode config) {
         ObjectNode result = config.deepCopy();
-        for (var node : result.path("nodes")) {
+        for (var node : WorkflowNodes.all(result)) {
             if (!node.path("type").asText().equals("tool") || !(node.path(
                 "config") instanceof ObjectNode settings) || !settings.has("toolName")) {
                 continue;

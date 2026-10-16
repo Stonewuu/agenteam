@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AuthLoginSecurityTest {
+    private static final String PASSWORD_HASH = new AccountPasswordEncoder().encode("actual-long-password");
 
     private final AuthMapper accounts = mock(AuthMapper.class);
     private final PermissionMapper permissions = mock(PermissionMapper.class);
@@ -33,7 +34,7 @@ class AuthLoginSecurityTest {
 
     @Test
     void successfulLoginRotatesSessionBeforeGrantingIdentity() {
-        String hash = encoder.encode("actual-long-password");
+        String hash = PASSWORD_HASH;
         var user = user(hash);
         availableUser(user);
         var request = new MockHttpServletRequest();
@@ -52,7 +53,7 @@ class AuthLoginSecurityTest {
 
     @Test
     void wrongPasswordAndUnknownAccountHaveSamePublicFailure() {
-        availableUser(user(encoder.encode("actual-long-password")));
+        availableUser(user(PASSWORD_HASH));
         var wrong = assertThrows(ResponseStatusException.class,
             () -> service.login(new ApiLoginRequest("alice", "wrong-password"), new MockHttpServletRequest()));
         var unknown = assertThrows(ResponseStatusException.class,
@@ -63,7 +64,7 @@ class AuthLoginSecurityTest {
 
     @Test
     void concurrentCredentialChangeCannotGrantTheNewSessionVersionToOldCredentials() {
-        availableUser(user(encoder.encode("actual-long-password")));
+        availableUser(user(PASSWORD_HASH));
         when(accounts.findById("user-one")).thenReturn(Optional.of(AuthSessionSecurityTest.user(false, 2, "active")));
         var request = new MockHttpServletRequest();
         assertEquals(401, assertThrows(ResponseStatusException.class,

@@ -35,8 +35,6 @@ import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -141,18 +139,6 @@ class ChatPersistenceTest extends ChatApiTestSupport {
     }
 
     @Test
-    void ownBotAndOtherBotMessagesCannotCreateTasksOrLeakBody() {
-        enableGroup();
-        for (String sender : new String[] {"app", "bot", "unknown"}) {
-            String id = ingress.accept(enterprise, bot.getId(), 1L, message("event-" + sender, "message-" + sender, sender, "机器人内部交接提示"));
-            var receipt = receipts().selectById(id);
-            assertEquals("ignored", receipt.getStatus());
-            assertFalse(cipher.decrypt(enterprise, "receipt", id, receipt.getPayloadEncrypted()).toString().contains("交接提示"));
-        }
-        assertEquals(0, messageCount());
-    }
-
-    @Test
     void revokedConnectionAndFeatureSwitchRejectBeforeWriting() {
         var event = message("reject", "reject", "user", "不应保存");
         assertThrows(ApiException.class, () -> ingress.accept(enterprise, bot.getId(), null, event));
@@ -220,6 +206,13 @@ class ChatPersistenceTest extends ChatApiTestSupport {
     @Test
     void unsupportedAndControlEventsAreNotRoutedAsInstructions() {
         enableGroup();
+        for (String sender : new String[] {"app", "bot", "unknown"}) {
+            String id = ingress.accept(enterprise, bot.getId(), 1L, message("event-" + sender, "message-" + sender, sender, "机器人内部交接提示"));
+            var receipt = receipts().selectById(id);
+            assertEquals("ignored", receipt.getStatus());
+            assertFalse(cipher.decrypt(enterprise, "receipt", id, receipt.getPayloadEncrypted()).toString().contains("交接提示"));
+        }
+        assertEquals(0, messageCount());
         for (String type : new String[] {"im.message.reaction.created_v1", "im.message.recalled_v1", "unknown.event"}) {
             var event = json.createObjectNode();
             event.putObject("header").put("event_type", type).put("event_id", type);
@@ -260,6 +253,12 @@ class ChatPersistenceTest extends ChatApiTestSupport {
         assertEquals(1, databaseAccess.mapper(ChatOutboundAttemptMapper.class).selectCount(new LambdaQueryWrapper<ChatOutboundAttemptRow>()
             .eq(ChatOutboundAttemptRow::getOutboundId, first.getId())));
         assertTrue(sending.claim("second").isEmpty());
+        var app = bots.application(bot);
+        var other = new IntegrationApplication("another-application", enterprise, "feishu", app.externalTenantId(), "another-id", 1L);
+        var limits = List.of(new ChannelRateLimit("shared_group", false, 60, 1, false, 0));
+        assertEquals(Duration.ZERO, rates.acquireConversation(app, "tenant-scope", externalChat, limits));
+        assertTrue(rates.acquireConversation(other, "tenant-scope", externalChat, limits).toMillis() > 0);
+        assertEquals(Duration.ZERO, rates.acquireConversation(other, "tenant-scope", externalChat + "-different", limits));
     }
 
     @Test
@@ -316,16 +315,6 @@ class ChatPersistenceTest extends ChatApiTestSupport {
     }
 
     @Test
-    void groupRateIsSharedByDifferentBotApplications() {
-        var app = bots.application(bot);
-        var other = new IntegrationApplication("another-application", enterprise, "feishu", app.externalTenantId(), "another-id", 1L);
-        var limits = List.of(new ChannelRateLimit("shared_group", false, 60, 1, false, 0));
-        assertEquals(Duration.ZERO, rates.acquireConversation(app, "tenant-scope", externalChat, limits));
-        assertTrue(rates.acquireConversation(other, "tenant-scope", externalChat, limits).toMillis() > 0);
-        assertEquals(Duration.ZERO, rates.acquireConversation(other, "tenant-scope", externalChat + "-different", limits));
-    }
-
-    @Test
     void oldRetryingProgressCannotPermanentlyBlockTheFinalMessage() {
         var group = enableGroup();
         var progress = outbound.text(enterprise, group.getId(), bot.getId(), null, null, "old-progress", "assigned", "测试进展", null);
@@ -344,26 +333,28 @@ class ChatPersistenceTest extends ChatApiTestSupport {
         assertEquals("sent", outboundRows().selectById(complete.getId()).getStatus());
     }
 
-    @ParameterizedTest
-    @EnumSource(value = Outcome.class, names = {"RETRYABLE_FAILURE", "TOKEN_EXPIRED"})
-    void knownFailuresRetryOnlyTheSendWithTheSameRequestUntilTheAttemptLimit(Outcome outcome) {
+    @Test
+    void knownFailuresRetryOnlyTheSendWithTheSameRequestUntilTheAttemptLimit() {
         var group = enableGroup();
-        var queued = enqueue(group);
-        for (int attempt = 1; attempt <= 5; attempt++) {
-            var lease = sending.claim("known-send-failure").orElseThrow();
-            assertEquals(queued.getId(), lease.outboundId());
-            sending.begin(lease);
-            sending.complete(lease, new ChatPlatformAdapter.SendReceipt(new ChannelSendResult(outcome, "feishu", null,
-                "SIMULATED_PLATFORM_FAILURE", "明确拒绝本次发送", 9L, 429, "test-trace"), null));
-            var saved = outboundRows().selectById(queued.getId());
-            assertEquals(attempt == 5 ? "failed" : "retry_wait", saved.getStatus());
-            assertEquals(attempt, saved.getAttemptCount());
-            assertEquals(queued.getRequestId(), saved.getRequestId());
-            assertNull(saved.getFirstSubmittedAt());
-            if (attempt < 5) {
-                assertTrue(saved.getNextAttemptAt().isAfter(Instant.now().plusSeconds(7)));
-                outboundRows().update(new LambdaUpdateWrapper<ChatOutboundMessageRow>().eq(ChatOutboundMessageRow::getId, queued.getId())
-                    .set(ChatOutboundMessageRow::getNextAttemptAt, Instant.now().minusSeconds(1)));
+        for (var outcome : List.of(Outcome.RETRYABLE_FAILURE, Outcome.TOKEN_EXPIRED)) {
+            var queued = outbound.text(enterprise, group.getId(), bot.getId(), null, null,
+                "known-failure-" + outcome, "probe", "群策能力验证：固定发送内容", null);
+            for (int attempt = 1; attempt <= 5; attempt++) {
+                var lease = sending.claim("known-send-failure").orElseThrow();
+                assertEquals(queued.getId(), lease.outboundId());
+                sending.begin(lease);
+                sending.complete(lease, new ChatPlatformAdapter.SendReceipt(new ChannelSendResult(outcome, "feishu", null,
+                    "SIMULATED_PLATFORM_FAILURE", "明确拒绝本次发送", 9L, 429, "test-trace"), null));
+                var saved = outboundRows().selectById(queued.getId());
+                assertEquals(attempt == 5 ? "failed" : "retry_wait", saved.getStatus());
+                assertEquals(attempt, saved.getAttemptCount());
+                assertEquals(queued.getRequestId(), saved.getRequestId());
+                assertNull(saved.getFirstSubmittedAt());
+                if (attempt < 5) {
+                    assertTrue(saved.getNextAttemptAt().isAfter(Instant.now().plusSeconds(7)));
+                    outboundRows().update(new LambdaUpdateWrapper<ChatOutboundMessageRow>().eq(ChatOutboundMessageRow::getId, queued.getId())
+                        .set(ChatOutboundMessageRow::getNextAttemptAt, Instant.now().minusSeconds(1)));
+                }
             }
         }
         assertEquals(0, count("agent_run"));

@@ -74,7 +74,7 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
     private ExecutionEventPublisher publisher;
 
     @Autowired
-    private ExecutionEventCache eventCache;
+    private LiveEventCache eventCache;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
@@ -89,7 +89,7 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void activeRunBlocksArchiveAndDeleteWhileRenamingFavoriteAndRevisionRemainConsistent() throws Exception {
+    void conversationLifecycleKeepsRevisionsPrivateFeedbackAndRetentionConsistent() throws Exception {
         var versions = databaseAccess.mapper(ResourceVersionSqlMapper.class);
         var published = versions.selectOne(new LambdaQueryWrapper<ResourceVersionRow>()
             .eq(ResourceVersionRow::getEnterpriseId, enterprise).eq(ResourceVersionRow::getId, version));
@@ -116,20 +116,30 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         assertEquals(conversation, favorites.at("/items/0/id").asText());
         assertEquals("Feather", favorites.at("/items/0/agentIcon").asText());
         assertEquals("mint", favorites.at("/items/0/agentColor").asText());
+        String feedbackPath = base() + "/messages/" + accepted.path("outputMessageId").asText() + "/feedback";
+        change(HttpMethod.PUT, feedbackPath, Map.of("value", "positive"), null, UUID.randomUUID().toString()).andExpect(status().isConflict());
         cancel(accepted);
+        change(HttpMethod.PUT, base() + "/messages/" + accepted.path("inputMessageId").asText() + "/feedback", Map.of("value", "positive"), null, UUID.randomUUID().toString()).andExpect(status().isConflict());
+        String feedbackKey = UUID.randomUUID().toString();
+        change(HttpMethod.PUT, feedbackPath, Map.of("value", "positive"), null, feedbackKey).andExpect(status().isOk());
+        change(HttpMethod.PUT, feedbackPath, Map.of("value", "positive"), null, feedbackKey).andExpect(status().isOk());
+        assertEquals(1, count("message_feedback"));
+        var snapshot = snapshot(conversation);
+        schemas.validate("ConversationSnapshot", snapshot);
+        assertEquals("positive", snapshot.at("/messages/1/feedback").asText());
+        var other = EnterpriseTestData.member(users, permissions, enterprise, "other-" + UUID.randomUUID(), "其他管理员的独立测试口令", "另一管理员", List.of(permissions.builtinRoleId(enterprise, "enterprise-admin")));
+        var actor = new AuthContext(other, enterprise, Set.copyOf(permissions.listPermissionCodes(other.id(), enterprise)));
+        assertEquals(404, assertThrows(ResponseStatusException.class, () -> queries.snapshot(actor, conversation)).getStatusCode().value());
+        var withdrawn = json.createObjectNode().putNull("value");
+        change(HttpMethod.PUT, feedbackPath, withdrawn, null, UUID.randomUUID().toString()).andExpect(status().isOk());
+        assertEquals(0, count("message_feedback"));
+        assertTrue(snapshot(conversation).at("/messages/1/feedback").isNull());
         var archived = data(change(HttpMethod.PATCH, path(conversation), Map.of("status", "archived"), snapshot(conversation).at("/conversation/revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
         assertFalse(archived.path("canContinue").asBoolean());
         write(path(conversation) + "/messages", input("归档后不能发送"), UUID.randomUUID().toString()).andExpect(status().isConflict());
-    }
-
-    @Test
-    void deleteKeepsMessagesAndRestoreHonorsThirtyDayLimit() throws Exception {
-        var accepted = submit();
-        cancel(accepted);
-        String conversation = accepted.path("conversationId").asText();
-        String key = UUID.randomUUID().toString(), revision = snapshot(conversation).at("/conversation/revision").asText();
-        change(HttpMethod.DELETE, path(conversation), null, revision, key).andExpect(status().isOk());
-        change(HttpMethod.DELETE, path(conversation), null, revision, key).andExpect(status().isOk());
+        String deleteKey = UUID.randomUUID().toString(), deleteRevision = snapshot(conversation).at("/conversation/revision").asText();
+        change(HttpMethod.DELETE, path(conversation), null, deleteRevision, deleteKey).andExpect(status().isOk());
+        change(HttpMethod.DELETE, path(conversation), null, deleteRevision, deleteKey).andExpect(status().isOk());
         mvc.perform(get(path(conversation)).cookie(cookie)).andExpect(status().isNotFound());
         var deleted = data(mvc.perform(get(base() + "/conversations").cookie(cookie).param("status", "deleted")).andExpect(status().isOk()).andReturn()).at("/items/0");
         assertEquals(conversation, deleted.path("id").asText());
@@ -141,30 +151,6 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         String latest = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ConversationSqlMapper.class).selectList(new LambdaQueryWrapper<AgentConversationRow>().select(AgentConversationRow::getRevision).eq(AgentConversationRow::getId, (conversation))).stream().map(fixtureRecord -> Objects.toString(fixtureRecord.getRevision(), null)).toList());
         change(HttpMethod.POST, path(conversation) + "/restore", null, latest, UUID.randomUUID().toString()).andExpect(status().isConflict());
         assertTrue(data(mvc.perform(get(base() + "/conversations").cookie(cookie).param("status", "deleted")).andExpect(status().isOk()).andReturn()).path("items").isEmpty());
-    }
-
-    @Test
-    void feedbackIsPrivateRepeatableAndCanBeWithdrawn() throws Exception {
-        var accepted = submit();
-        String conversation = accepted.path("conversationId").asText();
-        String path = base() + "/messages/" + accepted.path("outputMessageId").asText() + "/feedback";
-        change(HttpMethod.PUT, path, Map.of("value", "positive"), null, UUID.randomUUID().toString()).andExpect(status().isConflict());
-        cancel(accepted);
-        change(HttpMethod.PUT, base() + "/messages/" + accepted.path("inputMessageId").asText() + "/feedback", Map.of("value", "positive"), null, UUID.randomUUID().toString()).andExpect(status().isConflict());
-        String key = UUID.randomUUID().toString();
-        change(HttpMethod.PUT, path, Map.of("value", "positive"), null, key).andExpect(status().isOk());
-        change(HttpMethod.PUT, path, Map.of("value", "positive"), null, key).andExpect(status().isOk());
-        assertEquals(1, count("message_feedback"));
-        var snapshot = snapshot(conversation);
-        schemas.validate("ConversationSnapshot", snapshot);
-        assertEquals("positive", snapshot.at("/messages/1/feedback").asText());
-        var other = EnterpriseTestData.member(users, permissions, enterprise, "other-" + UUID.randomUUID(), "其他管理员的独立测试口令", "另一管理员", List.of(permissions.builtinRoleId(enterprise, "enterprise-admin")));
-        var actor = new AuthContext(other, enterprise, Set.copyOf(permissions.listPermissionCodes(other.id(), enterprise)));
-        assertEquals(404, assertThrows(ResponseStatusException.class, () -> queries.snapshot(actor, conversation)).getStatusCode().value());
-        var withdrawn = json.createObjectNode().putNull("value");
-        change(HttpMethod.PUT, path, withdrawn, null, UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertEquals(0, count("message_feedback"));
-        assertTrue(snapshot(conversation).at("/messages/1/feedback").isNull());
     }
 
     @Test
@@ -210,7 +196,7 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         var firstStep = new RunStepView("step-first", null, attempt, "agent", "处理任务", 1, "running", null, Instant.now().toString(), null, null);
         var secondStep = new RunStepView("step-second", "step-first", attempt, "model", "生成回复", 2, "running", null, Instant.now().toString(), null, null);
         var block = new ContentBlock("visible-result", "text", null, 1, "1", "可查看的结果", "running", null, null, null, null, null, null);
-        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(ExecutionChange.step(firstStep), ExecutionChange.step(secondStep), ExecutionChange.replace(block)));
+        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(ExecutionChange.step(firstStep), ExecutionChange.step(secondStep), new ExecutionChange(block, null, "0", null, null, null)));
         lifecycle.finish(lease, "completed", null, null);
         var recent = data(mvc.perform(get(path(conversation) + "/messages").cookie(cookie).param("limit", "1")).andExpect(status().isOk()).andReturn());
         schemas.validate("MessageHistory", recent);
@@ -257,7 +243,7 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         Files.writeString(workspaceFile, "预览工作内容");
         Files.writeString(stateFile, "预览状态内容");
         publisher.publish(enterprise, conversation);
-        assertTrue(eventCache.last(enterprise, conversation).sequence() > 0);
+        assertTrue(eventCache.position(enterprise, conversation).isPresent());
         var retained = data(preview(Map.of("input", input("保留七天内的新预览")), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         cancel(retained);
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
@@ -269,7 +255,7 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getId, (id)))));
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentMessageRow>().eq(AgentMessageRow::getConversationId, (conversation)))));
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getRunId, (id)))));
-        assertEquals(0, eventCache.last(enterprise, conversation).sequence());
+        assertTrue(eventCache.position(enterprise, conversation).isEmpty());
         assertFalse(Files.exists(workspaceFile));
         assertFalse(Files.exists(stateFile));
         assertTrue(Math.toIntExact(databaseAccess.mapper(QuotaEntryTableMapper.class).selectCount(new LambdaQueryWrapper<QuotaEntryRow>().eq(QuotaEntryRow::getRunId, (id)).eq(QuotaEntryRow::getState, "consumed"))) > 0);

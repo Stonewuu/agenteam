@@ -22,8 +22,6 @@ import com.stonewu.agenteam.service.tool.ExecutionToolCatalog;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -72,18 +70,13 @@ class ResourceDeletionExecutionTest extends ExecutionApiTestSupport {
         ENVIRONMENT.close();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void currentAndHistoricalReferencesAllowDeletionAndKeepThePublishedContent(boolean currentStillUsesPlugin) throws Exception {
+    @Test
+    void historicalReferencesAllowDeletionAndKeepThePublishedContent() throws Exception {
         String plugin = plugin();
         String pluginVersion = publish(plugin);
         configureAgent(config -> config.withArray("pluginVersionIds").add(pluginVersion));
         String first = version;
-        configureAgent(config -> {
-            if (!currentStillUsesPlugin) {
-                config.putArray("pluginVersionIds");
-            }
-        });
+        configureAgent(config -> config.putArray("pluginVersionIds"));
         String latest = version;
         var beforeFirst = versions.find(enterprise, first).orElseThrow();
         var beforeLatest = versions.find(enterprise, latest).orElseThrow();
@@ -192,7 +185,9 @@ class ResourceDeletionExecutionTest extends ExecutionApiTestSupport {
         var before = catalog.list(run(configurations.normal(actor(), agent, version).snapshot()));
         String deletedName = before.values().stream().filter(value -> value.resourceId().equals(deleted)).findFirst().orElseThrow().definition().name();
         String retainedName = before.values().stream().filter(value -> value.resourceId().equals(retained)).findFirst().orElseThrow().definition().name();
+        var published = versions.find(enterprise, version).orElseThrow();
         delete(deleted);
+        assertEquals(published, versions.find(enterprise, version).orElseThrow());
         var observed = new AtomicReference<JsonNode>();
         modelResponse = exchange -> {
             observed.set(json.readTree(exchange.getRequestBody()));

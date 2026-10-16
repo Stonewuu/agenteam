@@ -22,7 +22,6 @@ import {VersionPicker} from "./version-picker";
 import {BusinessTermsField} from "./business-terms-field";
 import {AgentSubagentSettings} from "./agent-subagent-settings";
 import {type ReasoningEffort, reasoningEffortLabels} from "@/features/modelprofile/lib/reasoning-effort";
-import {WorkflowDevelopmentNotice, workflowInDevelopment} from "@/features/workflow/components/workflow-development";
 import ui from "@/components/ui/surface.module.css";
 
 export function AgentConfigForm({
@@ -59,7 +58,7 @@ export function AgentConfigForm({
   })[kind]);
   const canReadVersions = permissions.some((permission) => /^(agent|skill|plugin|workflow|knowledge|data)\.(create|edit|preview)$/.test(permission));
   const switchType = () => {
-    if (!typeChange || typeChange === "workflow" && workflowInDevelopment) {
+    if (!typeChange) {
       return;
     }
     const next = {
@@ -86,8 +85,7 @@ export function AgentConfigForm({
         onChange={(event) => setTypeChange(event.target.value as AgentConfig["agentType"])}>
         <option value="chat">{uiText("对话型")}</option>
         <option value="task">{uiText("任务型")}</option>
-        {(!workflowInDevelopment || value.agentType === "workflow") && <option value="workflow"
-                disabled={workflowInDevelopment}>{workflowInDevelopment ? uiText("流程型（当前不可用）") : uiText("流程型")}</option>}
+        <option value="workflow">{uiText("流程型")}</option>
       </Select></label>
         {value.agentType !== "workflow" &&
           <QueryState {...profiles} hasData={Boolean(profiles.data?.length)}
@@ -143,8 +141,7 @@ export function AgentConfigForm({
       {([
         ["skill", uiText("技能"), "skillVersionIds", 20], ["plugin", uiText("插件"), "pluginVersionIds", 20], ["knowledge", uiText("知识库"), "knowledgeVersionIds", 10],
         ["data", uiText("数据源"), "dataVersionIds", 10], ["workflow", uiText("工作流"), "workflowVersionIds", 5],
-      ] as const).map(([kind, title, field, maximum]) => kind === "workflow" && workflowInDevelopment ?
-        (value.agentType === "workflow" || value.workflowVersionIds.length > 0 ? <WorkflowDevelopmentNotice key={kind}/> : null) :
+      ] as const).map(([kind, title, field, maximum]) =>
         <VersionPicker key={kind} enterpriseId={enterpriseId} kind={kind} title={title} selected={value[field]}
                        onChange={(selected) => {
                          const next = {...value, [field]: selected};
@@ -154,7 +151,7 @@ export function AgentConfigForm({
                          onChange(next);
                        }}
                        maximum={maximum} allowed={canUse(kind) && !readOnly} readOnly={readOnly}/>)}
-      {value.agentType === "workflow" && !workflowInDevelopment &&
+      {value.agentType === "workflow" &&
         <EntryWorkflow enterpriseId={enterpriseId} value={value} onChange={(id) => set("entryWorkflowVersionId", id)}
                        allowed={canUse("workflow") && !readOnly}/>}
     </Section>}

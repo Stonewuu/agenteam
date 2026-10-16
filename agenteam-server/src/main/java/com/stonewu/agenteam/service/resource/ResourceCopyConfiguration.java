@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.workflow.WorkflowNodes;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
@@ -83,12 +85,7 @@ public class ResourceCopyConfiguration {
             config.putArray("sources").addAll(sources);
             config.putArray("tools").addAll(tools);
         } else if (binding.bindingKey().startsWith("nodes/")) {
-            String[] parts = binding.bindingKey().split("/");
-            for (JsonNode node : config.path("nodes")) {
-                if (node.path("nodeId").asText().equals(parts[1])) {
-                    ((ObjectNode) node.path("config")).putNull(parts[3]);
-                }
-            }
+            WorkflowNodes.clearDependency(config, binding.bindingKey());
         } else if (config.path(binding.bindingKey()).isArray()) {
             // 使用来源位置中的版本过滤，数组被前一次移除后序号可能已经改变。
             var remaining = new ArrayList<JsonNode>();

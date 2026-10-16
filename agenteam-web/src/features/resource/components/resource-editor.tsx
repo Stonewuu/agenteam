@@ -19,7 +19,7 @@ import {MotionPanel} from "@/components/ui/motion-panel";
 import {QueryState} from "@/components/ui/query-state";
 import {Dialog, DialogAction, DialogActions, DialogCancel} from "@/components/ui/dialog";
 import {ResourceAvatar} from "@/components/ui/resource-avatar";
-import {IconArrowLeft, IconDeviceFloppy, IconHistory} from "@/components/ui/icons";
+import {IconArrowLeft, IconDeviceFloppy, IconHistory, IconMaximize, IconSettings} from "@/components/ui/icons";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import {ApiError, apiRequest, errorMessage} from "@/lib/http/api-client";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
@@ -35,6 +35,7 @@ import {PluginToolsPanel} from "@/features/plugin/components/plugin-tools-panel"
 import {KnowledgeDocumentsPanel} from "@/features/knowledge/components/knowledge-documents-panel";
 import {DataCollectionsPanel} from "@/features/data/components/data-collections-panel";
 import {WorkflowPreview} from "@/features/workflow/components/workflow-preview";
+import {WorkflowAssistantButton} from "@/features/workflow/components/workflow-assistant-button";
 import {AppearanceFields} from "./appearance-fields";
 import type {ToolSource} from "@/features/plugin/types/plugin";
 import {collectionSource, remoteSource, sourceTools} from "@/features/plugin/lib/plugin-collection";
@@ -46,19 +47,28 @@ import {ResourceVersions} from "./resource-versions";
 import {TagPicker} from "./tag-picker";
 import {AgentPreview} from "./agent-preview";
 import {AgentIntroductionPreview} from "./agent-introduction-preview";
+import {WorkflowDetailsDialog} from "./workflow-details-dialog";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./resource.module.css";
+import workspace from "./workflow-workspace.module.css";
 
 const subscribeToClient = () => () => {
 };
 
-export function ResourceEditor({enterpriseId, kind, id, permissions, permissionVersion}: {
+type ResourceEditorProps = {
   enterpriseId: string;
   kind: ResourceKind;
   id: string;
   permissions: string[];
   permissionVersion: string
-}) {
+};
+
+export function ResourceEditor(props: ResourceEditorProps) {
+  return props.kind === "workflow" ? <div className={workspace.query}><ResourceEditorContent {...props}/></div>
+    : <ResourceEditorContent {...props}/>;
+}
+
+function ResourceEditorContent({enterpriseId, kind, id, permissions, permissionVersion}: ResourceEditorProps) {
   const uiText = useT();
   const clientReady = useSyncExternalStore(subscribeToClient, () => true, () => false);
   const params = useSearchParams();
@@ -129,6 +139,10 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
   const [source, setSource] = useState(initial);
   const [discarding, setDiscarding] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [workflowInfo, setWorkflowInfo] = useState(kind === "workflow" && !initial);
+  const [focused, setFocused] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null);
   const [lastErrors, setLastErrors] = useState(action.fieldErrors);
   const dirty = JSON.stringify(state.draft) !== JSON.stringify(state.saved);
   const editable = state.detail ? state.detail.resource.allowedActions.includes("edit") : permissions.includes(`${kind}.create`);
@@ -138,6 +152,9 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
     const field = Object.keys(action.fieldErrors)[0];
     if (field) {
       setSection(sectionForField(kind, field));
+      if (kind === "workflow" && ["name", "description", "tagIds", "config.icon", "config.color"].includes(field)) {
+        setWorkflowInfo(true);
+      }
     }
   }
   if (initial && initial !== source) {
@@ -192,8 +209,14 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
   const errors = {...state.detail?.fieldErrors, ...action.fieldErrors};
   const busy = action.busy || checking;
   const configuration = kind === "agent" || kind === "skill" && section !== "basic" || kind === "plugin" && section === "connection" || ["knowledge", "data"].includes(kind) && section === "basic";
-  return <div className={styles.editor}>
-    <PageHeader title={state.draft.name || uiText("新建{0}", [label])} size="small" leading={<>
+  return <div className={`${styles.editor} ${kind === "workflow" ? workspace.workspace : ""}`}
+    data-focused={kind === "workflow" && focused || undefined} onKeyDown={(event) => {
+      if (focused && event.key === "Escape" && !(event.target as HTMLElement).closest('[role="dialog"], [role="menu"], [role="listbox"]')) {
+        setFocused(false);
+      }
+    }}>
+    <PageHeader title={state.draft.name || uiText("新建{0}", [label])} size="small"
+      className={kind === "workflow" ? workspace.header : undefined} inlineMetadata={kind === "workflow"} leading={<>
       <Link className="icon-button" href={resourcePage(enterpriseId, kind)} aria-label={uiText("返回{0}列表", [label])}><IconArrowLeft
         size={20}/></Link>
       <ResourceAvatar icon={state.draft.config.icon} color={state.draft.config.color}/></>} metadata={<>
@@ -202,6 +225,16 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
       <span className={styles.unsaved}>{uiText("有未保存的修改")}</span>}
       {state.detail?.resource.hasUnpublishedChanges && <span className="badge amber">{uiText("有未发布修改")}</span>}
     </>} actions={<div className={styles.topActions}>
+      {kind === "workflow" && <><Button type="button" className={ui.button} disabled={busy}
+        onClick={() => setWorkflowInfo(true)}><IconSettings size={16}/>{uiText("工作流信息")}</Button>
+        <Button type="button" className="icon-button" aria-label={uiText(focused ? "退出专注画布" : "专注画布")}
+          title={uiText(focused ? "退出专注画布" : "专注画布")} aria-pressed={focused}
+          onClick={() => setFocused((value) => !value)}><IconMaximize size={18}/></Button>
+        {editable && dirty && <Button type="button" className={ui.button} disabled={busy}
+          onClick={() => setDiscarding(true)}>{uiText("取消修改")}</Button>}</>}
+      {kind === "workflow" && editable && state.detail && <WorkflowAssistantButton enterprise={enterpriseId}
+        permissions={permissions} resourceId={state.detail.resource.id} disabled={dirty || action.busy || checking}
+        open={assistantOpen} onOpenChange={setAssistantOpen} container={canvasElement?.closest<HTMLElement>("[data-motion-workflow]") ?? null} onChanged={() => void changed()}/>}
       {state.detail &&
         <Button type="button" className={ui.button} onClick={() => setHistory(true)} disabled={busy}><IconHistory
           size={16}/>{uiText("历史")}</Button>}
@@ -231,9 +264,14 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
         <p className={styles.lastSaved}>{uiText("最近保存")}<EnterpriseDateTime value={state.detail.resource.updatedAt}
                                                                                 compact/></p>}</aside>}
       <MotionPanel className={`${styles.editorPanel} ${kind === "workflow" ? styles.workflowPanel : ""}`}
+                   data-motion-workflow={kind === "workflow" || undefined}
                    value={kind === "workflow" ? "workflow" : section}>
         <form id={formId} onSubmit={(event) => {
           event.preventDefault();
+          if (kind === "workflow" && !state.draft.name.trim()) {
+            setWorkflowInfo(true);
+            return;
+          }
           void action.execute(async () => {
             const before = state.detail;
             const saved = await action.mutation.run<ResourceDetail>(organizationPath(enterpriseId, `/resources${before ? `/${encodeURIComponent(before.resource.id)}/draft` : ""}`),
@@ -248,21 +286,8 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
             }
           }, state.detail ? uiText("草稿已保存。") : uiText("{0}已创建。", [label]));
         }}>
-          <Fieldset className={styles.editorFields} disabled={!editable || busy}>
-            {kind === "workflow" ?
-              <div className={styles.workflowBasics}><TextField label={uiText("工作流名称")} name="name"
-                                                                value={state.draft.name}
-                                                                onChange={(value) => changeDraft("name", value)}
-                                                                maximum={80} required errors={errors}/><TextField
-                label={uiText("简介")} name="description" value={state.draft.description}
-                onChange={(value) => changeDraft("description", value)} maximum={500} errors={errors}/>
-                <Disclosure><DisclosureSummary>{uiText("图标与标签")}</DisclosureSummary><AppearanceFields
-                  disabled={!editable || busy} value={state.draft.config}
-                  onChange={(value) => changeDraft("config", {...state.draft.config, ...value})}/><TagPicker
-                  enterpriseId={enterpriseId} selected={state.draft.tagIds}
-                  onChange={(value) => changeDraft("tagIds", value)} known={state.detail?.resource.tags}
-                  canManage={permissions.includes("tag.manage")} readOnly={!editable}/></Disclosure>
-              </div> : section === "basic" && <>
+          {kind !== "workflow" && <Fieldset className={styles.editorFields} disabled={!editable || busy}>
+            {section === "basic" && <>
               <Section title={localizeCatalog(editorSections, uiText)[kind][0].label}><TextField label={uiText("名称")}
                                                                                                  name="name"
                                                                                                  value={state.draft.name}
@@ -291,21 +316,24 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
                 enterpriseId={enterpriseId} selected={state.draft.tagIds}
                 onChange={(value) => changeDraft("tagIds", value)} known={state.detail?.resource.tags}
                 canManage={permissions.includes("tag.manage")} readOnly={!editable}/></Section>}
-          </Fieldset>
+          </Fieldset>}
           {kind === "workflow" &&
             <ResourceConfigForm enterpriseId={enterpriseId} kind={kind} config={state.draft.config}
                                 onChange={(value) => changeDraft("config", value)} permissions={permissions}
-                                errors={errors} readOnly={!editable} resource={state.detail?.resource} busy={busy}/>}
+                                errors={errors} readOnly={!editable} resource={state.detail?.resource} busy={busy} fillHeight
+                                assistantOpen={assistantOpen} onInspectorOpen={() => setAssistantOpen(false)} onCanvasElement={setCanvasElement}/>}
           {kind === "plugin" && section === "connection" && remoteSource(state.draft.config as PluginConfig) && (state.detail ?
             <PluginToolsPanel enterpriseId={enterpriseId} detail={state.detail}
                               value={state.draft.config as PluginConfig}
                               onChange={(value) => changeDraft("config", value)} dirty={dirty || action.busy}
                               onChecked={changed} onChecking={setChecking} readOnly={!editable || action.busy}/> :
             <p className={ui.description}>{uiText("保存连接信息后可读取并选择远程工具。")}</p>)}
-          <MutationFeedback action={action} onReload={loadLatest}/>
+          <div className={kind === "workflow" ? workspace.feedback : undefined}
+            hidden={kind === "workflow" && !action.error && !action.conflict && !Object.keys(errors).length}>
+            <MutationFeedback action={action} onReload={loadLatest}/>
           {!action.error && Object.keys(errors).length > 0 &&
-            <ErrorFeedback error={uiText("配置中有需要修改的内容。")} fieldErrors={errors}/>}
-          {editable && dirty && <footer className={styles.editorActions}><span
+            <ErrorFeedback error={uiText("配置中有需要修改的内容。")} fieldErrors={errors}/>}</div>
+          {kind !== "workflow" && editable && dirty && <footer className={styles.editorActions}><span
             className={styles.unsaved}>{uiText("有未保存的修改")}</span><Button className={ui.button} type="button"
                                                                                 disabled={busy}
                                                                                 onClick={() => setDiscarding(true)}>{uiText("取消修改")}</Button>
@@ -327,6 +355,9 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
       </MotionPanel>
       {kind === "agent" && <AgentIntroductionPreview draft={state.draft}/>}
     </div>
+    {kind === "workflow" && workflowInfo && <WorkflowDetailsDialog enterpriseId={enterpriseId} draft={state.draft}
+      detail={state.detail} errors={errors} editable={editable} busy={busy} permissions={permissions}
+      onChange={changeDraft} onClose={() => setWorkflowInfo(false)}/>}
     {history && state.detail &&
       <Dialog title={uiText("发布历史")} drawer onClose={() => setHistory(false)}><ResourceVersions
         key={state.detail.resource.revision} enterpriseId={enterpriseId} resource={state.detail.resource}

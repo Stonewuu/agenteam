@@ -70,11 +70,13 @@ test("未提交源码、开发记录、跳过测试和未完成构建均不能�
   const dirty = fixture();
   dirty.write("agenteam-server/new.txt", "尚未提交");
   assert.throws(() => verifyCommunityBackend(dirty.root, {release: true}), /未提交/);
+  const sample = fixture();
   for (const [key, value] of [["release", false], ["testsExecuted", false], ["sourceDirty", true], ["status", "building"]]) {
-    const sample = fixture();
+    const original = sample.record[key];
     sample.record[key] = value;
     sample.save();
     assert.throws(() => verifyCommunityBackend(sample.root, {release: true}), /正式后端|构建记录/);
+    sample.record[key] = original;
   }
 });
 

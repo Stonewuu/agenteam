@@ -54,10 +54,25 @@ class SkillExecutionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void selectedSkillsReachModelInUserOrderAndDuplicateSelectionIsStoredOnce() throws Exception {
+    void skillSelectionVisibilityAndRevocationRespectThePublishedBindings() throws Exception {
         var first = skill("甲技能", "甲的固定指令标记", true);
         var second = skill("乙技能", "乙的固定指令标记", false);
+        var result = write(base() + "/conversations", Map.of("agentId", agent, "input", selected("不允许直接指定", List.of(first.version()))), UUID.randomUUID().toString()).andExpect(status().isConflict()).andReturn();
+        assertEquals("SKILL_DEPENDENCY_UNAVAILABLE", json.readTree(result.getResponse().getContentAsString()).at("/error/code").asText());
+        assertEquals(0, count("agent_conversation"));
+        assertEquals(0, count("agent_message"));
+        assertEquals(0, reserved());
         configureAgent(config -> config.set("skillVersionIds", json.valueToTree(List.of(first.version(), second.version()))));
+        var workspace = data(mvc.perform(get(base() + "/workspace/skills").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(1, workspace.path("items").size());
+        schemas.validate("WorkspaceSkill", workspace.at("/items/0"));
+        assertEquals(first.version(), workspace.at("/items/0/skill/versionId").asText());
+        assertEquals(agent, workspace.at("/items/0/employees/0/agentId").asText());
+        assertFalse(workspace.toString().contains("私有指令"));
+        var firstPage = data(mvc.perform(get(options()).cookie(cookie).param("kind", "skill").param("limit", "1")).andExpect(status().isOk()).andReturn());
+        assertTrue(firstPage.path("hasMore").asBoolean());
+        var secondPage = data(mvc.perform(get(options()).cookie(cookie).param("kind", "skill").param("limit", "1").param("cursor", firstPage.path("nextCursor").asText())).andExpect(status().isOk()).andReturn());
+        assertEquals(Set.of(first.version(), second.version()), List.of(firstPage.at("/items/0/versionId").asText(), secondPage.at("/items/0/versionId").asText()).stream().collect(Collectors.toSet()));
         var modelInput = new AtomicReference<String>();
         modelResponse = exchange -> {
             modelInput.set(json.readTree(exchange.getRequestBody()).toString());
@@ -85,6 +100,13 @@ class SkillExecutionApiTest extends ExecutionApiTestSupport {
             assertFalse(snapshot.toString().contains("固定指令标记"));
             assertTrue(snapshot.toString().contains("乙技能"));
             assertEquals(callsBefore + 1, modelCalls.get());
+            var hire = hires.forAgent(enterprise, admin, agent, false).orElseThrow();
+            hires.changeStatus(hire, "paused", Instant.now());
+            assertTrue(data(mvc.perform(get(base() + "/workspace/skills").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("items").isEmpty());
+            mvc.perform(get(options()).cookie(cookie).param("kind", "skill")).andExpect(status().isConflict());
+            hires.changeStatus(hires.forAgent(enterprise, admin, agent, false).orElseThrow(), "active", Instant.now());
+            change(HttpMethod.PATCH, base() + "/resources/" + first.id() + "/status", Map.of("status", "disabled"), "2", UUID.randomUUID().toString()).andExpect(status().isOk());
+            assertTrue(data(mvc.perform(get(base() + "/workspace/skills").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("items").isEmpty());
         } finally {
             worker.close();
         }
@@ -108,40 +130,6 @@ class SkillExecutionApiTest extends ExecutionApiTestSupport {
         var rejected = write(base() + "/conversations/" + conversation + "/messages", selected("不能扩大旧能力", List.of(second.version())), UUID.randomUUID().toString()).andExpect(status().isConflict()).andReturn();
         assertEquals("SKILL_DEPENDENCY_UNAVAILABLE", json.readTree(rejected.getResponse().getContentAsString()).at("/error/code").asText());
         assertEquals(1, count("agent_run"));
-    }
-
-    @Test
-    void workspaceRequiresVisibleSettingAnActiveHireAndAnActuallyUsableDependencySet() throws Exception {
-        var shown = skill("工作台技能", "公开名称之外的私有指令", true);
-        var hidden = skill("仅输入选择的技能", "不在工作台展示", false);
-        configureAgent(config -> config.set("skillVersionIds", json.valueToTree(List.of(shown.version(), hidden.version()))));
-        var workspace = data(mvc.perform(get(base() + "/workspace/skills").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertEquals(1, workspace.path("items").size());
-        schemas.validate("WorkspaceSkill", workspace.at("/items/0"));
-        assertEquals(shown.version(), workspace.at("/items/0/skill/versionId").asText());
-        assertEquals(agent, workspace.at("/items/0/employees/0/agentId").asText());
-        assertFalse(workspace.toString().contains("私有指令"));
-        var firstPage = data(mvc.perform(get(options()).cookie(cookie).param("kind", "skill").param("limit", "1")).andExpect(status().isOk()).andReturn());
-        assertTrue(firstPage.path("hasMore").asBoolean());
-        var secondPage = data(mvc.perform(get(options()).cookie(cookie).param("kind", "skill").param("limit", "1").param("cursor", firstPage.path("nextCursor").asText())).andExpect(status().isOk()).andReturn());
-        assertEquals(Set.of(shown.version(), hidden.version()), List.of(firstPage.at("/items/0/versionId").asText(), secondPage.at("/items/0/versionId").asText()).stream().collect(Collectors.toSet()));
-        var hire = hires.forAgent(enterprise, admin, agent, false).orElseThrow();
-        hires.changeStatus(hire, "paused", Instant.now());
-        assertTrue(data(mvc.perform(get(base() + "/workspace/skills").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("items").isEmpty());
-        mvc.perform(get(options()).cookie(cookie).param("kind", "skill")).andExpect(status().isConflict());
-        hires.changeStatus(hires.forAgent(enterprise, admin, agent, false).orElseThrow(), "active", Instant.now());
-        change(HttpMethod.PATCH, base() + "/resources/" + shown.id() + "/status", Map.of("status", "disabled"), "2", UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertTrue(data(mvc.perform(get(base() + "/workspace/skills").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("items").isEmpty());
-    }
-
-    @Test
-    void selectingUnboundSkillDoesNotCreateConversationMessagesOrQuotaReservation() throws Exception {
-        var unrelated = skill("未绑定技能", "不能自动加入员工的指令", true);
-        var result = write(base() + "/conversations", Map.of("agentId", agent, "input", selected("不允许直接指定", List.of(unrelated.version()))), UUID.randomUUID().toString()).andExpect(status().isConflict()).andReturn();
-        assertEquals("SKILL_DEPENDENCY_UNAVAILABLE", json.readTree(result.getResponse().getContentAsString()).at("/error/code").asText());
-        assertEquals(0, count("agent_conversation"));
-        assertEquals(0, count("agent_message"));
-        assertEquals(0, reserved());
     }
 
     private String options() {

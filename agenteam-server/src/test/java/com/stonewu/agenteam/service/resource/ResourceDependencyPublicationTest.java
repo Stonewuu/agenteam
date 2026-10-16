@@ -144,6 +144,12 @@ class ResourceDependencyPublicationTest {
         var outer = create("workflow", "外部工作流", flow(childVersion));
         assertEquals("VALIDATION_FAILED", assertThrows(ApiException.class, () -> publish(outer.resource().id())).code());
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ResourceVersionSqlMapper.class).selectCount(new LambdaQueryWrapper<ResourceVersionRow>().eq(ResourceVersionRow::getResourceId, outer.resource().id()))));
+        assertFalse(usable.list(actor, "agent", "", null, 50, null, true).items().stream()
+            .anyMatch(item -> item.resourceId().equals(child.resource().id())));
+        var parent = agent();
+        parent.putArray("subagentVersionIds").add(childVersion);
+        String parentId = create("agent", "不能调用此子智能体", parent).resource().id();
+        assertThrows(ApiException.class, () -> publish(parentId));
     }
 
     @Test
@@ -192,23 +198,23 @@ class ResourceDependencyPublicationTest {
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ResourceVersionSqlMapper.class).selectCount(new LambdaQueryWrapper<ResourceVersionRow>().eq(ResourceVersionRow::getResourceId, copyId))));
         String replacement = publish(agentId).version().id();
         ((ObjectNode) config.at("/nodes/1/config")).put("agentVersionId", replacement);
+        var mapping = (ObjectNode) config.at("/nodes/1/config/inputMapping");
+        mapping.put("text", "${steps.end.output.result}");
+        save(copyId, config);
+        assertEquals("VALIDATION_FAILED", assertThrows(ApiException.class, () -> publish(copyId)).code());
+        mapping.put("text", "${input.text}");
+        var schema = (ObjectNode) config.at("/nodes/0/config/inputSchema");
+        schema.put("$ref", "https://schemas.example.test/input.json");
+        save(copyId, config);
+        assertEquals("VALIDATION_FAILED", assertThrows(ApiException.class, () -> publish(copyId)).code());
+        assertEquals(0, databaseAccess.mapper(ResourceVersionSqlMapper.class).selectCount(
+            new LambdaQueryWrapper<ResourceVersionRow>().eq(ResourceVersionRow::getResourceId, copyId)));
+        schema.remove("$ref");
         save(copyId, config);
         assertEquals(replacement, publish(copyId).dependencies().getFirst().versionId());
     }
 
-    @Test
-    void publicationRejectsFutureNodeReferencesAndSchemasThatReadRemoteDefinitions() throws Exception {
-        String dependency = publish(create("agent", "可引用智能体", agent()).resource().id()).version().id();
-        var invalid = flow(dependency);
-        ((ObjectNode) invalid.at("/nodes/1/config/inputMapping")).put("text", "${steps.end.output.result}");
-        var workflow = create("workflow", "不能读取未来节点", invalid);
-        assertEquals("VALIDATION_FAILED", assertThrows(ApiException.class, () -> publish(workflow.resource().id())).code());
-        var remote = flow(null);
-        ((ObjectNode) remote.at("/nodes/0/config/inputSchema")).put("$ref", "https://schemas.example.test/input.json");
-        var remoteFlow = create("workflow", "不能读取远程结构", remote);
-        assertEquals("VALIDATION_FAILED", assertThrows(ApiException.class, () -> publish(remoteFlow.resource().id())).code());
-        assertEquals(0, Math.toIntExact(databaseAccess.mapper(ResourceVersionSqlMapper.class).selectCount(new LambdaQueryWrapper<ResourceVersionRow>().eq(ResourceVersionRow::getResourceId, remoteFlow.resource().id()))));
-    }
+
 
     @Test
     void subagentsCanBeSelectedAndUsedWithoutHiringButStillNeedCurrentUsePermission() throws Exception {
@@ -274,19 +280,7 @@ class ResourceDependencyPublicationTest {
         assertEquals("RESOURCE_DEPENDENCY_UNAVAILABLE", assertThrows(ApiException.class, () -> publish(parent)).code());
     }
 
-    @Test
-    void unsupportedWorkflowCapabilitiesAreNotOfferedAsSubagents() throws Exception {
-        String workflow = publish(create("workflow", "已有流程", flow(null)).resource().id()).version().id();
-        var config = agent();
-        config.withArray("workflowVersionIds").add(workflow);
-        String child = create("agent", "带工作流能力的员工", config).resource().id();
-        String version = publish(child).version().id();
-        assertFalse(usable.list(actor, "agent", "", null, 50, null, true).items().stream().anyMatch(item -> item.resourceId().equals(child)));
-        var parent = agent();
-        parent.putArray("subagentVersionIds").add(version);
-        String id = create("agent", "不能调用此子智能体", parent).resource().id();
-        assertThrows(ApiException.class, () -> publish(id));
-    }
+
 
     @Test
     void latestSubagentsArePagedAsResourcesAndHistoricalVersionsStaySelectable() throws Exception {
@@ -364,7 +358,7 @@ class ResourceDependencyPublicationTest {
              "instructions":"整理已提供的资料。","maxSteps":20,"timeoutSeconds":120,
              "attachmentsEnabled":false,"welcomeMessage":"","suggestedQuestions":[],"skillVersionIds":[],"pluginVersionIds":[],
              "knowledgeVersionIds":[],"dataVersionIds":[],"workflowVersionIds":[],"entryWorkflowVersionId":null,"historyMessageLimit":20,
-             "memoryEnabled":false,"memoryFields":[],"businessTerms":[],"researchSubagentEnabled":false,"publicExamples":[]}
+             "memoryEnabled":false,"memoryFields":[],"businessTerms":[],"publicExamples":[]}
             """)).put("modelProfileId", model);
     }
 

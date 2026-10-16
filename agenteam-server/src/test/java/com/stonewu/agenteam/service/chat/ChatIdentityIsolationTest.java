@@ -86,6 +86,9 @@ class ChatIdentityIsolationTest extends CollaborationApiTestSupport {
             .eq(UserChannelBindingRow::getEnterpriseId, enterprise).eq(UserChannelBindingRow::getId, binding.getId())
             .set(UserChannelBindingRow::getUserId, admin));
         assertEquals(admin, identities.actor(enterprise, admin, binding.getId()).userId());
+        var denied = receive("administrator-without-agent-access", "管理员也需要智能体使用权限");
+        assertThrows(ApiException.class, () -> routing.route(enterprise, denied.getId()));
+        assertEquals(0, taskCount());
         grants.replaceGrants(enterprise, agent, initiator.id(), Set.of(new ResourceGrantSpec("user", admin, "use")), Instant.now());
         hires.establish(enterprise, admin, agent, Instant.now());
         var incoming = receive("administrator-own-message", "平台管理员以自己的已绑定账号发起任务");
@@ -98,6 +101,7 @@ class ChatIdentityIsolationTest extends CollaborationApiTestSupport {
 
     @Test
     void platformAdministratorStillNeedsEnabledBindingAndActiveEnterpriseMembership() {
+        assertTrue(identities.bindingNotice(enterprise, bot.getConnectionId(), "feishu_open_id", "ou_unknown", null, "feishu").contains("授权并绑定"));
         assertEquals("CHANNEL_BINDING_REQUIRED", assertThrows(ApiException.class,
             () -> identities.actor(enterprise, admin, "missing-binding")).code());
         databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
@@ -109,6 +113,10 @@ class ChatIdentityIsolationTest extends CollaborationApiTestSupport {
             .set(UserChannelBindingRow::getChatEnabled, false));
         assertEquals("CHANNEL_BINDING_REQUIRED", assertThrows(ApiException.class,
             () -> identities.actor(enterprise, admin, binding.getId())).code());
+        String notice = identities.bindingNotice(enterprise, bot.getConnectionId(), "feishu_open_id", "ou_user", null, "feishu");
+        assertTrue(notice.contains("已绑定"));
+        assertTrue(notice.contains("个人设置 → 企业账号绑定"));
+        assertFalse(notice.contains("重新绑定"));
         String otherEnterprise = provisioning.create("管理员非有效成员的隔离企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         databaseAccess.mapper(IdentityQueryMapper.class).update(new LambdaUpdateWrapper<EnterpriseMemberRow>()
             .eq(EnterpriseMemberRow::getEnterpriseId, otherEnterprise).eq(EnterpriseMemberRow::getUserId, admin)
@@ -116,16 +124,6 @@ class ChatIdentityIsolationTest extends CollaborationApiTestSupport {
         assertFalse(users.isActiveMember(admin, otherEnterprise));
         assertEquals("CHANNEL_BINDING_REQUIRED", assertThrows(ApiException.class,
             () -> identities.actor(otherEnterprise, admin)).code());
-    }
-
-    @Test
-    void platformAdministratorCannotRunAnAgentWithoutOwnUsePermission() {
-        databaseAccess.mapper(UserChannelBindingMapper.class).update(new LambdaUpdateWrapper<UserChannelBindingRow>()
-            .eq(UserChannelBindingRow::getEnterpriseId, enterprise).eq(UserChannelBindingRow::getId, binding.getId())
-            .set(UserChannelBindingRow::getUserId, admin));
-        var incoming = receive("administrator-without-agent-access", "管理员也需要智能体使用权限");
-        assertThrows(ApiException.class, () -> routing.route(enterprise, incoming.getId()));
-        assertEquals(0, taskCount());
     }
 
     @Test
@@ -250,18 +248,12 @@ class ChatIdentityIsolationTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void openIdAndNamesNeverMatchAcrossApplicationsWithoutUnionId() {
+    void sharedIdentityRequiresMatchingTypeTenantConnectionAndEnterprise() {
         var other = secondBot();
         assertTrue(identities.find(enterprise, other.getConnectionId(), "feishu_open_id", "ou_user", null).isEmpty());
         shareBinding();
         assertTrue(identities.find(enterprise, other.getConnectionId(), "feishu_open_id", "ou_user", "on_other").isEmpty());
         assertTrue(identities.find(enterprise, other.getConnectionId(), "wecom_userid", "ou_user", "on_shared").isEmpty());
-    }
-
-    @Test
-    void tenantConnectionAndEnterpriseBoundariesRemainRequired() {
-        shareBinding();
-        var other = secondBot();
         assertTrue(identities.find(enterprise, other.getConnectionId(), "feishu_open_id", "ou_other", "on_shared").isPresent());
         applications().update(new LambdaUpdateWrapper<EnterpriseIntegrationRow>().eq(EnterpriseIntegrationRow::getId, other.getConnectionId())
             .set(EnterpriseIntegrationRow::getExternalTenantId, "another_tenant"));
@@ -308,17 +300,6 @@ class ChatIdentityIsolationTest extends CollaborationApiTestSupport {
             .andExpect(status().isOk());
         assertEquals(0, bindings().selectCount(new LambdaQueryWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getEnterpriseId, enterprise).ne(UserChannelBindingRow::getStatus, "revoked")));
-    }
-
-    @Test
-    void bindingNoticeExplainsTheActualAction() {
-        assertTrue(identities.bindingNotice(enterprise, bot.getConnectionId(), "feishu_open_id", "ou_unknown", null, "feishu").contains("授权并绑定"));
-        bindings().update(new LambdaUpdateWrapper<UserChannelBindingRow>().eq(UserChannelBindingRow::getId, binding.getId())
-            .set(UserChannelBindingRow::getChatEnabled, false));
-        String text = identities.bindingNotice(enterprise, bot.getConnectionId(), "feishu_open_id", "ou_user", null, "feishu");
-        assertTrue(text.contains("已绑定"));
-        assertTrue(text.contains("个人设置 → 企业账号绑定"));
-        assertFalse(text.contains("重新绑定"));
     }
 
     private void shareBinding() {

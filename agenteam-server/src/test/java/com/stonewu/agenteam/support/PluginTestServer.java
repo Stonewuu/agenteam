@@ -31,8 +31,12 @@ public final class PluginTestServer implements AutoCloseable {
     public volatile Function<JsonNode, JsonNode> toolResult = arguments -> json.valueToTree(Map.of("content", List.of(Map.of("type", "text", "text", "操作完成")), "isError", false));
 
     public PluginTestServer() {
+        this(0);
+    }
+
+    public PluginTestServer(int port) {
         try {
-            server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
             server.setExecutor(executor);
             server.createContext("/mcp", this::handle);
             server.start();

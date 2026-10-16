@@ -1,11 +1,12 @@
 package com.stonewu.agenteam.support;
 
 import com.stonewu.agenteam.mapper.test.support.TestDatabaseAdministrationMapper;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ public final class IsolatedDatabase implements AutoCloseable {
     private final String password;
     private MybatisTestDatabase administration;
     private MybatisTestDatabase access;
+    private HikariDataSource pool;
 
     public IsolatedDatabase() throws SQLException {
         var mysql = IsolatedInfrastructure.mysql();
@@ -30,18 +32,36 @@ public final class IsolatedDatabase implements AutoCloseable {
     }
 
     public Connection connection() throws SQLException {
-        return DriverManager.getConnection(url, "root", password);
+        return dataSource().getConnection();
+    }
+
+    private synchronized HikariDataSource dataSource() {
+        if (administration == null) {
+            throw new IllegalStateException("隔离测试库已经关闭");
+        }
+        if (pool == null) {
+            var config = new HikariConfig();
+            config.setJdbcUrl(url);
+            config.setUsername("root");
+            config.setPassword(password);
+            config.setMaximumPoolSize(8);
+            config.setMinimumIdle(0);
+            config.setConnectionTimeout(10000);
+            config.setPoolName(name.value());
+            pool = new HikariDataSource(config);
+        }
+        return pool;
     }
 
     public synchronized MybatisTestDatabase databaseAccess() {
         if (access == null) {
-            access = new MybatisTestDatabase(new DriverManagerDataSource(url, "root", password));
+            access = new MybatisTestDatabase(dataSource());
         }
         return access;
     }
 
     public void initialize() {
-        Flyway.configure().dataSource(url, "root", password).locations("classpath:db/schema")
+        Flyway.configure().dataSource(dataSource()).locations("classpath:db/schema")
             .baselineOnMigrate(false).cleanDisabled(true).validateOnMigrate(true).load().migrate();
     }
 
@@ -49,6 +69,10 @@ public final class IsolatedDatabase implements AutoCloseable {
     public void close() throws SQLException {
         if (administration != null) {
             try {
+                if (pool != null) {
+                    pool.close();
+                    pool = null;
+                }
                 administration.mapper(TestDatabaseAdministrationMapper.class).dropDatabase(name);
             } finally {
                 administration = null;

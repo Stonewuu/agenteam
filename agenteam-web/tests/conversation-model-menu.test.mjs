@@ -5,9 +5,13 @@ import vm from "node:vm";
 import ts from "typescript";
 import { chineseText } from "./i18n-test-runtime.mjs";
 
+const compiledSources = new Map();
 function compile(path, modules) {
-  const source = readFileSync(new URL(path, import.meta.url), "utf8");
-  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  if (!compiledSources.has(path)) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8");
+    compiledSources.set(path, ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText);
+  }
+  const compiled = compiledSources.get(path);
   const exports = {};
   vm.runInNewContext(compiled, { exports, require: (name) => modules[name], console: modules.console ?? console });
   return exports;

@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.support.InProcessDocumentParsing;
 import org.junit.jupiter.api.Tag;
 
 
@@ -34,7 +35,7 @@ import java.util.zip.ZipOutputStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 真正启动独立进程，验证中文、页码、恶意压缩内容及取消后的文件清理。
+ * 真实子进程验证协议与取消，格式及危险文档复用真实解析实现。
  */
 @Tag("external-process")
 class DocumentParserProcessTest {
@@ -46,6 +47,10 @@ class DocumentParserProcessTest {
     }
 
     private DocumentParserProcess parser() {
+        return InProcessDocumentParsing.create(storage(), new ObjectMapper(), root.resolve("parser").toString());
+    }
+
+    private DocumentParserProcess isolatedParser() {
         return new DocumentParserProcess(storage(), new ObjectMapper(), root.resolve("parser").toString());
     }
 
@@ -61,8 +66,12 @@ class DocumentParserProcessTest {
     }
 
     private List<DocumentChunk> parse(String name, byte[] bytes) {
+        return parse(name, bytes, parser());
+    }
+
+    private List<DocumentChunk> parse(String name, byte[] bytes, DocumentParserProcess executable) {
         var chunks = new ArrayList<DocumentChunk>();
-        try (var parsed = parser().parse(file(name, bytes), () -> true)) {
+        try (var parsed = executable.parse(file(name, bytes), () -> true)) {
             parsed.forEach(chunks::add);
             assertEquals(parsed.chunkCount(), chunks.size());
         }
@@ -76,7 +85,7 @@ class DocumentParserProcessTest {
     @Test
     void chineseAndSupplementaryCharactersKeepTheirContentAndBoundedChunks() throws Exception {
         String text = "知识检索保留真实资料😀".repeat(350);
-        var chunks = parse("资料.md", ("\uFEFF" + text).getBytes(StandardCharsets.UTF_8));
+        var chunks = parse("资料.md", ("\uFEFF" + text).getBytes(StandardCharsets.UTF_8), isolatedParser());
         assertTrue(chunks.size() > 3);
         StringBuilder restored = new StringBuilder();
         for (var chunk : chunks) {
@@ -89,7 +98,8 @@ class DocumentParserProcessTest {
             assertEquals(0, remaining.count());
         }
         rejects("FILE_TYPE_INVALID", "伪装.txt", new byte[]{'M', 'Z', 0, 5});
-        rejects("FILE_TYPE_INVALID", "错误编码.txt", new byte[]{(byte) 0xff, (byte) 0xff});
+        assertEquals("FILE_TYPE_INVALID", assertThrows(ApiException.class,
+            () -> isolatedParser().parse(file("错误编码.txt", new byte[]{(byte) 0xff, (byte) 0xff}), () -> true)).code());
         rejects("FILE_NO_TEXT", "空白.txt", "  \n ".getBytes(StandardCharsets.UTF_8));
     }
 
@@ -119,9 +129,9 @@ class DocumentParserProcessTest {
     @Test
     void deadlineAndLeaseLossStopTheProcessAndRemoveItsTemporaryFiles() throws Exception {
         var input = file("资料.txt", "正常文字".repeat(1000).getBytes(StandardCharsets.UTF_8));
-        assertEquals("FILE_PROCESSING_TIMEOUT", assertThrows(ApiException.class, () -> parser().parse(input, () -> true, Duration.ofNanos(1))).code());
+        assertEquals("FILE_PROCESSING_TIMEOUT", assertThrows(ApiException.class, () -> isolatedParser().parse(input, () -> true, Duration.ofNanos(1))).code());
         var checks = new AtomicInteger();
-        var cancelled = assertThrows(ApiException.class, () -> parser().parse(input, () -> checks.incrementAndGet() < 6));
+        var cancelled = assertThrows(ApiException.class, () -> isolatedParser().parse(input, () -> checks.incrementAndGet() < 6));
         assertEquals("FILE_PROCESSING_CANCELLED", cancelled.code(), () -> Arrays.toString(cancelled.getSuppressed()));
         try (var remaining = Files.list(root.resolve("parser"))) {
             assertEquals(0, remaining.count());

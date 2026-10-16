@@ -124,10 +124,6 @@ class PlatformCapacityCheck extends ExecutionApiTestSupport {
             report.put("knowledgePlans", databaseTimes.plans(databaseAccess));
             report.put("status", times.passed() ? "passed" : "threshold_not_met");
             save(report, times);
-            if (Boolean.getBoolean("capacity.compareKnowledgeQueries")) {
-                report.put("knowledgeComparisons", databaseTimes.compareKnowledgeQueries(databaseAccess));
-                save(report, times);
-            }
             if (Boolean.getBoolean("capacity.checkExecution")) {
                 report.put("scope", "规定数据规模的真实接口、同企业二十次活动执行和实际事件接收");
                 allowModelCalls = true;

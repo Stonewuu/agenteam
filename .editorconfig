@@ -11,6 +11,9 @@ indent_size = 2
 [*.{java,py,ps1}]
 indent_size = 4
 
+[*.ps1]
+charset = utf-8-bom
+
 [*.{cmd,bat}]
 end_of_line = crlf
 

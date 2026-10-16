@@ -101,63 +101,9 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void parentReadsRealKnowledgeAndDataAndPersistsOnlyActualCitationSources() throws Exception {
+    void parentAndChildReadTheSameSourcesWithIndependentSessionsAndActualCitations() throws Exception {
         var knowledge = knowledge();
         var collection = fileData("编号,部门,人数\n9007199254740993,研发,42\n");
-        configureAgent(config -> {
-            config.set("knowledgeVersionIds", json.valueToTree(List.of(knowledge.version())));
-            config.set("dataVersionIds", json.valueToTree(List.of(collection.version())));
-        });
-        var requests = new AtomicInteger();
-        var modelContext = new AtomicReference<String>();
-        modelResponse = exchange -> {
-            var input = json.readTree(exchange.getRequestBody());
-            if (requests.getAndIncrement() == 0) {
-                toolCalls(exchange, List.of(tool(0, "knowledge-parent", modelTool(input, "knowledge_search"), Map.of("query", "休假申请")), tool(1, "data-parent", modelTool(input, "data_query"), query(collection, List.of("编号", "人数")))));
-            } else {
-                modelContext.set(input.toString());
-                frame(exchange, Map.of("content", "已经核对休假规定和部门人数。"), "stop");
-            }
-        };
-        var accepted = submit("查阅休假申请规定和人数");
-        finish(accepted);
-        assertTrue(modelContext.get().contains("休假申请需要提前两天提交"));
-        assertTrue(modelContext.get().contains("9007199254740993"));
-        assertEquals(2, Math.toIntExact(databaseAccess.mapper(ToolCallSqlMapper.class).selectCount(new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getEnterpriseId, (enterprise)).eq(ToolCallRow::getStatus, "succeeded").isNull(ToolCallRow::getPluginToolId).isNotNull(ToolCallRow::getResourceVersionId))));
-        assertEquals(0, count("run_approval"));
-        var snapshot = snapshot(accepted);
-        schemas.validate("ConversationSnapshot", snapshot);
-        var citations = json.createArrayNode();
-        snapshot.at("/messages/1/blocks").forEach(block -> {
-            if (block.path("type").asText().equals("citation")) {
-                citations.add(block.path("citation"));
-            }
-        });
-        assertEquals(1, citations.size());
-        assertEquals(knowledge.document(), citations.get(0).path("documentId").asText());
-        assertEquals(knowledge.file(), citations.get(0).path("fileId").asText());
-        assertEquals(1, citations.get(0).path("generation").asInt());
-        assertFalse(snapshot.toString().contains("platform_"));
-        for (var block : snapshot.at("/messages/1/blocks")) {
-            if (block.path("type").asText().equals("tool")) {
-                assertEquals(block.at("/tool/name").asText().equals("knowledge_search") ? "knowledge" : "data", block.at("/tool/sourceKind").asText());
-            }
-        }
-        String originalPath = base() + "/knowledge/citations/" + citations.get(0).path("chunkId").asText();
-        var original = data(mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isOk()).andReturn());
-        schemas.validate("Citation", original);
-        assertTrue(original.path("excerpt").asText().contains("休假申请需要提前两天提交"));
-        String other = provisioning.create("另一资料企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
-        mvc.perform(get("/api/v1/enterprises/" + other + "/knowledge/citations/" + original.path("chunkId").asText()).cookie(cookie)).andExpect(status().isNotFound());
-        String revision = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(KnowledgeDocumentSqlMapper.class).selectList(new LambdaQueryWrapper<KnowledgeDocumentRow>().select(KnowledgeDocumentRow::getRevision).eq(KnowledgeDocumentRow::getId, (knowledge.document()))).stream().map(fixtureRecord -> Objects.toString(fixtureRecord.getRevision(), null)).toList());
-        change(HttpMethod.DELETE, base() + "/knowledge/" + knowledge.resource() + "/documents/" + knowledge.document(), null, revision, UUID.randomUUID().toString()).andExpect(status().isOk());
-        mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void temporaryChildListsCollectionsAndQueriesThemWithoutBorrowingParentSession() throws Exception {
-        var knowledge = knowledge();
-        var collection = fileData("编号,部门,人数\n7,产品,18\n");
         configureAgent(config -> {
             config.put("dynamicSubagentEnabled", true);
             config.set("knowledgeVersionIds", json.valueToTree(List.of(knowledge.version())));
@@ -166,6 +112,7 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
         var parent = new AtomicInteger();
         var child = new AtomicInteger();
         var childContext = new AtomicReference<String>();
+        var modelContext = new AtomicReference<String>();
         modelResponse = exchange -> {
             var input = json.readTree(exchange.getRequestBody());
             String question = "";
@@ -176,8 +123,12 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
             }
             if (question.contains("父任务查阅")) {
                 if (parent.getAndIncrement() == 0) {
-                    toolCalls(exchange, List.of(tool(0, "source-child", "agent_spawn", Map.of("agent_id", "general-purpose", "label", "资料查阅", "task", "子任务查阅资料"))));
+                    toolCalls(exchange, List.of(
+                        tool(0, "knowledge-parent", modelTool(input, "knowledge_search"), Map.of("query", "休假申请")),
+                        tool(1, "data-parent", modelTool(input, "data_query"), query(collection, List.of("编号", "人数"))),
+                        tool(2, "source-child", "agent_spawn", Map.of("agent_id", "general-purpose", "label", "资料查阅", "task", "子任务查阅资料"))));
                 } else {
+                    modelContext.set(input.toString());
                     frame(exchange, Map.of("content", "父任务已整理查阅结果。"), "stop");
                 }
             } else {
@@ -196,8 +147,28 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
         };
         var accepted = submit("父任务查阅资料");
         finish(accepted);
+        assertTrue(modelContext.get().contains("休假申请需要提前两天提交"));
+        assertTrue(modelContext.get().contains("9007199254740993"));
+        assertEquals(5, Math.toIntExact(databaseAccess.mapper(ToolCallSqlMapper.class).selectCount(new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getEnterpriseId, (enterprise)).eq(ToolCallRow::getStatus, "succeeded").isNull(ToolCallRow::getPluginToolId).isNotNull(ToolCallRow::getResourceVersionId))));
+        assertEquals(0, count("run_approval"));
         var snapshot = snapshot(accepted);
         schemas.validate("ConversationSnapshot", snapshot);
+        var citations = json.createArrayNode();
+        snapshot.at("/messages/1/blocks").forEach(block -> {
+            if (block.path("type").asText().equals("citation") && !block.hasNonNull("parentBlockId")) {
+                citations.add(block.path("citation"));
+            }
+        });
+        assertEquals(1, citations.size());
+        assertEquals(knowledge.document(), citations.get(0).path("documentId").asText());
+        assertEquals(knowledge.file(), citations.get(0).path("fileId").asText());
+        assertEquals(1, citations.get(0).path("generation").asInt());
+        assertFalse(snapshot.toString().contains("platform_"));
+        for (var block : snapshot.at("/messages/1/blocks")) {
+            if (block.path("type").asText().equals("tool") && block.at("/tool/sourceKind").isTextual()) {
+                assertEquals(block.at("/tool/name").asText().equals("knowledge_search") ? "knowledge" : "data", block.at("/tool/sourceKind").asText());
+            }
+        }
         assertTrue(childContext.get().contains("休假申请需要提前两天提交"));
         String childBlock = "";
         for (var block : snapshot.at("/messages/1/blocks")) {
@@ -206,7 +177,7 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
             }
         }
         assertFalse(childBlock.isBlank());
-        int tools = 0, citations = 0;
+        int tools = 0, childCitations = 0;
         for (var block : snapshot.at("/messages/1/blocks")) {
             if (childBlock.equals(block.path("parentBlockId").asText())) {
                 if (block.path("type").asText().equals("tool")) {
@@ -214,17 +185,27 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
                     assertEquals("completed", block.path("status").asText());
                 }
                 if (block.path("type").asText().equals("citation")) {
-                    citations++;
+                    childCitations++;
                 }
             }
         }
         assertEquals(3, tools);
-        assertEquals(1, citations);
+        assertEquals(1, childCitations);
         assertEquals(3, Math.toIntExact(databaseAccess.mapper(ToolCallSqlMapper.class).selectCount(new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getRunId, (accepted.path("runId").asText())).ne(ToolCallRow::getFrameworkSessionId, (accepted.path("conversationId").asText())).eq(ToolCallRow::getStatus, "succeeded"))));
+
+        String originalPath = base() + "/knowledge/citations/" + citations.get(0).path("chunkId").asText();
+        var original = data(mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        schemas.validate("Citation", original);
+        assertTrue(original.path("excerpt").asText().contains("休假申请需要提前两天提交"));
+        String other = provisioning.create("另一资料企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
+        mvc.perform(get("/api/v1/enterprises/" + other + "/knowledge/citations/" + original.path("chunkId").asText()).cookie(cookie)).andExpect(status().isNotFound());
+        String revision = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(KnowledgeDocumentSqlMapper.class).selectList(new LambdaQueryWrapper<KnowledgeDocumentRow>().select(KnowledgeDocumentRow::getRevision).eq(KnowledgeDocumentRow::getId, (knowledge.document()))).stream().map(fixtureRecord -> Objects.toString(fixtureRecord.getRevision(), null)).toList());
+        change(HttpMethod.DELETE, base() + "/knowledge/" + knowledge.resource() + "/documents/" + knowledge.document(), null, revision, UUID.randomUUID().toString()).andExpect(status().isOk());
+        mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isNotFound());
     }
 
     @Test
-    void agentListsSearchesAndReadsTheTailOfTheSameSavedLargeResult() throws Exception {
+    void savedResultsSupportToolAndUserReadingUntilTheirFieldsBecomeSensitive() throws Exception {
         var source = fileData("编号,内容\n1," + "资料内容".repeat(6000) + "文件尾部的确切答案是四十二\n");
         configureAgent(config -> {
             config.set("dataVersionIds", json.valueToTree(List.of(source.version())));
@@ -306,35 +287,11 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
                 }
             }
         }
-    }
 
-    @Test
-    void savedDataResultBecomesUnreadableWhenItsFieldIsMadeSensitive() throws Exception {
-        var source = fileData("编号,内容\n1," + "资料内容".repeat(5000) + "\n");
-        configureAgent(config -> config.set("dataVersionIds", json.valueToTree(List.of(source.version()))));
-        var requests = new AtomicInteger();
-        modelResponse = exchange -> {
-            var input = json.readTree(exchange.getRequestBody());
-            if (requests.getAndIncrement() == 0) {
-                toolCalls(exchange, List.of(tool(0, "large-data", modelTool(input, "data_query"), query(source, List.of("编号", "内容")))));
-            } else {
-                frame(exchange, Map.of("content", "完整查询结果已保存。"), "stop");
-            }
-        };
-        var accepted = submit("读取资料数据");
-        finish(accepted);
-        assertEquals(0, databaseAccess.mapper(FileSqlMapper.class).selectCount(new LambdaQueryWrapper<FileObjectRow>()
-            .eq(FileObjectRow::getRunId, accepted.path("runId").asText())));
-        var call = databaseAccess.mapper(ToolCallSqlMapper.class).selectOne(new LambdaQueryWrapper<ToolCallRow>()
-            .eq(ToolCallRow::getRunId, accepted.path("runId").asText()).eq(ToolCallRow::getToolName, "data_query"));
-        String url = base() + "/runs/" + accepted.path("runId").asText() + "/steps/" + call.getStepId() + "/tool-content/download";
-        var pending = mvc.perform(get(url).cookie(cookie)).andReturn();
-        var response = mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn();
-        assertTrue(response.getResponse().getContentAsByteArray().length > 16000);
         var fields = source.collection().path("fields").deepCopy();
         ((ObjectNode) fields.get(1)).put("sensitive", true);
         change(HttpMethod.PUT, base() + "/data/" + source.resource() + "/collections/" + source.collection().path("id").asText(), Map.of("name", "数据资料", "sourceName", source.collection().path("sourceName").asText(), "fields", fields), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        mvc.perform(get(url).cookie(cookie)).andExpect(status().isForbidden());
+        mvc.perform(get(contentUrl + "/download").cookie(cookie)).andExpect(status().isForbidden());
         int before = modelCalls.get();
         var next = data(write(base() + "/conversations/" + accepted.path("conversationId").asText() + "/messages", input("继续整理先前结果"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         try (var worker = new RunWorker(lifecycle, tasks)) {

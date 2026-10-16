@@ -1,7 +1,52 @@
 .editor {
-  display: grid;
-  gap: 18px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.layout {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.canvasFrame {
+  --workflow-edge: color-mix(in srgb, var(--secondary) 84%, var(--surface));
+  position: relative;
+  display: block;
+  min-width: 0;
+  height: min(68vh, 720px);
+  min-height: 460px;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+
+.canvasFrame :global(.react-flow__edgelabel-renderer) {
+  z-index: 10;
+}
+
+.node {
+  position: relative;
+  display: block;
+  width: 205px;
+  height: 112px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  box-shadow: 0 4px 16px rgb(0 0 0 / .04);
+  touch-action: none;
+  user-select: none;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .toolbar, .heading, .line {
@@ -19,95 +64,6 @@
 
 .toolbar select {
   width: auto;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
-  gap: 20px;
-  align-items: start;
-}
-
-.canvasFrame {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--surface-soft);
-}
-
-.zoom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  font-size: 13px;
-}
-
-.zoom > div {
-  display: flex;
-  gap: 4px;
-}
-
-.zoom button {
-  min-height: 32px;
-  padding: 4px 10px;
-}
-
-.viewport {
-  overflow: auto;
-  height: 440px;
-  outline-offset: -3px;
-  background-image: radial-gradient(var(--border) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-.canvas {
-  position: relative;
-  transform-origin: 0 0;
-}
-
-.connections {
-  position: absolute;
-  inset: 0;
-  color: var(--muted-foreground);
-  pointer-events: none;
-}
-
-.connections > g > path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-}
-
-.connections text {
-  fill: var(--foreground);
-  font-size: 12px;
-  paint-order: stroke;
-  stroke: var(--surface-soft);
-  stroke-width: 4px;
-  stroke-linejoin: round;
-}
-
-.node {
-  position: absolute;
-  display: grid;
-  gap: 2px;
-  width: 184px;
-  height: 78px;
-  padding: 9px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  color: var(--foreground);
-  text-align: left;
-  font: inherit;
-  box-shadow: 0 2px 6px #00000009;
-  touch-action: none;
-  user-select: none;
 }
 
 .node strong {
@@ -191,53 +147,6 @@
   resize: vertical;
 }
 
-.condition {
-  display: grid;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  min-width: 0;
-}
-
-.conditionGroup {
-  display: grid;
-  gap: 12px;
-  padding-left: 8px;
-  border-left: 2px solid var(--border);
-}
-
-.variable {
-  display: grid;
-  gap: 8px;
-}
-
-.variable select {
-  font-size: 12px;
-}
-
-.mapping {
-  display: grid;
-  gap: 14px;
-}
-
-.mappingRow {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  min-width: 0;
-}
-
-.mappingRow > .line {
-  flex-wrap: nowrap;
-}
-
-.mappingRow .line > label {
-  flex: 1;
-}
-
 .errors {
   margin: 0;
   padding: 14px 14px 14px 32px;
@@ -259,21 +168,6 @@
   padding: 5px 0;
 }
 
-.edge {
-  display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.edge > span {
-  font-size: 13px;
-}
-
-.edge select {
-  min-width: 0;
-}
-
 .preview {
   display: grid;
   gap: 22px;
@@ -293,60 +187,10 @@
   gap: 12px;
 }
 
-.previewSteps {
-  display: grid;
-  gap: 10px;
-}
-
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .viewport {
-    height: 360px;
-  }
-}
-
 @media (max-width: 600px) {
   .panel {
     padding: 14px;
   }
-
-  .edge {
-    grid-template-columns: 75px minmax(0, 1fr) auto;
-  }
-}
-
-.layout {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.withPanel {
-  grid-template-columns: minmax(0, 1fr) 290px;
-}
-
-.canvasFrame {
-  height: 450px;
-  border: 0;
-  border-radius: 0;
-  background: var(--surface-soft);
-}
-
-.node {
-  position: relative;
-  display: block;
-  width: 205px;
-  height: auto;
-  min-height: 110px;
-  padding: 15px;
-  border-radius: 13px;
-  background: var(--surface);
-  box-shadow: 0 4px 16px rgb(0 0 0 / .04);
 }
 
 .nodeHeading {
@@ -391,35 +235,25 @@
   border: 2px solid var(--accent);
 }
 
+.canvasFrame .connection {
+  stroke: var(--workflow-edge);
+  stroke-width: 1.7;
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 180ms ease, stroke-width 180ms ease;
+}
+
+.canvasFrame :global(.react-flow__edge:hover) .connection,
+.canvasFrame :global(.react-flow__edge:focus-visible) .connection,
+.canvasFrame :global(.react-flow__edge.selected) .connection {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
 .selectedNode {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.canvasFrame :global(.react-flow__controls) {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-
-.canvasFrame :global(.react-flow__controls-button) {
-  width: 44px;
-  height: 44px;
-  padding: 12px;
-  background: var(--surface);
-  color: var(--text);
-  border-bottom-color: var(--border);
-}
-
-.canvasFrame :global(.react-flow__controls-button:hover) {
-  background: var(--surface-hover);
-}
-
-.canvasFrame :global(.react-flow__controls-button svg) {
-  fill: none;
-  max-width: 18px;
-  max-height: 18px;
 }
 
 .canvasFrame :global(.react-flow__attribution) {
@@ -434,31 +268,12 @@
   border-radius: 13px;
 }
 
-.configuration {
-  border: 0;
-  border-left: 1px solid var(--border);
-  border-radius: 0;
-  padding: 20px;
-  max-height: 450px;
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
 .configuration .heading {
   flex-wrap: nowrap;
 }
 
 .configuration > button {
   justify-self: start;
-}
-
-.configuration .edge {
-  grid-template-columns: 45px minmax(0, 1fr) auto;
-  gap: 5px;
-}
-
-.configuration .edge > button {
-  padding: 6px;
 }
 
 .graphCount {
@@ -497,22 +312,7 @@
   opacity: .45;
 }
 
-@media (max-width: 900px) {
-  .withPanel {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .configuration {
-    border-left: 0;
-    border-top: 1px solid var(--border);
-    max-height: none;
-  }
-}
-
 @media (max-width: 600px) {
-  .canvasFrame {
-    height: 400px;
-  }
 
   .toolbar {
     gap: 14px;
@@ -527,22 +327,9 @@
   }
 }
 
-.editor {
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  overflow: hidden;
-}
-
 .toolbar {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-}
-
-.layout {
-  border: 0;
-  border-radius: 0;
 }
 
 .validation {
@@ -563,6 +350,187 @@
   padding: 17px 20px;
 }
 
-.node {
-  height: 112px;
+.nodeLibrary {
+  width: 280px;
+  max-height: min(560px, 80vh);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.libraryItem, .contextItem {
+  min-height: 48px;
+  gap: 12px;
+}
+
+.libraryItem strong, .contextItem strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.libraryItem small, .contextItem small {
+  display: block;
+  font-size: 11px;
+  color: var(--secondary);
+  margin-top: 3px;
+}
+
+.contextMenu {
+  width: 270px;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.historyControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 600px) {
+
+  .toolbar > div {
+    display: contents;
+  }
+
+  .historyControls > button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout, .node, .canvasFrame .connection {
+    transition: none;
+  }
+}
+
+.fillHeight,
+.fillHeight > .editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  gap: 0;
+}
+
+.fillHeight > .editor {
+  border: 0;
+  border-radius: 0;
+}
+
+.fillHeight .toolbar {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+}
+
+.fillHeight .breadcrumb {
+  flex: 0 0 auto;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.fillHeight .layout {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.fillHeight .canvasFrame {
+  height: 100%;
+  min-height: 0;
+  overscroll-behavior: none;
+}
+
+.graphArea {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.fillHeight .graphArea {
+  height: 100%;
+}
+
+.canvasFeedback {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 6;
+  max-width: min(440px, calc(100% - 32px));
+  max-height: min(260px, calc(100% - 32px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 13px 44px 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.dismissFeedback {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+}
+
+.canvasFeedback .validation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+}
+
+.canvasFeedback .errors {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.canvasFeedback .errors button {
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .fillHeight .configuration > .heading :global(.icon-button), .dismissFeedback {
+    width: 44px;
+    height: 44px;
+  }
+
+  .canvasFeedback {
+    min-height: 58px;
+    padding-right: 56px;
+  }
+}
+
+@media (max-width: 600px) {
+  .fillHeight .toolbar {
+    padding: 8px 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .fillHeight .toolbar :is(button, .graphCount) {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .canvasFrame {
+    --workflow-minimap-bottom: 124px;
+  }
 }

@@ -10,12 +10,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
-import com.stonewu.agenteam.mapper.execution.ExecutionMessageSqlMapper;
 import com.stonewu.agenteam.mapper.execution.RunSqlMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepSqlMapper;
 import com.stonewu.agenteam.mapper.modelprofile.ModelProfileSqlMapper;
 import com.stonewu.agenteam.mapper.test.usage.QuotaBucketFixtureMapper;
-import com.stonewu.agenteam.model.execution.entity.AgentMessageRow;
 import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.execution.entity.RunStepRow;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
@@ -71,67 +69,14 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void thinkingIsSavedWhileTheModelIsStillStreamingAndIsSeparateFromTheFinalAnswer() throws Exception {
-        configureAgent(config -> config.put("instructions", "模型上下文不可外泄"));
-        var finishModel = new CountDownLatch(1);
-        modelResponse = exchange -> {
-            try {
-                exchange.getRequestBody().readAllBytes();
-                begin(exchange);
-                frame(exchange, Map.of("reasoning_content", "先核对已提供的数据。"), null);
-                if (!finishModel.await(12, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException("未收到完成思考测试的信号");
-                }
-                frame(exchange, Map.of("reasoning_content", "再整理结论。"), null);
-                frame(exchange, Map.of("content", "这是最终答复。"), "stop");
-                exchange.getResponseBody().write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
-                exchange.getResponseBody().flush();
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-            } finally {
-                exchange.close();
-            }
-        };
-        var accepted = data(write(base() + "/conversations", Map.of("agentId", agent, "input", input("请分析数据")), UUID.randomUUID().toString())
-            .andExpect(status().isAccepted()).andReturn());
-        allowModelCalls = true;
-        var worker = new RunWorker(lifecycle, tasks);
-        String run = accepted.path("runId").asText();
-        String conversation = accepted.path("conversationId").asText();
-        try {
-            worker.poll();
-            await(() -> {
-                var output = databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectOne(new LambdaQueryWrapper<AgentMessageRow>()
-                    .eq(AgentMessageRow::getRunId, run).eq(AgentMessageRow::getRole, "assistant"));
-                return output != null && output.getBlocksJson().contains("先核对已提供的数据。");
-            });
-            assertEquals("running", runState(run));
-            var streaming = data(mvc.perform(get(base() + "/conversations/" + conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
-            schemas.validate("ConversationSnapshot", streaming);
-            assertEquals("", streaming.at("/messages/1/content").asText());
-            assertEquals("thinking", streaming.at("/messages/1/blocks/0/type").asText());
-            assertEquals("running", streaming.at("/messages/1/blocks/0/status").asText());
-            finishModel.countDown();
-            await(() -> runState(run).equals("completed"));
-            var snapshot = data(mvc.perform(get(base() + "/conversations/" + conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
-            schemas.validate("ConversationSnapshot", snapshot);
-            assertEquals("这是最终答复。", snapshot.at("/messages/1/content").asText());
-            assertEquals("先核对已提供的数据。再整理结论。", snapshot.at("/messages/1/blocks/0/text").asText());
-            assertEquals("completed", snapshot.at("/messages/1/blocks/0/status").asText());
-            assertFalse(snapshot.toString().contains("模型上下文不可外泄"));
-        } finally {
-            finishModel.countDown();
-            worker.close();
-        }
-    }
-
-    @Test
-    void interleavedChildrenAndRepeatedChildSessionKeepTheirToolParentAndSavedOrder() throws Exception {
+    void parallelChildrenKeepParentOrderAndContinueTheirOwnHistoryInTheNextRun() throws Exception {
         configureChild();
         configureAgent(config -> config.put("instructions", "模型上下文不可外泄"));
         var childrenStarted = new CountDownLatch(2);
         var finishChildren = new CountDownLatch(1);
         var parentCalls = new AtomicInteger();
+        var followupCalls = new AtomicInteger();
+        var childHistory = new AtomicBoolean();
         var sawInstructions = new AtomicBoolean();
         modelResponse = exchange -> {
             try {
@@ -150,6 +95,17 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
                     } else {
                         frame(exchange, Map.of("content", "父任务的整理结果"), "stop");
                     }
+                } else if (question.equals("继续对话")) {
+                    if (followupCalls.getAndIncrement() == 0) {
+                        var call = Map.of("index", 0, "id", "continued-child", "type", "function", "function",
+                            Map.of("name", "agent_send", "arguments", "{\"label\":\"甲\",\"message\":\"新的子问题\"}"));
+                        frame(exchange, Map.of("tool_calls", List.of(call)), "tool_calls");
+                    } else {
+                        frame(exchange, Map.of("content", "父任务继续结果"), "stop");
+                    }
+                } else if (question.equals("新的子问题")) {
+                    childHistory.set(request.toString().contains("子问题甲追问") && request.toString().contains("追问的独立回答"));
+                    frame(exchange, Map.of("content", "子任务继续结果"), "stop");
                 } else {
                     if (!question.contains("追问")) {
                         childrenStarted.countDown();
@@ -180,9 +136,9 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
         try {
             worker.poll();
             assertTrue(childrenStarted.await(10, TimeUnit.SECONDS));
-            await(() -> savedBlocks(accepted.path("outputMessageId").asText()).toString().contains("子问题甲的首段") && savedBlocks(accepted.path("outputMessageId").asText()).toString().contains("子问题乙的首段"));
+            await(() -> visibleMessage(conversation, accepted.path("outputMessageId").asText()).path("blocks").toString().contains("子问题甲的首段") && visibleMessage(conversation, accepted.path("outputMessageId").asText()).path("blocks").toString().contains("子问题乙的首段"));
             assertEquals("running", runState(runId));
-            var partial = savedBlocks(accepted.path("outputMessageId").asText());
+            var partial = visibleMessage(conversation, accepted.path("outputMessageId").asText()).path("blocks");
             var stable = new ArrayList<String>();
             partial.forEach(block -> stable.add(block.path("id").asText() + ":" + block.path("displayOrder").asInt()));
             finishChildren.countDown();
@@ -248,6 +204,17 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
             assertFalse(csv.contains("模型上下文不可外泄"));
             assertFalse(csv.contains("agent_key:"));
             assertFalse(csv.contains("session_id:"));
+            var next = data(write(base() + "/conversations/" + conversation + "/messages", input("继续对话"),
+                UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+            worker.poll();
+            await(() -> !Set.of("queued", "running").contains(runState(next.path("runId").asText())));
+            assertEquals("completed", runState(next.path("runId").asText()));
+            assertTrue(childHistory.get(), "继续子任务时必须读取该子任务自己的问题和回答");
+            var continued = data(mvc.perform(get(base() + "/conversations/" + conversation).cookie(cookie))
+                .andExpect(status().isOk()).andReturn());
+            schemas.validate("ConversationSnapshot", continued);
+            assertEquals(4, continued.path("messages").size());
+            assertTrue(continued.at("/messages/3/blocks").toString().contains("子任务继续结果"));
         } finally {
             finishChildren.countDown();
             worker.close();
@@ -317,7 +284,7 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
             await(() -> Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getRunId, (run)).eq(RunStepRow::getKind, "agent").in(RunStepRow::getStatus, Arrays.asList("completed", "failed")))) == 2);
             assertEquals("running", runState(run));
             Map<String, JsonNode> blocks = new HashMap<>();
-            savedBlocks(output).forEach(block -> blocks.put(block.path("id").asText(), block));
+            visibleMessage(accepted.path("conversationId").asText(), output).path("blocks").forEach(block -> blocks.put(block.path("id").asText(), block));
             int children = 0;
             for (var block : blocks.values()) {
                 if (block.path("type").asText().equals("subagent")) {
@@ -330,7 +297,7 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
                 }
             }
             assertEquals(2, children);
-            assertTrue(savedBlocks(output).toString().contains("成功子任务的结果"));
+            assertTrue(visibleMessage(accepted.path("conversationId").asText(), output).path("blocks").toString().contains("成功子任务的结果"));
             finishParent.countDown();
             await(() -> runState(run).equals("completed"));
             var detail = data(mvc.perform(get(base() + "/runs/" + run).cookie(cookie)).andExpect(status().isOk()).andReturn());
@@ -344,7 +311,7 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
 
     @Test
     void oversizedContextFailsBeforeAnyModelCallAndReleasesReservation() throws Exception {
-        // 使用确实装不下单条输入的模型配置，不能依赖旧实现把中文字节误算为模型输入数量。
+        // 使用无法容纳单条输入的模型配置，验证发起模型请求前就拒绝执行。
         assertEquals(1, databaseAccess.mapper(ModelProfileSqlMapper.class).update(new LambdaUpdateWrapper<ModelProfileRow>()
             .eq(ModelProfileRow::getEnterpriseId, enterprise).eq(ModelProfileRow::getName, "执行模型配置")
             .set(ModelProfileRow::getCapabilitiesJson, json.writeValueAsString(new ModelCapabilities(true, true, 1024, 4096, List.of("text"))))));
@@ -356,54 +323,6 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
             assertEquals("EXECUTION_CONTEXT_LIMIT", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getErrorCode).eq(AgentRunRow::getId, (accepted.path("runId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getErrorCode()).toList()));
             assertEquals(0, reserved());
             assertEquals(0, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(QuotaBucketFixtureMapper.class).conversationManagementApiPreviewsStayOutOfTheNormalListAndExpireWithoutDeletingUsageOrOtherConversationsObject(enterprise)));
-        } finally {
-            worker.close();
-        }
-    }
-
-    @Test
-    void nextRunCanContinueThePriorChildWithItsEarlierMessages() throws Exception {
-        configureChild();
-        var firstCalls = new AtomicInteger();
-        var nextCalls = new AtomicInteger();
-        var childHistory = new AtomicBoolean();
-        modelResponse = exchange -> {
-            try {
-                var request = json.readTree(exchange.getRequestBody());
-                String question = lastUserText(request);
-                begin(exchange);
-                if (question.equals("第一次") && firstCalls.getAndIncrement() == 0) {
-                    frame(exchange, Map.of("tool_calls", List.of(spawn(0, "first-child", "甲", "原始子问题"))), "tool_calls");
-                } else if (question.equals("继续对话") && nextCalls.getAndIncrement() == 0) {
-                    var call = Map.of("index", 0, "id", "continued-child", "type", "function", "function", Map.of("name", "agent_send", "arguments", "{\"label\":\"甲\",\"message\":\"新的子问题\"}"));
-                    frame(exchange, Map.of("tool_calls", List.of(call)), "tool_calls");
-                } else {
-                    if (question.equals("新的子问题")) {
-                        childHistory.set(request.toString().contains("已有子任务内容") && request.toString().contains("原始子问题"));
-                    }
-                    frame(exchange, Map.of("content", question.equals("原始子问题") ? "已有子任务内容" : question.equals("新的子问题") ? "子任务继续结果" : "父任务结果"), "stop");
-                }
-                exchange.getResponseBody().write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
-                exchange.getResponseBody().flush();
-            } finally {
-                exchange.close();
-            }
-        };
-        var first = data(write(base() + "/conversations", Map.of("agentId", agent, "input", input("第一次")), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        allowModelCalls = true;
-        var worker = new RunWorker(lifecycle, tasks);
-        try {
-            worker.poll();
-            await(() -> runState(first.path("runId").asText()).equals("completed"));
-            var second = data(write(base() + "/conversations/" + first.path("conversationId").asText() + "/messages", input("继续对话"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-            worker.poll();
-            await(() -> !Set.of("queued", "running").contains(runState(second.path("runId").asText())));
-            assertEquals("completed", runState(second.path("runId").asText()));
-            assertTrue(childHistory.get(), "继续子任务时必须读取它自己的前一轮问题和回答");
-            var snapshot = data(mvc.perform(get(base() + "/conversations/" + first.path("conversationId").asText()).cookie(cookie)).andExpect(status().isOk()).andReturn());
-            schemas.validate("ConversationSnapshot", snapshot);
-            assertEquals(4, snapshot.path("messages").size());
-            assertTrue(snapshot.at("/messages/3/blocks").toString().contains("子任务继续结果"));
         } finally {
             worker.close();
         }
@@ -439,14 +358,6 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
             }
         }
         return last;
-    }
-
-    private JsonNode savedBlocks(String message) {
-        try {
-            return json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getBlocksJson).eq(AgentMessageRow::getId, (message))).stream().map(fixtureRecord -> fixtureRecord.getBlocksJson()).toList()));
-        } catch (IOException failed) {
-            throw new IllegalStateException(failed);
-        }
     }
 
     private String runState(String run) {

@@ -178,45 +178,41 @@ class ModelBillingPersistenceTest {
             assertThat(copy.status()).isEqualTo("draft");
             assertThatThrownBy(() -> f.tx.execute(status -> f.pricing.update(f.actor, f.model.id(), copy.id(), 20, f.price("9"))))
                 .isInstanceOf(ApiException.class).hasMessageContaining("更新");
+            verifyInterruptedUsage(f);
+            verifyOwnerIsolation(f, database.databaseAccess());
         }
     }
 
-    @Test
-    void lostProcessIsMarkedInterruptedButLateAuthoritativeUsageIsStillSaved() throws Exception {
-        try (var database = new IsolatedDatabase()) {
-            database.initialize();
-            var f = new Fixture(database.databaseAccess());
-            f.tx.executeWithoutResult(status -> f.usage.register("lost", "process", f.context, f.model, f.provider));
-            f.rows.update(Wrappers.<ModelUsageRecordRow>lambdaUpdate().eq(ModelUsageRecordRow::getId, "lost")
-                .set(ModelUsageRecordRow::getRequestLeaseUntil, NOW.minusSeconds(1)));
-            f.tx.executeWithoutResult(status -> f.recovery.recoverInterrupted());
-            assertThat(f.rows.selectById("lost").getCallStatus()).isEqualTo("interrupted");
-            var collector = new ModelUsageAccumulator("openai", "standard", Set.of());
-            collector.accept(f.json.readTree("{\"prompt_tokens\":5,\"completion_tokens\":10}"));
-            assertThat(f.tx.<Boolean>execute(status -> f.usage.save(f.snapshot("lost", collector, "in_flight")))).isFalse();
-            collector.finish();
-            assertThat(f.tx.<Boolean>execute(status -> f.usage.save(f.snapshot("lost", collector, "completed")))).isTrue();
-            assertThat(f.rows.selectById("lost").getOutputTokens()).isEqualTo(10);
-            assertThat(f.rows.selectById("lost").getRunLeaseVersion()).isEqualTo(7);
-        }
+
+
+
+
+    private void verifyInterruptedUsage(Fixture f) throws Exception {
+        f.tx.executeWithoutResult(status -> f.usage.register("lost", "process", f.context, f.model, f.provider));
+        f.rows.update(Wrappers.<ModelUsageRecordRow>lambdaUpdate().eq(ModelUsageRecordRow::getId, "lost")
+            .set(ModelUsageRecordRow::getRequestLeaseUntil, NOW.minusSeconds(1)));
+        f.tx.executeWithoutResult(status -> f.recovery.recoverInterrupted());
+        assertThat(f.rows.selectById("lost").getCallStatus()).isEqualTo("interrupted");
+        var collector = new ModelUsageAccumulator("openai", "standard", Set.of());
+        collector.accept(f.json.readTree("{\"prompt_tokens\":5,\"completion_tokens\":10}"));
+        assertThat(f.tx.<Boolean>execute(status -> f.usage.save(f.snapshot("lost", collector, "in_flight")))).isFalse();
+        collector.finish();
+        assertThat(f.tx.<Boolean>execute(status -> f.usage.save(f.snapshot("lost", collector, "completed")))).isTrue();
+        assertThat(f.rows.selectById("lost").getOutputTokens()).isEqualTo(10);
+        assertThat(f.rows.selectById("lost").getRunLeaseVersion()).isEqualTo(7);
     }
 
-    @Test
-    void databaseRejectsCrossEnterpriseLinksAndWrongSaveOwner() throws Exception {
-        try (var database = new IsolatedDatabase()) {
-            database.initialize();
-            var f = new Fixture(database.databaseAccess());
-            var second = new Fixture(database.databaseAccess());
-            var row = new ModelUsageRegistrationMapper().create("invalid-owner", "process", f.context, f.model, f.provider, null, NOW);
-            row.setEnterpriseId(second.enterprise);
-            assertThatThrownBy(() -> f.rows.insert(row)).isInstanceOf(DataIntegrityViolationException.class);
-            f.tx.executeWithoutResult(status -> f.usage.register("scoped", "process", f.context, f.model, f.provider));
-            var collector = new ModelUsageAccumulator("openai", "standard", Set.of());
-            collector.finish();
-            var wrong = new ModelUsageSnapshot(f.enterprise, "scoped", "other-process", collector.snapshot(), "completed", NOW, null, null, null, null);
-            assertThat(f.tx.<Boolean>execute(status -> f.usage.save(wrong))).isFalse();
-            assertThatThrownBy(() -> f.pricing.list(second.actor, f.model.id(), null)).isInstanceOf(ApiException.class);
-        }
+    private void verifyOwnerIsolation(Fixture f, MybatisTestDatabase access) throws Exception {
+        var second = new Fixture(access);
+        var row = new ModelUsageRegistrationMapper().create("invalid-owner", "process", f.context, f.model, f.provider, null, NOW);
+        row.setEnterpriseId(second.enterprise);
+        assertThatThrownBy(() -> f.rows.insert(row)).isInstanceOf(DataIntegrityViolationException.class);
+        f.tx.executeWithoutResult(status -> f.usage.register("scoped", "process", f.context, f.model, f.provider));
+        var collector = new ModelUsageAccumulator("openai", "standard", Set.of());
+        collector.finish();
+        var wrong = new ModelUsageSnapshot(f.enterprise, "scoped", "other-process", collector.snapshot(), "completed", NOW, null, null, null, null);
+        assertThat(f.tx.<Boolean>execute(status -> f.usage.save(wrong))).isFalse();
+        assertThatThrownBy(() -> f.pricing.list(second.actor, f.model.id(), null)).isInstanceOf(ApiException.class);
     }
 
     private static class Fixture {

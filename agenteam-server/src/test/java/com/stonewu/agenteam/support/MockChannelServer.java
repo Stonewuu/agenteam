@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
  * 测试专用平台网络端点；响应取自有官方文档依据的协议样本，完整收集实际请求。
  */
 public final class MockChannelServer implements AutoCloseable {
+    private static final JsonNode FIXTURES = loadFixtures();
     public record Received(String method, URI uri, Map<String, List<String>> headers, String body) {
         public String header(String name) {
             return headers.entrySet().stream().filter(entry -> entry.getKey().equalsIgnoreCase(name))
@@ -33,9 +34,7 @@ public final class MockChannelServer implements AutoCloseable {
             return parameters(uri.getRawQuery());
         }
 
-        public Map<String, String> form() {
-            return parameters(body);
-        }
+
 
         private static Map<String, String> parameters(String text) {
             var result = new LinkedHashMap<String, String>();
@@ -57,12 +56,8 @@ public final class MockChannelServer implements AutoCloseable {
     private final BlockingQueue<Received> received = new LinkedBlockingQueue<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final HttpServer server;
-    private final JsonNode fixtures;
 
     public MockChannelServer() throws IOException {
-        try (var stream = new ClassPathResource("contracts/integration/platform-responses.json").getInputStream()) {
-            fixtures = new ObjectMapper().readTree(stream);
-        }
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.setExecutor(executor);
         server.createContext("/", exchange -> {
@@ -87,6 +82,14 @@ public final class MockChannelServer implements AutoCloseable {
         server.start();
     }
 
+    private static JsonNode loadFixtures() {
+        try (var stream = new ClassPathResource("contracts/integration/platform-responses.json").getInputStream()) {
+            return new ObjectMapper().readTree(stream);
+        } catch (IOException failure) {
+            throw new IllegalStateException("无法读取平台协议测试样本", failure);
+        }
+    }
+
     public URI origin() {
         return URI.create("http://127.0.0.1:" + server.getAddress().getPort());
     }
@@ -96,10 +99,10 @@ public final class MockChannelServer implements AutoCloseable {
     }
 
     public void reply(int status, String fixture, Map<String, String> headers) {
-        if (!fixtures.has(fixture)) {
+        if (!FIXTURES.has(fixture)) {
             throw new IllegalArgumentException("未知平台协议样本：" + fixture);
         }
-        raw(status, fixtures.get(fixture).toString(), headers);
+        raw(status, FIXTURES.get(fixture).toString(), headers);
     }
 
     public void raw(int status, String body, Map<String, String> headers) {

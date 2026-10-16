@@ -12,7 +12,7 @@ const created = [];
 let networkCreated = false;
 
 function docker(...args) {
-  return execFileSync("docker", args, { encoding: "utf8", timeout: 60_000 }).trim();
+  return execFileSync("docker", args, { encoding: "utf8", windowsHide: true, timeout: 60_000 }).trim();
 }
 
 async function waitForProxy() {
@@ -29,13 +29,13 @@ try {
   docker("network", "create", network);
   networkCreated = true;
   const fixture = fileURLToPath(new URL("./proxy-upstream.mjs", import.meta.url));
-  docker("run", "--detach", "--name", upstream, "--network", network,
+  docker("run", "--detach", "--name", upstream, "--memory", "128m", "--cpus", "1", "--network", network,
     "--network-alias", "backend", "--network-alias", "frontend",
     "--mount", `type=bind,src=${fixture},dst=/proxy-upstream.mjs,readonly`,
     "node:24-bookworm-slim", "node", "/proxy-upstream.mjs");
   created.push(upstream);
   const configuration = fileURLToPath(new URL("../../deploy/nginx/", import.meta.url));
-  docker("run", "--detach", "--name", proxy, "--network", network,
+  docker("run", "--detach", "--name", proxy, "--memory", "64m", "--cpus", "1", "--network", network,
     "--publish", "127.0.0.1::80", "--publish", "127.0.0.1::81",
     "--env", "PUBLIC_URL=https://agenteam.example.test",
     "--mount", `type=bind,src=${configuration}15-agenteam-config.sh,dst=/etc/agenteam/start-nginx.sh,readonly`,

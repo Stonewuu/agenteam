@@ -51,6 +51,7 @@ class ScheduledNotificationManagementApiTest extends ExecutionApiTestSupport {
 
     @Test
     void notificationPlanSavesWithoutAnAgentAndDoesNotSendAnythingDuringCreation() throws Exception {
+        optionEndpointsReturnActualActionSchemasAndScopedRecipients();
         var input = payload(admin);
         String key = UUID.randomUUID().toString();
         var saved = data(write(path(), input, key).andExpect(status().isCreated()).andReturn());
@@ -75,12 +76,6 @@ class ScheduledNotificationManagementApiTest extends ExecutionApiTestSupport {
         assertEquals(id, page.at("/items/0/id").asText());
         change(HttpMethod.POST, path() + "/" + id + "/upgrade-version", null, "1", UUID.randomUUID().toString())
             .andExpect(status().isUnprocessableEntity());
-    }
-
-    @Test
-    void switchingActionsAtomicallyReplacesAgentFieldsAndRecipientRows() throws Exception {
-        var notice = data(write(path(), payload(admin), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
-        String id = notice.path("id").asText();
         var agentInput = payload(admin);
         agentInput.put("action", Map.of("type", "agent.run", "schemaVersion", 1, "config", Map.of(
             "hireId", hires.forAgent(enterprise, admin, agent, false).orElseThrow().id(), "inputText", "整理会议资料")));
@@ -97,7 +92,10 @@ class ScheduledNotificationManagementApiTest extends ExecutionApiTestSupport {
         assertTrue(restored.path("inputText").isNull());
         assertEquals("notification.send", restored.at("/action/type").asText());
         assertEquals(1, restored.at("/action/recipients").size());
+
     }
+
+
 
     @Test
     void ordinaryMemberCanPlanSelfNotificationsButCannotSelectAnotherMember() {
@@ -130,10 +128,6 @@ class ScheduledNotificationManagementApiTest extends ExecutionApiTestSupport {
         retry.put("maxRetries", 1);
         write(path(), retry, UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
         assertEquals(0, count("scheduled_task"));
-    }
-
-    @Test
-    void recipientsMustBeUniqueCurrentMembersAndSelectedChannelsMustBeAvailable() throws Exception {
         for (var recipients : List.of(
             List.of(Map.of("userId", admin, "connectionIds", List.of()), Map.of("userId", admin, "connectionIds", List.of())),
             List.of(Map.of("userId", UUID.randomUUID().toString(), "connectionIds", List.of())),
@@ -145,10 +139,12 @@ class ScheduledNotificationManagementApiTest extends ExecutionApiTestSupport {
             write(path(), input, UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
         }
         assertEquals(0, count("scheduled_task"));
+
     }
 
-    @Test
-    void optionEndpointsReturnActualActionSchemasAndScopedRecipients() throws Exception {
+
+
+    private void optionEndpointsReturnActualActionSchemasAndScopedRecipients() throws Exception {
         var actions = data(mvc.perform(get(base() + "/schedule-actions").cookie(cookie)).andExpect(status().isOk()).andReturn());
         actions.forEach(item -> schemas.validate("ScheduleActionOption", item));
         assertEquals(2, actions.size());

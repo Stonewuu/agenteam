@@ -42,12 +42,13 @@ public class WorkflowExecutionEngine {
     private final ObjectMapper json;
     private final WorkflowToolRetryService retries;
     private final WorkflowResultPublisher results;
+    private final WorkflowLoopNodeExecutor loops;
 
     public WorkflowExecutionEngine(WorkflowControlNodes controls, WorkflowAgentNodeExecutor agents,
                                    WorkflowToolNodeExecutor tools,
                                    WorkflowApprovalNodeExecutor approvals, RunLifecycleService lifecycle,
                                    WorkflowValues values, Clock clock, ObjectMapper json,
-                                   WorkflowToolRetryService retries, WorkflowResultPublisher results) {
+                                   WorkflowToolRetryService retries, WorkflowResultPublisher results, WorkflowLoopNodeExecutor loops) {
         this.controls = controls;
         this.agents = agents;
         this.tools = tools;
@@ -58,17 +59,22 @@ public class WorkflowExecutionEngine {
         this.json = json;
         this.retries = retries;
         this.results = results;
+        this.loops = loops;
     }
 
     public Mono<Void> execute(WorkflowRunContext context, Identity identity, WorkflowTraversal workflow) {
+        return execute(context, identity, workflow, false);
+    }
+
+    private Mono<Void> execute(WorkflowRunContext context, Identity identity, WorkflowTraversal workflow, boolean nested) {
         return Mono.defer(() -> {
             context.add(identity, workflow);
-            return round(context, identity, workflow, true);
+            return round(context, identity, workflow, true, nested);
         });
     }
 
     private Mono<Void> round(WorkflowRunContext context, Identity identity, WorkflowTraversal workflow,
-                             boolean restored) {
+                             boolean restored, boolean nested) {
         return Mono.defer(() -> {
             context.requireActive();
             var saved = workflow.snapshot();
@@ -96,19 +102,19 @@ public class WorkflowExecutionEngine {
                     "工作流没有可继续的节点，请检查连接与已保存的步骤。"));
             }
             return Flux.fromIterable(candidates)
-                .flatMap(id -> node(context, identity, workflow, workflow.graph().nodes().get(id)), 4)
-                .then(round(context, identity, workflow, false));
+                .flatMap(id -> node(context, identity, workflow, workflow.graph().nodes().get(id), nested), 4)
+                .then(round(context, identity, workflow, false, nested));
         });
     }
 
-    private Mono<Void> node(WorkflowRunContext context, Identity identity, WorkflowTraversal workflow, Node node) {
+    private Mono<Void> node(WorkflowRunContext context, Identity identity, WorkflowTraversal workflow, Node node, boolean nested) {
         return Mono.defer(() -> {
             context.requireActive();
             if (workflow.node(node.id()).terminal()) {
                 return Mono.empty();
             }
             if (workflow.node(node.id()).retryAt() != null) {
-                return retries.await(context, identity, workflow, node).then(node(context, identity, workflow, node));
+                return retries.await(context, identity, workflow, node).then(node(context, identity, workflow, node, nested));
             }
             JsonNode input;
             if (workflow.node(node.id()).status().equals("pending")) {
@@ -131,6 +137,10 @@ public class WorkflowExecutionEngine {
             }
             Duration timeout = ExecutionLimits.minTimeout(Duration.ofMillis(remaining),
                 lifecycle.remaining(context.run()));
+            if (node.type().equals("loop")) {
+                return loops.execute(context, identity, workflow, node, input,
+                    (child, traversal) -> execute(context, child, traversal, true)).timeout(timeout);
+            }
             Mono<WorkflowNodeResult> result;
             if (controls.handles(node)) {
                 result = Mono.fromCallable(() -> {
@@ -147,11 +157,12 @@ public class WorkflowExecutionEngine {
                     default -> Mono.error(new IllegalStateException("工作流节点类型未实现"));
                 };
             }
-            return result.timeout(timeout).doOnNext(value -> {
+            // 循环里的并行分支也共享四个执行名额，循环控制节点自身不占名额。
+            return context.nodeSlots().execute(result.subscribeOn(Schedulers.boundedElastic())).timeout(timeout).doOnNext(value -> {
                 if (value.waiting()) {
                     context.suspend(identity, workflow, node, value.tools(), value.approval());
                 } else {
-                    if (node.type().equals("end")) {
+                    if (node.type().equals("end") && !nested) {
                         results.validate(context, identity, value.output());
                     }
                     context.complete(identity, workflow, node, value.output(), value.branch());
@@ -172,7 +183,7 @@ public class WorkflowExecutionEngine {
                 () -> new ApiException(HttpStatus.CONFLICT, "WORKFLOW_NODE_FAILED",
                     "当前流程节点没有完成，请查看已经保存的内容。"));
             if (retries.plan(context, identity, workflow, node, error)) {
-                return retries.await(context, identity, workflow, node).then(node(context, identity, workflow, node));
+                return retries.await(context, identity, workflow, node).then(node(context, identity, workflow, node, nested));
             }
             context.fail(identity, workflow, node, error.code(), error.getReason(),
                 cause instanceof ApiException || cause instanceof TimeoutException ? canContinue(error) : false);

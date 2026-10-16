@@ -41,7 +41,7 @@ class WorkspaceStoreTest {
     }
 
     @Test
-    void laterRunReadsTheSameFilesAndExactEditKeepsTheirContents() throws Exception {
+    void laterRunsAndConcurrentReadersSeeOnlyCommittedFilesWhileWritersStayExclusive() throws Exception {
         var store = store();
         try (var scope = store.open(run("first", "conversation"), "conversation", control, Duration.ofSeconds(1), () -> {
         })) {
@@ -53,6 +53,14 @@ class WorkspaceStoreTest {
             assertEquals(Set.of("source"), scope.manifest().sourceResultIds());
             assertEquals("旧内容\n", scope.current().document("work/report.txt").read(2, 2, null, 10, 1024).content());
             assertEquals(1, scope.prepare().edit(context, "work/report.txt", "旧内容", "修改后的内容", false).occurrences());
+            assertEquals("WORKSPACE_BUSY", assertThrows(ApiException.class,
+                () -> store.open(run("competing", "conversation"), "conversation", control, Duration.ofMillis(60), () -> {
+                })).code());
+            var snapshot = assertTimeout(Duration.ofSeconds(1), () -> store.snapshot("enterprise", "user", "conversation"));
+            assertEquals(Set.of("source"), snapshot.manifest().sourceResultIds());
+            assertEquals("第一行🙂\n旧内容\n最后一行", snapshot.files().document("work/report.txt").read(1, null, null, 10, 1024).content());
+            assertNull(store.snapshot("enterprise", "other-user", "conversation").files());
+            assertNull(store.snapshot("enterprise", "user", "other-conversation").files());
             scope.commit(Set.of("source"), Set.of());
         }
         try (var scope = store.open(run("third", "conversation"), "conversation", control, Duration.ofSeconds(1), () -> {
@@ -104,44 +112,6 @@ class WorkspaceStoreTest {
     }
 
     @Test
-    void concurrentOwnerWaitsUntilThePreviousScopeHasClosed() throws Exception {
-        var store = store();
-        var run = run("run", "conversation");
-        try (var ignored = store.open(run, "conversation", control, Duration.ofSeconds(1), () -> {
-        })) {
-            assertEquals("WORKSPACE_BUSY", assertThrows(ApiException.class, () -> store.open(run, "conversation", control, Duration.ofMillis(60), () -> {
-            })).code());
-        }
-        try (var available = store.open(run, "conversation", control, Duration.ofSeconds(1), () -> {
-        })) {
-            assertNotNull(available.current());
-        }
-    }
-
-    @Test
-    void browsingReadsTheCommittedVersionWithoutWaitingForTheWriter() throws Exception {
-        var store = store();
-        var run = run("run", "conversation");
-        try (var scope = store.open(run, "conversation", control, Duration.ofSeconds(10), () -> {
-        })) {
-            scope.prepare().write(context, "work/saved.txt", "已保存");
-            scope.commit(Set.of("source"), Set.of());
-        }
-        try (var writer = store.open(run, "conversation", control, Duration.ofSeconds(10), () -> {
-        })) {
-            writer.prepare().edit(context, "work/saved.txt", "已保存", "尚未保存", false);
-            var snapshot = assertTimeout(Duration.ofSeconds(1), () -> store.snapshot("enterprise", "user", "conversation"));
-            assertEquals(Set.of("source"), snapshot.manifest().sourceResultIds());
-            assertEquals("已保存", snapshot.files().document("work/saved.txt").read(1, null, null, 10, 1024).content());
-            assertNull(store.snapshot("enterprise", "other-user", "conversation").files());
-            assertNull(store.snapshot("enterprise", "user", "other-conversation").files());
-            writer.commit(Set.of("source"), Set.of());
-            assertEquals("尚未保存", store.snapshot("enterprise", "user", "conversation").files()
-                .document("work/saved.txt").read(1, null, null, 10, 1024).content());
-        }
-    }
-
-    @Test
     void rejectsHostPathsReadOnlyAreasAmbiguousEditsAndOversizedWrites() throws Exception {
         var store = store();
         try (var scope = store.open(run("run", "conversation"), "conversation", control, Duration.ofSeconds(1), () -> {
@@ -155,10 +125,6 @@ class WorkspaceStoreTest {
             assertEquals(2, files.edit(context, "work/edit.txt", "重复", "变化", true).occurrences());
             assertThrows(ApiException.class, () -> files.write(context, "outputs/large.txt", "文".repeat(400000)));
         }
-    }
-
-    @Test
-    void rootAliasesResolveInsideTheWorkspaceAndCannotBeWrittenAsFiles() throws Exception {
         for (String root : Set.of("/workspace", "/workspace/", "/", ".")) {
             assertEquals(directory, WorkspacePaths.resolve(directory, root, false));
             assertEquals("WORKSPACE_READ_ONLY", assertThrows(ApiException.class,

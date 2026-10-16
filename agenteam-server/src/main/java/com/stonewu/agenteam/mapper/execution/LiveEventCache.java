@@ -33,6 +33,7 @@ public class LiveEventCache {
     private static final DefaultRedisScript<Long> LEASE = script("live-lease", Long.class);
     private static final DefaultRedisScript<Long> COMPACT = script("live-compact", Long.class);
     private static final DefaultRedisScript<Long> FREEZE = script("live-freeze", Long.class);
+    private static final DefaultRedisScript<Long> REMOVE = script("live-remove", Long.class);
     private static final DefaultRedisScript<Long> RELEASE = new DefaultRedisScript<>("""
         if redis.call('GET', KEYS[1]) == ARGV[1] then
             return redis.call('DEL', KEYS[1])
@@ -69,6 +70,19 @@ public class LiveEventCache {
 
     public void release(String enterprise, String conversation, String token) {
         redis.execute(RELEASE, List.of(key(enterprise, conversation) + ":initialize"), token);
+    }
+
+    public boolean remove(String enterprise, String conversation, String owner, List<String> runs) {
+        String prefix = key(enterprise, conversation);
+        var objects = redis.opsForHash().keys(prefix + ":objects").stream().map(Object::toString).toList();
+        var keys = new ArrayList<>(List.of(prefix + ":initialize", prefix + ":objects"));
+        keys.addAll(coreKeys(prefix));
+        keys.add(prefix + ":dirty");
+        objects.forEach(object -> keys.add(prefix + ":body:" + object));
+        runs.forEach(run -> keys.add(prefix + ":lease:" + run));
+        var arguments = new ArrayList<>(List.of(owner));
+        arguments.addAll(objects);
+        return Long.valueOf(1).equals(redis.execute(REMOVE, keys, arguments.toArray()));
     }
 
     public String initialize(String enterprise, String conversation, String owner, long databaseVersion,

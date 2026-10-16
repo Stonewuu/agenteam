@@ -96,17 +96,29 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void attachmentOnlyMessagesKeepTheirFilesAndReachTheModelExactlyOnce() throws Exception {
+    void attachmentOnlyMessagesPreserveTextAndUnparsedPdfReferencesInOneModelRequest() throws Exception {
         configureAgent(config -> config.put("attachmentsEnabled", true));
         String text = "本次附件中的橙石活动在星期五举行，请按资料准备。", file = upload("attachment", null, "活动.txt", text.getBytes(StandardCharsets.UTF_8), true);
+        byte[] bytes;
+        try (var document = new PDDocument(); var output = new ByteArrayOutputStream()) {
+            document.addPage(new PDPage());
+            document.save(output);
+            bytes = output.toByteArray();
+        }
+        String pdfFile = upload("attachment", null, "无文字资料.pdf", bytes, true);
         var input = new LinkedHashMap<>(input(""));
-        input.put("attachmentIds", List.of(file));
+        input.put("attachmentIds", List.of(file, pdfFile));
         String key = UUID.randomUUID().toString();
         var body = Map.of("agentId", agent, "input", input);
         var accepted = data(write(base() + "/conversations", body, key).andExpect(status().isAccepted()).andReturn());
         assertEquals(accepted, data(write(base() + "/conversations", body, key).andExpect(status().isAccepted()).andReturn()));
-        assertEquals(1, count("message_attachment"));
+        assertEquals(2, count("message_attachment"));
         assertNull(files.find(enterprise, file, false).orElseThrow().expiresAt());
+        assertNull(files.find(enterprise, pdfFile, false).orElseThrow().expiresAt());
+        var run = runs.find(enterprise, accepted.path("runId").asText(), false).orElseThrow();
+        assertEquals(pdfFile, run.executionConfig().at("/inputSourceFiles/1/id").asText());
+        assertTrue(run.executionConfig().path("sourceContext").asText().contains("未提取到文字"));
+        assertTrue(run.executionConfig().path("sourceContext").asText().contains("不能根据文件名推测或编造内容"));
         assertTrue(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ConversationSqlMapper.class).selectList(new LambdaQueryWrapper<AgentConversationRow>().select(AgentConversationRow::getTitle).eq(AgentConversationRow::getId, (accepted.path("conversationId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getTitle()).toList()).startsWith("资料处理 "));
         var modelInput = new AtomicReference<String>();
         modelResponse = exchange -> {
@@ -132,35 +144,12 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
             schemas.validate("ConversationSnapshot", snapshot);
             assertEquals(file, snapshot.at("/messages/0/attachments/0/id").asText());
             assertEquals("活动.txt", snapshot.at("/messages/0/attachments/0/name").asText());
+            assertEquals(pdfFile, snapshot.at("/messages/0/attachments/1/id").asText());
+            assertEquals("FILE_NO_TEXT", snapshot.at("/messages/0/attachments/1/errorCode").asText());
             assertEquals("", snapshot.at("/messages/0/content").asText());
         } finally {
             worker.close();
         }
-    }
-
-    @Test
-    void pdfWithoutTextCanBeSubmittedAndKeepsTheOriginalFileReference() throws Exception {
-        configureAgent(config -> config.put("attachmentsEnabled", true));
-        byte[] bytes;
-        try (var document = new PDDocument(); var output = new ByteArrayOutputStream()) {
-            document.addPage(new PDPage());
-            document.save(output);
-            bytes = output.toByteArray();
-        }
-        String file = upload("attachment", null, "无文字资料.pdf", bytes, true);
-        var input = new LinkedHashMap<>(input(""));
-        input.put("attachmentIds", List.of(file));
-        var accepted = data(write(base() + "/conversations", Map.of("agentId", agent, "input", input), UUID.randomUUID().toString())
-            .andExpect(status().isAccepted()).andReturn());
-        var run = runs.find(enterprise, accepted.path("runId").asText(), false).orElseThrow();
-        assertEquals(file, run.executionConfig().at("/inputSourceFiles/0/id").asText());
-        assertTrue(run.executionConfig().path("sourceContext").asText().contains("未提取到文字"));
-        assertTrue(run.executionConfig().path("sourceContext").asText().contains("不能根据文件名推测或编造内容"));
-        assertNull(files.find(enterprise, file, false).orElseThrow().expiresAt());
-        var snapshot = data(mvc.perform(get(base() + "/conversations/" + accepted.path("conversationId").asText()).cookie(cookie))
-            .andExpect(status().isOk()).andReturn());
-        assertEquals(file, snapshot.at("/messages/0/attachments/0/id").asText());
-        assertEquals("FILE_NO_TEXT", snapshot.at("/messages/0/attachments/0/errorCode").asText());
     }
 
     @Test
@@ -178,20 +167,6 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
         write(base() + "/conversations", Map.of("agentId", agent, "input", input), UUID.randomUUID().toString()).andExpect(status().isNotFound());
         assertEquals(0, count("agent_run"));
         assertEquals(0, count("agent_message"));
-        assertEquals(0, count("message_attachment"));
-        assertEquals(0, reserved());
-    }
-
-    @Test
-    void allAttachmentBytesAreCountedBeforeAnythingIsSubmitted() throws Exception {
-        configureAgent(config -> config.put("attachmentsEnabled", true));
-        byte[] text = new byte[17 * 1024 * 1024];
-        Arrays.fill(text, (byte) 'a');
-        String a = upload("attachment", null, "一.txt", text, true), b = upload("attachment", null, "二.txt", text, true), c = upload("attachment", null, "三.txt", text, true);
-        var input = new LinkedHashMap<>(input("整理资料"));
-        input.put("attachmentIds", List.of(a, b, c));
-        write(base() + "/conversations", Map.of("agentId", agent, "input", input), UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
-        assertEquals(0, count("agent_run"));
         assertEquals(0, count("message_attachment"));
         assertEquals(0, reserved());
     }

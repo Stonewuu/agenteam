@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.workflow.WorkflowNodes;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
@@ -130,7 +132,7 @@ public class ExecutionToolCatalog {
             }
         }
         for (var workflow : workflows) {
-            for (var node : workflow.path("nodes")) {
+            for (var node : WorkflowNodes.all(workflow)) {
                 if (!node.path("type").asText().equals("tool")) {
                     continue;
                 }

@@ -11,12 +11,14 @@ import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceDraftTableMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
 import com.stonewu.agenteam.mapper.test.usage.QuotaBucketFixtureMapper;
+import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.resource.entity.ResourceDraftRow;
 import com.stonewu.agenteam.model.resource.entity.ResourceRow;
 import com.stonewu.agenteam.service.agent.AgentExecutionAdapter;
 import com.stonewu.agenteam.service.enterprise.EnterpriseProvisioningService;
 import com.stonewu.agenteam.service.execution.ExecutionMessageWriter;
+import com.stonewu.agenteam.service.execution.ConversationSnapshotService;
 import com.stonewu.agenteam.service.execution.ExecutionTaskFactory;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.support.*;
@@ -40,6 +42,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -133,6 +136,9 @@ public abstract class ExecutionApiTestSupport {
 
     @Autowired
     protected ExecutionMessageWriter messageWriter;
+
+    @Autowired
+    private ConversationSnapshotService conversationSnapshots;
 
     protected Cookie cookie;
 
@@ -270,6 +276,13 @@ public abstract class ExecutionApiTestSupport {
 
     protected JsonNode data(MvcResult result) throws Exception {
         return json.readTree(result.getResponse().getContentAsString()).path("data");
+    }
+
+    protected JsonNode visibleMessage(String conversation, String message) {
+        var actor = new AuthContext(users.findById(admin).orElseThrow(), enterprise,
+            Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
+        return json.valueToTree(conversationSnapshots.read(actor, conversation).messages().stream()
+            .filter(value -> value.id().equals(message)).findFirst().orElseThrow());
     }
 
     protected void refreshCsrf() throws Exception {

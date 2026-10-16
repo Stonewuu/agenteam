@@ -25,7 +25,7 @@ public class WorkflowNodeDependencies {
 
     public void validate(String enterprise, JsonNode config, Map<String, ResolvedDependency> dependencies) {
         int index = 0;
-        for (var node : config.path("nodes")) {
+        for (var node : WorkflowNodes.all(config)) {
             String field = "config.nodes[" + index++ + "].config";
             var settings = node.path("config");
             String type = node.path("type").asText();

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.schedule;
 
+import com.stonewu.agenteam.model.tool.entity.ToolCallRow;
+import com.stonewu.agenteam.mapper.tool.ToolCallSqlMapper;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -80,21 +82,24 @@ class ScheduleRetryApiTest extends ScheduleRetryTestSupport {
         });
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {400, 401, 403, 422})
-    void authenticationAndParameterErrorsAreNeverAutomaticallyRetried(int status) throws Exception {
-        allowModelCalls = true;
-        modelResponse = exchange -> error(exchange, status);
-        var accepted = submitSchedule();
-        String run = accepted.path("runId").asText();
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> state(run).equals("failed"));
+    @Test
+    void authenticationAndParameterErrorsAreNeverAutomaticallyRetried() throws Exception {
+        for (int status : List.of(400, 401, 403, 422)) {
+            int beforeCalls = modelCalls.get();
+            int usedBefore = used();
+            allowModelCalls = true;
+            modelResponse = exchange -> error(exchange, status);
+            var accepted = submitSchedule();
+            String run = accepted.path("runId").asText();
+            try (var worker = new RunWorker(lifecycle, tasks)) {
+                worker.poll();
+                await(() -> state(run).equals("failed"));
+            }
+            assertEquals(1, databaseAccess.mapper(RunAttemptSqlMapper.class).selectCount(new LambdaQueryWrapper<RunAttemptRow>().eq(RunAttemptRow::getRunId, run)));
+            assertEquals(beforeCalls + 1, modelCalls.get());
+            assertEquals(usedBefore + 1, used());
+            assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getNextAttemptAt).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> (fixtureRecord.getNextAttemptAt() == null ? null : Timestamp.from(fixtureRecord.getNextAttemptAt()))).toList()));
         }
-        assertEquals(1, count("run_attempt"));
-        assertEquals(callsBefore + 1, modelCalls.get());
-        assertEquals(1, used());
-        assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getNextAttemptAt).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> (fixtureRecord.getNextAttemptAt() == null ? null : Timestamp.from(fixtureRecord.getNextAttemptAt()))).toList()));
     }
 
     @Test
@@ -147,13 +152,13 @@ class ScheduleRetryApiTest extends ScheduleRetryTestSupport {
         var first = lifecycle.start(lease).orElseThrow();
         lifecycle.beforeExternalStep(lease);
         var block = new ContentBlock(UUID.randomUUID().toString(), "text", null, 1, "1", "已保存的部分结果", "running", null, null, null, null, null, null);
-        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(ExecutionChange.replace(block)));
+        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(new ExecutionChange(block, null, "0", null, null, null)));
         lifecycle.rejectClaim(lease, "MODEL_TEMPORARY_FAILURE", "模型连接暂时失败。");
         var snapshot = snapshot(accepted);
         assertEquals("failed", snapshot.at("/messages/1/status").asText());
         assertEquals("已保存的部分结果", snapshot.at("/messages/1/content").asText());
         assertNotEquals(first.outputMessageId(), snapshot.at("/activeRun/outputMessageId").asText());
-        assertThrows(ExecutionStoppedException.class, () -> messageWriter.save(lease, UUID.randomUUID().toString(), List.of(ExecutionChange.replace(block.update("错误的晚到内容", "completed")))));
+        assertThrows(ExecutionStoppedException.class, () -> messageWriter.save(lease, UUID.randomUUID().toString(), List.of(new ExecutionChange(block.update("错误的晚到内容", "completed"), null, "1", null, null, null))));
         lifecycle.finish(lease, "completed", null, null);
         assertEquals("queued", state(run));
         assertEquals(2, attemptNo(run));
@@ -194,9 +199,8 @@ class ScheduleRetryApiTest extends ScheduleRetryTestSupport {
         assertEquals(0, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallFixtureMapper.class).scheduleRetryApiRetryReexecutesReadOnlyToolsWithTheSameProviderCallIdWithoutReusingFailedAttemptStateObject18(run)));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"approve", "reject"})
-    void completedWritesAndExplicitRejectionsPreventWholeRunRetryAfterLaterModelFailure(String decision) throws Exception {
+    @Test
+    void completedWritesAndExplicitRejectionsPreventWholeRunRetryAfterLaterModelFailure() throws Exception {
         var writes = new AtomicInteger();
         REMOTE.reset();
         REMOTE.tools = json.valueToTree(List.of(Map.of("name", "save_item", "description", "保存验收记录", "inputSchema", Map.of("type", "object", "properties", Map.of("text", Map.of("type", "string")), "required", List.of("text")), "annotations", Map.of("readOnlyHint", false))));
@@ -211,35 +215,39 @@ class ScheduleRetryApiTest extends ScheduleRetryTestSupport {
         String pluginVersion = data(change(HttpMethod.POST, base() + "/resources/" + plugin + "/publish", Map.of("releaseNote", "写入验收"), "1", UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
         configureAgent(value -> value.set("pluginVersionIds", json.valueToTree(List.of(pluginVersion))));
         allowModelCalls = true;
-        var modelTurn = new AtomicInteger();
-        modelResponse = exchange -> {
-            var request = json.readTree(exchange.getRequestBody());
-            if (modelTurn.incrementAndGet() == 1) {
-                frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "save-once", "type", "function", "function", Map.of("name", modelTool(request, "save_item"), "arguments", json.writeValueAsString(Map.of("text", "只允许本次保存")))))), "tool_calls");
-            } else {
-                error(exchange, 503);
+        for (String decision : List.of("approve", "reject")) {
+            writes.set(0);
+            int usedBefore = used();
+            var modelTurn = new AtomicInteger();
+            modelResponse = exchange -> {
+                var request = json.readTree(exchange.getRequestBody());
+                if (modelTurn.incrementAndGet() == 1) {
+                    frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "save-once", "type", "function", "function", Map.of("name", modelTool(request, "save_item"), "arguments", json.writeValueAsString(Map.of("text", "只允许本次保存")))))), "tool_calls");
+                } else {
+                    error(exchange, 503);
+                }
+            };
+            var accepted = submitSchedule();
+            String run = accepted.path("runId").asText();
+            try (var worker = new RunWorker(lifecycle, tasks)) {
+                worker.poll();
+                await(() -> state(run).equals("waiting_approval"));
             }
-        };
-        var accepted = submitSchedule();
-        String run = accepted.path("runId").asText();
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> state(run).equals("waiting_approval"));
+            assertEquals(0, writes.get());
+            var approval = data(mvc.perform(get(base() + "/runs/" + run + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn()).get(0);
+            change(HttpMethod.POST, base() + "/approvals/" + approval.path("id").asText() + "/decision", Map.of("decision", decision, "requestHash", approval.path("requestHash").asText()), approval.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
+            try (var worker = new RunWorker(lifecycle, tasks)) {
+                worker.poll();
+                await(() -> state(run).equals("failed"));
+            }
+            assertEquals(decision.equals("approve") ? 1 : 0, writes.get());
+            assertEquals(2, modelTurn.get());
+            assertEquals(1, databaseAccess.mapper(RunAttemptSqlMapper.class).selectCount(new LambdaQueryWrapper<RunAttemptRow>().eq(RunAttemptRow::getRunId, run)));
+            assertEquals(usedBefore + 1, used());
+            assertEquals(0, reserved());
+            assertEquals(1, databaseAccess.mapper(ToolCallSqlMapper.class).selectCount(new LambdaQueryWrapper<ToolCallRow>().eq(ToolCallRow::getRunId, run)));
+            assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getNextAttemptAt).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> (fixtureRecord.getNextAttemptAt() == null ? null : Timestamp.from(fixtureRecord.getNextAttemptAt()))).toList()));
         }
-        assertEquals(0, writes.get());
-        var approval = data(mvc.perform(get(base() + "/runs/" + run + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn()).get(0);
-        change(HttpMethod.POST, base() + "/approvals/" + approval.path("id").asText() + "/decision", Map.of("decision", decision, "requestHash", approval.path("requestHash").asText()), approval.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> state(run).equals("failed"));
-        }
-        assertEquals(decision.equals("approve") ? 1 : 0, writes.get());
-        assertEquals(2, modelTurn.get());
-        assertEquals(1, count("run_attempt"));
-        assertEquals(1, used());
-        assertEquals(0, reserved());
-        assertEquals(1, count("tool_call"));
-        assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getNextAttemptAt).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> (fixtureRecord.getNextAttemptAt() == null ? null : Timestamp.from(fixtureRecord.getNextAttemptAt()))).toList()));
     }
 
     private void plugin() throws Exception {

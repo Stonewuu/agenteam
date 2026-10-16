@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -78,6 +79,7 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
+        registry.add("execution.events.live-enabled", () -> "false");
     }
 
     @AfterAll
@@ -86,7 +88,7 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void savesHundredsOfDeltasInBoundedRowsAndResumesFromEveryOriginalPosition() throws Exception {
+    void boundedStorageResumesWithinAndAcrossEventBatches() throws Exception {
         var fixture = start();
         append(fixture, fixture.block(), 270, "中文🙂");
         var original = events.after(enterprise, fixture.conversation(), 0, 1000);
@@ -100,9 +102,19 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
             .map(codec::encode).mapToLong(value -> value.data().getBytes(StandardCharsets.UTF_8).length).sum();
         long after = rows.stream().mapToLong(row -> row.getPayloadJson().getBytes(StandardCharsets.UTF_8).length).sum();
         assertTrue(after < before * 0.35);
-        for (int position = 0; position <= original.size(); position++) {
+        var positions = new TreeSet<>(List.of(0, 1, 4, 5, 6, 17, original.size() - 1, original.size()));
+        for (var row : rows) {
+            int boundary = Math.toIntExact(row.getConversationSequence());
+            for (int offset : List.of(-8, -7, -1, 0, 1)) {
+                int position = boundary + offset;
+                if (position >= 0 && position <= original.size()) {
+                    positions.add(position);
+                }
+            }
+        }
+        for (int position : positions) {
             assertEquals(original.subList(position, Math.min(original.size(), position + 7)),
-                events.after(enterprise, fixture.conversation(), position, 7));
+                events.after(enterprise, fixture.conversation(), position, 7), "续读位置：" + position);
         }
         var snapshot = snapshot(fixture);
         assertEquals("中文🙂".repeat(270), snapshot.at("/messages/1/content").asText());
@@ -111,11 +123,17 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void partialPublishThenAppendKeepsOriginalHashesAndCannotMarkNewOutputPublished() throws Exception {
+    void partialPublishingRecoversFromAcknowledgementFailureAndKeepsNewOutputUnpublished() throws Exception {
         var fixture = start();
         var block = append(fixture, fixture.block(), 130, "前");
         var original = events.after(enterprise, fixture.conversation(), 0, 1000);
-        publisher.publish(enterprise, fixture.conversation());
+        doThrow(new DataAccessResourceFailureException("仅供验证的分发确认失败")).when(eventRecords)
+            .publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
+        try {
+            assertThrows(DataAccessResourceFailureException.class, () -> publisher.publish(enterprise, fixture.conversation()));
+        } finally {
+            doCallRealMethod().when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
+        }
         assertEquals(100, cache.last(enterprise, fixture.conversation()).sequence());
         assertNull(deltaRows(fixture.conversation()).getFirst().getPublishedAt());
         append(fixture, block, 20, "后");
@@ -193,12 +211,12 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void legacyConversionPreservesEveryEventAndRollbackRestoresDeletedRows() throws Exception {
+    void compactionPreservesEventsAndRollsBackAnIncompleteBatch() throws Exception {
         var fixture = start();
         append(fixture, fixture.block(), 90, "历史🙂");
         var expected = events.after(enterprise, fixture.conversation(), 0, 1000);
         var expectedSnapshot = snapshot(fixture);
-        expandLegacy(fixture, expected);
+        writeIndividualDeltas(fixture, expected);
         publisher.publish(enterprise, fixture.conversation());
         assertEquals(90, deltaRows(fixture.conversation()).size());
         doThrow(new DataAccessResourceFailureException("仅供验证的合并保存失败")).when(storage)
@@ -237,10 +255,10 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void historicalConversionAndNewOutputUseTheSameConversationLock() throws Exception {
+    void compactionAndNewOutputUseTheSameConversationLock() throws Exception {
         var fixture = start();
         var block = append(fixture, fixture.block(), 80, "原");
-        expandLegacy(fixture, events.after(enterprise, fixture.conversation(), 0, 1000));
+        writeIndividualDeltas(fixture, events.after(enterprise, fixture.conversation(), 0, 1000));
         var entered = new CountDownLatch(1);
         var release = new CountDownLatch(1);
         var first = new AtomicBoolean(true);
@@ -270,23 +288,6 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
             release.countDown();
             doCallRealMethod().when(storage).replace(any(AgentEventRow.class), anyList(), anyLong());
         }
-    }
-
-    @Test
-    void redisAcknowledgementBeforeDatabaseFailureCanRetryMergedEventsWithoutDuplicates() throws Exception {
-        var fixture = start();
-        append(fixture, fixture.block(), 60, "已确认");
-        doThrow(new DataAccessResourceFailureException("仅供验证的分发确认失败")).when(eventRecords)
-            .publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
-        try {
-            assertThrows(DataAccessResourceFailureException.class, () -> publisher.publish(enterprise, fixture.conversation()));
-        } finally {
-            doCallRealMethod().when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
-        }
-        assertNull(deltaRows(fixture.conversation()).getFirst().getPublishedAt());
-        publisher.publish(enterprise, fixture.conversation());
-        assertEquals(events.after(enterprise, fixture.conversation(), 0, 1000), cache.after(enterprise, fixture.conversation(), 0, 1000));
-        assertEquals(0, events.unpublished(enterprise, fixture.conversation(), 1000).size());
     }
 
     private record Fixture(String conversation, JobLease lease, ContentBlock block) {
@@ -325,7 +326,7 @@ class ConversationDeltaStorageTest extends ExecutionApiTestSupport {
             .andExpect(status().isOk()).andReturn());
     }
 
-    private void expandLegacy(Fixture fixture, List<ExecutionEvent> values) {
+    private void writeIndividualDeltas(Fixture fixture, List<ExecutionEvent> values) {
         new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
             records.delete(new LambdaQueryWrapper<AgentEventRow>().eq(AgentEventRow::getEnterpriseId, enterprise)
                 .eq(AgentEventRow::getConversationId, fixture.conversation()).eq(AgentEventRow::getEventType, "message.delta"));

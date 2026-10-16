@@ -68,6 +68,22 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
         var draft = data(write(path, Map.of("configuration", price()), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
         String priceId = draft.path("id").asText();
         assertThat(draft.at("/configuration/rules/0/rates/0/pricePerMillion").isTextual()).isTrue();
+        var preview = data(write(path + "/" + priceId + "/preview", Map.of("dispatchedAt", Instant.now().toString(), "inputTokens", 1000,
+            "outputTokens", 50, "cacheReadTokens", 0), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
+        assertThat(preview.path("totalAmount").isTextual()).isTrue();
+        assertThat(preview.path("totalAmount").asText()).isEqualTo("0.0024");
+        write(path + "/" + priceId + "/preview", Map.of("dispatchedAt", Instant.now().toString(), "inputTokens", 1000,
+            "outputTokens", 50, "cacheReadTokens", 0, "cacheWriteDetails", Map.of("300", 100)), UUID.randomUUID().toString())
+            .andExpect(status().isUnprocessableEntity());
+        change(HttpMethod.PUT, path + "/" + priceId, price(), "99", UUID.randomUUID().toString()).andExpect(status().isConflict());
+        var second = data(write(path, Map.of("copyFromVersionId", priceId), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
+        assertThat(second.path("id").asText()).isNotEqualTo(priceId);
+        change(HttpMethod.DELETE, path + "/" + second.path("id").asText(), null, "1", UUID.randomUUID().toString()).andExpect(status().isOk());
+        mvc.perform(get(base() + "/usage/models").param("from", "2026-01-01T00:00:00Z").param("to", "2027-01-01T00:00:00Z").cookie(cookie))
+            .andExpect(status().isUnprocessableEntity());
+        var empty = data(mvc.perform(get(base() + "/usage/models").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertThat(empty.at("/totals/calls").asText()).isEqualTo("0");
+        assertThat(empty.at("/totals/amounts").isEmpty()).isTrue();
         String publishKey = UUID.randomUUID().toString();
         var published = data(change(HttpMethod.POST, path + "/" + priceId + "/publish", null, "1", publishKey).andExpect(status().isOk()).andReturn());
         assertThat(published.path("status").asText()).isEqualTo("published");
@@ -133,6 +149,7 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
             .andExpect(status().isBadRequest()).andReturn();
         assertThat(json.readTree(rejectedCursor.getResponse().getContentAsString()).at("/error/code").asText()).isEqualTo("CURSOR_INVALID");
         databaseAccess.mapper(ModelUsageRecordMapper.class).deleteById(duplicate.getId());
+        verifyCatalogDraft(model, path, published);
         String other = provisioning.create("另一用量企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         mvc.perform(get("/api/v1/enterprises/" + other + "/usage/model-calls/" + call.getId()).cookie(cookie)).andExpect(status().isNotFound());
         String username = "billing-member-" + UUID.randomUUID();
@@ -153,42 +170,15 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
         refreshCsrf();
     }
 
-    @Test
-    void draftPreviewUsesExactDecimalsAndDoesNotSendAnyModelRequest() throws Exception {
-        String model = model();
-        String path = base() + "/models/" + model + "/price-versions";
-        var draft = data(write(path, Map.of("configuration", price()), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
-        String id = draft.path("id").asText();
-        var preview = data(write(path + "/" + id + "/preview", Map.of("dispatchedAt", Instant.now().toString(), "inputTokens", 1000,
-            "outputTokens", 50, "cacheReadTokens", 0), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
-        assertThat(preview.path("totalAmount").isTextual()).isTrue();
-        assertThat(preview.path("totalAmount").asText()).isEqualTo("0.0024");
-        write(path + "/" + id + "/preview", Map.of("dispatchedAt", Instant.now().toString(), "inputTokens", 1000,
-            "outputTokens", 50, "cacheReadTokens", 0, "cacheWriteDetails", Map.of("300", 100)), UUID.randomUUID().toString())
-            .andExpect(status().isUnprocessableEntity());
-        change(HttpMethod.PUT, path + "/" + id, price(), "99", UUID.randomUUID().toString()).andExpect(status().isConflict());
-        var second = data(write(path, Map.of("copyFromVersionId", id), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
-        assertThat(second.path("id").asText()).isNotEqualTo(id);
-        change(HttpMethod.DELETE, path + "/" + id, null, "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        mvc.perform(get(base() + "/usage/models").param("from", "2026-01-01T00:00:00Z").param("to", "2027-01-01T00:00:00Z").cookie(cookie))
-            .andExpect(status().isUnprocessableEntity());
-        var empty = data(mvc.perform(get(base() + "/usage/models").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertThat(empty.at("/totals/calls").asText()).isEqualTo("0");
-        assertThat(empty.at("/totals/amounts").isEmpty()).isTrue();
-    }
+
 
     private AgentRunRow run(String id) {
         return databaseAccess.mapper(RunSqlMapper.class).selectById(id);
     }
 
-    @Test
-    void manualCatalogSearchCreatesAnIndependentDraftWithoutChangingTheModelOrPublishedPrice() throws Exception {
-        String model = model();
-        String path = base() + "/models/" + model + "/price-versions";
-        var existing = data(write(path, Map.of("configuration", price()), UUID.randomUUID().toString())
-            .andExpect(status().isCreated()).andReturn());
-        change(HttpMethod.POST, path + "/" + existing.path("id").asText() + "/publish", null, "1", UUID.randomUUID().toString())
-            .andExpect(status().isOk());
+
+
+    private void verifyCatalogDraft(String model, String path, JsonNode existing) throws Exception {
         String body = """
             {"deepseek":{"name":"DeepSeek","api":"https://api.deepseek.com","models":{
               "deepseek-flash":{"name":"DeepSeek Flash","modalities":{"output":["text"]},

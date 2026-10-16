@@ -40,7 +40,7 @@ class SandboxCapacityTest {
         String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         Path arguments = directory.resolve("java-arguments.txt");
         String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
-        Files.writeString(arguments, "-cp\n" + quoted(classpath) + "\n" + Probe.class.getName() + "\n"
+        Files.writeString(arguments, "-Xmx64m\n-XX:ActiveProcessorCount=1\n-XX:TieredStopAtLevel=1\n-cp\n" + quoted(classpath) + "\n" + Probe.class.getName() + "\n"
             + quoted(directory.toString()) + "\n" + quoted(ready.toString()) + "\n");
         var process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", executable).toString(),
             "@" + arguments).redirectErrorStream(true).start();

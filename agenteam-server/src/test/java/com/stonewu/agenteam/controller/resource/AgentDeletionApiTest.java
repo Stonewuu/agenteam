@@ -73,6 +73,21 @@ class AgentDeletionApiTest extends ExecutionApiTestSupport {
 
     @Test
     void deletionTerminatesAllUsersIncludingPausedHiresAndKeepsOtherAgents() throws Exception {
+        String memberId = member();
+        var memberActor = new AuthContext(users.findById(memberId).orElseThrow(), enterprise,
+            Set.copyOf(permissions.listPermissionCodes(memberId, enterprise)));
+        assertThrows(ResponseStatusException.class,
+            () -> resourceLifecycle.delete(memberActor, agent, Long.parseLong(resourceRevision())));
+        String otherEnterprise = provisioning.create("无关企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
+        var otherActor = new AuthContext(actor().user(), otherEnterprise,
+            Set.copyOf(permissions.listPermissionCodes(admin, otherEnterprise)));
+        assertThrows(ResponseStatusException.class,
+            () -> resourceLifecycle.delete(otherActor, agent, Long.parseLong(resourceRevision())));
+        change(HttpMethod.DELETE, base() + "/resources/" + agent, null, "1", UUID.randomUUID().toString())
+            .andExpect(status().isConflict());
+        assertEquals("active", agentHires().getFirst().getStatus());
+        assertNull(agentHires().getFirst().getTerminatedAt());
+        var previous = hires.forAgent(enterprise, admin, agent, false).orElseThrow();
         String pausedUser = member();
         var paused = hires.establish(enterprise, pausedUser, agent, Instant.now());
         hires.changeStatus(paused, "paused", Instant.now());
@@ -121,12 +136,6 @@ class AgentDeletionApiTest extends ExecutionApiTestSupport {
             .andExpect(status().isOk()).andReturn());
         assertEquals("terminated", historical.path("hireStatus").asText());
         assertFalse(historical.path("canRun").asBoolean());
-    }
-
-    @Test
-    void restoreAndEnableRequireANewHireAndReuseTheHistoricalRelationship() throws Exception {
-        var previous = hires.forAgent(enterprise, admin, agent, false).orElseThrow();
-        resourceLifecycle.delete(actor(), agent, Long.parseLong(resourceRevision()));
         var restored = resourceLifecycle.restore(actor(), agent, resources.find(enterprise, agent, true, false).orElseThrow().revision());
         assertEquals("disabled", restored.status());
         assertEquals("terminated", hireRows.selectById(previous.id()).getStatus());
@@ -140,7 +149,10 @@ class AgentDeletionApiTest extends ExecutionApiTestSupport {
         assertEquals(previous.id(), hired.at("/hire/id").asText());
         assertEquals("active", hired.at("/hire/status").asText());
         assertEquals(previous.revision() + 2, hired.at("/hire/revision").asLong());
+
     }
+
+
 
     @Test
     void runningTasksStillBlockDeletionWithoutTerminatingHiresOrPausingPlans() throws Exception {
@@ -172,23 +184,7 @@ class AgentDeletionApiTest extends ExecutionApiTestSupport {
         assertNull(resources.find(enterprise, agent, false, false).orElseThrow().deletedAt());
     }
 
-    @Test
-    void deniedOrStaleDeletionLeavesHiresUntouched() throws Exception {
-        String memberId = member();
-        var memberActor = new AuthContext(users.findById(memberId).orElseThrow(), enterprise,
-            Set.copyOf(permissions.listPermissionCodes(memberId, enterprise)));
-        assertThrows(ResponseStatusException.class,
-            () -> resourceLifecycle.delete(memberActor, agent, Long.parseLong(resourceRevision())));
-        String otherEnterprise = provisioning.create("无关企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
-        var otherActor = new AuthContext(actor().user(), otherEnterprise,
-            Set.copyOf(permissions.listPermissionCodes(admin, otherEnterprise)));
-        assertThrows(ResponseStatusException.class,
-            () -> resourceLifecycle.delete(otherActor, agent, Long.parseLong(resourceRevision())));
-        change(HttpMethod.DELETE, base() + "/resources/" + agent, null, "1", UUID.randomUUID().toString())
-            .andExpect(status().isConflict());
-        assertEquals("active", agentHires().getFirst().getStatus());
-        assertNull(agentHires().getFirst().getTerminatedAt());
-    }
+
 
     @Test
     void concurrentHiringCannotLeaveAnActiveHireAfterDeletion() throws Exception {

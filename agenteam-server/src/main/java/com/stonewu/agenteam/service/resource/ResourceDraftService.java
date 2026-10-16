@@ -67,6 +67,21 @@ public class ResourceDraftService {
             configurations.draft(actor, kind, value.config()), Map.of(), null, "created");
     }
 
+    /** 内置模板为当前用户建立独立资源；固定编号仅由服务端生成，重复打开不再创建副本。 */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ResourceDetailView createAgentTemplate(AuthContext actor, String id, ResourceCreateRequest value) {
+        policy.authorizeCreation(actor, ResourceKind.AGENT);
+        var existing = resources.find(actor.enterpriseId(), id, true, true).orElse(null);
+        if (existing != null) {
+            if (existing.kind() != ResourceKind.AGENT || !existing.ownerUserId().equals(actor.userId()) || existing.deletedAt() != null) {
+                throw ResourceAuthorizationService.unavailable();
+            }
+            return views.detail(actor, policy.authorize(actor, id, "view", false, false));
+        }
+        return create(actor, ResourceKind.AGENT, value.name(), value.description(), value.tagIds(),
+            configurations.draft(actor, ResourceKind.AGENT, value.config()), Map.of(), null, "created", id);
+    }
+
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ResourceDetailView importSkill(AuthContext actor, String name, String description, JsonNode config,
                                           Map<String, List<String>> errors) {
@@ -126,9 +141,14 @@ public class ResourceDraftService {
                                       List<String> tagIds,
                                       JsonNode config, Map<String, List<String>> errors, String copiedFrom,
                                       String source) {
+        return create(actor, kind, name, description, tagIds, config, errors, copiedFrom, source, UUID.randomUUID().toString());
+    }
+
+    private ResourceDetailView create(AuthContext actor, ResourceKind kind, String name, String description,
+                                      List<String> tagIds, JsonNode config, Map<String, List<String>> errors,
+                                      String copiedFrom, String source, String id) {
         credentials.validate(actor, kind, null, config);
         var selected = selections.validateSelection(actor.enterpriseId(), tagIds);
-        String id = UUID.randomUUID().toString();
         resources.create(id, actor.enterpriseId(), kind, ResourceInput.text(name, "name", 80, true),
             ResourceInput.text(description, "description", 500, false),
             configurations.subtype(kind, config), actor.userId(), source, config, clock.instant());

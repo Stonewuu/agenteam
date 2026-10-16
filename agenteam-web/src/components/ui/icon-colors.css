@@ -57,6 +57,7 @@
 .button.danger,
 button[data-variant="default"],
 [data-variant="destructive"],
+[data-composer-part="submit"],
 [role="alert"],
 [disabled],
 [aria-disabled="true"],

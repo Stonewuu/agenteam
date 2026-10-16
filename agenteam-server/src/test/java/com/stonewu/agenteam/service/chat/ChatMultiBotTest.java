@@ -68,16 +68,6 @@ class ChatMultiBotTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void matchingJointProbeVerifiesBothApplicationsWithoutStartingBusinessWork() {
-        var peer = peer();
-        verifyPair(peer);
-        assertTrue(bots.capability(bots.require(enterprise, bot.getId()), "crossBotIdentity"));
-        assertTrue(bots.capability(bots.require(enterprise, peer.getId()), "crossBotIdentity"));
-        assertEquals(0, messageCount());
-        assertEquals(0, taskCount());
-    }
-
-    @Test
     void appScopedBotAndHumanMentionsMergeIntoOneTaskWithoutUsingNames() {
         var peer = peer();
         verifyScopedPair(peer);
@@ -145,23 +135,16 @@ class ChatMultiBotTest extends CollaborationApiTestSupport {
         var mentions = List.of(new Mention(
             "ou_finance_in_hr", "同名机器人", "bot", "@_user_1"));
         var receiver = bots.require(enterprise, bot.getId());
+        var second = bots.require(enterprise, peer.getId());
+        assertTrue(mentionIdentities.supportsGroup(List.of(receiver, second)));
+        var third = additionalBot("ou_third", "其他岗位");
+        assertFalse(mentionIdentities.supportsGroup(List.of(receiver, second, third)));
         assertEquals(peer.getPlatformBotId(), mentionIdentities.resolve(receiver, mentions).getFirst().externalId());
         databaseAccess.mapper(EnterpriseIntegrationMapper.class).update(new LambdaUpdateWrapper<EnterpriseIntegrationRow>()
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise).eq(EnterpriseIntegrationRow::getId, peer.getConnectionId())
             .setIncrBy(EnterpriseIntegrationRow::getCredentialRevision, 1));
         assertEquals("mention:@_user_1", mentionIdentities.resolve(receiver, mentions).getFirst().externalId());
         assertFalse(mentionIdentities.supportsGroup(List.of(receiver, bots.require(enterprise, peer.getId()))));
-    }
-
-    @Test
-    void addingAnotherBotRequiresTheWholeGroupToHaveVerifiedMentionMappings() {
-        var peer = peer();
-        verifyScopedPair(peer);
-        var first = bots.require(enterprise, bot.getId());
-        var second = bots.require(enterprise, peer.getId());
-        assertTrue(mentionIdentities.supportsGroup(List.of(first, second)));
-        var third = additionalBot("ou_third", "其他岗位");
-        assertFalse(mentionIdentities.supportsGroup(List.of(first, second, third)));
     }
 
     private void verifyScopedPair(ChatBotBindingRow peer) {
@@ -189,6 +172,10 @@ class ChatMultiBotTest extends CollaborationApiTestSupport {
     void differentMessageIdsFailJointProofAndStartingAnotherProbeClearsOldProof() throws Exception {
         var peer = peer();
         verifyPair(peer);
+        assertTrue(bots.capability(bots.require(enterprise, bot.getId()), "crossBotIdentity"));
+        assertTrue(bots.capability(bots.require(enterprise, peer.getId()), "crossBotIdentity"));
+        assertEquals(0, messageCount());
+        assertEquals(0, taskCount());
         String marker = marker(peer);
         assertFalse(bots.capability(bots.require(enterprise, bot.getId()), "crossBotIdentity"));
         ingress.accept(enterprise, bot.getId(), 1L, both(peer, "joint-a", "message-a", marker, false));

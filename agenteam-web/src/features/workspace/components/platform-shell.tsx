@@ -180,7 +180,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
             className={`workspace-scroll-region${fullHeight ? " workspace-full-height" : ""}`}>
         <div className={fullHeight ? "workspace-viewport" : "page-content"}><ExistingShell.Provider key={user.id} value><PageHeaderIconProvider
           icon={<PageIcon size={26} variant="Bulk"/>}>{chatArea ? <ConversationFrame>{children}</ConversationFrame> :
-          <LoadingTransition>{children}</LoadingTransition>}</PageHeaderIconProvider></ExistingShell.Provider></div>
+          <LoadingTransition className={fullHeight ? "workspace-viewport-frame" : undefined}>{children}</LoadingTransition>}</PageHeaderIconProvider></ExistingShell.Provider></div>
       </main>
     </div>
   </div>;

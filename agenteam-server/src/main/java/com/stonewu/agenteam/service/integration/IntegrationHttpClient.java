@@ -3,7 +3,6 @@ package com.stonewu.agenteam.service.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelHttpResponse;
-import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -50,12 +49,7 @@ public class IntegrationHttpClient {
             new ChannelRequestDiagnostics(query, body, bearer, json));
     }
 
-    public ChannelHttpResponse form(String connection, URI address, Map<String, String> fields) {
-        var body = new FormBody.Builder();
-        fields.forEach(body::add);
-        return execute(connection, new Request.Builder().url(address.toString()), body.build(), null,
-            new ChannelRequestDiagnostics(fields, null, null, json));
-    }
+
 
     public ChannelHttpResponse patch(String connection, URI address, JsonNode body, String bearer) {
         var content = RequestBody.create(body.toString(), MediaType.get("application/json; charset=utf-8"));

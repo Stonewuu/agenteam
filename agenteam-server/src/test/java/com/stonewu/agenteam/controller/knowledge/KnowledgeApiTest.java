@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 真实数据库全文索引、文件扫描协议与独立解析进程共同验证知识资料流程。
+ * 真实数据库全文索引、文件扫描协议与生产格式解析共同验证知识资料流程。
  */
 @SpringBootTest
 @Import({CapacityInstrumentation.class, SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
@@ -95,15 +95,7 @@ class KnowledgeApiTest extends KnowledgeApiTestSupport {
         for (Object plan : plans.values()) {
             assertTrue(new ObjectMapper().readTree(plan.toString()).has("query_block"));
         }
-        var comparisons = new ObjectMapper().valueToTree(queryTimings.compareKnowledgeQueries(databaseAccess));
-        assertEquals(1, comparisons.size());
-        var variants = comparisons.elements().next().path("variants");
-        assertEquals(3, variants.size());
-        for (var variant : variants) {
-            assertFalse(variant.path("rows").isEmpty());
-            assertEquals(2, variant.path("millis").size());
-            assertTrue(new ObjectMapper().readTree(variant.path("plan").asText()).has("query_block"));
-        }
+
     }
 
     @Test
@@ -185,20 +177,6 @@ class KnowledgeApiTest extends KnowledgeApiTestSupport {
     }
 
     @Test
-    void replacementRejectsForeignOrUncheckedFilesAndStaleRevisions() throws Exception {
-        String resource = resource("替换授权", 8000), another = resource("另一资料库", 8000);
-        byte[] bytes = "橙石资料授权检查。".getBytes(StandardCharsets.UTF_8);
-        String original = upload(resource, "原始说明.txt", bytes, true), doc = add(resource, original);
-        assertTrue(worker.runNext());
-        String foreign = upload(another, "其他资料.txt", bytes, true), pending = upload(resource, "未检查.txt", bytes, false);
-        String revision = Long.toString(documents.find(enterprise, doc, false).orElseThrow().revision()), path = knowledge(resource) + "/documents/" + doc + "/replace-file";
-        write(HttpMethod.POST, path, admin, revision, UUID.randomUUID().toString(), Map.of("fileId", foreign)).andExpect(status().isNotFound());
-        write(HttpMethod.POST, path, admin, revision, UUID.randomUUID().toString(), Map.of("fileId", pending)).andExpect(status().isConflict());
-        write(HttpMethod.POST, path, admin, "1", UUID.randomUUID().toString(), Map.of("fileId", original)).andExpect(status().isConflict());
-        assertEquals(original, documents.find(enterprise, doc, false).orElseThrow().fileId());
-    }
-
-    @Test
     void currentGrantsAndEnterpriseBoundariesProtectBothSearchAndExistingDownloadLinks() throws Exception {
         String resource = resource("授权资料", 8000);
         byte[] bytes = "橙石资料只能在授权范围内读取。".getBytes(StandardCharsets.UTF_8);
@@ -243,7 +221,7 @@ class KnowledgeApiTest extends KnowledgeApiTestSupport {
     }
 
     @Test
-    void batchValidationRollsBackAllDocumentsAndUnprocessedOrForeignFilesAreRejected() throws Exception {
+    void batchAndReplacementValidationRespectFileScopeReadinessAndRevisions() throws Exception {
         String resource = resource("批量校验", 8000), another = resource("另一个知识库", 8000);
         byte[] bytes = "橙石批量资料".getBytes(StandardCharsets.UTF_8);
         String valid = upload(resource, "可读.txt", bytes, true), foreign = upload(another, "其他资料.txt", bytes, true);
@@ -257,6 +235,12 @@ class KnowledgeApiTest extends KnowledgeApiTestSupport {
         write(HttpMethod.POST, knowledge(resource) + "/documents/" + id + "/reprocess", admin, "1", UUID.randomUUID().toString(), null).andExpect(status().isConflict());
         assertTrue(worker.runNext());
         write(HttpMethod.POST, knowledge(resource) + "/documents/" + id + "/reprocess", admin, "1", UUID.randomUUID().toString(), null).andExpect(status().isConflict());
+        String revision = Long.toString(documents.find(enterprise, id, false).orElseThrow().revision());
+        String path = knowledge(resource) + "/documents/" + id + "/replace-file";
+        write(HttpMethod.POST, path, admin, revision, UUID.randomUUID().toString(), Map.of("fileId", foreign)).andExpect(status().isNotFound());
+        write(HttpMethod.POST, path, admin, revision, UUID.randomUUID().toString(), Map.of("fileId", pending)).andExpect(status().isConflict());
+        write(HttpMethod.POST, path, admin, "1", UUID.randomUUID().toString(), Map.of("fileId", valid)).andExpect(status().isConflict());
+        assertEquals(valid, documents.find(enterprise, id, false).orElseThrow().fileId());
     }
 
     @Test

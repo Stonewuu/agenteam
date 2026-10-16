@@ -32,7 +32,6 @@ import type {AgentConfig, DraftWrite, ModelProfile, ResourceSummary} from "../ty
 import ui from "@/components/ui/surface.module.css";
 import styles from "./agent-preview.module.css";
 import {type ReasoningEffort, reasoningEffortLabels} from "@/features/modelprofile/lib/reasoning-effort";
-import {workflowInDevelopment} from "@/features/workflow/components/workflow-development";
 
 const states: Record<RunStatus, string> = {
   queued: "等待执行",
@@ -77,7 +76,7 @@ export function AgentPreview({enterpriseId, resource, draft, saving}: {
   const hasInput = Boolean(text.trim() || files.fileIds.length);
 
   function submit() {
-    if (busy || active || !valid || !hasInput || !sourcesReady || workflow && workflowInDevelopment) {
+    if (busy || active || !valid || !hasInput || !sourcesReady) {
       return;
     }
     if (!compare) {
@@ -99,9 +98,9 @@ export function AgentPreview({enterpriseId, resource, draft, saving}: {
   }
 
   return <>
-    {!(workflow && workflowInDevelopment) && <Button className={ui.button} type="button" disabled={saving}
-            onClick={() => setOpen(true)}>{workflow ? uiText("预览流程员工") : uiText("预览与对比")}</Button>}
-    {open && !(workflow && workflowInDevelopment) &&
+    <Button className={ui.button} type="button" disabled={saving}
+            onClick={() => setOpen(true)}>{workflow ? uiText("预览流程员工") : uiText("预览与对比")}</Button>
+    {open &&
       <Dialog title={workflow ? uiText("预览流程员工") : uiText("预览与模型对比")} onClose={() => setOpen(false)}
               busy={busy} wide>
         <form className={ui.form} onSubmit={(event) => {

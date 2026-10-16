@@ -83,7 +83,7 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void homeReturnsThreeRowsAndRealCountsAndCompletionUsesTheCurrentRevision() throws Exception {
+    void homeCountsOrderingCompletionAndTeamVisibilityUseCurrentDataAndPermissions() throws Exception {
         for (int i = 0; i < 5; i++) {
             todos.create(actor(admin), todo(admin, null, "待处理事项" + i));
         }
@@ -111,31 +111,25 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
         assertEquals(4, page("/home").path("openTodoCount").asInt());
         String elsewhere = provisioning.create("独立首页企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         assertEquals(0, home.get(new AuthContext(users.findById(admin).orElseThrow(), elsewhere, Set.of())).openTodoCount());
-    }
-
-    @Test
-    void homeUsesCurrentPermissionsAndTeamMembershipBeforeTakingThreeRows() {
-        var viewer = member(Set.of("workspace.view", "todo.view", "todo.manage"));
         String team = key();
         enterprises.insertTeam(team, enterprise, "首页实际团队", "", "active", admin, Instant.now());
-        enterprises.replaceTeamMembers(enterprise, team, Set.of(admin, viewer.userId()), Instant.now());
+        enterprises.replaceTeamMembers(enterprise, team, Set.of(admin, other.userId()), Instant.now());
         for (int i = 0; i < 4; i++) {
-            todos.create(actor(admin), todo(viewer.userId(), team, "无团队权限不可见" + i));
+            todos.create(actor(admin), todo(other.userId(), team, "无团队权限不可见" + i));
         }
-        todos.create(actor(admin), todo(viewer.userId(), null, "本人实际待办"));
-        var first = home.get(viewer);
+        var first = home.get(other);
         assertEquals(1, first.openTodoCount());
-        assertEquals("本人实际待办", first.todos().getFirst().title());
-        String role = permissions.listUserRoleIds(viewer.userId(), enterprise).getFirst();
+        assertEquals("交给其他成员的事项", first.todos().getFirst().title());
+        String role = permissions.listUserRoleIds(other.userId(), enterprise).getFirst();
         permissions.replaceRolePermissions(enterprise, role, Set.of("workspace.view", "todo.view", "todo.manage", "todo.team_view"));
-        assertEquals(5, home.get(viewer).openTodoCount());
+        assertEquals(5, home.get(other).openTodoCount());
         enterprises.replaceTeamMembers(enterprise, team, Set.of(admin), Instant.now());
-        assertEquals(1, home.get(viewer).openTodoCount());
+        assertEquals(1, home.get(other).openTodoCount());
         permissions.replaceRolePermissions(enterprise, role, Set.of("workspace.view"));
-        assertTrue(home.get(viewer).todos().isEmpty());
-        assertTrue(home.get(viewer).recentConversations().isEmpty());
-        assertTrue(home.get(viewer).employees().isEmpty());
-        assertEquals(0, home.get(viewer).enabledScheduleCount());
+        assertTrue(home.get(other).todos().isEmpty());
+        assertTrue(home.get(other).recentConversations().isEmpty());
+        assertTrue(home.get(other).employees().isEmpty());
+        assertEquals(0, home.get(other).enabledScheduleCount());
     }
 
     @Test
@@ -144,7 +138,7 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
         for (int i = 0; i < 4; i++) {
             String id = newAgent("最近暂停员工" + i);
             hires.establish(enterprise, admin, id, Instant.now());
-            databaseAccess.mapper(AgentHireFixtureMapper.class).workspaceApiDefaultEmployeeUsesRealUseTimeAndSkipsPausedOrInvalidEntriesBeforeLimitUpdate4(enterprise, id);
+            databaseAccess.mapper(AgentHireFixtureMapper.class).pauseAgentHires(enterprise, id);
         }
         String newHire = newAgent("新雇佣员工");
         hires.establish(enterprise, admin, newHire, Instant.now());
@@ -160,7 +154,7 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void searchFiltersResourceOwnershipBeforeLimitAndDoesNotBorrowAnotherOperationScope() throws Exception {
+    void searchAppliesOperationScopesAndReturnsOnlyPublicEmployeesAndPrivateConversationData() throws Exception {
         var viewer = member(Set.of("workspace.view", "capabilities.view", "agent.view"));
         String role = permissions.listUserRoleIds(viewer.userId(), enterprise).getFirst();
         for (int i = 0; i < 12; i++) {
@@ -185,18 +179,15 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
         assertTrue(items(search.get(viewer, "匹配"), "resources").isEmpty());
         mvc.perform(get(base() + "/search").param("query", "查".repeat(101)).cookie(cookie)).andExpect(status().isUnprocessableEntity());
         assertTrue(page("/search?query=").path("groups").size() <= 3);
-    }
-
-    @Test
-    void searchReturnsPublicEmployeeAndPrivateConversationWithoutInternalInstructions() throws Exception {
+        permissions.replaceRolePermissions(enterprise, role, Set.of("workspace.view", "agent.run", "conversation.view"));
+        viewer = actor(viewer.userId());
         configureAgent(config -> config.put("icon", "NotebookPen").put("color", "mint"));
-        var viewer = member(Set.of("workspace.view", "agent.run", "conversation.view"));
         hires.establish(enterprise, viewer.userId(), agent, Instant.now());
         String own = conversation(viewer.userId(), "固定本人历史", Instant.now());
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (own)).set(AgentConversationRow::getStatus, "archived"));
         conversation(admin, "固定其他成员的私有历史", Instant.now().plusSeconds(10));
         configureAgent(config -> config.put("icon", "Telescope").put("color", "blue"));
-        var result = search.get(viewer, "固定");
+        result = search.get(viewer, "固定");
         schemas.validate("SearchResult", json.valueToTree(result));
         assertEquals(1, items(result, "conversations").size());
         assertEquals(own, items(result, "conversations").getFirst().targetId());
@@ -249,7 +240,7 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
     }
 
     private void draftResource(String owner, String name, Instant updated) {
-        databaseAccess.mapper(ResourceFixtureMapper.class).workspaceApiDraftResourceUpdate(key(), enterprise, name, owner, Timestamp.from(updated));
+        databaseAccess.mapper(ResourceFixtureMapper.class).insertSearchableAgent(key(), enterprise, name, owner, updated);
     }
 
     private Map<String, Object> schedule(boolean enabled) {

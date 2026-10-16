@@ -75,21 +75,6 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void cancellingQueuedRunStopsExecutionAndFinishesTaskWithoutCallingModel() {
-        startTask();
-        var accepted = dispatch.submit(dispatch.claim("cancel-test").orElseThrow());
-        var task = onlyTask();
-        inputs.cancel(actor(), task.getId(), task.getRevision(), "cancel-user", "不再需要");
-        assertEquals("cancelling", onlyTask().getStatus());
-        worker.recover();
-        worker.recover();
-        assertEquals("cancelled", runs.find(enterprise, accepted.runId(), false).orElseThrow().status());
-        assertEquals("cancelled", onlyTask().getStatus());
-        assertEquals("cancelled", work(task.getOwnerWorkId()).getStatus());
-        assertTrue(dispatch.claim("after-cancel").isEmpty());
-    }
-
-    @Test
     void newRequirementStopsOldRunAndResumesSameWorkWithNewContext() {
         startTask();
         var first = dispatch.submit(dispatch.claim("input-test").orElseThrow());
@@ -105,6 +90,15 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
         assertEquals(2, next.executionConfig().at("/collaboration/inputRevision").asInt());
         assertEquals(2, next.executionConfig().at("/collaboration/runRound").asInt());
         assertEquals(2, onlyTask().getRunCount());
+        var current = onlyTask();
+        inputs.cancel(actor(), current.getId(), current.getRevision(), "cancel-user", "不再需要");
+        assertEquals("cancelling", onlyTask().getStatus());
+        worker.recover();
+        worker.recover();
+        assertEquals("cancelled", runs.find(enterprise, second.runId(), false).orElseThrow().status());
+        assertEquals("cancelled", onlyTask().getStatus());
+        assertEquals("cancelled", work(current.getOwnerWorkId()).getStatus());
+        assertTrue(dispatch.claim("after-cancel").isEmpty());
     }
 
     @Test
@@ -135,26 +129,7 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void httpOwnerCanReadAndAppendButAdministratorCannotReadPrivateTask() throws Exception {
-        startTask();
-        var task = onlyTask();
-        String path = base() + "/collaboration/tasks/" + task.getId();
-        mvc.perform(get(path).cookie(cookie)).andExpect(status().isNotFound());
-        var browser = login();
-        var detail = data(mvc.perform(get(path).cookie(browser.cookie())).andExpect(status().isOk()).andReturn());
-        assertEquals(task.getShortCode(), detail.at("/task/shortCode").asText());
-        assertFalse(detail.toString().contains("payloadEncrypted"));
-        assertFalse(detail.toString().contains("senderIdentities"));
-        String key = UUID.randomUUID().toString();
-        var body = Map.of("requestId", key, "expectedRevision", task.getRevision(), "text", "补充月份要求", "messageReferences", List.of(), "waivedRoleIds", List.of());
-        var first = data(writeAs(browser, path + "/inputs", body, key).andExpect(status().isOk()).andReturn());
-        assertEquals(first, data(writeAs(browser, path + "/inputs", body, key).andExpect(status().isOk()).andReturn()));
-        assertEquals(2L, onlyTask().getInputRevision());
-        assertEquals(1, data(mvc.perform(get(base() + "/collaboration/tasks").cookie(browser.cookie())).andExpect(status().isOk()).andReturn()).path("items").size());
-    }
-
-    @Test
-    void fullChatResultRequiresBothGroupPermissionAndOwnersChoice() throws Exception {
+    void ownerHttpAccessAndFullResultRequirePersonalAndGroupPermission() throws Exception {
         // 本用例验证受限群，显式准备限制，避免依赖新群的默认回复方式。
         assertEquals(1, databaseAccess.mapper(ChatConversationMapper.class).update(new LambdaUpdateWrapper<ChatConversationRow>()
             .eq(ChatConversationRow::getEnterpriseId, enterprise).eq(ChatConversationRow::getId, group.getId())
@@ -162,7 +137,13 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
         startTask();
         var task = onlyTask();
         var browser = login();
-        String path = base() + "/collaboration/tasks/" + task.getId() + "/inputs";
+        String detailPath = base() + "/collaboration/tasks/" + task.getId();
+        mvc.perform(get(detailPath).cookie(cookie)).andExpect(status().isNotFound());
+        var detail = data(mvc.perform(get(detailPath).cookie(browser.cookie())).andExpect(status().isOk()).andReturn());
+        assertEquals(task.getShortCode(), detail.at("/task/shortCode").asText());
+        assertFalse(detail.toString().contains("payloadEncrypted"));
+        assertFalse(detail.toString().contains("senderIdentities"));
+        String path = detailPath + "/inputs";
         String first = UUID.randomUUID().toString();
         writeAs(browser, path, Map.of("requestId", first, "expectedRevision", task.getRevision(), "text", "允许群内公布结果", "outputVisibility", "chat_full"), first)
             .andExpect(status().isUnprocessableEntity());
@@ -172,8 +153,10 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
             .eq(ChatConversationRow::getEnterpriseId, enterprise).eq(ChatConversationRow::getId, group.getId())
             .set(ChatConversationRow::getResultPolicy, "full_allowed")));
         String next = UUID.randomUUID().toString();
-        writeAs(browser, path, Map.of("requestId", next, "expectedRevision", task.getRevision(), "text", "允许群内公布结果", "outputVisibility", "chat_full"), next)
-            .andExpect(status().isOk());
+        var request = Map.of("requestId", next, "expectedRevision", task.getRevision(), "text", "允许群内公布结果", "outputVisibility", "chat_full");
+        var saved = data(writeAs(browser, path, request, next).andExpect(status().isOk()).andReturn());
+        assertEquals(saved, data(writeAs(browser, path, request, next).andExpect(status().isOk()).andReturn()));
+        assertEquals(1, data(mvc.perform(get(base() + "/collaboration/tasks").cookie(browser.cookie())).andExpect(status().isOk()).andReturn()).path("items").size());
         assertEquals("chat_full", onlyTask().getOutputVisibility());
         assertEquals(2L, onlyTask().getInputRevision());
     }

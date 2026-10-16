@@ -39,7 +39,6 @@ execution:
     enabled: "false"
   events:
     worker-enabled: "false"
-    live-enabled: "false"
   workspace-files-root: "target/test-workspace-files"
   user-workspaces-root: "target/test-user-workspaces"
   workspace-preview-root: "target/test-file-preview"

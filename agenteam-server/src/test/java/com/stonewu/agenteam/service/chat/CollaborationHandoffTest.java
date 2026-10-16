@@ -84,6 +84,11 @@ class CollaborationHandoffTest extends CollaborationToolTestSupport {
         registry.add("chat.worker-enabled", () -> false);
     }
 
+    @Override
+    protected boolean requiresBusinessTool() {
+        return true;
+    }
+
     @AfterAll
     void closeEnvironment() throws Exception {
         ENVIRONMENT.close();
@@ -92,7 +97,10 @@ class CollaborationHandoffTest extends CollaborationToolTestSupport {
     @Test
     void hrHandsOffInternallyAndFinanceReadsExactArtifactWithoutPlatformMessage() throws Exception {
         startTask("核算考勤和工资");
+        requireBusinessApproval();
         var hr = startNext();
+        var denied = assertThrows(ApiException.class, () -> invoke(hr, "ordinary-write", "todo_create", Map.of("title", "未经确认不能创建")));
+        assertEquals("TOOL_APPROVAL_REQUIRED", denied.code());
         try (var control = new ToolCallControl(() -> {
         }); var scope = workspaces.open(hr.run(), hr.run().conversationId(), control, Duration.ofSeconds(10), () -> {
         })) {
@@ -272,15 +280,6 @@ class CollaborationHandoffTest extends CollaborationToolTestSupport {
         assertEquals(hr.run().conversationId(), resumed.run().conversationId());
         invoke(resumed, "new-complete", "collab_complete_task", Map.of("expectedInputRevision", 2, "summary", "二月工资核算完成", "artifactRefs", List.of(), "acceptedPriorResults", List.of()));
         assertEquals("completed", onlyTask().getStatus());
-    }
-
-    @Test
-    void legacyTaskStillRequiresApprovalForBusinessWrites() throws Exception {
-        startTask("协作任务仍需确认业务写入");
-        legacyApprovalPolicy();
-        var hr = startNext();
-        var error = assertThrows(ApiException.class, () -> invoke(hr, "ordinary-write", "todo_create", Map.of("title", "未经确认不能创建")));
-        assertEquals("TOOL_APPROVAL_REQUIRED", error.code());
     }
 
     @Test

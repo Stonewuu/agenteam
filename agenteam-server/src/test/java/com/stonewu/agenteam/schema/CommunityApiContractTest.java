@@ -11,7 +11,7 @@ class CommunityApiContractTest {
     private final ObjectMapper json = new ObjectMapper();
 
     @Test
-    void communityContractKeepsSharedReadsAndDoesNotAdvertisePrivateOperations() {
+    void communityContractExposesSharedOperationsAndRejectsConflictingExtensions() {
         var document = ApiContractDocument.load(json);
         assertThat(document.at("/info/version").asText()).isEqualTo("0.2.0");
         var paths = document.required("paths");
@@ -26,13 +26,8 @@ class CommunityApiContractTest {
         assertThat(document.at("/components/schemas/UsageItem/properties/subjectType/enum"))
             .isEqualTo(json.valueToTree(new String[]{"enterprise"}));
         assertThat(document.at("/components/schemas").has("AuditEvent")).isFalse();
-    }
-
-    @Test
-    void extensionCannotReplaceExistingOperationsOrUseAnotherVersion() {
-        var document = ApiContractDocument.load(json);
         var extension = json.createObjectNode();
-        extension.put("formatVersion", 1).put("version", "0.2.0");
+        extension.put("formatVersion", 1).put("version", document.at("/info/version").asText());
         extension.putObject("paths").putObject("/enterprises").putObject("get");
         extension.putObject("schemas");
         extension.putArray("permissions");

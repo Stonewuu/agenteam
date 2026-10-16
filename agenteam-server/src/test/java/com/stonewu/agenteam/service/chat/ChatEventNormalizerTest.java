@@ -116,6 +116,7 @@ class ChatEventNormalizerTest {
     void overlongTextAndMissingIdsAreRejectedInsteadOfTruncated() throws Exception {
         var raw = feishuMessage("text", json.createObjectNode().put("text", "长".repeat(32001)));
         assertThrows(ApiException.class, () -> fs.normalize(feishu, "hr", raw, now));
+        ((ObjectNode) raw.path("event").path("message")).put("content", "{\"text\":\"有效长度的内容\"}");
         ((ObjectNode) raw.path("event").path("message")).remove("message_id");
         assertThrows(ApiException.class, () -> fs.normalize(feishu, "hr", raw, now));
     }

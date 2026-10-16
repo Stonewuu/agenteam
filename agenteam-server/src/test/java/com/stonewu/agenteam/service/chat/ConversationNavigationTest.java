@@ -90,6 +90,14 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
 
     @Test
     void namesCodesAndRoleSearchOpenTheCorrectConversation() {
+        var versions = databaseAccess.mapper(ResourceVersionSqlMapper.class);
+        var stored = versions.selectById(version);
+        var config = (ObjectNode) resourceJson.read(stored.getConfigJson());
+        config.put("icon", "Telescope");
+        config.put("color", "teal");
+        versions.update(new LambdaUpdateWrapper<ResourceVersionRow>()
+            .eq(ResourceVersionRow::getEnterpriseId, enterprise).eq(ResourceVersionRow::getId, version)
+            .set(ResourceVersionRow::getConfigJson, resourceJson.write(config)));
         secondBot();
         var task = task("制作工资核算表", true);
         var byTitle = navigation.list(actor(), "工资核算", null, null, null, null, null, 30).items();
@@ -102,12 +110,12 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
         assertEquals(finance.collaboration().roles().stream().filter(role -> role.name().equals("财务")).findFirst().orElseThrow().conversationId(), finance.conversation().id());
         assertTrue(finance.matchedRole());
         assertEquals(finance.key(), navigation.current(actor(), finance.conversation().id()).key());
-    }
-
-    @Test
-    void existingRoleFavoriteRemainsVisibleAndCanBeClearedFromAnyRole() {
-        secondBot();
-        task("收藏测试任务", true);
+        var displayGroup = navigation.list(actor(), null, null, null, null, null, null, 30).items().getFirst().collaboration();
+        assertEquals(displayGroup.ownerConversationId(), displayGroup.roles().getFirst().conversationId());
+        for (var role : displayGroup.roles()) {
+            assertEquals("Telescope", role.icon());
+            assertEquals("teal", role.color());
+        }
         var item = navigation.list(actor(), null, null, null, null, null, null, 30).items().getFirst();
         var peer = item.collaboration().roles().stream().filter(role -> !role.conversationId().equals(item.conversation().id())).findFirst().orElseThrow();
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>()
@@ -144,26 +152,6 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
         assertEquals(2, value.collaboration().roles().size());
         assertEquals(1, value.collaboration().roles().stream().filter(role -> role.conversationId() == null).count());
         assertEquals(value.conversation().id(), value.collaboration().ownerConversationId());
-    }
-
-    @Test
-    void rolesUseTheirFixedAgentAppearanceAndOwnerComesFirst() {
-        var versions = databaseAccess.mapper(ResourceVersionSqlMapper.class);
-        var stored = versions.selectById(version);
-        var config = (ObjectNode) resourceJson.read(stored.getConfigJson());
-        config.put("icon", "Telescope");
-        config.put("color", "teal");
-        versions.update(new LambdaUpdateWrapper<ResourceVersionRow>()
-            .eq(ResourceVersionRow::getEnterpriseId, enterprise).eq(ResourceVersionRow::getId, version)
-            .set(ResourceVersionRow::getConfigJson, resourceJson.write(config)));
-        secondBot();
-        task("检查岗位图标", true);
-        var group = navigation.list(actor(), null, null, null, null, null, null, 30).items().getFirst().collaboration();
-        assertEquals(group.ownerConversationId(), group.roles().getFirst().conversationId());
-        for (var role : group.roles()) {
-            assertEquals("Telescope", role.icon());
-            assertEquals("teal", role.color());
-        }
     }
 
     private AuthContext actor() {
@@ -203,15 +191,15 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
     @Test
     void searchFindsOlderMatchesBeyondTheFirstBatchAndPaginatesWithoutRepeatingThem() {
         var original = original();
-        var seeded = seed(original, 130);
+        var seeded = seed(original, 104);
         var first = list.list(actor(), null, null, "历史关键词", null, 1);
         assertEquals(List.of(seeded.get(102).getId()), first.items().stream().map(value -> value.id()).toList());
         assertTrue(first.hasMore());
         var second = list.list(actor(), null, null, "历史关键词", first.nextCursor(), 1);
-        assertEquals(List.of(seeded.get(129).getId()), second.items().stream().map(value -> value.id()).toList());
+        assertEquals(List.of(seeded.get(103).getId()), second.items().stream().map(value -> value.id()).toList());
         assertFalse(second.hasMore());
         assertNull(second.nextCursor());
-        assertEquals(seeded.get(129).getId(), list.list(actor(), null, null, seeded.get(129).getShortCode().toLowerCase(), null, 30).items().getFirst().id());
+        assertEquals(seeded.get(103).getId(), list.list(actor(), null, null, seeded.get(103).getShortCode().toLowerCase(), null, 30).items().getFirst().id());
         var completed = list.list(actor(), group.getId(), "completed", "历史关键词", null, 30);
         assertEquals(List.of(seeded.get(102).getId()), completed.items().stream().map(value -> value.id()).toList());
         assertTrue(list.list(actor(), null, null, "不存在的合成搜索词", null, 30).items().isEmpty());
@@ -243,7 +231,7 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
 
     @Test
     void cursorCannotCrossUsersOrFiltersAndAdministratorCannotListAnotherMembersTasks() {
-        seed(original(), 3);
+        var seeded = seed(original(), 3);
         var first = list.list(actor(), null, null, null, null, 1);
         assertEquals("CURSOR_INVALID", assertThrows(ApiException.class,
             () -> list.list(actor(), null, "completed", null, first.nextCursor(), 1)).code());
@@ -255,12 +243,6 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
         assertEquals("CURSOR_INVALID", assertThrows(ApiException.class,
             () -> list.list(administrator, null, null, null, first.nextCursor(), 1)).code());
         assertThrows(ApiException.class, () -> list.list(actor(), null, "invented-status", null, null, 30));
-    }
-
-    @Test
-    void updatedTaskMovesToTheTopWithoutLosingOlderTasks() {
-        var initial = original();
-        var seeded = seed(initial, 3);
         databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
             .eq(CollaborationTaskRow::getEnterpriseId, enterprise).eq(CollaborationTaskRow::getId, seeded.getLast().getId())
             .set(CollaborationTaskRow::getUpdatedAt, Instant.now().plusSeconds(1)));
@@ -280,7 +262,7 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
         var addedMessages = new ArrayList<ChatMessageRow>();
         var addedTasks = new ArrayList<CollaborationTaskRow>();
         for (int index = 0; index < count; index++) {
-            String text = index == 102 || index == 129 ? "历史关键词的合成任务 " + index : "普通记录 " + index;
+            String text = index == 102 || index == 103 ? "历史关键词的合成任务 " + index : "普通记录 " + index;
             var message = json.convertValue(originalMessage, ChatMessageRow.class);
             String messageId = UUID.randomUUID().toString();
             message.setId(messageId);

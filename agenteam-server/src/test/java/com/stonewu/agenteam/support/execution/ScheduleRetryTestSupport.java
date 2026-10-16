@@ -118,7 +118,15 @@ public abstract class ScheduleRetryTestSupport extends ExecutionApiTestSupport {
     protected void attempt(String run, int expected) throws Exception {
         try (var worker = new RunWorker(lifecycle, tasks)) {
             worker.poll();
-            await(() -> state(run).equals("queued") && attemptNo(run) == expected || state(run).equals("failed"));
+            await(() -> {
+                var current = databaseAccess.mapper(RunSqlMapper.class).selectOne(new LambdaQueryWrapper<AgentRunRow>()
+                    .eq(AgentRunRow::getEnterpriseId, enterprise).eq(AgentRunRow::getId, run));
+                if (current == null) {
+                    throw new AssertionError("等待的定时执行记录不存在");
+                }
+                return current.getStatus().equals("queued") && current.getCurrentAttemptNo() == expected
+                    || current.getStatus().equals("failed");
+            });
         }
         assertEquals("queued", state(run), () -> DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectMaps(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getErrorCode, AgentRunRow::getErrorMessage).eq(AgentRunRow::getId, (run))).stream().map(fixtureValues -> {
             Map<String, Object> fixtureRow = new LinkedCaseInsensitiveMap<>();

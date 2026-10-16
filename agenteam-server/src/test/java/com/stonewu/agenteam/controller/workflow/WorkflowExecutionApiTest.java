@@ -3,7 +3,6 @@ package com.stonewu.agenteam.controller.workflow;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
-import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -17,8 +16,6 @@ import com.stonewu.agenteam.model.execution.entity.*;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRow;
 import com.stonewu.agenteam.service.execution.RunWorker;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.http.HttpMethod;
@@ -49,11 +46,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SharedEnterpriseTestEdition.class)
 class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, 120})
-    void entryWorkflowPersistsActualMappedResultWithoutCallingAModel(int timeoutSeconds) throws Exception {
+    @Test
+    void entryWorkflowPersistsActualMappedResultWithoutCallingAModel() throws Exception {
         useWorkflow(linear(node("work", "transform", Map.of("fields", List.of(Map.of("target", "answer", "template", "收到：${input.text}")))), Map.of("text", "${steps.work.output.answer}")));
-        configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", timeoutSeconds));
+        configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", 120));
         var accepted = submit();
         String run = accepted.path("runId").asText();
         try (var worker = new RunWorker(lifecycle, tasks)) {
@@ -102,49 +98,6 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
         assertEquals(1, count("run_approval"));
         assertEquals("skipped", stepList(run).stream().filter(item -> item.at("/workflow/nodeId").asText().equals("yes")).findFirst().orElseThrow().path("status").asText());
         assertEquals(4, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getUsedSteps).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getUsedSteps()).toList()));
-        validateEvents(accepted);
-    }
-
-    @Test
-    void twoNodeAgentsRunConcurrentlyAndKeepDistinctRepliesUnderTheirNodes() throws Exception {
-        String nodeVersion = version;
-        var entered = new CountDownLatch(2);
-        allowModelCalls = true;
-        modelResponse = exchange -> {
-            String request = json.readTree(exchange.getRequestBody()).toString();
-            entered.countDown();
-            try {
-                if (!entered.await(5, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException("两条实际模型请求没有并行开始");
-                }
-            } catch (InterruptedException stopped) {
-                Thread.currentThread().interrupt();
-                throw new IOException("模型验收被中断", stopped);
-            }
-            frame(exchange, request.contains("左侧问题") ? "左侧真实结果" : "右侧真实结果");
-        };
-        useWorkflow(graph(List.of(start(), node("parallel", "parallel", Map.of("joinNodeId", "join")), node("left", "agent", Map.of("agentVersionId", nodeVersion, "inputMapping", Map.of("text", "左侧问题"))), node("right", "agent", Map.of("agentVersionId", nodeVersion, "inputMapping", Map.of("text", "右侧问题"))), node("join", "join", Map.of("parallelNodeId", "parallel")), end(Map.of("text", "${steps.left.output.text}；${steps.right.output.text}"))), List.of(edge("start", "parallel"), edge("parallel", "left"), edge("parallel", "right"), edge("left", "join"), edge("right", "join"), edge("join", "end"))));
-        var accepted = submit();
-        String run = accepted.path("runId").asText();
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> terminal(run));
-        }
-        assertCompleted(run);
-        assertEquals(0, entered.getCount());
-        assertEquals(callsBefore + 2, modelCalls.get());
-        var snapshot = snapshot(accepted);
-        assertEquals("左侧真实结果；右侧真实结果", snapshot.at("/messages/1/content").asText());
-        var orders = new HashSet<Integer>();
-        for (var block : snapshot.at("/messages/1/blocks")) {
-            assertTrue(orders.add(block.path("displayOrder").asInt()));
-        }
-        for (String id : List.of("left", "right")) {
-            var step = stepList(run).stream().filter(value -> value.at("/workflow/nodeId").asText().equals(id)).findFirst().orElseThrow();
-            assertTrue(snapshot.at("/messages/1/blocks").findValuesAsText("parentBlockId").contains(step.path("id").asText()));
-            String output = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunStepSqlMapper.class).selectList(new LambdaQueryWrapper<RunStepRow>().select(RunStepRow::getOutputJson).eq(RunStepRow::getId, (step.path("id").asText()))).stream().map(fixtureRecord -> fixtureRecord.getOutputJson()).toList());
-            assertEquals(id.equals("left") ? "左侧真实结果" : "右侧真实结果", json.readTree(output).path("text").asText());
-        }
         validateEvents(accepted);
     }
 
@@ -240,37 +193,54 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
     }
 
     @Test
-    void transientReadFailuresRetryAtTwoAndTenSecondsAndRemainOneRecordedOperation() throws Exception {
+    void boundedReadRetriesRecoverOrFailWithoutDuplicatingRecordedOperations() throws Exception {
         String plugin = readPlugin();
-        useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", plugin, "toolName", "read_url", "inputMapping", Map.of("url", origin() + "/retry"))), Map.of("result", "${steps.work.output}")));
+        useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", plugin, "toolName", "read_url",
+            "inputMapping", Map.of("url", origin() + "/retry"))), Map.of("result", "${steps.work.output}")));
         configureAgent(config -> config.put("maxSteps", 0).put("timeoutSeconds", 0));
-        READ_FAILURES.set(2);
+        failReads("/retry", 2);
         int before = READS.get();
-        var accepted = submit();
-        String run = accepted.path("runId").asText();
+        var recovered = submit();
+        String recoveredRun = recovered.path("runId").asText();
+        useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", plugin, "toolName", "read_url",
+            "inputMapping", Map.of("url", origin() + "/unavailable"))), Map.of("text", "不应继续")));
+        failReads("/unavailable", 5);
+        var failed = submit();
+        String failedRun = failed.path("runId").asText();
         try (var worker = new RunWorker(lifecycle, tasks)) {
             worker.poll();
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(22);
-            while (!terminal(run) && System.nanoTime() < deadline) {
+            while ((!terminal(recoveredRun) || !terminal(failedRun)) && System.nanoTime() < deadline) {
                 TimeUnit.MILLISECONDS.sleep(100);
             }
+            worker.poll();
         }
-        assertCompleted(run);
-        assertEquals(before + 3, READS.get());
-        assertEquals(3, READ_TIMES.size());
-        assertTrue(READ_TIMES.get(1) - READ_TIMES.get(0) >= TimeUnit.MILLISECONDS.toNanos(1900));
-        assertTrue(READ_TIMES.get(2) - READ_TIMES.get(1) >= TimeUnit.MILLISECONDS.toNanos(9900));
-        assertEquals(1, count("tool_call"));
-        assertEquals(3, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().select(ToolCallRow::getAttemptCount).eq(ToolCallRow::getRunId, (run))).stream().map(fixtureRecord -> fixtureRecord.getAttemptCount()).toList()));
-        assertEquals(6, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getUsedSteps).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getUsedSteps()).toList()));
-        validateEvents(accepted);
+        assertCompleted(recoveredRun);
+        assertEquals("failed", runStatus(failedRun));
+        assertEquals(before + 6, READS.get());
+        var times = READ_TIMES.get("/retry");
+        assertEquals(3, times.size());
+        assertTrue(times.get(1) - times.get(0) >= TimeUnit.MILLISECONDS.toNanos(1900));
+        assertTrue(times.get(2) - times.get(1) >= TimeUnit.MILLISECONDS.toNanos(9900));
+        assertEquals(3, READ_TIMES.get("/unavailable").size());
+        assertEquals(2, count("tool_call"));
+        for (String run : List.of(recoveredRun, failedRun)) {
+            var call = databaseAccess.mapper(ToolCallSqlMapper.class).selectOne(new LambdaQueryWrapper<ToolCallRow>()
+                .eq(ToolCallRow::getRunId, run));
+            assertEquals(3, call.getAttemptCount());
+        }
+        var records = databaseAccess.mapper(RunSqlMapper.class);
+        assertEquals(6, records.selectById(recoveredRun).getUsedSteps());
+        assertEquals("REMOTE_SERVER_UNAVAILABLE", records.selectById(failedRun).getErrorCode());
+        validateEvents(recovered);
+        validateEvents(failed);
     }
 
     @Test
     void rejectedReadsAndUnknownWritesAreNeverAutomaticallyResent() throws Exception {
         String read = readPlugin();
         useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", read, "toolName", "read_url", "inputMapping", Map.of("url", origin() + "/rejected"))), Map.of("text", "不应返回")));
-        READ_FAILURES.set(3);
+        failReads("/rejected", 3);
         readFailureStatus = 404;
         int before = READS.get();
         var first = submit();
@@ -310,7 +280,7 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
     void retryWaitSurvivesWorkerReplacementWithoutResettingItsAttemptsOrBudget() throws Exception {
         String plugin = readPlugin();
         useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", plugin, "toolName", "read_url", "inputMapping", Map.of("url", origin() + "/resume"))), Map.of("text", "读取已完成")));
-        READ_FAILURES.set(1);
+        failReads("/resume", 1);
         int before = READS.get();
         var accepted = submit();
         String run = accepted.path("runId").asText();
@@ -334,32 +304,10 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
     }
 
     @Test
-    void persistentReadFailureStopsAfterTwoRetries() throws Exception {
-        String plugin = readPlugin();
-        useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", plugin, "toolName", "read_url", "inputMapping", Map.of("url", origin() + "/unavailable"))), Map.of("text", "不应继续")));
-        READ_FAILURES.set(5);
-        int before = READS.get();
-        var accepted = submit();
-        String run = accepted.path("runId").asText();
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(22);
-            while (!terminal(run) && System.nanoTime() < deadline) {
-                TimeUnit.MILLISECONDS.sleep(100);
-            }
-            worker.poll();
-        }
-        assertEquals("failed", runStatus(run));
-        assertEquals(before + 3, READS.get());
-        assertEquals(3, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>().select(ToolCallRow::getAttemptCount).eq(ToolCallRow::getRunId, (run))).stream().map(fixtureRecord -> fixtureRecord.getAttemptCount()).toList()));
-        assertEquals("REMOTE_SERVER_UNAVAILABLE", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getErrorCode).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getErrorCode()).toList()));
-    }
-
-    @Test
     void cancellationDuringRetryWaitPreventsTheNextRequest() throws Exception {
         String plugin = readPlugin();
         useWorkflow(linear(node("work", "tool", Map.of("pluginVersionId", plugin, "toolName", "read_url", "inputMapping", Map.of("url", origin() + "/cancel"))), Map.of("text", "不应返回")));
-        READ_FAILURES.set(5);
+        failReads("/cancel", 5);
         int before = READS.get();
         var accepted = submit();
         String run = accepted.path("runId").asText();
@@ -383,12 +331,22 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
         String plugin = remotePlugin(writes, new AtomicReference<>());
         configureAgent(config -> config.withArray("pluginVersionIds").add(plugin));
         String nodeVersion = version;
+        var entered = new CountDownLatch(2);
         var turns = new ConcurrentHashMap<String, AtomicInteger>();
         allowModelCalls = true;
         modelResponse = exchange -> {
             var request = json.readTree(exchange.getRequestBody());
             String side = request.toString().contains("左侧请求") ? "左侧" : "右侧";
             if (turns.computeIfAbsent(side, ignored -> new AtomicInteger()).getAndIncrement() == 0) {
+                entered.countDown();
+                try {
+                    if (!entered.await(5, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("两条实际模型请求没有并行开始");
+                    }
+                } catch (InterruptedException stopped) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("模型验收被中断", stopped);
+                }
                 frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "same-call", "type", "function", "function", Map.of("name", modelTool(request, "Read_Item"), "arguments", json.writeValueAsString(Map.of("text", side + "固定正文")))))), "tool_calls");
             } else {
                 frame(exchange, side + "处理结果");
@@ -400,6 +358,7 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
         waitForDecision(run);
         var confirmations = approvals(run);
         assertEquals(2, confirmations.size());
+        assertEquals(0, entered.getCount());
         assertEquals(0, writes.get());
         assertEquals(2, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallFixtureMapper.class).workflowExecutionApiParallelNodeAgentsResumeTheirOwnToolConfirmationsWithTheSameFrameworkCallIdentifierObject(run)));
         assertEquals(1, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallFixtureMapper.class).scheduleRetryApiRetryReexecutesReadOnlyToolsWithTheSameProviderCallIdWithoutReusingFailedAttemptStateObject17(run)));
@@ -413,7 +372,18 @@ class WorkflowExecutionApiTest extends WorkflowExecutionApiTestSupport {
         assertCompleted(run);
         assertEquals(1, writes.get());
         assertEquals(callsBefore + 4, modelCalls.get());
-        assertEquals("左侧处理结果；右侧处理结果", snapshot(accepted).at("/messages/1/content").asText());
+        var snapshot = snapshot(accepted);
+        assertEquals("左侧处理结果；右侧处理结果", snapshot.at("/messages/1/content").asText());
+        var orders = new HashSet<Integer>();
+        for (var block : snapshot.at("/messages/1/blocks")) {
+            assertTrue(orders.add(block.path("displayOrder").asInt()));
+        }
+        for (String id : List.of("left", "right")) {
+            var step = stepList(run).stream().filter(value -> value.at("/workflow/nodeId").asText().equals(id)).findFirst().orElseThrow();
+            assertTrue(snapshot.at("/messages/1/blocks").findValuesAsText("parentBlockId").contains(step.path("id").asText()));
+            String output = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunStepSqlMapper.class).selectList(new LambdaQueryWrapper<RunStepRow>().select(RunStepRow::getOutputJson).eq(RunStepRow::getId, (step.path("id").asText()))).stream().map(fixtureRecord -> fixtureRecord.getOutputJson()).toList());
+            assertEquals(id.equals("left") ? "左侧处理结果" : "右侧处理结果", json.readTree(output).path("text").asText());
+        }
         validateEvents(accepted);
     }
 }

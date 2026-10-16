@@ -28,6 +28,7 @@ export function VersionPicker({
                                 maximum,
                                 allowed,
                                 readOnly = false,
+                                compact = false,
                                 subagentsOnly = false,
                                 excludeResourceId
                               }: {
@@ -39,6 +40,7 @@ export function VersionPicker({
   maximum: number;
   allowed: boolean;
   readOnly?: boolean;
+  compact?: boolean;
   subagentsOnly?: boolean;
   excludeResourceId?: string;
 }) {
@@ -59,7 +61,7 @@ export function VersionPicker({
       }
     }
   }
-  return <Fieldset className={styles.section}>
+  return <Fieldset className={compact ? picker.compact : styles.section}>
     <legend>{title}</legend>
     {kind === "plugin" && allowed && <JavaPluginNotices enterpriseId={enterpriseId} versions={selected}/>}
     {resolved.error && <p className={ui.error} role="alert">{localizeUiMessage(resolved.error ?? "", uiText)}<Button

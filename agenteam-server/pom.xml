@@ -35,9 +35,10 @@
   </scm>
   <properties>
     <agenteam.build.directory>${project.basedir}/target</agenteam.build.directory>
-    <agenteam.test.forks>0.25C</agenteam.test.forks>
+    <agenteam.test.forks>2</agenteam.test.forks>
     <agenteam.test.heap>1024m</agenteam.test.heap>
-    <agenteam.test.processors>4</agenteam.test.processors>
+    <agenteam.test.compiler-level>4</agenteam.test.compiler-level>
+    <agenteam.test.processors>2</agenteam.test.processors>
     <skipTests>false</skipTests>
     <agenteam.test.skip.processes>${skipTests}</agenteam.test.skip.processes>
     <agenteam.test.reports>${agenteam.build.directory}/surefire-reports</agenteam.test.reports>
@@ -275,7 +276,8 @@
           <forkCount>${agenteam.test.forks}</forkCount>
           <reuseForks>true</reuseForks>
           <reportsDirectory>${agenteam.test.reports}</reportsDirectory>
-          <argLine>-Xmx${agenteam.test.heap} -XX:ActiveProcessorCount=${agenteam.test.processors}</argLine>
+          <!-- 长时间复用测试进程时保留完整优化编译，避免所有场景持续使用低优化代码。 -->
+          <argLine>-Xmx${agenteam.test.heap} -XX:ActiveProcessorCount=${agenteam.test.processors} -XX:TieredStopAtLevel=${agenteam.test.compiler-level}</argLine>
         </configuration>
         <executions>
           <execution>

@@ -13,10 +13,41 @@ import java.util.jar.Manifest;
  * 从独立 Java 源码编译真实程序包，验证 PF4J 索引和公共接口的实际兼容性。
  */
 public final class JavaPluginFixture {
+    private static byte[] compiledClass;
     private JavaPluginFixture() {
     }
 
     public static byte[] build(String version) throws Exception {
+        var manifest = new Manifest();
+        var attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("Plugin-Id", "example");
+        attributes.putValue("Plugin-Version", version);
+        attributes.putValue("Plugin-Requires", "1.0.0");
+        attributes.putValue("Plugin-Description", "测试 Java 插件");
+        attributes.putValue("Plugin-Provider", "测试作者");
+        var bytes = new ByteArrayOutputStream();
+        try (var archive = new JarOutputStream(bytes, manifest)) {
+            archive.putNextEntry(new JarEntry("Example.class"));
+            archive.write(compiledClass());
+            archive.closeEntry();
+            archive.putNextEntry(new JarEntry("META-INF/extensions.idx"));
+            archive.write("Example\n".getBytes(StandardCharsets.UTF_8));
+            archive.closeEntry();
+            archive.putNextEntry(new JarEntry("META-INF/agenteam-plugin.json"));
+            archive.write("""
+                {"name":"Java 示例","configurationSchema":{"type":"object","additionalProperties":false,
+                "properties":{"prefix":{"type":"string","title":"内容前缀"}}}}
+                """.getBytes(StandardCharsets.UTF_8));
+            archive.closeEntry();
+        }
+        return bytes.toByteArray();
+    }
+
+    private static synchronized byte[] compiledClass() throws Exception {
+        if (compiledClass != null) {
+            return compiledClass;
+        }
         var directory = Files.createTempDirectory("plugin-test-compile-");
         try {
             var source = directory.resolve("Example.java");
@@ -27,6 +58,7 @@ public final class JavaPluginFixture {
                 import java.util.List;
                 import java.util.Map;
                 import java.io.IOException;
+                import java.util.concurrent.locks.LockSupport;
                 public class Example implements JavaToolPlugin {
                     public List<ToolSpec> tools() {
                         return List.of(new ToolSpec("echo", "示例工具", "返回带前缀的内容", "",
@@ -42,7 +74,8 @@ public final class JavaPluginFixture {
                         }
                         if (name.equals("hang")) {
                             while (true) {
-                                Thread.onSpinWait();
+                                LockSupport.parkNanos(50_000_000L);
+                                Thread.interrupted();
                             }
                         }
                         return Map.of("content", config.getOrDefault("prefix", "") + args.get("value").toString(),
@@ -55,30 +88,8 @@ public final class JavaPluginFixture {
             if (result != 0) {
                 throw new IllegalStateException("测试插件编译失败");
             }
-            var manifest = new Manifest();
-            var attributes = manifest.getMainAttributes();
-            attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-            attributes.putValue("Plugin-Id", "example");
-            attributes.putValue("Plugin-Version", version);
-            attributes.putValue("Plugin-Requires", "1.0.0");
-            attributes.putValue("Plugin-Description", "测试 Java 插件");
-            attributes.putValue("Plugin-Provider", "测试作者");
-            var bytes = new ByteArrayOutputStream();
-            try (var archive = new JarOutputStream(bytes, manifest)) {
-                archive.putNextEntry(new JarEntry("Example.class"));
-                archive.write(Files.readAllBytes(directory.resolve("Example.class")));
-                archive.closeEntry();
-                archive.putNextEntry(new JarEntry("META-INF/extensions.idx"));
-                archive.write("Example\n".getBytes(StandardCharsets.UTF_8));
-                archive.closeEntry();
-                archive.putNextEntry(new JarEntry("META-INF/agenteam-plugin.json"));
-                archive.write("""
-                    {"name":"Java 示例","configurationSchema":{"type":"object","additionalProperties":false,
-                    "properties":{"prefix":{"type":"string","title":"内容前缀"}}}}
-                    """.getBytes(StandardCharsets.UTF_8));
-                archive.closeEntry();
-            }
-            return bytes.toByteArray();
+            compiledClass = Files.readAllBytes(directory.resolve("Example.class"));
+            return compiledClass;
         } finally {
             try (var files = Files.list(directory)) {
                 for (var file : files.toList()) {

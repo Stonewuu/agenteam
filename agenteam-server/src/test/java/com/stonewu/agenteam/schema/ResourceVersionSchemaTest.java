@@ -48,7 +48,7 @@ class ResourceVersionSchemaTest {
             for (String enterprise : new String[]{"first", "second"}) {
                 new EnterpriseMapper(databaseAccess.mapper(EnterpriseSqlMapper.class), databaseAccess.mapper(QuotaPolicySqlMapper.class), databaseAccess.mapper(IdentityQueryMapper.class), databaseAccess.mapper(EnterpriseTeamTableMapper.class), databaseAccess.mapper(MemberTeamSqlMapper.class), databaseAccess.mapper(MemberRoleQueryMapper.class)).insert(enterprise, enterprise, "", null, "owner", QuotaPeriod.containing(Instant.now(), "Asia/Shanghai"), Instant.now());
                 users.addMember(enterprise, "owner", "资源维护者", Instant.now());
-                databaseAccess.mapper(ResourceFixtureMapper.class).resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate(enterprise, enterprise);
+                databaseAccess.mapper(ResourceFixtureMapper.class).insertAgent(enterprise, enterprise, "资源草稿", "owner");
             }
             database.initialize();
             assertEquals("资源草稿", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ResourceSqlMapper.class).selectList(new LambdaQueryWrapper<ResourceRow>().select(ResourceRow::getName).eq(ResourceRow::getId, "first")).stream().map(fixtureRecord -> fixtureRecord.getName()).toList()));
@@ -56,13 +56,13 @@ class ResourceVersionSchemaTest {
             version(databaseAccess, "second-v1", "second", "second", 1);
             databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().eq(ResourceRow::getId, "first").set(ResourceRow::getPublishedVersionId, "first-v1"));
             assertThrows(DataIntegrityViolationException.class, () -> databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().eq(ResourceRow::getId, "first").set(ResourceRow::getPublishedVersionId, "second-v1")));
-            databaseAccess.mapper(ResourceFixtureMapper.class).resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate12();
+            databaseAccess.mapper(ResourceFixtureMapper.class).insertAgent("another", "first", "另一个资源", "owner");
             version(databaseAccess, "another-v1", "first", "another", 1);
             assertThrows(DataIntegrityViolationException.class, () -> databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().eq(ResourceRow::getId, "first").set(ResourceRow::getPublishedVersionId, "another-v1")));
             assertThrows(DataIntegrityViolationException.class, () -> version(databaseAccess, "duplicate-v1", "first", "first", 1));
             assertThrows(DataIntegrityViolationException.class, () -> databaseAccess.mapper(ResourceDependencyFixtureMapper.class).resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate());
-            databaseAccess.mapper(AgentHireFixtureMapper.class).resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate();
-            assertThrows(DataIntegrityViolationException.class, () -> databaseAccess.mapper(AgentHireFixtureMapper.class).resourceVersionSchemaRejectsWrongVersionsCrossEnterpriseReferencesAndDuplicateHiresUpdate6());
+            databaseAccess.mapper(AgentHireFixtureMapper.class).insertHire("hire-1", "first", "owner", "first", Instant.now());
+            assertThrows(DataIntegrityViolationException.class, () -> databaseAccess.mapper(AgentHireFixtureMapper.class).insertHire("hire-2", "first", "owner", "first", Instant.now()));
             application(databaseAccess, "pending", "pending", 1);
             assertThrows(DataIntegrityViolationException.class, () -> application(databaseAccess, "duplicate", "pending", 1));
             assertCheckConstraint(() -> application(databaseAccess, "invalid-null", "pending", null));

@@ -11,9 +11,9 @@ const { fileStatusText, fileFailureText } = loadSource("features/file/lib/file-s
 function clipboard(files = [], items = []) {
   let prevented = false;
   return { clipboardData: { files, items }, preventDefault() {
- prevented = true; 
+ prevented = true;
 }, get prevented() {
- return prevented; 
+ return prevented;
 } };
 }
 
@@ -46,10 +46,11 @@ test("纯文字粘贴不被接管，禁用附件时不触发文件上传", () =>
   assert.deepEqual(calls, []);
 });
 
+const composerSource = readFileSync(new URL("../src/features/agent/components/conversation-composer.tsx", import.meta.url), "utf8");
+const composerCode = ts.transpileModule(composerSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+
 function composer(overrides = {}) {
   const calls = [];
-  const source = readFileSync(new URL("../src/features/agent/components/conversation-composer.tsx", import.meta.url), "utf8");
-  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const modules = {
     react: { useImperativeHandle() {} },
     "react/jsx-runtime": { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
@@ -59,7 +60,7 @@ function composer(overrides = {}) {
     "../hooks/use-composer-layout": { useComposerLayout: () => ({ current: null }) },
   };
   const exports = {};
-  vm.runInNewContext(compiled, { exports, require: name => modules[name] ?? new Proxy({ default: {} }, { get: (target, key) => key in target ? target[key] : String(key) }) });
+  vm.runInNewContext(composerCode, { exports, require: name => modules[name] ?? new Proxy({ default: {} }, { get: (target, key) => key in target ? target[key] : String(key) }) });
   const tree = exports.ConversationComposer({ text: "保留已有草稿", skills: [], documents: [], model: {}, approvalPolicy: {},
     files: { add: value => calls.push(value), items: [], fileIds: [] }, employeeReady: true, attachmentsEnabled: true, submitting: false, ...overrides });
   function visit(node) {

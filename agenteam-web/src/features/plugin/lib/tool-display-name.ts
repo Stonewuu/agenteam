@@ -30,6 +30,11 @@ const builtinNames: Record<string, Record<string, string>> = {
     schedule_delete: "删除计划"
   },
   web_read: {read_url: "读取网页"},
+  workflow_management: {
+    workflow_schema: "查看工作流节点", workflow_list: "查询工作流", workflow_get: "读取工作流草稿",
+    workflow_capabilities: "查找可用能力", workflow_dependency: "查看节点能力", workflow_create: "创建工作流",
+    workflow_save: "保存工作流草稿", workflow_patch: "修改工作流步骤", workflow_validate: "检查工作流"
+  },
   group_collaboration: {
     collab_list_roles: "查看协作岗位",
     collab_read_context: "查看任务背景",
@@ -62,10 +67,20 @@ const builtinResources: Record<string, string> = {
   "定时任务": "schedule_management",
   "网页读取": "web_read",
   "文件": "workspace_files",
-  "团队协作": "group_collaboration"
+  "团队协作": "group_collaboration",
+  "工作流管理": "workflow_management"
 };
 
 const builtinDescriptions: Record<string, string> = {
+  workflow_schema: "查看可用节点和工作流配置方式。",
+  workflow_list: "查询有权查看的工作流。",
+  workflow_get: "读取工作流当前草稿。",
+  workflow_capabilities: "查找可用于工作流的智能体和插件。",
+  workflow_dependency: "查看选定版本提供的工具或技能。",
+  workflow_create: "创建工作流草稿。",
+  workflow_save: "保存工作流的完整草稿。",
+  workflow_patch: "添加、调整或删除工作流步骤和连接。",
+  workflow_validate: "检查工作流连接、循环和所选能力。",
   platform_context: "查看当前企业、账号和企业时区。",
   platform_time: "查询当前日期、时间和企业时区。",
   platform_search: "搜索你有权访问的工作空间内容。",

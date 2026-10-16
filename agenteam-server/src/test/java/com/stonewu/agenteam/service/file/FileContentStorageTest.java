@@ -24,7 +24,7 @@ class FileContentStorageTest {
         var referenced = new HashSet<String>();
         Path directory = Files.createDirectories(root.resolve("enterprise"));
         Instant before = Instant.now().minusSeconds(86400);
-        for (int i = 0; i < 401; i++) {
+        for (int i = 0; i < 5; i++) {
             String key = "enterprise/" + UUID.randomUUID() + ".data";
             Path file = root.resolve(key);
             Files.writeString(file, "仍有引用的内容");
@@ -37,7 +37,7 @@ class FileContentStorageTest {
         var storage = new FileContentStorage(root.resolve(".temporary").toString(), new LocalFileObjectStore(root.toString()));
         int removed = 0;
         for (int batch = 0; batch < 4; batch++) {
-            removed += storage.cleanOrphans(before, referenced::contains, 200);
+            removed += storage.cleanOrphans(before, referenced::contains, 2);
         }
         assertEquals(1, removed);
         assertFalse(Files.exists(orphan));

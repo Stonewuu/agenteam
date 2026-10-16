@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -176,6 +177,27 @@ class LiveEventCacheTest {
         assertTrue(cache.renew(run.enterpriseId(), run.conversationId(), cursor, next, next.until(), now));
         assertEquals("lease_lost", cache.append(run.enterpriseId(), run.conversationId(), cursor, LiveEventCache.token(lease), mutation).status());
         assertTrue(cache.append(run.enterpriseId(), run.conversationId(), cursor, LiveEventCache.token(next), mutation).accepted());
+        assertFalse(cache.remove(run.enterpriseId(), run.conversationId(), "不是当前清理资格", List.of(run.id())));
+        assertTrue(cache.position(run.enterpriseId(), run.conversationId()).isPresent());
+        String otherConversation = UUID.randomUUID().toString();
+        String otherOwner = cache.claim(run.enterpriseId(), otherConversation);
+        try {
+            cache.initialize(run.enterpriseId(), otherConversation, otherOwner, 0, null, null);
+        } finally {
+            cache.release(run.enterpriseId(), otherConversation, otherOwner);
+        }
+        String owner = cache.claim(run.enterpriseId(), run.conversationId());
+        assertNotNull(owner);
+        try {
+            assertTrue(cache.remove(run.enterpriseId(), run.conversationId(), owner, List.of(run.id())));
+            assertTrue(cache.position(run.enterpriseId(), run.conversationId()).isEmpty());
+            assertEquals(Set.of(key() + ":initialize"), redis.keys(key() + ":*"));
+            assertTrue(cache.position(run.enterpriseId(), otherConversation).isPresent());
+            assertTrue(cache.remove(run.enterpriseId(), run.conversationId(), owner, List.of(run.id())));
+        } finally {
+            cache.release(run.enterpriseId(), run.conversationId(), owner);
+        }
+        assertTrue(redis.keys(key() + ":*").isEmpty());
     }
 
     private StreamCursor initialize(String replace, long databaseVersion) {

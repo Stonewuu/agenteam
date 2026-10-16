@@ -55,6 +55,9 @@ import {
   Lock1,
   Logout,
   Maximize4,
+  Maximize2,
+  MouseSquare,
+  Map1,
   Menu,
   Messages2,
   Minus,
@@ -212,6 +215,9 @@ export const IconLock = agenteamIcon(Lock1);
 export const IconUnlock = agenteamIcon(Unlock);
 export const IconLogout = agenteamIcon(Logout);
 export const IconMail = agenteamIcon(Sms);
+export const IconPan = agenteamIcon(Maximize2);
+export const IconSelect = agenteamIcon(MouseSquare);
+export const IconMap = agenteamIcon(Map1);
 export const IconMaximize = agenteamIcon(Maximize4);
 export const IconMenu2 = agenteamIcon(Menu);
 export const IconMessages = agenteamIcon(Messages2);

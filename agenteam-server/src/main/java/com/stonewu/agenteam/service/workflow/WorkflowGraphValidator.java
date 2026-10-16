@@ -97,6 +97,13 @@ public class WorkflowGraphValidator {
                 }
             }
             validateExpressions(node, ancestors.get(node.id()), field);
+            if (node.type().equals("loop")) {
+                try {
+                    compile(node.config().path("body"));
+                } catch (ApiException invalid) {
+                    throw invalid(node.id(), null, field + ".config.body", "循环内部步骤：" + invalid.getReason());
+                }
+            }
         }
         return new WorkflowGraph(Collections.unmodifiableMap(nodes), List.copyOf(edges), List.copyOf(ordered),
             freeze(incoming), freeze(outgoing),
@@ -173,6 +180,9 @@ public class WorkflowGraphValidator {
             }
             expressions.validateTemplates(values.get("inputMapping"), previous);
             expressions.validateTemplates(values.get("outputMapping"), previous);
+            if (node.type().equals("loop")) {
+                expressions.validateTemplates(values.get("items"), previous);
+            }
             if (node.type().equals("approval")) {
                 expressions.validateTemplates(values.get("title"), previous);
                 expressions.validateTemplates(values.get("description"), previous);

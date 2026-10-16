@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.modelprofile.RemoteModelMapper;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRecord;
@@ -98,9 +100,10 @@ class RemoteModelClientTest {
         });
         assertEquals("MODEL_LIST_TOO_LARGE", assertThrows(ApiException.class, () -> client.list(provider(""))).code());
         server.removeContext("/custom/v1/models");
+        var release = new CountDownLatch(1);
         server.createContext("/custom/v1/models", exchange -> {
             try {
-                Thread.sleep(400);
+                release.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
             } finally {
@@ -109,9 +112,13 @@ class RemoteModelClientTest {
         });
         var impatient = new RemoteModelClient(policy, mapper, new OkHttpClient.Builder()
             .readTimeout(Duration.ofMillis(100)).callTimeout(Duration.ofMillis(200)).build());
-        var timeout = assertThrows(ApiException.class, () -> impatient.list(provider("")));
-        assertEquals("MODEL_LIST_TIMEOUT", timeout.code());
-        assertNotNull(timeout.getCause());
+        try {
+            var timeout = assertThrows(ApiException.class, () -> impatient.list(provider("")));
+            assertEquals("MODEL_LIST_TIMEOUT", timeout.code());
+            assertNotNull(timeout.getCause());
+        } finally {
+            release.countDown();
+        }
     }
 
     @ParameterizedTest

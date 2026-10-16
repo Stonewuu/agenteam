@@ -19,34 +19,23 @@ import static org.mockito.Mockito.when;
 
 class ExecutionGuardStepLimitTest {
     @Test
-    void fiveHundredStepsAreAllowedAndTheNextStepIsRejected() {
+    void unlimitedAndConfiguredStepBudgetsRemainIndependent() {
         var context = RuntimeContext.builder().userId("user").sessionId("session").build();
         var model = mock(Model.class);
         when(model.getContextWindowSize()).thenReturn(100_000);
         var input = new ModelCallInput(List.of(), List.of(), GenerateOptions.builder().build(), model);
-        var limited = new ExecutionGuardMiddleware(mock(RunLifecycleService.class), null, "session", 500);
-        for (int step = 0; step < 500; step++) {
-            limited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2));
+        var lifecycle = mock(RunLifecycleService.class);
+        for (int maximum : List.of(0, 2, 500)) {
+            var guard = new ExecutionGuardMiddleware(lifecycle, null, "session", maximum);
+            int steps = maximum == 0 ? 60 : maximum;
+            for (int step = 0; step < steps; step++) {
+                guard.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2));
+            }
+            if (maximum > 0) {
+                assertEquals("EXECUTION_STEP_LIMIT", assertThrows(ApiException.class,
+                    () -> guard.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2))).code(),
+                    "步数上限：" + maximum);
+            }
         }
-        assertEquals("EXECUTION_STEP_LIMIT", assertThrows(ApiException.class,
-            () -> limited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2))).code());
-    }
-
-    @Test
-    void unlimitedExecutionsPassFiftyStepsAndExplicitLimitsStillStop() {
-        var context = RuntimeContext.builder().userId("user").sessionId("session").build();
-        var model = mock(Model.class);
-        when(model.getContextWindowSize()).thenReturn(100_000);
-        var input = new ModelCallInput(List.of(), List.of(), GenerateOptions.builder().build(), model);
-        var unlimited = new ExecutionGuardMiddleware(mock(RunLifecycleService.class), null, "session", 0);
-        for (int step = 0; step < 60; step++) {
-            unlimited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2));
-        }
-        var limited = new ExecutionGuardMiddleware(mock(RunLifecycleService.class), null, "session", 2);
-        for (int step = 0; step < 2; step++) {
-            limited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2));
-        }
-        assertEquals("EXECUTION_STEP_LIMIT", assertThrows(ApiException.class,
-            () -> limited.onModelCall(null, context, input, ignored -> Flux.empty()).blockLast(Duration.ofSeconds(2))).code());
     }
 }

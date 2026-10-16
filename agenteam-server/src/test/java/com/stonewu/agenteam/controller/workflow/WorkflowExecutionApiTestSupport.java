@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -48,9 +49,9 @@ abstract class WorkflowExecutionApiTestSupport extends ExecutionApiTestSupport {
 
     static final protected AtomicInteger READS = new AtomicInteger();
 
-    static final protected AtomicInteger READ_FAILURES = new AtomicInteger();
+    static final protected Map<String, AtomicInteger> READ_FAILURES = new ConcurrentHashMap<>();
 
-    static final protected List<Long> READ_TIMES = new CopyOnWriteArrayList<>();
+    static final protected Map<String, List<Long>> READ_TIMES = new ConcurrentHashMap<>();
 
     static volatile protected int readFailureStatus = 503;
 
@@ -78,9 +79,13 @@ abstract class WorkflowExecutionApiTestSupport extends ExecutionApiTestSupport {
 
     @BeforeEach
     protected void resetReadFailures() {
-        READ_FAILURES.set(0);
+        READ_FAILURES.clear();
         READ_TIMES.clear();
         readFailureStatus = 503;
+    }
+
+    protected void failReads(String path, int count) {
+        READ_FAILURES.put(path, new AtomicInteger(count));
     }
 
     protected String readPlugin() throws Exception {
@@ -239,8 +244,10 @@ abstract class WorkflowExecutionApiTestSupport extends ExecutionApiTestSupport {
             var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             server.createContext("/", exchange -> {
                 READS.incrementAndGet();
-                READ_TIMES.add(System.nanoTime());
-                if (READ_FAILURES.getAndUpdate(value -> Math.max(0, value - 1)) > 0) {
+                String path = exchange.getRequestURI().getPath();
+                READ_TIMES.computeIfAbsent(path, ignored -> new CopyOnWriteArrayList<>()).add(System.nanoTime());
+                if (READ_FAILURES.computeIfAbsent(path, ignored -> new AtomicInteger())
+                    .getAndUpdate(value -> Math.max(0, value - 1)) > 0) {
                     exchange.sendResponseHeaders(readFailureStatus, -1);
                     exchange.close();
                     return;

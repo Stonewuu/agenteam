@@ -41,6 +41,7 @@ class S3FileObjectStoreTest {
     private static final GenericContainer<?> SERVER = new GenericContainer<>(
         new ImageFromDockerfile("agenteam/test-minio:2025-09-07-07c3a429", false)
             .withFileFromClasspath("Dockerfile", "containers/minio/Dockerfile"))
+        .withCreateContainerCmdModifier(command -> command.getHostConfig().withMemory(512L * 1024 * 1024).withNanoCPUs(1_000_000_000L))
         .withEnv("MINIO_ROOT_USER", USER).withEnv("MINIO_ROOT_PASSWORD", PASSWORD).withEnv("MINIO_BROWSER", "off")
         .withCommand("server", "/data", "--address", ":9000").withExposedPorts(9000)
         .waitingFor(Wait.forHttp("/minio/health/ready").forPort(9000));
@@ -89,15 +90,6 @@ class S3FileObjectStoreTest {
             }
             assertThrows(ApiException.class, () -> store.open("../enterprise-a/other.data"));
             assertThrows(IllegalArgumentException.class, () -> content.write("../enterprise-b", new ByteArrayInputStream(bytes), 1024));
-        }
-    }
-
-    @Test
-    void publicBucketPolicyImmediatelyBlocksStorageReadsAndWrites() throws Exception {
-        String bucket = bucket();
-        try (var store = store(bucket)) {
-            var content = new FileContentStorage(temporary.toString(), store);
-            var saved = content.write("enterprise-a", new ByteArrayInputStream("公开权限测试中的合成内容".getBytes(StandardCharsets.UTF_8)), 1024);
             String policy = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::" + bucket + "/*\"}]}";
             try {
                 client.putBucketPolicy(request -> request.bucket(bucket).policy(policy));
@@ -108,10 +100,12 @@ class S3FileObjectStoreTest {
                 client.deleteBucketPolicy(request -> request.bucket(bucket));
             }
             try (var input = store.open(saved.key())) {
-                assertEquals("公开权限测试中的合成内容", new String(input.readAllBytes(), StandardCharsets.UTF_8));
+                assertArrayEquals(bytes, input.readAllBytes());
             }
         }
     }
+
+
 
     private FileObjectStore store(String bucket) {
         var environment = new MockEnvironment().withProperty("files.storage", "s3").withProperty("files.s3.endpoint", origin())

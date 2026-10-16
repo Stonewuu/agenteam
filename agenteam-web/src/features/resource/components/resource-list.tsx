@@ -28,6 +28,7 @@ import {TagFilter} from "./tag-filter";
 
 import {SkillImportDialog} from "@/features/skill/components/skill-import-dialog";
 import {BuiltinPluginCatalog} from "@/features/plugin/components/builtin-plugin-catalog";
+import {WorkflowAssistantButton} from "@/features/workflow/components/workflow-assistant-button";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./resource.module.css";
 
@@ -78,6 +79,7 @@ export function ResourceList({enterpriseId, kind, permissions}: {
       knowledge: uiText("集中整理资料，让每个回答有据可依。"),
       data: uiText("连接业务数据，为任务提供所需的信息。")
     })[kind]} actions={<>
+      {kind === "workflow" && canCreate && <WorkflowAssistantButton enterprise={enterpriseId} permissions={permissions}/>}
       {canView && <Button className="icon-button" aria-label={copy.refresh}
                           onClick={() => setRefresh((value) => value + 1)}><IconRefresh size={18}/></Button>}
       {kind === "skill" && canCreate && permissions.includes("skill.import") &&

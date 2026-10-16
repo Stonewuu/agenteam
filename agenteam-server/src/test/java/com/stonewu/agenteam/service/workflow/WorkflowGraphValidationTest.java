@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.stonewu.agenteam.mapper.resource.ResourceJson;
+import com.stonewu.agenteam.mapper.workflow.WorkflowDraftMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolSchemaValidation;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,9 @@ class WorkflowGraphValidationTest {
         var error = reject(merge);
         assertTrue(error.details().containsKey("nodeId"));
         var missing = parallel();
+        ((ObjectNode) missing.at("/nodes/1/config")).putNull("joinNodeId");
+        assertDoesNotThrow(() -> WorkflowInputValidation.validate(missing, false));
+        reject(missing);
         ((ObjectNode) missing.at("/nodes/1/config")).put("joinNodeId", "end");
         reject(missing);
         var escaping = parallel();
@@ -137,9 +142,51 @@ class WorkflowGraphValidationTest {
         return result;
     }
 
+    @Test
+    void validatesLoopBodiesAndRejectsUnboundedCountsNestingAndHiddenBrokenGraphs() {
+        var loop = node("work", "loop", Map.of("mode", "count", "count", 3, "maxIterations", 5, "body", linear()));
+        var flow = graph(List.of(start(), loop, end()), List.of(edge("start", "work"), edge("work", "end")));
+        assertEquals(6, WorkflowNodes.all(flow).size());
+        assertEquals(3, graphs.compile(flow).order().size());
+        ((ObjectNode) loop.path("config")).put("count", 6);
+        reject(graph(List.of(start(), loop, end()), List.of(edge("start", "work"), edge("work", "end"))));
+        var broken = flow.deepCopy();
+        ((ObjectNode) broken.at("/nodes/1/config/body/edges/0")).put("target", "missing");
+        assertEquals("work", reject(broken).details().get("nodeId"));
+        var nested = flow;
+        for (int index = 0; index < 3; index++) {
+            nested = graph(List.of(start(), node("work", "loop", Map.of("mode", "count", "count", 1, "maxIterations", 1, "body", nested)), end()),
+                List.of(edge("start", "work"), edge("work", "end")));
+        }
+        reject(nested);
+    }
+
     private ObjectNode condition(JsonNode condition) {
         return graph(List.of(start(), node("choose", "condition", Map.of("condition", condition)), transform("left"), transform("right"), end()),
             List.of(edge("start", "choose"), edge("choose", "left", "true"), edge("choose", "right", "false"), edge("left", "end"), edge("right", "end")));
+    }
+
+    @Test
+    void visualGroupsPreserveExecutionAndRejectInvalidMembershipWhileAgentDeletionPrunesGroups() {
+        var flow = linear();
+        var group = Map.of("groupId", "group_a", "name", "处理步骤", "nodeIds", List.of("start", "work", "end"));
+        flow.set("groups", json.valueToTree(List.of(group)));
+        WorkflowInputValidation.validate(flow, false);
+        assertEquals(graphs.compile(linear()).order(), graphs.compile(flow).order());
+        for (var members : List.of(List.of("start", "missing"), List.of("work", "work"), List.of("work"))) {
+            var invalid = flow.deepCopy();
+            ((ObjectNode) invalid.at("/groups/0")).set("nodeIds", json.valueToTree(members));
+            assertThrows(ApiException.class, () -> WorkflowInputValidation.validate(invalid, false));
+        }
+        var duplicate = flow.deepCopy();
+        ((ArrayNode) duplicate.path("groups")).add(json.valueToTree(Map.of("groupId", "group_b", "name", "重复成员", "nodeIds", List.of("start", "end"))));
+        assertThrows(ApiException.class, () -> WorkflowInputValidation.validate(duplicate, false));
+        var mapper = new WorkflowDraftMapper(new ResourceJson(json));
+        var removed = mapper.patch(flow, json.valueToTree(List.of(Map.of("action", "remove_node", "id", "work"))));
+        assertEquals(List.of("start", "end"), json.convertValue(removed.at("/groups/0/nodeIds"), List.class));
+        var dissolved = mapper.patch(removed, json.valueToTree(List.of(Map.of("action", "remove_node", "id", "end"))));
+        assertTrue(dissolved.path("groups").isEmpty());
+        assertEquals(3, flow.at("/groups/0/nodeIds").size());
     }
 
     private ObjectNode parallel() {

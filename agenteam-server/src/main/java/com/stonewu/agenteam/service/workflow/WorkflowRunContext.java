@@ -54,6 +54,7 @@ public final class WorkflowRunContext implements AutoCloseable {
     private List<PendingCall> rootCalls;
     private boolean rootCompleted;
     private final Semaphore researchSlots = new Semaphore(2);
+    private final WorkflowNodeSlots nodeSlots = new WorkflowNodeSlots(4);
     private final Map<String, AgentState> live = new LinkedHashMap<>();
     private final Map<String, String> phases = new LinkedHashMap<>();
     private final Map<String, String> owners = new LinkedHashMap<>();
@@ -100,6 +101,10 @@ public final class WorkflowRunContext implements AutoCloseable {
 
     public Semaphore researchSlots() {
         return researchSlots;
+    }
+
+    public WorkflowNodeSlots nodeSlots() {
+        return nodeSlots;
     }
 
     public void requireActive() {

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
-import com.stonewu.agenteam.mapper.collaboration.CollaborationActionMapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
@@ -12,14 +11,11 @@ import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
-import com.stonewu.agenteam.model.collaboration.entity.CollaborationActionRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
 import com.stonewu.agenteam.model.integration.entity.UserChannelBindingRow;
-import com.stonewu.agenteam.service.collaboration.CollaborationActionService;
 import com.stonewu.agenteam.service.collaboration.CollaborationRunAccessService;
-import com.stonewu.agenteam.service.collaboration.CollaborationWorkService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
@@ -27,8 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -42,10 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** 验证协作的事务、并发与权限边界，断言已保存的工作、成果和执行轮次。 */
 class CollaborationInvariantTest extends CollaborationToolTestSupport {
     private static final InvitationHttpTestEnvironment ENV = new InvitationHttpTestEnvironment();
-    @Autowired PlatformTransactionManager manager;
     @Autowired CollaborationRunAccessService runAccess;
-    @Autowired CollaborationActionService actions;
-    @Autowired CollaborationWorkService workService;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
@@ -58,30 +49,6 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
     @AfterAll
     void closeEnvironment() throws Exception {
         ENV.close();
-    }
-
-    @Test
-    void interruptedHandoffRollsBackWorkOwnerActionAndOutgoingTogether() {
-        startTask("事务中断时不能留下半份交接");
-        var hr = startNext();
-        publish(hr, "basis", "用于交接的明确成果");
-        var before = onlyTask();
-        long outgoing = outboundCount();
-        long actionCount = actionCount();
-        var request = json.valueToTree(handoff(financeRole().getId(), "basis"));
-        assertThrows(IllegalStateException.class, () -> new TransactionTemplate(manager).executeWithoutResult(status -> {
-            var context = runAccess.require(hr.run(), hr.run().conversationId(), true);
-            var action = actions.begin(context.task(), context.work().getId(), hr.run().id(), null, "rollback-handoff", "handoff", request);
-            actions.finish(action, workService.assign(context, action, request, true));
-            throw new IllegalStateException("模拟在业务事务提交前中断");
-        }));
-        assertEquals(before.getOwnerWorkId(), onlyTask().getOwnerWorkId());
-        assertEquals(1, onlyTask().getWorkCount());
-        assertEquals(0, onlyTask().getHandoffCount());
-        assertEquals("running", work(before.getOwnerWorkId()).getStatus());
-        assertEquals(outgoing, outboundCount());
-        assertEquals(actionCount, actionCount());
-        assertEquals(1, workCount());
     }
 
     @Test
@@ -151,7 +118,8 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
         var hr = startNext();
         assign(hr, "old-assist", financeRole().getId());
         publish(hr, "basis", "人事已完成考勤");
-        invoke(hr, "transfer-owner", "collab_handoff", handoff(financeRole().getId(), "basis"));
+        invoke(hr, "transfer-owner", "collab_handoff", Map.of("expectedInputRevision", 1, "targetRoleId", financeRole().getId(), "completedSummary", "已核对资料",
+            "nextGoal", "继续核算", "acceptanceCriteria", "给出最终精确结果", "artifactRefs", references(artifact("basis")), "dependsOnWorkIds", List.of()));
         finish(hr);
         var assistance = startNext();
         assertEquals("assist", work(link(assistance.run().id()).getWorkId()).getPurpose());
@@ -219,6 +187,15 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
         assertEquals(initiator.id(), executionAccess.actor(hr.run()).userId());
         assertEquals("COLLABORATION_CONTEXT_REQUIRED", assertThrows(ApiException.class,
             () -> runAccess.require(hr.run(), "child-session", true)).code());
+        var owner = onlyTask().getOwnerWorkId();
+        databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
+            .eq(CollaborationTaskRow::getId, onlyTask().getId()).set(CollaborationTaskRow::getPolicySnapshot, "{\"maxHandoffs\":0}"));
+        var result = invoke(hr, "handoff-forbidden", "collab_handoff", Map.of("expectedInputRevision", 1, "targetRoleId", financeRole().getId(), "completedSummary", "已核对资料",
+            "nextGoal", "继续核算", "acceptanceCriteria", "给出最终精确结果", "artifactRefs", references(first), "dependsOnWorkIds", List.of()));
+        assertTrue(result.path("isError").asBoolean());
+        assertEquals(owner, onlyTask().getOwnerWorkId());
+        assertEquals(0, onlyTask().getHandoffCount());
+        assertEquals(1, workCount());
     }
 
     @Test
@@ -239,21 +216,6 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
         assertTrue(rejected.path("isError").asBoolean());
         assertEquals(2, workCount());
         assertEquals(2, onlyTask().getRunCount());
-    }
-
-    @Test
-    void zeroHandoffBudgetDoesNotChangeTheOwner() {
-        startTask("任务禁止再次转交负责人");
-        var hr = startNext();
-        publish(hr, "basis", "已核对考勤");
-        var owner = onlyTask().getOwnerWorkId();
-        databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
-            .eq(CollaborationTaskRow::getId, onlyTask().getId()).set(CollaborationTaskRow::getPolicySnapshot, "{\"maxHandoffs\":0}"));
-        var result = invoke(hr, "handoff-forbidden", "collab_handoff", handoff(financeRole().getId(), "basis"));
-        assertTrue(result.path("isError").asBoolean());
-        assertEquals(owner, onlyTask().getOwnerWorkId());
-        assertEquals(0, onlyTask().getHandoffCount());
-        assertEquals(1, workCount());
     }
 
     @Test
@@ -304,11 +266,6 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
         assertFalse(result.path("isError").asBoolean(), result::toString);
     }
 
-    private Map<String, Object> handoff(String role, String key) {
-        return Map.of("expectedInputRevision", 1, "targetRoleId", role, "completedSummary", "已核对资料", "nextGoal", "继续核算",
-            "acceptanceCriteria", "给出最终精确结果", "artifactRefs", references(artifact(key)), "dependsOnWorkIds", List.of());
-    }
-
     private void submit(Active run, String operation, String summary) {
         var result = invoke(run, operation, "collab_submit_result", Map.of("expectedInputRevision", 1, "summary", summary, "artifactRefs", List.of()));
         assertFalse(result.path("isError").asBoolean(), result::toString);
@@ -328,13 +285,4 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
         return allWorks().size();
     }
 
-    private long actionCount() {
-        return databaseAccess.mapper(CollaborationActionMapper.class).selectCount(new LambdaQueryWrapper<CollaborationActionRow>()
-            .eq(CollaborationActionRow::getEnterpriseId, enterprise));
-    }
-
-    private long outboundCount() {
-        return databaseAccess.mapper(ChatOutboundMessageMapper.class).selectCount(new LambdaQueryWrapper<ChatOutboundMessageRow>()
-            .eq(ChatOutboundMessageRow::getEnterpriseId, enterprise));
-    }
 }

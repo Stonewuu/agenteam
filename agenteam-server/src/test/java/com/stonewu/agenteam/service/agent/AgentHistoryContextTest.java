@@ -43,21 +43,14 @@ class AgentHistoryContextTest {
         assertTrue(restored.getFirst().getTextContent().contains("合成来源 run-0"));
         assertSame(context.getFirst(), restored.get(240));
         assertSame(context.getLast(), restored.getLast());
-        verify(fixture.messages(), times(3)).history(eq("enterprise"), eq("conversation"), any(), eq(100));
-        verify(fixture.runs(), times(3)).sourceContexts(eq("enterprise"), eq("user"), eq("conversation"), anyList());
+        assertEquals(history.stream().map(MessageView::id).toList(), fixture.restore(List.of()).stream().map(Msg::getId).toList());
+        verify(fixture.messages(), times(6)).history(eq("enterprise"), eq("conversation"), any(), eq(100));
+        verify(fixture.runs(), times(6)).sourceContexts(eq("enterprise"), eq("user"), eq("conversation"), anyList());
         verify(fixture.runs(), never()).find(any(), any(), anyBoolean());
     }
 
     @Test
-    void historyWithoutACheckpointAlsoLoadsAllPagesInChronologicalOrder() {
-        var history = history(250);
-        var fixture = fixture(history);
-        assertEquals(history.stream().map(MessageView::id).toList(), fixture.restore(List.of()).stream().map(Msg::getId).toList());
-        verify(fixture.messages(), times(3)).history(any(), any(), any(), eq(100));
-    }
-
-    @Test
-    void compressedHistoryIsKeptInFullWithoutLoadingTheEarlierRawMessagesAgain() {
+    void completeSavedContextsRemainIntactWithoutLoadingEarlierRawMessages() {
         var context = new ArrayList<Msg>();
         context.add(Msg.builder().name(ConversationCompactor.SUMMARY_MSG_NAME).role(MsgRole.USER)
             .content(TextBlock.builder().text("合成摘要：此前的目标和约束").build()).build());
@@ -67,24 +60,15 @@ class AgentHistoryContextTest {
         var fixture = fixture(history(250));
         assertEquals(context, fixture.restore(context));
         verifyNoInteractions(fixture.messages(), fixture.runs(), fixture.calls());
-    }
-
-    @Test
-    void unknownLegacyInputIdDoesNotCauseGuessingOrDroppingSavedContent() {
-        var fixture = fixture(history(220));
-        var context = List.of(text("unknown-input", MsgRole.USER, "保留已存的合成要求"));
-        assertEquals(context, fixture.restore(context));
+        var unknown = List.of(text("unknown-input", MsgRole.USER, "保留已存的合成要求"));
+        assertEquals(unknown, fixture.restore(unknown));
         verify(fixture.messages(), never()).history(any(), any(), any(), anyInt());
     }
 
     @Test
-    void emptyConversationDoesNotCreateSyntheticHistory() {
-        assertTrue(fixture(List.of()).restore(List.of()).isEmpty());
-    }
-
-    @Test
-    void invalidPaginationCannotRepeatTheSamePageForever() {
+    void emptyHistoryAndInvalidPaginationCannotInventOrRepeatMessages() {
         var fixture = fixture(List.of());
+        assertTrue(fixture.restore(List.of()).isEmpty());
         doReturn(Collections.nCopies(100, view("next-input", "user", "next-run")))
             .when(fixture.messages()).history(any(), any(), any(), anyInt());
         assertThrows(IllegalStateException.class, () -> fixture.restore(List.of()));

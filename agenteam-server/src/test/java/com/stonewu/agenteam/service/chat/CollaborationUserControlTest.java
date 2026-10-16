@@ -43,13 +43,18 @@ class CollaborationUserControlTest extends CollaborationToolTestSupport {
         registry.add("chat.worker-enabled", () -> false);
     }
 
+    @Override
+    protected boolean requiresBusinessTool() {
+        return true;
+    }
+
     @AfterAll
     void closeEnvironment() throws Exception {
         ENV.close();
     }
 
     @Test
-    void businessWriteRequiresTheOriginalOwnersApprovalAndAdministratorCannotTakeOver() throws Exception {
+    void changingRequirementsInvalidatesThePendingBusinessApproval() throws Exception {
         var run = waiting();
         var confirmation = approvals.forRun(enterprise, run.id()).getFirst();
         assertEquals(initiator.id(), confirmation.approverUserId());
@@ -57,12 +62,6 @@ class CollaborationUserControlTest extends CollaborationToolTestSupport {
         mvc.perform(get(base() + "/runs/" + run.id() + "/approvals").cookie(cookie)).andExpect(status().is4xxClientError());
         assertEquals("pending", approvals.find(enterprise, confirmation.id(), false).orElseThrow().status());
         assertEquals(0, count("todo_item"));
-    }
-
-    @Test
-    void changingRequirementsInvalidatesThePendingBusinessApproval() throws Exception {
-        var run = waiting();
-        var confirmation = approvals.forRun(enterprise, run.id()).getFirst();
         var actor = identities.actor(enterprise, initiator.id(), binding.getId());
         var task = onlyTask();
         inputs.append(actor, task.getId(), task.getRevision(), "new-requirements", "改为统计二月，原来的待办不要创建", null);
@@ -80,7 +79,7 @@ class CollaborationUserControlTest extends CollaborationToolTestSupport {
 
     private RunRecord waiting() throws Exception {
         startTask("统计考勤后创建需要原发起人确认的待办");
-        legacyApprovalPolicy();
+        requireBusinessApproval();
         var accepted = dispatch.submit(dispatch.claim("approval-fixture").orElseThrow());
         allowModelCalls = true;
         modelResponse = exchange -> {

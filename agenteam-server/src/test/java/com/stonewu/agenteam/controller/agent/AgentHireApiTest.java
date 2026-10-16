@@ -137,9 +137,16 @@ class AgentHireApiTest {
     @Test
     void repeatedHireAndPersonalStatusChangesReuseOneRelationshipAndUnlistingOnlyPreventsNewHires() throws Exception {
         String agent = employee("automatic");
+        var before = info(agent, member);
+        schemas.validate("Employee", before);
+        assertTrue(before.path("canHire").asBoolean());
+        assertFalse(before.path("canRun").asBoolean());
+        assertFalse(before.toString().contains("instructions"));
+        assertFalse(before.toString().contains("modelProfileId"));
         var hired = data(hire(agent, member).andExpect(status().isOk()).andReturn());
         schemas.validate("HireResult", hired);
         String id = hired.at("/hire/id").asText();
+        assertTrue(info(agent, member).path("canRun").asBoolean());
         int audits = Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise)));
         assertEquals(hired, data(hire(agent, member).andExpect(status().isOk()).andReturn()));
         assertEquals(audits, Math.toIntExact(databaseAccess.mapper(AuditEventSqlMapper.class).selectCount(new LambdaQueryWrapper<AuditEventRow>().eq(AuditEventRow::getEnterpriseId, enterprise))));
@@ -151,6 +158,12 @@ class AgentHireApiTest {
         assertTrue(info(agent, member).path("canResume").asBoolean());
         var resumed = data(write(HttpMethod.PATCH, base() + "/hires/" + id, member, "2", UUID.randomUUID().toString(), Map.of("status", "active")).andExpect(status().isOk()).andReturn());
         assertEquals(id, resumed.path("id").asText());
+        var market = data(mvc.perform(get(base() + "/employees").cookie(member.cookie()).param("tab", "market")).andExpect(status().isOk()).andReturn());
+        assertTrue(market.path("items").isEmpty());
+        var mine = data(mvc.perform(get(base() + "/employees").cookie(member.cookie()).param("tab", "mine")).andExpect(status().isOk()).andReturn());
+        assertEquals(1, mine.path("items").size());
+        assertTrue(mine.at("/items/0/canRun").asBoolean());
+        mvc.perform(get(base() + "/employees/" + agent).cookie(another.cookie())).andExpect(status().isNotFound());
         hire(agent, another).andExpect(status().isNotFound());
         write(HttpMethod.PATCH, base() + "/hires/" + id, member, "3", UUID.randomUUID().toString(), Map.of("status", "terminated")).andExpect(status().isOk());
         write(HttpMethod.PATCH, base() + "/hires/" + id, member, "4", UUID.randomUUID().toString(), Map.of("status", "active")).andExpect(status().isConflict());
@@ -158,6 +171,11 @@ class AgentHireApiTest {
         var hiredAgain = data(hire(agent, member).andExpect(status().isOk()).andReturn());
         assertEquals(id, hiredAgain.at("/hire/id").asText());
         assertEquals("5", hiredAgain.at("/hire/revision").asText());
+        write(HttpMethod.PUT, base() + "/resources/" + agent + "/grants", admin, "4", UUID.randomUUID().toString(), Map.of("grants", List.of())).andExpect(status().isOk());
+        var unavailable = info(agent, member);
+        assertEquals("active", unavailable.path("hireStatus").asText());
+        assertFalse(unavailable.path("canRun").asBoolean());
+        assertFalse(unavailable.path("unavailableReason").isNull());
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(AgentHireSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentHireRow>().eq(AgentHireRow::getEnterpriseId, enterprise))));
     }
 
@@ -278,32 +296,6 @@ class AgentHireApiTest {
             body.put("reason", reason);
         }
         return write(HttpMethod.POST, base() + "/hire-requests/" + id + "/decision", admin, "1", key, body);
-    }
-
-    @Test
-    void marketplaceUsesPublishedInformationAndPersonalRelationsRemainVisibleAfterAccessChanges() throws Exception {
-        String agent = employee("automatic");
-        var before = info(agent, member);
-        schemas.validate("Employee", before);
-        assertTrue(before.path("canHire").asBoolean());
-        assertFalse(before.path("canRun").asBoolean());
-        assertFalse(before.toString().contains("instructions"));
-        assertFalse(before.toString().contains("modelProfileId"));
-        hire(agent, member).andExpect(status().isOk());
-        assertTrue(info(agent, member).path("canRun").asBoolean());
-        write(HttpMethod.PUT, base() + "/agents/" + agent + "/listing", admin, "2", UUID.randomUUID().toString(), Map.of("listed", false, "hirePolicy", "automatic")).andExpect(status().isOk());
-        var market = data(mvc.perform(get(base() + "/employees").cookie(member.cookie()).param("tab", "market")).andExpect(status().isOk()).andReturn());
-        assertTrue(market.path("items").isEmpty());
-        var mine = data(mvc.perform(get(base() + "/employees").cookie(member.cookie()).param("tab", "mine")).andExpect(status().isOk()).andReturn());
-        assertEquals(1, mine.path("items").size());
-        assertTrue(mine.at("/items/0/canRun").asBoolean());
-        var stranger = member();
-        mvc.perform(get(base() + "/employees/" + agent).cookie(stranger.cookie())).andExpect(status().isNotFound());
-        write(HttpMethod.PUT, base() + "/resources/" + agent + "/grants", admin, "3", UUID.randomUUID().toString(), Map.of("grants", List.of())).andExpect(status().isOk());
-        var unavailable = info(agent, member);
-        assertEquals("active", unavailable.path("hireStatus").asText());
-        assertFalse(unavailable.path("canRun").asBoolean());
-        assertFalse(unavailable.path("unavailableReason").isNull());
     }
 
     @Test

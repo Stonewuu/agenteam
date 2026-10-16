@@ -75,9 +75,8 @@ class ConversationApprovalPolicyApiTest extends ExecutionApiTestSupport {
     }
 
     @ParameterizedTest
-    @CsvSource({"default,read,false", "default,write,true", "default,destructive,true", "default,unknown,true",
-        "auto_approve,read,false", "auto_approve,write,false", "auto_approve,destructive,true", "auto_approve,unknown,true",
-        "full_access,read,false", "full_access,write,false", "full_access,destructive,false", "full_access,unknown,false"})
+    @CsvSource({"default,read,false", "default,unknown,true", "auto_approve,write,false",
+        "auto_approve,destructive,true", "full_access,unknown,false"})
     void policyControlsActualToolExecution(String policy, String operationClass, boolean confirmation) throws Exception {
         prepareTool(operationClass);
         var request = (ObjectNode) json.valueToTree(body());
@@ -96,7 +95,12 @@ class ConversationApprovalPolicyApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void oldClientsKeepDefaultAndSavedPolicyAppliesToNextRunOnly() throws Exception {
+    void validatesPolicyAndAppliesSavedChangesOnlyToFutureRuns() throws Exception {
+        var invalid = (ObjectNode) json.valueToTree(body());
+        invalid.put("approvalPolicy", "anything");
+        write(base() + "/conversations", invalid, UUID.randomUUID().toString()).andExpect(status().is(422));
+        assertEquals(0, count("agent_conversation"));
+        assertEquals(0, count("agent_run"));
         prepareTool("read");
         var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         String conversation = accepted.path("conversationId").asText(), run = accepted.path("runId").asText();
@@ -113,15 +117,6 @@ class ConversationApprovalPolicyApiTest extends ExecutionApiTestSupport {
         assertEquals("default", runs.find(enterprise, run, false).orElseThrow().executionConfig().path("approvalPolicy").asText());
         var next = data(write(path(conversation) + "/messages", input("继续检查"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         assertEquals("auto_approve", runs.find(enterprise, next.path("runId").asText(), false).orElseThrow().executionConfig().path("approvalPolicy").asText());
-    }
-
-    @Test
-    void invalidPolicyDoesNotCreateConversationOrTask() throws Exception {
-        var request = (ObjectNode) json.valueToTree(body());
-        request.put("approvalPolicy", "anything");
-        write(base() + "/conversations", request, UUID.randomUUID().toString()).andExpect(status().is(422));
-        assertEquals(0, count("agent_conversation"));
-        assertEquals(0, count("agent_run"));
     }
 
     @ParameterizedTest

@@ -15,14 +15,14 @@ function homeTask(request, options = {}) {
   const calls = [], states = [];
   let cursor = 0, routing = false, pending;
   const action = { busy: false, error: "", mutation: { run: async (path, options) => {
- calls.push({ kind: "request", path, options }); return request(); 
+ calls.push({ kind: "request", path, options }); return request();
 } },
     execute(operation) {
  action.busy = true; pending = operation().catch((error) => {
- action.error = error.message; 
+ action.error = error.message;
 }).finally(() => {
- action.busy = false; 
-}); return pending; 
+ action.busy = false;
+}); return pending;
 } };
   const files = { items: [], fileIds: [], ready: true, clear: () => calls.push({ kind: "clearFiles" }), add: value => calls.push({ kind: "pasteFiles", files: value }) };
   const skills = { selected: [], loading: false, error: "", clear: () => calls.push({ kind: "clearSkills" }) };
@@ -35,11 +35,11 @@ function homeTask(request, options = {}) {
  const index = cursor++; if (!(index in states)) {
 states[index] = typeof initial === "function" ? initial() : initial;
 } return [states[index], (value) => {
- states[index] = typeof value === "function" ? value(states[index]) : value; 
-}]; 
+ states[index] = typeof value === "function" ? value(states[index]) : value;
+}];
 },
     useTransition: () => [routing, (callback) => {
- routing = true; callback(); 
+ routing = true; callback();
 }],
   };
   const modules = {
@@ -82,7 +82,7 @@ return node;
     for (const child of [node.props?.children].flat(Infinity)) {
  const found = visit(type, child); if (found) {
 return found;
-} 
+}
 }
     return null;
   }
@@ -92,10 +92,10 @@ return found;
     type: (value) => find("Textarea").props.onChange({ target: { value }, currentTarget: {}, nativeEvent: {} }),
     paste: event => find("Textarea").props.onPaste(event),
     submit: () => {
- find("form").props.onSubmit({ preventDefault() {} }); return pending; 
+ find("form").props.onSubmit({ preventDefault() {} }); return pending;
 },
     submitWithEnter: () => {
- find("Textarea").props.onKeyDown({ key: "Enter", nativeEvent: {}, preventDefault() {} }); return pending; 
+ find("Textarea").props.onKeyDown({ key: "Enter", nativeEvent: {}, preventDefault() {} }); return pending;
 },
   };
 }
@@ -105,17 +105,17 @@ test("工作台直接粘贴文件会上传，纯文字粘贴与附件禁用不�
   const file = new File(["内容"], "附件.txt");
   let prevented = 0;
   page.paste({ clipboardData: { files: [file], items: [] }, preventDefault() {
- prevented += 1; 
+ prevented += 1;
 } });
   assert.equal(prevented, 1);
   assert.deepEqual(page.calls.filter(call => call.kind === "pasteFiles"), [{ kind: "pasteFiles", files: [file] }]);
   page.paste({ clipboardData: { files: [], items: [{ kind: "string" }] }, preventDefault() {
- prevented += 1; 
+ prevented += 1;
 } });
   assert.equal(prevented, 1);
   const disabled = homeTask(async () => ({}), { employees: [{ agentId: "no-files", name: "仅文字", canRun: true, attachmentsEnabled: false }] });
   disabled.paste({ clipboardData: { files: [file], items: [] }, preventDefault() {
- prevented += 1; 
+ prevented += 1;
 } });
   assert.equal(prevented, 1);
   assert.deepEqual(disabled.calls.filter(call => call.kind === "pasteFiles"), []);
@@ -192,25 +192,15 @@ test("所选项目随首次发送保存，未选择时交给服务端创建", as
   assert.equal(automatic.calls.find((call) => call.kind === "request").options.body.projectId, null);
 });
 
-test("首次发送失败仍保留项目选择和草稿", async () => {
-  const home = homeTask(async () => {
-    throw new Error("本次请求失败");
-  });
-  const project = { id: "project-1", name: "共享报告", directory: "projects/shared" };
-  home.project.selected = project;
-  home.type("继续整理");
-  await home.submit();
-  assert.equal(home.project.selected, project);
-  assert.equal(home.find("Textarea").props.value, "继续整理");
-  assert.equal(home.calls.some((call) => call.kind === "navigate"), false);
-});
-
 test("创建失败不清空草稿和策略，也不开始页面过渡", async () => {
   const home = homeTask(async () => {
- throw new Error("本次请求失败"); 
+ throw new Error("本次请求失败");
 });
+  const project = { id: "project-1", name: "共享报告", directory: "projects/shared" };
+  home.project.selected = project;
   home.selectPolicy("auto_approve"); home.type("保留我的任务");
   await home.submit();
+  assert.equal(home.project.selected, project);
   assert.equal(home.find("Textarea").props.value, "保留我的任务");
   assert.equal(home.find("ConversationApprovalPolicy").props.value, "auto_approve");
   assert.deepEqual(home.calls.map((call) => call.kind), ["request"]);
@@ -220,7 +210,7 @@ test("创建失败不清空草稿和策略，也不开始页面过渡", async ()
 test("请求未返回时不提前清空或导航，导航等待期间继续禁用表单", async () => {
   let accept;
   const home = homeTask(() => new Promise((resolve) => {
- accept = resolve; 
+ accept = resolve;
 }));
   home.type("等待发送的任务");
   const pending = home.submit();

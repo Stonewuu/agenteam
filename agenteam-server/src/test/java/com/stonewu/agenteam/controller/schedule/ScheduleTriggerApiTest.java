@@ -145,10 +145,12 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
         assertEquals(2, Math.toIntExact(databaseAccess.mapper(ScheduleOccurrenceSqlMapper.class).selectCount(new LambdaQueryWrapper<ScheduledOccurrenceRow>().eq(ScheduledOccurrenceRow::getScheduleId, (id)).eq(ScheduledOccurrenceRow::getStatus, "missed"))));
         assertEquals(Timestamp.from(due), DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ScheduleOccurrenceSqlMapper.class).selectList(new LambdaQueryWrapper<ScheduledOccurrenceRow>().select(ScheduledOccurrenceRow::getScheduledFor).eq(ScheduledOccurrenceRow::getScheduleId, (id)).eq(ScheduledOccurrenceRow::getStatus, "queued")).stream().map(fixtureRecord -> (fixtureRecord.getScheduledFor() == null ? null : Timestamp.from(fixtureRecord.getScheduledFor()))).toList()));
         assertTrue(Instant.parse(detail(id).path("nextRunAt").asText()).isAfter(Instant.now()));
+        stop(latest(id).path("runId").asText());
+        expiredOneTimeAndLongUnattendedPlansDoNotRunButFutureMonthlyPlansRemainEnabled();
     }
 
-    @Test
-    void expiredOneTimeAndLongUnattendedPlansDoNotRunButFutureMonthlyPlansRemainEnabled() throws Exception {
+    private void expiredOneTimeAndLongUnattendedPlansDoNotRunButFutureMonthlyPlansRemainEnabled() throws Exception {
+        int runsBefore = count("agent_run");
         Instant due = recentTime().minusSeconds(1200);
         var once = payload(due);
         once.put("frequency", "once");
@@ -174,7 +176,7 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
         process(future);
         assertEquals(next, detail(future).path("nextRunAt").asText());
         assertTrue(detail(future).path("enabled").asBoolean());
-        assertEquals(0, count("agent_run"));
+        assertEquals(runsBefore, count("agent_run"));
         assertFalse(triggers.candidates().stream().anyMatch(item -> item.id().equals(future)));
     }
 
@@ -264,7 +266,9 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
     @Test
     void waitingForApprovalBlocksTheNextOccurrenceAndExpirationReleasesThePlan() throws Exception {
         useApprovalWorkflow();
-        String id = create(payload(recentTime()));
+        // 创建规则和推进到期时间使用同一基准，避免等待人工确认期间跨分钟改变规则对应的时间。
+        Instant due = recentTime();
+        String id = create(payload(due));
         var accepted = manual(id, UUID.randomUUID().toString());
         String run = accepted.path("runId").asText();
         try (var worker = new RunWorker(lifecycle, tasks)) {
@@ -272,7 +276,6 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
             await(() -> runStatus(run).equals("waiting_approval"));
         }
         assertEquals("waiting_approval", latest(id).path("status").asText());
-        Instant due = recentTime();
         makeDue(id, due, due.minusSeconds(1));
         process(id);
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(ScheduleOccurrenceSqlMapper.class).selectCount(new LambdaQueryWrapper<ScheduledOccurrenceRow>().eq(ScheduledOccurrenceRow::getScheduleId, (id)).eq(ScheduledOccurrenceRow::getStatus, "skipped").eq(ScheduledOccurrenceRow::getReasonCode, "SCHEDULE_PREVIOUS_ACTIVE"))));
@@ -301,12 +304,10 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(NotificationSqlMapper.class).selectCount(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getEnterpriseId, (enterprise)).eq(NotificationRow::getCategory, "approval"))));
         assertTrue(databaseAccess.mapper(NotificationSqlMapper.class).selectList(new LambdaQueryWrapper<NotificationRow>().select(NotificationRow::getTitle).eq(NotificationRow::getEnterpriseId, (enterprise))).stream().map(fixtureRecord -> fixtureRecord.getTitle()).toList().stream().allMatch(title -> title.contains("每日整理")));
         assertEquals(List.of(accepted.path("conversationId").asText()), databaseAccess.mapper(NotificationFixtureMapper.class).scheduleTriggerApiWaitingForApprovalBlocksTheNextOccurrenceAndExpirationReleasesThePlanList10(enterprise));
+        finishApprovedOccurrence(id);
     }
 
-    @Test
-    void approvalDecisionQueuesTheSameOccurrenceAndKeepsAUserPausedPlanPaused() throws Exception {
-        useApprovalWorkflow();
-        String id = create(payload(recentTime()));
+    private void finishApprovedOccurrence(String id) throws Exception {
         var accepted = manual(id, UUID.randomUUID().toString());
         String run = accepted.path("runId").asText();
         try (var worker = new RunWorker(lifecycle, tasks)) {
@@ -326,8 +327,8 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
         assertEquals("completed", latest(id).path("status").asText());
         assertFalse(detail(id).path("enabled").asBoolean());
         assertTrue(detail(id).path("nextRunAt").isNull());
-        assertEquals(1, count("run_attempt"));
-        assertEquals(1, count("scheduled_occurrence"));
+        assertEquals(2, count("run_attempt"));
+        assertEquals(3, count("scheduled_occurrence"));
         assertEquals(0, reserved());
     }
 

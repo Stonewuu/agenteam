@@ -28,7 +28,10 @@ class ToolResultServiceTest {
     @Test
     void returnsTwentyThreeKbWithoutFilesOrReferences() {
         String text = "a".repeat(23 * 1024);
-        var result = results.prepare(run, binding("plugin", "read_url"), json.tree(Map.of("content", text)), List.of(), "call-id", settings.inlineBytes(256000));
+        var source = json.tree(Map.of("content", text, "sourceResultIds", List.of("original"),
+            "inputFileIds", List.of("input"), "workspaceVersion", "version"));
+        var result = results.prepare(run, binding("plugin", "read_url"), source, List.of(), "call-id", settings.inlineBytes(256000));
+        assertEquals(source, result.modelResult());
         assertEquals(text, result.modelResult().path("content").asText());
         assertFalse(result.modelResult().has(ToolResultContent.REFERENCE));
         assertNull(result.file());
@@ -73,18 +76,17 @@ class ToolResultServiceTest {
 
     @Test
     void boundsCombinedOutputsIncludingJsonEscapesAndReferences() {
-        int calls = 100, maximum = ToolResultBudget.perCall(settings, 256000, calls), total = 0;
         var source = json.tree(Map.of("content", "\u0001\"文🙂".repeat(3000), "url", "https://example.test/" + "x".repeat(2000)));
-        for (int index = 0; index < calls; index++) {
-            var result = results.prepare(run, binding("plugin", "read_url"), source, List.of(), "call-" + index, maximum);
+        for (int calls : List.of(1, 2, 100)) {
+            int maximum = ToolResultBudget.perCall(settings, 256000, calls);
+            var result = results.prepare(run, binding("plugin", "read_url"), source, List.of(), "a".repeat(36), maximum);
             int size = Utf8Text.size(result.modelResult().toString());
             assertTrue(size <= maximum, "序列化后的完整结构不能超过分配大小");
             assertTrue(result.modelResult().path("path").asText().startsWith("tool-results/"));
             assertEquals(source, result.redacted());
             assertNull(result.file());
-            total += size;
+            assertTrue((long) size * calls <= 64 * 1024);
         }
-        assertTrue(total <= 64 * 1024);
     }
 
     @Test
@@ -109,13 +111,5 @@ class ToolResultServiceTest {
         return new ExecutionToolBinding("resource", "version", kind, "资料", null, definition, json.tree(Map.of()));
     }
 
-    @Test
-    void readResultsStayAvailableWithoutAddingHistoryReferences() {
-        var stored = json.tree(Map.of("content", "资料🙂".repeat(900), "sourceResultIds", List.of("original"), "inputFileIds", List.of("input"), "workspaceVersion", "version"));
-        var prepared = results.prepare(run, binding("plugin", "read_url"), stored, List.of(), "read-call", 32768);
-        assertEquals(stored, prepared.modelResult());
-        assertFalse(prepared.modelResult().has(ToolResultContent.REFERENCE));
-        assertNull(prepared.file());
-        assertEquals(stored, prepared.redacted());
-    }
+
 }

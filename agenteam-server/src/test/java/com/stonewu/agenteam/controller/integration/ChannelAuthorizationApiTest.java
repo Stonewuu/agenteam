@@ -86,9 +86,15 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
     }
 
     @BeforeEach
-    void configureConnection() throws Exception {
+    void prepareAuthorization() throws Exception {
         PLATFORM.reset();
         reviews.clear();
+        connection = null;
+        loginKey = null;
+        member = member();
+    }
+
+    private void configureConnection() throws Exception {
         var result = data(write(base() + "/integrations", Map.of("providerCode", "feishu", "name", "授权测试飞书",
             "externalAppId", "cli_" + key().replace("-", ""), "secret", "test-auth-secret",
             "bindingEnabled", true, "loginEnabled", true, "messagingEnabled", true), key()).andExpect(status().isCreated()).andReturn());
@@ -100,7 +106,6 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         PLATFORM.take();
         change(HttpMethod.PATCH, base() + "/integrations/" + connection + "/status", Map.of("status", "enabled"), "2", key()).andExpect(status().isOk());
         loginKey = databaseAccess.mapper(EnterpriseIntegrationMapper.class).selectById(connection).getPublicLoginKey();
-        member = member();
     }
 
     @Test
@@ -113,6 +118,11 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         var pending = flow(state);
         assertNotEquals(state, pending.getStateHash());
         assertFalse(pending.getTransientEncryptedJson().contains(state));
+        var otherBrowser = anonymous();
+        rawCallback(otherBrowser, connection, state).andExpect(status().isSeeOther());
+        assertEquals("pending", flow(state).getStatus());
+        rawCallback(member, key(), state).andExpect(status().isSeeOther());
+        assertEquals(0, PLATFORM.remainingRequests());
         queueIdentity();
         rawCallback(member, connection, state).andExpect(status().isSeeOther());
         PLATFORM.take();
@@ -132,10 +142,15 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         schemas.validate("ChannelAuthorizationReview", review);
         assertEquals("ou_test_member", review.path("externalSubjectId").asText());
         assertEquals(enterprise, review.path("enterpriseId").asText());
+        assertTrue(review.path("chatAvailable").asBoolean());
         String requestKey = key();
-        var bound = data(confirm(member, requestKey).andExpect(status().isCreated()).andReturn());
+        var confirmation = Map.of("authorizationId", reviews.get(member.cookie().getValue()), "receiveEnabled", false,
+            "externalLoginEnabled", false, "chatEnabled", true);
+        var bound = data(writeAs(member, HttpMethod.POST, channels() + "/confirm", confirmation, null, requestKey).andExpect(status().isCreated()).andReturn());
         schemas.validate("ChannelBinding", bound);
-        assertEquals(bound, data(confirm(member, requestKey).andExpect(status().isCreated()).andReturn()));
+        assertTrue(bound.path("chatEnabled").asBoolean());
+        assertFalse(bound.path("externalLoginEnabled").asBoolean());
+        assertEquals(bound, data(writeAs(member, HttpMethod.POST, channels() + "/confirm", confirmation, null, requestKey).andExpect(status().isCreated()).andReturn()));
         assertEquals(1, countBindings());
         var consumed = flow(state);
         assertEquals("consumed", consumed.getStatus());
@@ -143,34 +158,14 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         assertNull(consumed.getConfirmationTokenHash());
         assertFalse(bound.toString().contains("test-auth-secret"));
         confirm(member, key()).andExpect(status().isConflict());
-    }
-
-    @Test
-    void confirmationCanAuthorizeChatTogetherWithTheAccountBinding() throws Exception {
-        callback(member, state(begin(member)));
-        var review = data(mvc.perform(get("/api/v1/auth/channel-authorization").cookie(member.cookie())).andExpect(status().isOk()).andReturn());
-        assertTrue(review.path("chatAvailable").asBoolean());
-        var bound = data(writeAs(member, HttpMethod.POST, channels() + "/confirm",
-            Map.of("authorizationId", reviews.get(member.cookie().getValue()), "receiveEnabled", false,
-                "externalLoginEnabled", false, "chatEnabled", true), null, key()).andExpect(status().isCreated()).andReturn());
-        assertTrue(bound.path("chatEnabled").asBoolean());
-        assertFalse(bound.path("externalLoginEnabled").asBoolean());
-    }
-
-    @Test
-    void wrongBrowserWrongConnectionAndReplayCannotUseAuthorizationCode() throws Exception {
-        String state = state(begin(member));
-        var other = anonymous();
-        rawCallback(other, connection, state).andExpect(status().isSeeOther());
-        assertEquals("pending", flow(state).getStatus());
-        rawCallback(member, key(), state).andExpect(status().isSeeOther());
-        assertEquals(0, PLATFORM.remainingRequests());
-        callback(member, state);
-        confirm(member, key()).andExpect(status().isCreated());
         rawCallback(member, connection, state).andExpect(status().isSeeOther());
         assertEquals(1, countBindings());
         assertEquals(0, PLATFORM.remainingRequests());
     }
+
+
+
+
 
     @Test
     void expiredStateAndChangedConfigurationAreRejectedBeforeNetworkCalls() throws Exception {
@@ -185,16 +180,10 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         rawCallback(member, connection, next).andExpect(status().isSeeOther());
         assertEquals(0, PLATFORM.remainingRequests());
         assertEquals(0, countBindings());
+        rejectChangedBrowserAccount();
     }
 
-    @Test
-    void switchedAccountCannotCompletePreviousUsersBinding() throws Exception {
-        String state = state(begin(member));
-        var loggedIn = login(member, "execution-submission-admin", "执行提交测试所使用的独立完整口令");
-        rawCallback(loggedIn, connection, state).andExpect(status().isSeeOther());
-        assertEquals(0, PLATFORM.remainingRequests());
-        assertEquals(0, countBindings());
-    }
+
 
     @Test
     void wrongExternalTenantAndDeclinedAuthorizationDoNotCreateBinding() throws Exception {
@@ -227,8 +216,10 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         assertEquals(1, countBindings());
     }
 
+
+
     @Test
-    void expiredConfirmationCannotCreateBinding() throws Exception {
+    void anotherTabsCallbackCannotReplaceTheIdentityShownOnConfirmationPage() throws Exception {
         String state = state(begin(member));
         callback(member, state);
         databaseAccess.mapper(ChannelOauthSessionMapper.class).update(new LambdaUpdateWrapper<ChannelOauthSessionRow>()
@@ -236,10 +227,6 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
             .set(ChannelOauthSessionRow::getConfirmationExpiresAt, Instant.now().minusSeconds(1)));
         confirm(member, key()).andExpect(status().isConflict());
         assertEquals(0, countBindings());
-    }
-
-    @Test
-    void anotherTabsCallbackCannotReplaceTheIdentityShownOnConfirmationPage() throws Exception {
         callback(member, state(begin(member)));
         String shown = reviews.get(member.cookie().getValue());
         callback(member, state(begin(member)));
@@ -271,28 +258,13 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         var rebound = bind(member);
         assertNotEquals(bound.path("id").asText(), rebound.path("id").asText());
         assertEquals(2, countBindings());
+        verifyLoginToggleRevokesSession();
+        verifyLocalReauthentication();
     }
 
-    @Test
-    void disablingThenReenablingLoginDoesNotReviveExistingExternalSession() throws Exception {
-        bind(member);
-        var external = externalLogin();
-        change(HttpMethod.PATCH, base() + "/integrations/" + connection, Map.of("loginEnabled", false), "3", key()).andExpect(status().isOk());
-        change(HttpMethod.PATCH, base() + "/integrations/" + connection, Map.of("loginEnabled", true), "4", key()).andExpect(status().isOk());
-        mvc.perform(get("/api/v1/auth/me").cookie(external.cookie())).andExpect(status().isUnauthorized());
-    }
 
-    @Test
-    void localReauthenticationRotatesSessionAndRestoresGlobalAccess() throws Exception {
-        bind(member);
-        var external = externalLogin();
-        writeAs(external, HttpMethod.POST, "/api/v1/auth/reauthenticate", Map.of("password", "错误密码"), null, key())
-            .andExpect(status().isUnprocessableEntity());
-        var response = writeAs(external, HttpMethod.POST, "/api/v1/auth/reauthenticate", Map.of("password", "channel-member-password"), null, key())
-            .andExpect(status().isOk()).andReturn();
-        assertNotEquals(external.cookie().getValue(), response.getResponse().getCookie("SESSION").getValue());
-        assertEquals("password", data(response).path("authenticationMethod").asText());
-    }
+
+
 
     @Test
     void superAdministratorCanReceiveButCannotEnableExternalLogin() throws Exception {
@@ -342,6 +314,31 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
             .andExpect(status().isOk()).andReturn()).path("authenticationMethod").asText());
     }
 
+    private void rejectChangedBrowserAccount() throws Exception {
+        String state = state(begin(member));
+        var loggedIn = login(member, "execution-submission-admin", "执行提交测试所使用的独立完整口令");
+        rawCallback(loggedIn, connection, state).andExpect(status().isSeeOther());
+        assertEquals(0, PLATFORM.remainingRequests());
+        assertEquals(0, countBindings());
+    }
+
+    private void verifyLoginToggleRevokesSession() throws Exception {
+        var external = externalLogin();
+        change(HttpMethod.PATCH, base() + "/integrations/" + connection, Map.of("loginEnabled", false), "3", key()).andExpect(status().isOk());
+        change(HttpMethod.PATCH, base() + "/integrations/" + connection, Map.of("loginEnabled", true), "4", key()).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/auth/me").cookie(external.cookie())).andExpect(status().isUnauthorized());
+    }
+
+    private void verifyLocalReauthentication() throws Exception {
+        var external = externalLogin();
+        writeAs(external, HttpMethod.POST, "/api/v1/auth/reauthenticate", Map.of("password", "错误密码"), null, key())
+            .andExpect(status().isUnprocessableEntity());
+        var response = writeAs(external, HttpMethod.POST, "/api/v1/auth/reauthenticate", Map.of("password", "channel-member-password"), null, key())
+            .andExpect(status().isOk()).andReturn();
+        assertNotEquals(external.cookie().getValue(), response.getResponse().getCookie("SESSION").getValue());
+        assertEquals("password", data(response).path("authenticationMethod").asText());
+    }
+
     private JsonNode bind(Browser browser) throws Exception {
         callback(browser, state(begin(browser)));
         return data(confirm(browser, key()).andExpect(status().isCreated()).andReturn());
@@ -359,6 +356,9 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
     }
 
     private JsonNode begin(Browser browser) throws Exception {
+        if (connection == null) {
+            configureConnection();
+        }
         return data(writeAs(browser, HttpMethod.POST, channels() + "/" + connection + "/authorize",
             Map.of("embeddedClient", false), null, key()).andExpect(status().isOk()).andReturn());
     }

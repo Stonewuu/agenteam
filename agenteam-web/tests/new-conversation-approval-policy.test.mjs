@@ -4,10 +4,14 @@ import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 
+const compiledHooks = new Map();
 function loadHook(file, scope, modules) {
-  const source = readFileSync(new URL(`../src/features/agent/hooks/${file}.ts`, import.meta.url), "utf8");
+  if (!compiledHooks.has(file)) {
+    const source = readFileSync(new URL(`../src/features/agent/hooks/${file}.ts`, import.meta.url), "utf8");
+    compiledHooks.set(file, ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText);
+  }
   const exports = {};
-  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
+  vm.runInNewContext(compiledHooks.get(file),
     { ...scope, exports, require: (name) => modules[name] });
   return exports;
 }

@@ -103,7 +103,7 @@ class ChatGroupActivationTest extends CollaborationApiTestSupport {
         var current = conversation();
         var view = conversations.update(users.findById(admin).orElseThrow(), enterprise, false, current.getId(),
             new ChatConversationUpdateRequest(current.getRevision(), status, List.of(bot.getId()), "single_bot",
-                bot.getId(), bot.getId(), "mention", "summary_link", Map.of()));
+                bot.getId(), bot.getId(), "mention", "summary_link", Map.of("maxRuns", 40)));
         assertFalse(view.limits().containsKey("automaticBotSetup"));
         join(bot, "joined-again", Instant.now().minusSeconds(1));
         String receipt = ingress.accept(enterprise, bot.getId(), 1L, message("stopped-message", "stopped-message", "user", "不能恢复的正文"));
@@ -112,6 +112,19 @@ class ChatGroupActivationTest extends CollaborationApiTestSupport {
         assertEquals("ignored", receipts().selectById(receipt).getStatus());
         assertFalse(cipher.decrypt(enterprise, "receipt", receipt, receipts().selectById(receipt).getPayloadEncrypted()).toString().contains("不能恢复的正文"));
         assertEquals(0, taskCount());
+        if (status.equals("disabled")) {
+            var member = conversations.member(enterprise, current.getId(), bot.getId());
+            assertTrue(member.getCollaborationEnabled());
+            assertFalse(member.getReceiveEnabled());
+            assertFalse(member.getSendEnabled());
+            assertEquals(40, view.limits().get("maxRuns"));
+            var resumed = conversations.update(users.findById(admin).orElseThrow(), enterprise, false, current.getId(),
+                new ChatConversationUpdateRequest(view.revision(), "enabled", List.of(bot.getId()), "single_bot",
+                    bot.getId(), bot.getId(), "mention", "summary_link", Map.of("maxRuns", (Integer) view.limits().get("maxRuns"))));
+            assertEquals("enabled", resumed.status());
+            assertEquals("summary_link", resumed.resultPolicy());
+            assertEquals(40, resumed.limits().get("maxRuns"));
+        }
     }
 
     @Test
@@ -255,19 +268,4 @@ class ChatGroupActivationTest extends CollaborationApiTestSupport {
             .set(ChatBotBindingRow::getCapabilitiesJson, value.toString()));
     }
 
-    @Test
-    void pausingGroupRetainsRolesAndPolicyForResuming() {
-        var input = new ChatConversationUpdateRequest(1L, "disabled", List.of(bot.getId()), "single_bot", bot.getId(), bot.getId(), "mention",
-            "summary_link", Map.of("maxRuns", 40));
-        var paused = conversations.update(users.findById(admin).orElseThrow(), enterprise, false, group.getId(), input);
-        assertEquals("disabled", paused.status());
-        var member = conversations.member(enterprise, group.getId(), bot.getId());
-        assertTrue(member.getCollaborationEnabled());
-        assertFalse(member.getReceiveEnabled());
-        assertFalse(member.getSendEnabled());
-        var resumed = conversations.update(users.findById(admin).orElseThrow(), enterprise, false, group.getId(),
-            new ChatConversationUpdateRequest(paused.revision(), "enabled", List.of(bot.getId()), "single_bot", bot.getId(), bot.getId(), "mention",
-                "summary_link", Map.of("maxRuns", 40)));
-        assertEquals("enabled", resumed.status());
-    }
 }

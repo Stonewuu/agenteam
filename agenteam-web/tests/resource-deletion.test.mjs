@@ -15,11 +15,16 @@ vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/features/reso
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, { exports: display, require: () => ({}) });
 
+const compiledComponents = new Map();
 function component(file, values, feature = "resource") {
-  const source = readFileSync(new URL(`../src/features/${feature}/components/${file}`, import.meta.url), "utf8");
-  const compiled = ts.transpileModule(source, { compilerOptions: {
-    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
-  } }).outputText;
+  const path = `${feature}/${file}`;
+  if (!compiledComponents.has(path)) {
+    const source = readFileSync(new URL(`../src/features/${feature}/components/${file}`, import.meta.url), "utf8");
+    compiledComponents.set(path, ts.transpileModule(source, { compilerOptions: {
+      module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
+    } }).outputText);
+  }
+  const compiled = compiledComponents.get(path);
   const exports = {};
   const wrapper = (tag) => function Wrapper({ children, ...props }) {
     return React.createElement(tag, props, children);

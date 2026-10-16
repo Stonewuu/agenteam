@@ -32,8 +32,6 @@ import io.agentscope.core.state.ToolContextState;
 import io.agentscope.harness.agent.memory.compaction.ConversationCompactor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;
@@ -53,44 +51,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/** 验证真实加密状态在换轮时完整保留用户要求与工具结果，不受旧历史条数设置影响。 */
+/** 验证换轮后的加密状态和实际模型请求完整保留用户要求、工具结果与摘要。 */
 class AgentHistoryRestorationTest {
     @TempDir
     Path directory;
 
     @Test
-    void longToolRoundIsRetainedWhenInternalMessagesExceedHistoryLimit() {
-        var context = longRound("previous-input", 30);
-        var fixture = fixture(context, 20, List.of());
-        fixture.factory().initializeHistory(fixture.next(), fixture.target());
-        var saved = fixture.target().get("user", "conversation", "agent_state", AgentState.class);
-        assertTrue(saved.isPresent(), "长工具循环不能让上一轮历史变成空列表");
-        assertEquals(context.stream().map(Msg::getId).toList(), saved.orElseThrow().getContext().stream().map(Msg::getId).toList());
-        assertEquals(30, saved.orElseThrow().getContext().stream().filter(message -> message.getRole() == MsgRole.TOOL).count());
-    }
-
-    @Test
-    void recordedEarlierTurnsRepairAFormerlyTruncatedCheckpointWithoutRepeatingTheRetainedTurn() {
+    void recordedEarlierTurnsCompleteTheSavedContextWithoutRepeatingTheRetainedTurn() {
         var recent = List.of(text("recent-input", MsgRole.USER, "继续核对文件"), text("recent-answer", MsgRole.ASSISTANT, "已核对最新文件"));
         var history = List.of(view("old-input", "user", "合成要求：交付包含三张表"), view("old-answer", "assistant", "合成结果：考勤已统计"),
             view("recent-input", "user", "继续核对文件"), view("recent-output", "assistant", "已核对最新文件"));
-        var fixture = fixture(recent, 20, history);
+        var fixture = fixture(recent, history);
         fixture.factory().initializeHistory(fixture.next(), fixture.target());
         var saved = fixture.target().get("user", "conversation", "agent_state", AgentState.class).orElseThrow();
         assertEquals(List.of("old-input", "old-answer", "recent-input", "recent-answer"), saved.getContext().stream().map(Msg::getId).toList());
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {-1, 0, 1, 20, 100})
-    void legacyHistorySettingsNeverDiscardSavedTurns(int legacyLimit) {
-        var context = new ArrayList<Msg>();
-        for (int turn = 0; turn < 120; turn++) {
-            context.addAll(longRound("input-" + turn, 1));
-        }
-        var fixture = fixture(context, legacyLimit, List.of());
-        fixture.factory().initializeHistory(fixture.next(), fixture.target());
-        var saved = fixture.target().get("user", "conversation", "agent_state", AgentState.class).orElseThrow();
-        assertEquals(context.stream().map(Msg::getId).toList(), saved.getContext().stream().map(Msg::getId).toList());
     }
 
     @Test
@@ -98,7 +72,7 @@ class AgentHistoryRestorationTest {
         var context = longRound("summary", 30);
         context.set(0, Msg.builder().id("summary").name(ConversationCompactor.SUMMARY_MSG_NAME).role(MsgRole.USER)
             .content(TextBlock.builder().text("合成摘要：保留交付目标及既有约束").build()).build());
-        var fixture = fixture(context, 20, List.of(view("old-input", "user", "压缩前的旧正文")));
+        var fixture = fixture(context, List.of(view("old-input", "user", "压缩前的旧正文")));
         fixture.factory().initializeHistory(fixture.next(), fixture.target());
         var saved = fixture.target().get("user", "conversation", "agent_state", AgentState.class).orElseThrow();
         assertEquals(context.stream().map(Msg::getId).toList(), saved.getContext().stream().map(Msg::getId).toList());
@@ -107,7 +81,15 @@ class AgentHistoryRestorationTest {
 
     @Test
     void nextModelRequestActuallyReceivesTheEarlierRequirementsAndToolResults() {
-        var fixture = fixture(longRound("previous-input", 30), 20, List.of());
+        var context = new ArrayList<Msg>();
+        for (int turn = 0; turn < 120; turn++) {
+            context.addAll(longRound("input-" + turn, 1));
+        }
+        context.addAll(longRound("previous-input", 30));
+        var fixture = fixture(context, List.of());
+        fixture.factory().initializeHistory(fixture.next(), fixture.target());
+        var saved = fixture.target().get("user", "conversation", "agent_state", AgentState.class).orElseThrow();
+        assertEquals(context.stream().map(Msg::getId).toList(), saved.getContext().stream().map(Msg::getId).toList());
         var now = Instant.now();
         var lease = new JobLease("job", "enterprise", "user", "next", "worker", 1, now.plusSeconds(30));
         try (var execution = fixture.factory().create(fixture.next(), lease)) {
@@ -118,18 +100,15 @@ class AgentHistoryRestorationTest {
         var input = fixture.requests().getFirst();
         assertTrue(input.stream().anyMatch(message -> "previous-input".equals(message.getId())
             && message.getTextContent().contains("保留工资与考勤的核对依据")));
-        assertEquals(30, input.stream().filter(message -> message.getRole() == MsgRole.TOOL).count());
+        assertEquals(150, input.stream().filter(message -> message.getRole() == MsgRole.TOOL).count());
         assertTrue(input.stream().anyMatch(message -> "next-input".equals(message.getId())));
     }
 
-    private Fixture fixture(List<Msg> context, int limit, List<MessageView> history) {
+    private Fixture fixture(List<Msg> context, List<MessageView> history) {
         var json = new ObjectMapper();
         var config = json.createObjectNode().put("agentId", "employee").put("name", "历史验证员工");
         config.putObject("config").put("agentType", "chat")
             .put("modelProfileId", "model").put("maxSteps", 2).put("timeoutSeconds", 30).put("instructions", "只处理合成测试数据");
-        if (limit >= 0) {
-            config.withObject("config").put("historyMessageLimit", limit);
-        }
         config.putArray("dependencies");
         var now = Instant.parse("2026-10-14T10:00:00Z");
         var previous = new RunRecord("previous", "enterprise", "conversation", "user", "previous-input", "previous-output", "version",

@@ -102,26 +102,7 @@ class QueryableToolRecoveryApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void unknownQueryResultCannotCauseAnotherWriteOrManualRetry() throws Exception {
-        var accepted = waiting("unknown", 10);
-        String run = accepted.path("runId").asText();
-        approve(run);
-        try (var worker = new RunWorker(lifecycle, tasks)) {
-            worker.poll();
-            await(() -> terminal(run));
-        }
-        assertEquals("completed", state(run));
-        assertCall(run, "unknown", 1, 1);
-        write(base() + "/runs/" + run + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
-        try (var restarted = new RunWorker(lifecycle, tasks)) {
-            restarted.poll();
-        }
-        assertEquals(1, REMOTE.writes.get());
-        assertEquals(1, REMOTE.queries.get());
-    }
-
-    @Test
-    void uncertainWriteIsReturnedToTheModelAndDuplicateSubmissionIsBlocked() throws Exception {
+    void uncertainResultsRemainVisibleWithoutDuplicateWritesOrManualRetries() throws Exception {
         var accepted = waiting("unknown", 10);
         String run = accepted.path("runId").asText();
         var turn = new AtomicInteger();
@@ -150,6 +131,18 @@ class QueryableToolRecoveryApiTest extends ExecutionApiTestSupport {
         assertEquals(2, calls.size());
         assertTrue(calls.stream().allMatch(call -> "TOOL_RESULT_UNKNOWN".equals(call.getErrorCode())));
         assertEquals(1, count("run_approval"), "不确定的同参写入不能再次申请确认或发送");
+        var original = calls.stream().filter(call -> call.getFrameworkCallId().equals("queryable-call"))
+            .findFirst().orElseThrow();
+        assertEquals("unknown", original.getStatus());
+        assertEquals(1, original.getAttemptCount());
+        assertEquals(1, original.getQueryCount());
+        assertNotNull(original.getLastQueryAt());
+        write(base() + "/runs/" + run + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
+        try (var restarted = new RunWorker(lifecycle, tasks)) {
+            restarted.poll();
+        }
+        assertEquals(1, REMOTE.writes.get());
+        assertEquals(1, REMOTE.queries.get());
     }
 
     @Test
@@ -279,19 +272,14 @@ class QueryableToolRecoveryApiTest extends ExecutionApiTestSupport {
     }
 
     private void assertCall(String run, String status, int attempts, int queries) {
-        var call = DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ToolCallSqlMapper.class).selectMaps(new LambdaQueryWrapper<ToolCallRow>().select(ToolCallRow::getStatus, ToolCallRow::getAttemptCount, ToolCallRow::getQueryCount, ToolCallRow::getLastQueryAt).eq(ToolCallRow::getRunId, (run))).stream().map(fixtureValues -> {
-            Map<String, Object> fixtureRow = new LinkedCaseInsensitiveMap<>();
-            fixtureRow.put("status", fixtureValues.get("status"));
-            fixtureRow.put("attempt_count", fixtureValues.get("attempt_count"));
-            fixtureRow.put("query_count", fixtureValues.get("query_count"));
-            fixtureRow.put("last_query_at", fixtureValues.get("last_query_at"));
-            return fixtureRow;
-        }).toList());
-        assertEquals(status, call.get("status"));
-        assertEquals(attempts, ((Number) call.get("attempt_count")).intValue());
-        assertEquals(queries, ((Number) call.get("query_count")).intValue());
+        var call = databaseAccess.mapper(ToolCallSqlMapper.class).selectOne(new LambdaQueryWrapper<ToolCallRow>()
+            .eq(ToolCallRow::getRunId, run));
+        assertNotNull(call);
+        assertEquals(status, call.getStatus());
+        assertEquals(attempts, call.getAttemptCount());
+        assertEquals(queries, call.getQueryCount());
         if (queries > 0) {
-            assertNotNull(call.get("last_query_at"));
+            assertNotNull(call.getLastQueryAt());
         }
     }
 

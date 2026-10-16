@@ -113,13 +113,13 @@ public class BuiltinPluginResourceService {
         String icon = switch (adapter.code()) {
             case "platform_basics" -> "Library";
             case "todo_management" -> "NotebookPen";
-            case "schedule_management" -> "GitBranch";
+            case "schedule_management", "workflow_management" -> "GitBranch";
             case "web_read" -> "Telescope";
             default -> "Box";
         };
         String color = switch (adapter.code()) {
             case "todo_management" -> "mint";
-            case "schedule_management" -> "blue";
+            case "schedule_management", "workflow_management" -> "blue";
             case "web_read" -> "amber";
             default -> "purple";
         };

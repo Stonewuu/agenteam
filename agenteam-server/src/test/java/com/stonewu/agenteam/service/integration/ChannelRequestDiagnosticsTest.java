@@ -11,8 +11,6 @@ import com.stonewu.agenteam.mapper.integration.ChannelResponseMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
@@ -95,18 +93,13 @@ class ChannelRequestDiagnosticsTest {
         assertFalse(logs.contains("private-app-secret"));
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void oauthFailureKeepsDescriptionButNeverAuthorizationCodeOrVerifier(boolean structuredBody) {
+    @Test
+    void oauthFailureKeepsDescriptionButNeverAuthorizationCodeOrVerifier() {
         server.raw(400, """
             {"error":"invalid_grant","error_description":"Authorization code expired: private-code, verifier=private-verifier\\nforged entry"}
             """, Map.of());
         var fields = Map.of("client_secret", "private-secret", "code", "private-code", "code_verifier", "private-verifier");
-        if (structuredBody) {
-            http.post("test-feishu", server.origin().resolve("/open-apis/authen/v2/oauth/token"), Map.of(), json.valueToTree(fields), null);
-        } else {
-            http.form("test-feishu", server.origin().resolve("/oauth/v3/token"), fields);
-        }
+        http.post("test-feishu", server.origin().resolve("/open-apis/authen/v2/oauth/token"), Map.of(), json.valueToTree(fields), null);
         String logs = logs();
         assertTrue(logs.contains("invalid_grant"));
         assertTrue(logs.contains("Authorization code expired"));

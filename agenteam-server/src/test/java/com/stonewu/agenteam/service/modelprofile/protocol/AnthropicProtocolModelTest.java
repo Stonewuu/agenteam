@@ -72,6 +72,9 @@ class AnthropicProtocolModelTest {
         server.setExecutor(workers);
         server.createContext("/v1/messages", exchange -> {
             try (exchange) {
+                assertEquals("POST", exchange.getRequestMethod());
+                assertEquals("/v1/messages", exchange.getRequestURI().getPath());
+                assertEquals("test-key", exchange.getRequestHeaders().getFirst("x-api-key"));
                 requests.add(json.readTree(exchange.getRequestBody()));
                 String reply = replies.poll();
                 byte[] data = (reply == null ? "" : reply).getBytes(StandardCharsets.UTF_8);
@@ -93,7 +96,7 @@ class AnthropicProtocolModelTest {
     @Test
     void signedThinkingAndParallelToolsSurviveEncryptedStateReopening() throws Exception {
         replies.add(thinkingAndTools());
-        replies.add(textReply("完成两个工具", true));
+        replies.add(textReply("完成两个工具", false));
         var toolkit = new Toolkit();
         var echo = new EchoTool();
         toolkit.registerTool(echo);
@@ -137,26 +140,21 @@ class AnthropicProtocolModelTest {
                 assertFalse(Files.readString(file).contains("准备"));
             }
         }
+        var uncached = usages.getLast().snapshot();
+        assertEquals("complete", uncached.status());
+        assertEquals(42L, uncached.usage().inputTokens());
+        assertEquals(42L, uncached.usage().uncachedInputTokens());
+        assertNull(uncached.usage().cacheReadTokens());
+        assertNull(uncached.usage().cacheWriteTokens());
+        assertEquals("not_applicable", uncached.usage().fieldStates().get("cache_read"));
+        assertEquals("not_applicable", uncached.usage().fieldStates().get("cache_write"));
+        assertEquals(6L, uncached.usage().outputTokens());
+        assertEquals(48L, uncached.usage().totalTokens());
+        assertTrue(uncached.terminal());
+
     }
 
-    @Test
-    void unusedCacheFieldsDoNotPreventCompleteBilling() throws Exception {
-        replies.add(textReply("仍可回答", false));
-        var chunks = model().stream(List.of(new UserMessage("测试请求")), List.of(), null)
-            .collectList().block(Duration.ofSeconds(8));
-        assertNotNull(chunks);
-        var usage = usages.getFirst().snapshot();
-        assertEquals("complete", usage.status());
-        assertEquals(42L, usage.usage().inputTokens());
-        assertEquals(42L, usage.usage().uncachedInputTokens());
-        assertNull(usage.usage().cacheReadTokens());
-        assertNull(usage.usage().cacheWriteTokens());
-        assertEquals("not_applicable", usage.usage().fieldStates().get("cache_read"));
-        assertEquals("not_applicable", usage.usage().fieldStates().get("cache_write"));
-        assertEquals(6L, usage.usage().outputTokens());
-        assertEquals(48L, usage.usage().totalTokens());
-        assertTrue(usage.terminal());
-    }
+
 
     private Model model() {
         return new Model() {

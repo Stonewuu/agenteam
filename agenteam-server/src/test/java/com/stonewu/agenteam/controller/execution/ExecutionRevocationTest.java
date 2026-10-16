@@ -77,7 +77,7 @@ class ExecutionRevocationTest extends ExecutionApiTestSupport {
         lifecycle.start(lease).orElseThrow();
         lifecycle.beforeExternalStep(lease);
         var block = new ContentBlock("partial-output", "text", null, 1, "1", "已经保存的部分内容", "running", null, null, null, null, null, null);
-        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(ExecutionChange.replace(block)));
+        messageWriter.save(lease, UUID.randomUUID().toString(), List.of(new ExecutionChange(block, null, "0", null, null, null)));
         var preview = data(preview(Map.of("input", input("检查草稿")), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         var hire = hires.forAgent(enterprise, admin, agent, false).orElseThrow();
         change(HttpMethod.PATCH, base() + "/hires/" + hire.id(), Map.of("status", "paused"), Long.toString(hire.revision()), UUID.randomUUID().toString()).andExpect(status().isOk());

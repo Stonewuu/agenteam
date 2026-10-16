@@ -42,7 +42,7 @@ class SandboxArchiveMapperTest {
             byte[] traversal = archive("work/../../outside.txt", "不允许越过目录".getBytes(StandardCharsets.UTF_8));
             assertThrows(ApiException.class, () -> mapper.read(new ByteArrayInputStream(traversal), directory.resolve("traversal"),
                 Set.of("work"), SandboxExecutionRequest.class, control));
-            byte[] large = archive("work/large.txt", new byte[2 * 1024 * 1024]);
+            byte[] large = archive("work/large.txt", new byte[Math.toIntExact(settings().fileBytes() + 1)]);
             assertEquals("WORKSPACE_CAPACITY_EXCEEDED", assertThrows(ApiException.class, () -> mapper.read(new ByteArrayInputStream(large),
                 directory.resolve("large"), Set.of("work"), SandboxExecutionRequest.class, control)).code());
         }

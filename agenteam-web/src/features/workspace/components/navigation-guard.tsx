@@ -7,8 +7,8 @@ import {useRouter} from "next/navigation";
 import {Dialog, DialogAction, DialogActions, DialogCancel} from "@/components/ui/dialog";
 import ui from "@/components/ui/surface.module.css";
 
-type EditState = { dirty: boolean; busy: boolean };
-type Guard = { register: (key: symbol, state: EditState | null) => void; request: (action: () => void) => void };
+type EditState = { dirty: boolean; busy: boolean; scope?: string };
+type Guard = { register: (key: symbol, state: EditState | null) => void; request: (action: () => void, scope?: string) => void };
 const NavigationContext = createContext<Guard | null>(null);
 type HistoryNavigation = EventTarget & { traverseTo: (key: string) => { finished: Promise<unknown> } };
 type HistoryNavigateEvent = Event & { navigationType: string; destination: { key: string; url: string } };
@@ -17,7 +17,7 @@ export function NavigationGuard({children}: { children: ReactNode }) {
   const uiText = useT();
   const router = useRouter();
   const editors = useRef(new Map<symbol, EditState>());
-  const [pending, setPending] = useState<(() => void) | null>(null);
+  const [pending, setPending] = useState<{action: () => void; scope?: string} | null>(null);
   const [busyNotice, setBusyNotice] = useState(false);
   const register = useCallback((key: symbol, state: EditState | null) => {
     if (state) {
@@ -26,12 +26,12 @@ export function NavigationGuard({children}: { children: ReactNode }) {
       editors.current.delete(key);
     }
   }, []);
-  const request = useCallback((action: () => void) => {
-    const states = [...editors.current.values()];
+  const request = useCallback((action: () => void, scope?: string) => {
+    const states = [...editors.current.values()].filter((state) => scope === undefined || state.scope === scope);
     if (states.some((value) => value.busy)) {
       setBusyNotice(true);
     } else if (states.some((value) => value.dirty)) {
-      setPending(() => action);
+      setPending({action, scope});
     } else {
       action();
     }
@@ -98,8 +98,12 @@ export function NavigationGuard({children}: { children: ReactNode }) {
                         onClose={() => setPending(null)}><DialogActions className={ui.footer}>
       <DialogCancel className={ui.button}>{uiText("继续编辑")}</DialogCancel><DialogAction className={ui.danger}
                                                                                            onAction={(close) => close(() => {
-                                                                                             const action = pending;
-                                                                                             editors.current.clear();
+                                                                                             const action = pending.action;
+                                                                                             for (const [key, state] of editors.current) {
+                                                                                               if (pending.scope === undefined || state.scope === pending.scope) {
+                                                                                                 editors.current.delete(key);
+                                                                                               }
+                                                                                             }
                                                                                              setPending(null);
                                                                                              action();
                                                                                            })}>{uiText("放弃修改")}</DialogAction></DialogActions></Dialog>}
@@ -109,16 +113,18 @@ export function NavigationGuard({children}: { children: ReactNode }) {
   </NavigationContext.Provider>;
 }
 
-export function useBlockNavigation(dirty: boolean, busy = false) {
+export function useBlockNavigation(dirty: boolean, busy = false, scope?: string) {
   const uiText = useT();
   const guard = useContext(NavigationContext);
   const [key] = useState(() => Symbol(uiText("编辑表单")));
   useEffect(() => {
-    guard?.register(key, {dirty, busy});
+    guard?.register(key, {dirty, busy, scope});
     return () => guard?.register(key, null);
-  }, [guard, key, dirty, busy]);
+  }, [guard, key, dirty, busy, scope]);
 }
 
-export function useGuardedNavigation() {
-  return useContext(NavigationContext)?.request;
+export function useGuardedNavigation(scope?: string) {
+  const guard = useContext(NavigationContext);
+  const request = useCallback((action: () => void) => guard?.request(action, scope), [guard, scope]);
+  return guard ? request : undefined;
 }

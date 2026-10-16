@@ -43,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "0.3.0",
+    "elkjs": "0.12.0",
     "iconsax-reactjs": "0.0.8",
     "next": "16.3.2",
     "ogl": "1.0.11",

@@ -12,6 +12,7 @@ import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -33,6 +34,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class OfficeSandboxIntegrationTest {
     @TempDir
     Path directory;
+
+    @AfterEach
+    void cleanIncompleteContainers() throws Exception {
+        try (var paths = Files.find(directory, Integer.MAX_VALUE,
+            (path, attributes) -> attributes.isRegularFile() && path.getFileName().toString().equals("sandbox.pending"))) {
+            for (Path pending : paths.toList()) {
+                new DockerWorkspaceCommands().removeForWorkspace(
+                    Utf8Text.revision("workspace", pending.getParent().toAbsolutePath().normalize().toString()));
+            }
+        }
+    }
 
     @Test
     void createsReadsRecalculatesRendersAndKeepsFilesAcrossContainers() throws Exception {

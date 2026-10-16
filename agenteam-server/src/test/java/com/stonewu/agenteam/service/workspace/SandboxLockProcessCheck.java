@@ -51,7 +51,7 @@ public final class SandboxLockProcessCheck {
     private static void probe(Path directory, String mode) throws Exception {
         Path arguments = Files.createTempFile(directory, "lock-process-", ".args");
         String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
-        Files.writeString(arguments, "-Xmx48m\n-cp\n" + quote(classpath) + "\n" + SandboxLockProcessCheck.class.getName()
+        Files.writeString(arguments, "-Xmx48m\n-XX:ActiveProcessorCount=1\n-XX:TieredStopAtLevel=1\n-cp\n" + quote(classpath) + "\n" + SandboxLockProcessCheck.class.getName()
             + "\n" + quote(directory.toString()) + "\n" + mode + "\n");
         String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         var child = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", executable).toString(),

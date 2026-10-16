@@ -89,7 +89,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void oneThousandFragmentsStayOutOfMysqlUntilTheBlockEndsAndRefreshResumes() throws Exception {
+    void unfinishedBlocksRemainCompleteAcrossRefreshTrimAndConcurrentReaders() throws Exception {
         var fixture = start();
         try (var frames = presentation.open(fixture.run(), fixture.lease())) {
             clearInvocations(writer, conversations);
@@ -113,85 +113,35 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             assertEquals("尾", resumed.getFirst().payload().get("delta"));
             assertEquals("", saved(fixture));
 
-            frames.accept(event("TEXT_BLOCK_END", "reply", "text", null));
-            frames.flush();
-            assertEquals("字".repeat(1000) + "尾", saved(fixture));
-            assertEquals(1, textEvents(fixture));
-            verify(writer, times(1)).save(any(), anyString(), anyList());
-            verify(conversations, times(1)).advanceSequence(anyString(), anyString(), any());
-            assertEquals(saved(fixture), displayed(snapshot(fixture), fixture));
-        } finally {
-            lifecycle.finish(fixture.lease(), "completed", null, null);
-        }
-    }
-
-    @Test
-    void endingOneParallelBlockDoesNotSaveTheOtherRunningBlock() throws Exception {
-        var fixture = start();
-        try (var frames = presentation.open(fixture.run(), fixture.lease())) {
-            var first = frames.stream();
-            var second = frames.stream();
-            first.accept(event("TEXT_BLOCK_START", "first", "first", null));
-            first.accept(event("TEXT_BLOCK_DELTA", "first", "first", "第一段"));
-            second.accept(event("TEXT_BLOCK_START", "second", "second", null));
-            second.accept(event("TEXT_BLOCK_DELTA", "second", "second", "第二段还在输出"));
-            frames.flush();
-            first.finish("completed");
-            assertEquals("第一段", saved(fixture));
-            assertEquals("第一段\n\n第二段还在输出", displayed(snapshot(fixture), fixture));
-            assertEquals(1, textEvents(fixture));
-            second.finish("cancelled");
-            assertEquals("第一段\n\n第二段还在输出", saved(fixture));
-            assertEquals(2, textEvents(fixture));
-        } finally {
-            lifecycle.finish(fixture.lease(), "cancelled", null, null);
-        }
-    }
-
-    @Test
-    void trimmingOldRedisEventsKeepsTheEntireUnfinishedBlock() throws Exception {
-        var fixture = start();
-        try (var frames = presentation.open(fixture.run(), fixture.lease())) {
-            frames.accept(event("TEXT_BLOCK_START", "reply", "text", null));
-            frames.accept(event("TEXT_BLOCK_DELTA", "reply", "text", "开头"));
-            frames.flush();
-            var initial = snapshot(fixture);
             for (int i = 0; i < 8; i++) {
                 frames.accept(event("TEXT_BLOCK_DELTA", "reply", "text", Integer.toString(i)));
                 frames.flush();
             }
-            var reset = connections.connect(actor(), "read-only-test", fixture.run().conversationId(), initial.streamCursor().sequence(),
-                    null, initial.streamCursor().generation()).filter(frame -> "stream.reset".equals(frame.event()))
-                .next().block(Duration.ofSeconds(5));
+            var reset = connections.connect(actor(), "事件位置检查", fixture.run().conversationId(),
+                    before.streamCursor().sequence(), null, before.streamCursor().generation())
+                .filter(frame -> "stream.reset".equals(frame.event())).next().block(Duration.ofSeconds(5));
             assertNotNull(reset);
-            assertEquals("开头01234567", displayed(snapshot(fixture), fixture));
-            assertEquals("", saved(fixture));
-            frames.accept(event("TEXT_BLOCK_END", "reply", "text", null));
-            frames.flush();
-        } finally {
-            lifecycle.finish(fixture.lease(), "completed", null, null);
-        }
-    }
-
-    @Test
-    void oneHundredWaitingReadersDoNotPollMysqlForStreamPositions() throws Exception {
-        var fixture = start();
-        try (var frames = presentation.open(fixture.run(), fixture.lease())) {
-            frames.accept(event("TEXT_BLOCK_START", "reply", "text", null));
-            frames.accept(event("TEXT_BLOCK_DELTA", "reply", "text", "等待新的输出"));
-            frames.flush();
-            var snapshot = snapshot(fixture);
+            var current = snapshot(fixture);
+            String expected = "字".repeat(1000) + "尾01234567";
+            assertEquals(expected, displayed(current, fixture));
             var actor = actor();
             clearInvocations(conversations);
-            var received = Flux.range(0, 100).flatMap(index -> connections.connect(actor, "read-only-test", fixture.run().conversationId(),
-                    snapshot.streamCursor().sequence(), null, snapshot.streamCursor().generation())
-                .filter(frame -> "stream.ready".equals(frame.event())).take(1), 100).collectList().block(Duration.ofSeconds(12));
-            assertNotNull(received);
-            assertEquals(100, received.size());
+            int readers = 16;
+            var ready = Flux.range(0, readers).flatMap(index -> connections.connect(actor, "并发读取检查",
+                    fixture.run().conversationId(), current.streamCursor().sequence(), null, current.streamCursor().generation())
+                .filter(frame -> "stream.ready".equals(frame.event())).take(1), readers)
+                .collectList().block(Duration.ofSeconds(12));
+            assertNotNull(ready);
+            assertEquals(readers, ready.size());
             verify(conversations, never()).streamPosition(anyString(), anyString(), anyString(), any());
             assertEquals("", saved(fixture));
             frames.accept(event("TEXT_BLOCK_END", "reply", "text", null));
             frames.flush();
+            assertEquals(expected, saved(fixture));
+            assertEquals(1, textEvents(fixture));
+            verify(writer, times(1)).save(any(), anyString(), anyList());
+            verify(conversations, times(1)).advanceSequence(anyString(), anyString(), any());
+            assertEquals(saved(fixture), displayed(snapshot(fixture), fixture));
         } finally {
             lifecycle.finish(fixture.lease(), "completed", null, null);
         }
@@ -268,6 +218,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
 
     @Test
     void realModelThinkingStreamsBeforeDatabaseSaveAndFinalOutputRemainsComplete() throws Exception {
+        configureAgent(config -> config.put("instructions", "模型上下文不可外泄"));
         var finishModel = new CountDownLatch(1);
         modelResponse = exchange -> {
             try {
@@ -305,6 +256,10 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             var streaming = snapshots.read(actor, conversation);
             schemas.validate("ConversationSnapshot", json.valueToTree(streaming));
             assertNotNull(streaming.streamCursor());
+            var visible = streaming.messages().stream().filter(message -> message.id().equals(outputId)).findFirst().orElseThrow();
+            assertEquals("", visible.content());
+            assertEquals("running", visible.blocks().stream().filter(block -> block.type().equals("thinking"))
+                .findFirst().orElseThrow().status());
             finishModel.countDown();
             await(() -> runs.find(enterprise, runId, false).orElseThrow().terminal());
             assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
@@ -314,6 +269,9 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
                 .findFirst().orElseThrow().text());
             assertEquals(0, records.selectCount(new LambdaQueryWrapper<AgentEventRow>().eq(AgentEventRow::getRunId, runId)
                 .eq(AgentEventRow::getEventType, "message.delta")));
+            assertEquals("completed", saved.blocks().stream().filter(block -> block.type().equals("thinking"))
+                .findFirst().orElseThrow().status());
+            assertFalse(json.writeValueAsString(snapshots.read(actor, conversation)).contains("模型上下文不可外泄"));
         } finally {
             finishModel.countDown();
         }
@@ -331,7 +289,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void slowDatabaseSaveDoesNotBlockTheNextContentBlocksLiveOutput() throws Exception {
+    void parallelBlocksKeepStreamingDuringSlowSaveAndPersistOnlyWhenFinished() throws Exception {
         var fixture = start();
         var saving = new CountDownLatch(1);
         var continueSave = new CountDownLatch(1);
@@ -366,9 +324,13 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             if (finished != null) {
                 finished.get(5, TimeUnit.SECONDS);
             }
-            secondStream.finish("completed");
+            assertEquals("第一段已完成", saved(fixture));
+            assertEquals("第一段已完成\n\n第二段继续输出", displayed(snapshot(fixture), fixture));
+            assertEquals(1, textEvents(fixture));
+            secondStream.finish("cancelled");
             frames.flush();
             assertEquals("第一段已完成\n\n第二段继续输出", saved(fixture));
+            assertEquals(2, textEvents(fixture));
         } finally {
             continueSave.countDown();
             doCallRealMethod().when(writer).save(any(), anyString(), anyList());

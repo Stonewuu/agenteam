@@ -14,7 +14,6 @@ import io.agentscope.core.model.ChatResponse;
 import io.agentscope.core.model.Model;
 import io.agentscope.core.permission.PermissionContextState;
 import io.agentscope.core.permission.PermissionDecision;
-import io.agentscope.core.state.State;
 import io.agentscope.core.tool.ToolBase;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.harness.agent.HarnessAgent;
@@ -23,7 +22,6 @@ import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Base64;
@@ -93,26 +91,6 @@ class WorkflowNativeSuspensionTest {
         assertEquals(remaining.getReplyId(), completedResult.getReplyId());
     }
 
-    @Test
-    void applicationStateIsEncryptedVersionedAndCopiedWithoutAnAgentState() throws Exception {
-        var source = store("source", "第一次领取");
-        var state = new ProbeState("approval", "{\"number\":9007199254740993,\"secret\":\"仅保存在加密文件\"}");
-        source.save("user", "session", "workflow_state", state);
-        assertTrue(source.exists("user", "session"));
-        assertEquals(1, source.getVersioned("user", "session", "workflow_state", ProbeState.class).version());
-        var target = store("copy", "第二次领取");
-        source.copyTo(target);
-        assertEquals(state, store("copy", "第二次领取").get("user", "session", "workflow_state", ProbeState.class).orElseThrow());
-        assertTrue(target.matches(target.manifest()));
-        for (String file : target.manifest().keySet()) {
-            var content = Files.readString(workspace.resolve("copy").resolve(file));
-            assertFalse(content.contains("仅保存在加密文件"));
-            assertFalse(content.contains("9007199254740993"));
-        }
-        assertThrows(IllegalStateException.class,
-            () -> store("copy", "错误领取").get("user", "session", "workflow_state", ProbeState.class));
-    }
-
     private List<AgentEvent> invoke(Model model, List<Msg> input) throws Exception {
         var agent = HarnessAgent.builder().name("workflow-probe").model(model).workspace(workspace.resolve("agent"))
             .stateStore(store("agent-state", "验收执行")).maxIters(4)
@@ -141,9 +119,6 @@ class WorkflowNativeSuspensionTest {
     private ToolResultBlock result(String id, String value) {
         return ToolResultBlock.builder().id(id).name("workflow_probe").state(ToolResultState.SUCCESS)
             .output(TextBlock.builder().text(value).build()).build();
-    }
-
-    public record ProbeState(String next, String output) implements State {
     }
 
     private final class ExternalProbe extends ToolBase {

@@ -285,6 +285,5 @@
   "搜索数据源": "Search data sources",
   "刷新数据源": "Refresh data sources",
   "还没有数据源，可以先创建一个。": "No data sources yet. Create one to get started.",
-  "没有匹配的数据源，请调整筛选条件。": "No data sources match your search. Try different filters.",
-  "流程型（当前不可用）": "Workflow (unavailable)"
+  "没有匹配的数据源，请调整筛选条件。": "No data sources match your search. Try different filters."
 }

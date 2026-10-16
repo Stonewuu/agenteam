@@ -39,9 +39,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -116,28 +113,29 @@ class ScheduledChannelNotificationTest extends ExecutionApiTestSupport {
         ENVIRONMENT.close();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"wecom", "feishu"})
-    void scheduledNotificationsWaitForActualPlatformAcceptance(String provider) throws Exception {
-        var occurrence = enqueue(configure(provider));
-        assertEquals("running", row(occurrence.id()).getStatus());
-        assertEquals(1, noticeCount(occurrence.id()));
-        var send = delivery(occurrence.id());
-        assertEquals("scheduled", send.getDeliveryReason());
-        PLATFORM.reply(provider + ".token");
-        PLATFORM.reply(provider + ".accepted");
-        assertTrue(worker.runOnce());
-        PLATFORM.take();
-        String request = PLATFORM.take().body();
-        assertTrue(request.contains(provider.equals("wecom") ? "member_001" : "ou_test_member"));
-        reconciler.reconcile(row(occurrence.id()));
-        var completed = scheduleQueries.get(actor(), occurrence.scheduleId());
-        assertEquals("completed", completed.latestOccurrence().status());
-        assertEquals(2, completed.latestOccurrence().actionResult().get("totalCount"));
-        assertEquals(1, completed.latestOccurrence().actionResult().get("acceptedCount"));
-        assertNull(completed.activeOccurrenceId());
-        assertEquals(0, count("agent_run"));
-        assertEquals(0, reserved());
+    @Test
+    void scheduledNotificationsWaitForActualPlatformAcceptance() throws Exception {
+        for (String provider : List.of("wecom", "feishu")) {
+            var occurrence = enqueue(configure(provider));
+            assertEquals("running", row(occurrence.id()).getStatus());
+            assertEquals(1, noticeCount(occurrence.id()));
+            var send = delivery(occurrence.id());
+            assertEquals("scheduled", send.getDeliveryReason());
+            PLATFORM.reply(provider + ".token");
+            PLATFORM.reply(provider + ".accepted");
+            assertTrue(worker.runOnce());
+            PLATFORM.take();
+            String request = PLATFORM.take().body();
+            assertTrue(request.contains(provider.equals("wecom") ? "member_001" : "ou_test_member"));
+            reconciler.reconcile(row(occurrence.id()));
+            var completed = scheduleQueries.get(actor(), occurrence.scheduleId());
+            assertEquals("completed", completed.latestOccurrence().status());
+            assertEquals(2, completed.latestOccurrence().actionResult().get("totalCount"));
+            assertEquals(1, completed.latestOccurrence().actionResult().get("acceptedCount"));
+            assertNull(completed.activeOccurrenceId());
+            assertEquals(0, count("agent_run"));
+            assertEquals(0, reserved());
+        }
     }
 
     @Test
@@ -194,7 +192,14 @@ class ScheduledChannelNotificationTest extends ExecutionApiTestSupport {
         assertEquals("partially_failed", row(occurrence.id()).getStatus());
         var failed = deliveries.selectOne(new LambdaQueryWrapper<NotificationChannelDeliveryRow>().eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise)
             .eq(NotificationChannelDeliveryRow::getConnectionId, wecom.getId()));
+        var another = triggers.manual(actor(), occurrence.scheduleId(), UUID.randomUUID().toString());
+        var busy = assertThrows(ApiException.class, () -> management.retry(actor().user(), enterprise, false,
+            failed.getId(), failed.getRevision(), new ChannelDeliveryRetryRequest(false)));
+        assertEquals("SCHEDULE_BUSY", busy.code());
+        assertEquals("partially_failed", row(occurrence.id()).getStatus());
+        cancellations.cancel(actor(), another.scheduleId(), another.id());
         management.retry(actor().user(), enterprise, false, failed.getId(), failed.getRevision(), new ChannelDeliveryRetryRequest(false));
+        assertEquals(occurrence.id(), scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
         PLATFORM.reply("wecom.accepted");
         assertTrue(worker.runOnce());
         PLATFORM.take();
@@ -205,6 +210,8 @@ class ScheduledChannelNotificationTest extends ExecutionApiTestSupport {
             .eq(NotificationChannelDeliveryRow::getConnectionId, feishu.getId()));
         assertEquals(1, successful.getAttemptCount());
         assertEquals("accepted", successful.getStatus());
+        assertEquals(2, deliveries.selectById(failed.getId()).getAttemptCount());
+        assertNull(scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
         assertEquals(0, count("agent_run"));
     }
 
@@ -220,68 +227,30 @@ class ScheduledChannelNotificationTest extends ExecutionApiTestSupport {
         assertEquals(1, noticeCount(occurrence.id()));
     }
 
-    @Test
-    void stoppingDuringARequestKeepsThePlanActiveUntilItsRealResultIsSaved() {
-        var occurrence = enqueue(configure("feishu"));
-        var lease = transactions.claim("started-request").orElseThrow();
-        assertNotNull(transactions.prepare(lease));
-        var attempt = transactions.begin(lease);
-        assertNotNull(attempt);
-        var stopping = cancellations.cancel(actor(), occurrence.scheduleId(), occurrence.id());
-        assertEquals("running", stopping.status());
-        assertEquals(occurrence.id(), scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
-        assertEquals("SCHEDULE_BUSY", assertThrows(ApiException.class, () -> triggers.manual(actor(), occurrence.scheduleId(), UUID.randomUUID().toString())).code());
-        transactions.complete(lease, attempt.attemptId(), result(ChannelSendResult.Outcome.ACCEPTED));
-        reconciler.reconcile(row(occurrence.id()));
-        assertEquals("completed", row(occurrence.id()).getStatus());
-        assertNull(scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
-    }
+
+
+
 
     @Test
-    void manualRetryReoccupiesOnlyTheOriginalOccurrenceAndDoesNotReplaySuccessfulTargets() {
-        var occurrence = enqueue(configure("feishu"));
-        var lease = transactions.claim("failed-request").orElseThrow();
-        transactions.prepare(lease);
-        var attempt = transactions.begin(lease);
-        transactions.complete(lease, attempt.attemptId(), result(ChannelSendResult.Outcome.PERMANENT_FAILURE));
-        reconciler.reconcile(row(occurrence.id()));
-        assertEquals("partially_failed", row(occurrence.id()).getStatus());
-        var failed = delivery(occurrence.id());
-        var second = triggers.manual(actor(), occurrence.scheduleId(), UUID.randomUUID().toString());
-        var busy = assertThrows(ApiException.class, () -> management.retry(actor().user(), enterprise, false, failed.getId(), failed.getRevision(), new ChannelDeliveryRetryRequest(false)));
-        assertEquals("SCHEDULE_BUSY", busy.code());
-        assertEquals("partially_failed", row(occurrence.id()).getStatus());
-        cancellations.cancel(actor(), second.scheduleId(), second.id());
-        var retry = management.retry(actor().user(), enterprise, false, failed.getId(), failed.getRevision(), new ChannelDeliveryRetryRequest(false));
-        assertEquals("pending", retry.delivery().status());
-        assertEquals(occurrence.id(), scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
-        assertEquals(1, noticeCount(occurrence.id()));
-        var next = transactions.claim("retry-request").orElseThrow();
-        transactions.prepare(next);
-        var nextAttempt = transactions.begin(next);
-        transactions.complete(next, nextAttempt.attemptId(), result(ChannelSendResult.Outcome.ACCEPTED));
-        reconciler.reconcile(row(occurrence.id()));
-        assertEquals("completed", row(occurrence.id()).getStatus());
-        assertEquals(1, noticeCount(occurrence.id()));
-        assertEquals(2, delivery(occurrence.id()).getAttemptCount());
-        assertNull(scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = ChannelSendResult.Outcome.class, names = {"RETRYABLE_FAILURE", "UNKNOWN"})
-    void stoppingDuringARequestPreventsAutomaticRetryAfterTemporaryOrUnknownResults(ChannelSendResult.Outcome outcome) {
-        var occurrence = enqueue(configure("feishu"));
-        var lease = transactions.claim("stopping-request").orElseThrow();
-        transactions.prepare(lease);
-        var attempt = transactions.begin(lease);
-        cancellations.cancel(actor(), occurrence.scheduleId(), occurrence.id());
-        transactions.complete(lease, attempt.attemptId(), result(outcome));
-        reconciler.reconcile(row(occurrence.id()));
-        assertEquals(outcome == ChannelSendResult.Outcome.UNKNOWN ? "unknown" : "cancelled", delivery(occurrence.id()).getStatus());
-        assertEquals(outcome == ChannelSendResult.Outcome.UNKNOWN ? "unknown" : "partially_failed", row(occurrence.id()).getStatus());
-        assertNull(scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
-        assertFalse(worker.runOnce());
-        assertEquals(1, delivery(occurrence.id()).getAttemptCount());
+    void stoppingDuringARequestKeepsTheActualResultWithoutAutomaticRetry() {
+        for (var outcome : List.of(ChannelSendResult.Outcome.ACCEPTED, ChannelSendResult.Outcome.RETRYABLE_FAILURE, ChannelSendResult.Outcome.UNKNOWN)) {
+            var occurrence = enqueue(configure("feishu"));
+            var lease = transactions.claim("stopping-request").orElseThrow();
+            transactions.prepare(lease);
+            var attempt = transactions.begin(lease);
+            var stopping = cancellations.cancel(actor(), occurrence.scheduleId(), occurrence.id());
+            assertEquals("running", stopping.status());
+            assertEquals(occurrence.id(), scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
+            assertEquals("SCHEDULE_BUSY", assertThrows(ApiException.class,
+                () -> triggers.manual(actor(), occurrence.scheduleId(), UUID.randomUUID().toString())).code());
+            transactions.complete(lease, attempt.attemptId(), result(outcome));
+            reconciler.reconcile(row(occurrence.id()));
+            assertEquals(outcome == ChannelSendResult.Outcome.ACCEPTED ? "accepted" : outcome == ChannelSendResult.Outcome.UNKNOWN ? "unknown" : "cancelled", delivery(occurrence.id()).getStatus());
+            assertEquals(outcome == ChannelSendResult.Outcome.ACCEPTED ? "completed" : outcome == ChannelSendResult.Outcome.UNKNOWN ? "unknown" : "partially_failed", row(occurrence.id()).getStatus());
+            assertNull(scheduleQueries.get(actor(), occurrence.scheduleId()).activeOccurrenceId());
+            assertFalse(worker.runOnce());
+            assertEquals(1, delivery(occurrence.id()).getAttemptCount());
+        }
     }
 
     @Test

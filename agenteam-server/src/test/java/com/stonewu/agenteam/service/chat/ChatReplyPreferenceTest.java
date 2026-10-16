@@ -49,7 +49,18 @@ class ChatReplyPreferenceTest extends CollaborationApiTestSupport {
     @Test
     void ordinaryInitiatorChangesOnlyReplySettingsWithoutStartingWork() {
         var task = start();
-        var saved = modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, true, 0L));
+        var other = identities.actor(enterprise, admin);
+        assertThrows(ApiException.class, () -> modes.get(other, task.getId()));
+        assertThrows(ApiException.class, () -> modes.save(other, task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, false, null)));
+        assertThrows(ApiException.class, () -> preferences.get(other, task.getConversationId()));
+        assertThrows(ApiException.class, () -> preferences.save(other, task.getConversationId(), "summary_link", 0L));
+        assertTrue(preferences.list(other, null, 10).items().isEmpty());
+        assertEquals("chat_full", onlyTask().getOutputVisibility());
+        preferences.save(actor(), task.getConversationId(), "chat_full", 0L);
+        assertThrows(ApiException.class, () -> modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, true, 0L)));
+        assertEquals("chat_full", onlyTask().getOutputVisibility());
+        assertEquals(0, modes.get(actor(), task.getId()).revision());
+        var saved = modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, true, 1L));
         assertEquals("summary_link", saved.outputVisibility());
         assertEquals(1, saved.revision());
         assertEquals("summary_link", saved.conversation().outputVisibility());
@@ -62,18 +73,8 @@ class ChatReplyPreferenceTest extends CollaborationApiTestSupport {
         assertEquals(task.getWorkCount(), after.getWorkCount());
         assertTrue(after.getReplyModeExplicit());
         assertEquals(1, preferences.list(actor(), null, 10).items().size());
-    }
-
-    @Test
-    void otherMembersIncludingAdministratorsCannotChangeOrListPrivatePreferences() {
-        var task = start();
-        var other = identities.actor(enterprise, admin);
-        assertThrows(ApiException.class, () -> modes.get(other, task.getId()));
-        assertThrows(ApiException.class, () -> modes.save(other, task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, false, null)));
-        assertThrows(ApiException.class, () -> preferences.get(other, task.getConversationId()));
-        assertThrows(ApiException.class, () -> preferences.save(other, task.getConversationId(), "summary_link", 0L));
-        assertTrue(preferences.list(other, null, 10).items().isEmpty());
-        assertEquals("chat_full", onlyTask().getOutputVisibility());
+        assertThrows(ApiException.class, () -> modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("chat_full", 0L, false, null)));
+        assertEquals("summary_link", onlyTask().getOutputVisibility());
     }
 
     @Test
@@ -154,18 +155,6 @@ class ChatReplyPreferenceTest extends CollaborationApiTestSupport {
         assertEquals(List.of(bot.getRoleName()), preference.botNames());
         assertEquals(1, preferences.list(actor(), null, 10).items().size());
         assertEquals(preference.botNames(), preferences.list(actor(), null, 10).items().getFirst().botNames());
-    }
-
-    @Test
-    void staleTaskOrDefaultVersionCannotPartiallySaveSettings() {
-        var task = start();
-        preferences.save(actor(), task.getConversationId(), "chat_full", 0L);
-        assertThrows(ApiException.class, () -> modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, true, 0L)));
-        assertEquals("chat_full", onlyTask().getOutputVisibility());
-        assertEquals(0, modes.get(actor(), task.getId()).revision());
-        modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("summary_link", 0L, false, null));
-        assertThrows(ApiException.class, () -> modes.save(actor(), task.getId(), new CollaborationReplyModeRequest("chat_full", 0L, false, null)));
-        assertEquals("summary_link", onlyTask().getOutputVisibility());
     }
 
     private CollaborationTaskRow start() {

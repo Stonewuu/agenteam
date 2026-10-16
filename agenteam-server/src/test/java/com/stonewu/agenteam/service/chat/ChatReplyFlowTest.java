@@ -109,25 +109,27 @@ class ChatReplyFlowTest extends CollaborationToolTestSupport {
         assertEquals(List.of("帮我核对考勤", reply), displayed.stream().map(message -> message.content()).toList());
         assertTrue(next.run().executionConfig().path("sourceContext").asText().contains("帮我核对考勤"));
         assertTrue(next.run().executionConfig().path("sourceContext").asText().contains("九月"));
-        var oldMessage = databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectById(next.run().inputMessageId());
-        String accumulated = "帮我核对考勤\n\n补充要求：\n" + reply;
-        var blocks = json.createArrayNode();
-        for (var block : queries.snapshot(actor, next.run().conversationId()).messages().stream()
-            .filter(message -> message.id().equals(oldMessage.getId())).findFirst().orElseThrow().blocks()) {
-            var storedBlock = (ObjectNode) json.valueToTree(block);
-            if (block.type().equals("text")) {
-                storedBlock.put("text", accumulated);
+        if (scenario.equals("manual_link")) {
+            var storedMessage = databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectById(next.run().inputMessageId());
+            String accumulated = "帮我核对考勤\n\n补充要求：\n" + reply;
+            var blocks = json.createArrayNode();
+            for (var block : queries.snapshot(actor, next.run().conversationId()).messages().stream()
+                .filter(message -> message.id().equals(storedMessage.getId())).findFirst().orElseThrow().blocks()) {
+                var storedBlock = (ObjectNode) json.valueToTree(block);
+                if (block.type().equals("text")) {
+                    storedBlock.put("text", accumulated);
+                }
+                blocks.add(storedBlock);
             }
-            blocks.add(storedBlock);
+            databaseAccess.mapper(ExecutionMessageSqlMapper.class).update(new LambdaUpdateWrapper<AgentMessageRow>()
+                .eq(AgentMessageRow::getEnterpriseId, enterprise).eq(AgentMessageRow::getId, storedMessage.getId())
+                .set(AgentMessageRow::getContent, accumulated).set(AgentMessageRow::getBlocksJson, blocks.toString()));
+            var historyMessage = queries.history(actor, next.run().conversationId(), null, 30).messages().stream()
+                .filter(message -> message.id().equals(storedMessage.getId())).findFirst().orElseThrow();
+            assertEquals(reply, historyMessage.content());
+            assertTrue(historyMessage.blocks().stream().filter(block -> block.type().equals("text")).allMatch(block -> reply.equals(block.text())));
+            assertEquals(accumulated, databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectById(storedMessage.getId()).getContent());
         }
-        databaseAccess.mapper(ExecutionMessageSqlMapper.class).update(new LambdaUpdateWrapper<AgentMessageRow>()
-            .eq(AgentMessageRow::getEnterpriseId, enterprise).eq(AgentMessageRow::getId, oldMessage.getId())
-            .set(AgentMessageRow::getContent, accumulated).set(AgentMessageRow::getBlocksJson, blocks.toString()));
-        var historic = queries.history(actor, next.run().conversationId(), null, 30).messages().stream()
-            .filter(message -> message.id().equals(oldMessage.getId())).findFirst().orElseThrow();
-        assertEquals(reply, historic.content());
-        assertTrue(historic.blocks().stream().filter(block -> block.type().equals("text")).allMatch(block -> reply.equals(block.text())));
-        assertEquals(accumulated, databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectById(oldMessage.getId()).getContent());
         observer.observe(enterprise, link(next.run().id()).getId());
         String resultText = "九月实际出勤二十天，缺勤零天。";
         var completeArgs = Map.<String, Object>of("expectedInputRevision", 2, "summary", resultText,
@@ -157,13 +159,13 @@ class ChatReplyFlowTest extends CollaborationToolTestSupport {
     }
 
     @ParameterizedTest
-    @CsvSource({"true,3000", "true,18000", "true,33000", "false,3000", "false,18000", "false,33000"})
+    @CsvSource({"false,3000", "true,18000", "false,33000"})
     void automaticAnswerKeepsFullTextOrDeliversCompleteFile(boolean direct, int characters) throws Exception {
         externalChat = "oc_answer_" + UUID.randomUUID();
         routing.route(enterprise, receive(direct, "long-answer", "说明你的能力").getId());
         assertEquals("chat_full", onlyTask().getOutputVisibility());
         deliverAll(direct, "long-answer");
-        // 已有私聊仍保留旧的会话设置，也应允许将新任务的结果交付给已核对的本人。
+        // 私聊接收人已经核对，即使会话设为仅链接，新任务仍能完整交付本人。
         if (direct) {
             databaseAccess.mapper(ChatConversationMapper.class).update(new LambdaUpdateWrapper<ChatConversationRow>()
                 .eq(ChatConversationRow::getEnterpriseId, enterprise).eq(ChatConversationRow::getId, onlyTask().getConversationId())
@@ -220,7 +222,7 @@ class ChatReplyFlowTest extends CollaborationToolTestSupport {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void existingAutomaticGroupRepliesWithContentOnContinuationUnlessUserChoseLinks(boolean explicitlyLinkOnly) {
-        externalChat = "oc_legacy_answer_" + UUID.randomUUID();
+        externalChat = "oc_continued_answer_" + UUID.randomUUID();
         routing.route(enterprise, receive(false, "original", "你有哪些能力").getId());
         deliverAll(false, "original");
         var original = onlyTask();

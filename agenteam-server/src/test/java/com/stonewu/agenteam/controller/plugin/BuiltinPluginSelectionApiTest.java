@@ -82,7 +82,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
     @Test
     void newEnterpriseImmediatelyOffersRealPublishedBuiltinPlugins() throws Exception {
         var response = data(mvc.perform(get(base() + "/resources/usable-versions").param("kind", "plugin").cookie(cookie)).andExpect(status().isOk()).andReturn());
-        assertEquals(5, response.path("items").size());
+        assertEquals(6, response.path("items").size());
         var builtinCodes = new HashSet<String>();
         int toolCount = 0;
         for (var value : response.path("items")) {
@@ -99,19 +99,25 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
             toolCount += published.size();
             assertEquals(resource.config().path("enabledToolNames").size(), published.size());
         }
-        assertEquals(41, toolCount);
-        assertEquals(Set.of("platform_basics", "todo_management", "schedule_management", "web_read", "group_collaboration"), builtinCodes);
+        assertEquals(50, toolCount);
+        assertEquals(Set.of("platform_basics", "todo_management", "schedule_management", "web_read", "group_collaboration", "workflow_management"), builtinCodes);
         assertFalse(response.toString().contains("inputSchema"));
     }
 
     @Test
-    void startupFillsExistingEnterpriseWithoutReplacingItsCustomPlugin() {
+    void startupFillsExistingEnterpriseWithoutReplacingItsCustomPlugin() throws Exception {
         String legacy = legacyEnterprise();
         String custom = UUID.randomUUID().toString();
         var config = json.createObjectNode().put("icon", "Box").put("color", "pink").put("pluginType", "mcp").put("endpoint", "https://example.com/mcp");
         resources.create(custom, legacy, ResourceKind.PLUGIN, "待办管理", "已有自定义插件", "mcp", admin, "created", config, Instant.now());
-        initialization.run(new DefaultApplicationArguments());
-        assertEquals(5, available(actor(legacy)).size());
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var first = executor.submit(() -> initialization.run(new DefaultApplicationArguments()));
+            var second = executor.submit(() -> defaults.initialize(legacy));
+            first.get();
+            second.get();
+        }
+
+        assertEquals(6, available(actor(legacy)).size());
         var unchanged = resources.find(legacy, custom, false, false).orElseThrow();
         assertEquals(config, unchanged.config());
         assertNull(unchanged.publishedVersionId());
@@ -119,24 +125,15 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         var first = available(actor(legacy));
         initialization.run(new DefaultApplicationArguments());
         assertEquals(first, available(actor(legacy)));
-        assertEquals(6, pluginCount(legacy));
-    }
-
-    @Test
-    void concurrentInitializationPublishesEachPluginOnlyOnce() throws Exception {
-        String legacy = legacyEnterprise();
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var first = executor.submit(() -> defaults.initialize(legacy));
-            var second = executor.submit(() -> defaults.initialize(legacy));
-            first.get();
-            second.get();
-        }
-        assertEquals(5, pluginCount(legacy));
+        assertEquals(7, pluginCount(legacy));
         for (var value : available(actor(legacy))) {
             assertEquals(1, value.versionNo());
             assertEquals(2, resources.find(legacy, value.resourceId(), false, false).orElseThrow().nextVersionNo());
         }
+
     }
+
+
 
     @Test
     void choosingBuiltinsNeedsUsagePermissionButNoPluginCreationOrPublicationPermission() {
@@ -145,18 +142,7 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         permissions.replaceRolePermissions(enterprise, role, Set.of("capabilities.view", "agent.edit", "plugin.invoke"));
         var user = EnterpriseTestData.member(users, permissions, enterprise, "selector-" + UUID.randomUUID(), "内置插件选择测试所用独立密码2026!", "配置者", List.of(role));
         var actor = new AuthContext(user, enterprise, Set.of());
-        assertEquals(5, available(actor).size());
-        permissions.replaceRolePermissions(enterprise, role, Set.of("capabilities.view", "agent.edit"));
-        assertEquals(403, assertThrows(ResponseStatusException.class, () -> available(actor)).getStatusCode().value());
-    }
-
-    @Test
-    void initializationPreservesDisabledStateAndRemovedUseGrants() {
-        String role = UUID.randomUUID().toString();
-        permissions.insertRole(role, enterprise, "builtin-reader", "配置读取者", "", DataScope.ENTERPRISE, false, Instant.now());
-        permissions.replaceRolePermissions(enterprise, role, Set.of("capabilities.view", "agent.edit", "plugin.invoke"));
-        var user = EnterpriseTestData.member(users, permissions, enterprise, "reader-" + UUID.randomUUID(), "内置插件范围测试所用独立密码2026!", "配置者", List.of(role));
-        var actor = new AuthContext(user, enterprise, Set.of());
+        assertEquals(6, available(actor).size());
         var choices = available(actor);
         var disabled = resources.find(enterprise, choices.get(0).resourceId(), false, false).orElseThrow();
         var restricted = choices.get(1);
@@ -165,10 +151,14 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         defaults.initialize(enterprise);
         assertEquals("disabled", resources.find(enterprise, disabled.id(), false, false).orElseThrow().status());
         assertTrue(grants.grants(enterprise, restricted.resourceId()).isEmpty());
-        assertEquals(3, available(actor).size());
+        assertEquals(4, available(actor).size());
         assertTrue(options.list(actor, "plugin", null, null, 20, List.of(disabled.publishedVersionId(), restricted.versionId())).items().isEmpty());
-        assertEquals(5, pluginCount(enterprise));
+        assertEquals(6, pluginCount(enterprise));
+        permissions.replaceRolePermissions(enterprise, role, Set.of("capabilities.view", "agent.edit"));
+        assertEquals(403, assertThrows(ResponseStatusException.class, () -> available(actor)).getStatusCode().value());
     }
+
+
 
     @Test
     void resourcePickerGroupsLatestVersionsAndListsAuthorizedHistorySeparately() throws Exception {

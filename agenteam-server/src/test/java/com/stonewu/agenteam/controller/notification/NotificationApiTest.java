@@ -60,9 +60,20 @@ class NotificationApiTest extends ExecutionApiTestSupport {
 
     @Test
     void pagingAndReadAllKeepNotificationsThatArrivedAfterTheListOpenedUnread() throws Exception {
+        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
+            notifications.enqueue(enterprise, admin, notice("rolled-back"));
+            transaction.setRollbackOnly();
+        });
+        deliver(enterprise);
+        assertEquals(0, count("notification"));
+        assertEquals(0, unread().path("count").asInt());
+        enqueue(enterprise, admin, "one");
         enqueue(enterprise, admin, "one");
         enqueue(enterprise, admin, "two");
         deliver(enterprise);
+        enqueue(enterprise, admin, "one");
+        deliver(enterprise);
+        assertEquals(2, count("notification"));
         var opened = page(null, false, 1);
         assertEquals("2", opened.path("throughSequence").asText());
         assertTrue(opened.path("hasMore").asBoolean());
@@ -92,6 +103,18 @@ class NotificationApiTest extends ExecutionApiTestSupport {
         assertEquals(0, unread().path("count").asInt());
         write(path() + "/read-all", Map.of("throughSequence", "4"), UUID.randomUUID().toString()).andExpect(status().isUnprocessableEntity());
         mvc.perform(get(path()).cookie(cookie).param("unread", "true").param("cursor", opened.path("nextCursor").asText())).andExpect(status().isBadRequest());
+        databaseAccess.mapper(IdentityQueryMapper.class).update(new LambdaUpdateWrapper<EnterpriseMemberRow>().eq(EnterpriseMemberRow::getEnterpriseId, (enterprise)).eq(EnterpriseMemberRow::getUserId, (admin)).set(EnterpriseMemberRow::getNotificationSequence, 9007199254740992L));
+        enqueue(enterprise, admin, "large-sequence");
+        deliver(enterprise);
+        var page = page(null, false, 30);
+        assertEquals("9007199254740993", page.path("throughSequence").asText());
+        assertEquals("9007199254740993", page.at("/items/0/sequence").asText());
+        assertEquals("9007199254740993", unread().path("throughSequence").asText());
+        write(path() + "/read-all", Map.of("throughSequence", "9007199254740992"), UUID.randomUUID().toString()).andExpect(status().isOk());
+        assertEquals(1, unread().path("count").asInt());
+        write(path() + "/read-all", Map.of("throughSequence", "9007199254740993"), UUID.randomUUID().toString()).andExpect(status().isOk());
+        assertEquals(0, unread().path("count").asInt());
+
     }
 
     @Test
@@ -114,38 +137,9 @@ class NotificationApiTest extends ExecutionApiTestSupport {
         assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(NotificationSqlMapper.class).selectList(new LambdaQueryWrapper<NotificationRow>().select(NotificationRow::getReadAt).eq(NotificationRow::getId, (otherId))).stream().map(fixtureRecord -> (fixtureRecord.getReadAt() == null ? null : Timestamp.from(fixtureRecord.getReadAt()))).toList()));
     }
 
-    @Test
-    void notificationSequencesRemainExactAboveTheBrowserIntegerRange() throws Exception {
-        databaseAccess.mapper(IdentityQueryMapper.class).update(new LambdaUpdateWrapper<EnterpriseMemberRow>().eq(EnterpriseMemberRow::getEnterpriseId, (enterprise)).eq(EnterpriseMemberRow::getUserId, (admin)).set(EnterpriseMemberRow::getNotificationSequence, 9007199254740992L));
-        enqueue(enterprise, admin, "large-sequence");
-        deliver(enterprise);
-        var page = page(null, false, 30);
-        assertEquals("9007199254740993", page.path("throughSequence").asText());
-        assertEquals("9007199254740993", page.at("/items/0/sequence").asText());
-        assertEquals("9007199254740993", unread().path("throughSequence").asText());
-        write(path() + "/read-all", Map.of("throughSequence", "9007199254740992"), UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertEquals(1, unread().path("count").asInt());
-        write(path() + "/read-all", Map.of("throughSequence", "9007199254740993"), UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertEquals(0, unread().path("count").asInt());
-    }
 
-    @Test
-    void rolledBackBusinessWorkDoesNotDeliverAndRepeatedEventsDoNotDuplicateNotices() throws Exception {
-        new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
-            notifications.enqueue(enterprise, admin, notice("rolled-back"));
-            transaction.setRollbackOnly();
-        });
-        deliver(enterprise);
-        assertEquals(0, count("notification"));
-        assertEquals(0, unread().path("count").asInt());
-        enqueue(enterprise, admin, "same-event");
-        enqueue(enterprise, admin, "same-event");
-        deliver(enterprise);
-        enqueue(enterprise, admin, "same-event");
-        deliver(enterprise);
-        assertEquals(1, count("notification"));
-        assertEquals("1", unread().path("throughSequence").asText());
-    }
+
+
 
     private String path() {
         return base() + "/notifications";

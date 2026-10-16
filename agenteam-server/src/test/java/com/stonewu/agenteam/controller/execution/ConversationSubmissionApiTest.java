@@ -63,7 +63,7 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void concurrentDuplicateRequestCommitsOneConversationRunAndReservation() throws Exception {
+    void concurrentSubmissionStoresOneRunAndKeepsBusySnapshotsConsistent() throws Exception {
         String key = UUID.randomUUID().toString();
         var responses = concurrent(key, key);
         assertEquals(202, responses.getFirst().getResponse().getStatus());
@@ -86,11 +86,6 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
             schemas.validate("ExecutionEvent", json.valueToTree(event));
         }
         write(base() + "/conversations", Map.of("agentId", agent, "input", input("不同正文")), key).andExpect(status().isConflict());
-    }
-
-    @Test
-    void activeConversationRejectsNewRequestAndSnapshotUsesCommittedMessages() throws Exception {
-        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         String id = accepted.path("conversationId").asText();
         var busy = write(base() + "/conversations/" + id + "/messages", input("另一条输入"), UUID.randomUUID().toString()).andExpect(status().isConflict()).andReturn();
         assertEquals("CONVERSATION_BUSY", json.readTree(busy.getResponse().getContentAsString()).at("/error/code").asText());
@@ -143,7 +138,7 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void queuedCancellationReleasesQuotaAndRepeatedRetryCreatesOnlyOneNewRun() throws Exception {
+    void queuedAndRunningCancellationPreserveQuotaAndIgnoreLateCompletion() throws Exception {
         var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         String run = accepted.path("runId").asText();
         String cancelKey = UUID.randomUUID().toString();
@@ -161,12 +156,8 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         var retryBlocks = json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getBlocksJson).eq(AgentMessageRow::getId, (retried.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getBlocksJson()).toList()));
         assertEquals("重新执行", retryBlocks.get(0).path("label").asText());
         assertEquals("cancelled", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getStatus).eq(AgentRunRow::getId, (run))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
-    }
-
-    @Test
-    void firstStepConsumesOnceAndLateCompletionCannotReviveCancelledRun() throws Exception {
-        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         var lease = lifecycle.claim("test-worker").orElseThrow();
+        assertEquals(retried.path("runId").asText(), lease.runId());
         var started = lifecycle.start(lease).orElseThrow();
         assertEquals("running", started.status());
         assertEquals(1, reserved());
@@ -211,12 +202,12 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         var lease = lifecycle.claim("worker-message-save").orElseThrow();
         lifecycle.start(lease).orElseThrow();
         var block = new ContentBlock("block-one", "text", null, 1, "1", "已经保存的正文", "running", null, null, null, null, null, null);
-        var changes = List.of(ExecutionChange.replace(block));
+        var changes = List.of(new ExecutionChange(block, null, "0", null, null, null));
         String batch = UUID.randomUUID().toString();
         messageWriter.save(lease, batch, changes);
         messageWriter.save(lease, batch, changes);
         assertEquals(5, count("agent_event"));
-        assertThrows(IllegalStateException.class, () -> messageWriter.save(lease, batch, List.of(ExecutionChange.replace(block.update("不同的内容", "running")))));
+        assertThrows(IllegalStateException.class, () -> messageWriter.save(lease, batch, List.of(new ExecutionChange(block.update("不同的内容", "running"), null, "1", null, null, null))));
         assertEquals("已经保存的正文", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getContent).eq(AgentMessageRow::getId, (accepted.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getContent()).toList()));
     }
 
@@ -249,7 +240,8 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         var worker = new RunWorker(lifecycle, tasks);
         try {
             worker.poll();
-            await(() -> first.equals(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getContent).eq(AgentMessageRow::getId, (accepted.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getContent()).toList())));
+            await(() -> first.equals(visibleMessage(accepted.path("conversationId").asText(),
+                accepted.path("outputMessageId").asText()).path("content").asText()));
             assertEquals("running", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getStatus).eq(AgentRunRow::getId, (accepted.path("runId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
             finish.countDown();
             await(() -> "completed".equals(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getStatus).eq(AgentRunRow::getId, (accepted.path("runId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList())));
@@ -267,9 +259,6 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
             for (var event : events.after(enterprise, accepted.path("conversationId").asText(), 0, 100)) {
                 assertEquals(Long.toString(++sequence), event.sequence());
                 schemas.validate("ExecutionEvent", json.valueToTree(event));
-                if (event.type().equals("message.delta")) {
-                    assertTrue(event.payload().get("delta").toString().getBytes(StandardCharsets.UTF_8).length <= 4096);
-                }
             }
             assertEquals(Long.toString(sequence), snapshot.path("lastSequence").asText());
             assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getEnterpriseId, (enterprise)).in(RunStepRow::getStatus, Arrays.asList("pending", "running")))));

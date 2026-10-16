@@ -32,9 +32,13 @@ public final class PlatformBrowserModel implements AutoCloseable {
     private final Map<String, AtomicInteger> scheduleFailures = new ConcurrentHashMap<>();
 
     public PlatformBrowserModel(Path requests, String toolsOrigin) throws IOException {
+        this(requests, toolsOrigin, 0);
+    }
+
+    public PlatformBrowserModel(Path requests, String toolsOrigin, int port) throws IOException {
         this.requests = requests;
         this.toolsOrigin = toolsOrigin;
-        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
         server.setExecutor(executor);
         server.createContext("/", this::respond);
         server.start();

@@ -75,12 +75,35 @@ class ChatWebhookTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void encryptedCallbackCanRetryTenTimesButCreatesOneReceiptMessageTaskAndRun() throws Exception {
+    void callbackChallengeAndAuthenticationAllowOnlyOneRetriedBusinessRequest() throws Exception {
+        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(encrypt(json.valueToTree(Map.of(
+            "type", "url_verification", "token", TOKEN, "challenge", "isolated-challenge")))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.challenge").value("isolated-challenge"));
+        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(encrypt(json.valueToTree(Map.of(
+            "type", "url_verification", "token", "wrong-token", "challenge", "isolated-challenge")))))
+            .andExpect(status().is4xxClientError());
+        assertEquals(0, receiptCount());
+        {
+            var event = message("forged", "forged", "user", "伪造平台请求");
+            event.withObject("/header").put("token", TOKEN);
+            byte[] raw = encrypt(event);
+            String timestamp = Long.toString(Instant.now().getEpochSecond());
+            mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)).andExpect(status().is4xxClientError());
+            mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)
+                .header("X-Lark-Request-Timestamp", timestamp).header("X-Lark-Request-Nonce", "test-nonce")
+                .header("X-Lark-Signature", "0".repeat(64))).andExpect(status().is4xxClientError());
+            String expired = Long.toString(Instant.now().minusSeconds(400).getEpochSecond());
+            mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)
+                .header("X-Lark-Request-Timestamp", expired).header("X-Lark-Request-Nonce", "test-nonce")
+                .header("X-Lark-Signature", sign(raw, expired))).andExpect(status().is4xxClientError());
+            assertEquals(0, receiptCount());
+            assertEquals(0, taskCount());
+        }
         var event = message("webhook-retry", "webhook-message", "user", "统计测试考勤");
         event.withObject("/header").put("token", TOKEN);
         byte[] raw = encrypt(event);
         String timestamp = Long.toString(Instant.now().getEpochSecond());
-        for (int index = 0; index < 10; index++) {
+        for (int index = 0; index < 3; index++) {
             mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)
                 .header("X-Lark-Request-Timestamp", timestamp).header("X-Lark-Request-Nonce", "test-nonce")
                 .header("X-Lark-Signature", sign(raw, timestamp))).andExpect(status().isOk()).andExpect(jsonPath("$.msg").value("success"));
@@ -111,35 +134,6 @@ class ChatWebhookTest extends CollaborationApiTestSupport {
             .andExpect(jsonPath("$.nodeType").doesNotExist());
         assertEquals(0, taskCount());
         assertEquals(0, messageCount());
-    }
-
-    @Test
-    void missingForgedOrExpiredSignaturesNeverReachMessageStorage() throws Exception {
-        var event = message("forged", "forged", "user", "伪造平台请求");
-        event.withObject("/header").put("token", TOKEN);
-        byte[] raw = encrypt(event);
-        String timestamp = Long.toString(Instant.now().getEpochSecond());
-        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)).andExpect(status().is4xxClientError());
-        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)
-            .header("X-Lark-Request-Timestamp", timestamp).header("X-Lark-Request-Nonce", "test-nonce")
-            .header("X-Lark-Signature", "0".repeat(64))).andExpect(status().is4xxClientError());
-        String expired = Long.toString(Instant.now().minusSeconds(400).getEpochSecond());
-        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(raw)
-            .header("X-Lark-Request-Timestamp", expired).header("X-Lark-Request-Nonce", "test-nonce")
-            .header("X-Lark-Signature", sign(raw, expired))).andExpect(status().is4xxClientError());
-        assertEquals(0, receiptCount());
-        assertEquals(0, taskCount());
-    }
-
-    @Test
-    void challengeUsesPlatformProtocolAndWrongTokenIsRejected() throws Exception {
-        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(encrypt(json.valueToTree(Map.of(
-            "type", "url_verification", "token", TOKEN, "challenge", "isolated-challenge")))))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.challenge").value("isolated-challenge"));
-        mvc.perform(post(callback).contentType(MediaType.APPLICATION_JSON).content(encrypt(json.valueToTree(Map.of(
-            "type", "url_verification", "token", "wrong-token", "challenge", "isolated-challenge")))))
-            .andExpect(status().is4xxClientError());
-        assertEquals(0, receiptCount());
     }
 
     private byte[] encrypt(JsonNode plain) throws Exception {

@@ -127,6 +127,14 @@ class ConversationFileApiTest extends ExecutionApiTestSupport {
         var search = read(path(run) + "/" + file + "/text/search?query=查找目标");
         schemas.validate("ConversationFileSearch", search);
         assertEquals(3, search.path("matches").get(0).path("line").asInt());
+        String videoFile = FilePreviewMapper.workspaceId("outputs/clip.mp4");
+        var pending = mvc.perform(get(path(run) + "/" + videoFile + "/content").header("Range", "bytes=2-5").cookie(cookie)).andReturn();
+        var response = mvc.perform(asyncDispatch(pending)).andExpect(status().isPartialContent()).andReturn().getResponse();
+        assertEquals("2345", response.getContentAsString());
+        assertEquals("bytes 2-5/10", response.getHeader("Content-Range"));
+        assertEquals("video/mp4", response.getContentType());
+        var other = conversation();
+        mvc.perform(get(path(other) + "/" + videoFile + "/text").cookie(cookie)).andExpect(status().isNotFound());
         workspace(run, "# 修改后的报告", Set.of());
         mvc.perform(get(path(run) + "/" + file + "/text").param("revision", first.path("revision").asText()).cookie(cookie))
             .andExpect(status().isConflict());
@@ -134,20 +142,6 @@ class ConversationFileApiTest extends ExecutionApiTestSupport {
         mvc.perform(get(path(run)).param("path", "../outside").cookie(cookie)).andExpect(status().isBadRequest());
         mvc.perform(get(path(run) + "/" + FilePreviewMapper.workspaceId("../outside") + "/text").cookie(cookie)).andExpect(status().isBadRequest());
         mvc.perform(get(path(run))).andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void streamsVideoRangesAndRejectsFilesFromAnotherConversation() throws Exception {
-        var run = conversation();
-        workspace(run, "当前对话", Set.of());
-        String file = FilePreviewMapper.workspaceId("outputs/clip.mp4");
-        var pending = mvc.perform(get(path(run) + "/" + file + "/content").header("Range", "bytes=2-5").cookie(cookie)).andReturn();
-        var response = mvc.perform(asyncDispatch(pending)).andExpect(status().isPartialContent()).andReturn().getResponse();
-        assertEquals("2345", response.getContentAsString());
-        assertEquals("bytes 2-5/10", response.getHeader("Content-Range"));
-        assertEquals("video/mp4", response.getContentType());
-        var other = conversation();
-        mvc.perform(get(path(other) + "/" + file + "/text").cookie(cookie)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -171,21 +165,14 @@ class ConversationFileApiTest extends ExecutionApiTestSupport {
         assertEquals("完整附件内容", read(path(run) + "/f." + uploaded + "/text").path("content").asText());
         var other = conversation();
         mvc.perform(get(path(other) + "/f." + uploaded + "/text").cookie(cookie)).andExpect(status().isNotFound());
+        workspace(run, "由来源文件整理的内容", Set.of(uploaded));
+        String derived = FilePreviewMapper.workspaceId("work/report.md");
+        assertEquals("由来源文件整理的内容", read(path(run) + "/" + derived + "/text").path("content").asText());
         files.deleted(files.find(enterprise, uploaded, false).orElseThrow(), Instant.now());
+        mvc.perform(get(path(run) + "/" + derived + "/text").cookie(cookie)).andExpect(status().isNotFound());
+        mvc.perform(get(path(run)).cookie(cookie)).andExpect(status().isNotFound());
         mvc.perform(get(path(run) + "/f." + uploaded + "/text").cookie(cookie)).andExpect(status().isNotFound());
         assertEquals(1, read(path(run) + "?scope=context").path("items").size());
     }
 
-    @Test
-    void deletingASourceRevokesWorkspaceAccessEvenAfterTheTextWasCached() throws Exception {
-        var run = conversation();
-        String uploaded = save(run, "attachment", "来源.txt", "来源正文");
-        attachments.bind(enterprise, run.inputMessageId(), List.of(uploaded), Instant.now());
-        workspace(run, "由来源文件整理的内容", Set.of(uploaded));
-        String file = FilePreviewMapper.workspaceId("work/report.md");
-        assertEquals("由来源文件整理的内容", read(path(run) + "/" + file + "/text").path("content").asText());
-        files.deleted(files.find(enterprise, uploaded, false).orElseThrow(), Instant.now());
-        mvc.perform(get(path(run) + "/" + file + "/text").cookie(cookie)).andExpect(status().isNotFound());
-        mvc.perform(get(path(run)).cookie(cookie)).andExpect(status().isNotFound());
-    }
 }

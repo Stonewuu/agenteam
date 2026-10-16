@@ -3,6 +3,8 @@ package com.stonewu.agenteam.service.chat;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
+import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationActionMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationActionRow;
@@ -58,6 +60,9 @@ class CollaborationRollbackTest extends CollaborationToolTestSupport {
         assertEquals(task.getOwnerWorkId(), onlyTask().getOwnerWorkId());
         assertEquals(1, onlyTask().getWorkCount());
         assertEquals(0, onlyTask().getHandoffCount());
+        assertEquals("running", work(task.getOwnerWorkId()).getStatus());
+        assertEquals(1, databaseAccess.mapper(CollaborationWorkItemMapper.class).selectCount(new LambdaQueryWrapper<CollaborationWorkItemRow>()
+            .eq(CollaborationWorkItemRow::getEnterpriseId, enterprise).eq(CollaborationWorkItemRow::getTaskId, task.getId())));
         assertEquals(before, outgoing.selectCount(new LambdaQueryWrapper<ChatOutboundMessageRow>().eq(ChatOutboundMessageRow::getTaskId, task.getId())));
         assertEquals(0, databaseAccess.mapper(CollaborationActionMapper.class).selectCount(new LambdaQueryWrapper<CollaborationActionRow>()
             .eq(CollaborationActionRow::getTaskId, task.getId()).eq(CollaborationActionRow::getActionType, "handoff")));

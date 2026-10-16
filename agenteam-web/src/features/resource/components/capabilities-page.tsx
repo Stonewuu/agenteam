@@ -8,7 +8,6 @@ import {PlatformShell} from "@/features/workspace/components/platform-shell";
 import {ResourceEditor} from "./resource-editor";
 import {ResourceList} from "./resource-list";
 import {resourceTypes} from "../lib/resource-display";
-import {WorkflowDevelopmentPage, workflowInDevelopment} from "@/features/workflow/components/workflow-development";
 import ui from "@/components/ui/surface.module.css";
 
 export function CapabilitiesPage({enterpriseId, section, resourceId}: {
@@ -22,8 +21,9 @@ export function CapabilitiesPage({enterpriseId, section, resourceId}: {
                                                                                                            context
                                                                                                          }) => {
     const type = section ? localizeCatalog(resourceTypes, uiText).find((type) => type.path === section) : localizeCatalog(resourceTypes, uiText).find((type) => context.permissions.some((code) => [`${type.kind}.view`, `${type.kind}.create`].includes(code)));
-    return <PlatformShell user={user} context={context} area="capabilities" title={type?.label ?? uiText("能力中心")}>
-      {type?.kind === "workflow" && workflowInDevelopment ? <WorkflowDevelopmentPage/> : type ? resourceId ?
+    return <PlatformShell user={user} context={context} area="capabilities" title={type?.label ?? uiText("能力中心")}
+      fullHeight={type?.kind === "workflow" && Boolean(resourceId)}>
+      {type ? resourceId ?
           <ResourceEditor key={`${type.kind}:${resourceId}`} enterpriseId={enterpriseId} kind={type.kind} id={resourceId}
                           permissions={context.permissions} permissionVersion={context.permissionVersion}/>
           : <ResourceList key={`${type.kind}:${context.permissionVersion}`} enterpriseId={enterpriseId} kind={type.kind}

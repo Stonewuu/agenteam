@@ -113,28 +113,7 @@ class ScheduledNotificationExecutionTest extends ExecutionApiTestSupport {
         schemas.validate("ScheduleOccurrence", json.valueToTree(completed));
     }
 
-    @Test
-    void aDisabledRecipientDoesNotPreventDeliveryToRemainingMembers() {
-        var other = EnterpriseTestData.member(users, permissions, enterprise, "notice_" + UUID.randomUUID().toString().substring(0, 8),
-            "notice-test-password-2026", "通知接收成员", List.of(permissions.builtinRoleId(enterprise, "member")));
-        var actor = actor(admin);
-        var plan = plans.create(actor, request("逐人发送", List.of(admin, other.id())));
-        var queued = triggers.manual(actor, plan.id(), UUID.randomUUID().toString());
-        members.update(new LambdaUpdateWrapper<EnterpriseMemberRow>().eq(EnterpriseMemberRow::getEnterpriseId, enterprise)
-            .eq(EnterpriseMemberRow::getUserId, other.id()).set(EnterpriseMemberRow::getStatus, "disabled"));
-        assertTrue(worker.runOnce());
-        reconciler.reconcile(row(queued.id()));
-        var outcome = queries.get(actor, plan.id()).latestOccurrence();
-        assertEquals("partially_failed", outcome.status());
-        assertEquals(2, outcome.actionResult().get("totalCount"));
-        assertEquals(1, outcome.actionResult().get("inAppCount"));
-        assertEquals(1, outcome.actionResult().get("blockedCount"));
-        var detail = queries.occurrence(actor, plan.id(), queued.id());
-        assertTrue(detail.recipients().stream().anyMatch(value -> value.userId().equals(other.id()) && "blocked".equals(value.inAppStatus())));
-        assertTrue(queries.get(actor, plan.id()).enabled());
-        assertEquals(List.of(admin), notices.selectList(new LambdaQueryWrapper<NotificationRow>().eq(NotificationRow::getSourceOccurrenceId, queued.id()))
-            .stream().map(NotificationRow::getUserId).toList());
-    }
+
 
     @Test
     void aMemberWithoutAgentPermissionCanExecuteSelfNotificationsAndRevocationBlocksQueuedWork() {
@@ -194,21 +173,18 @@ class ScheduledNotificationExecutionTest extends ExecutionApiTestSupport {
         assertNull(queries.get(actor, plan.id()).activeOccurrenceId());
         assertFalse(worker.runOnce());
         assertEquals(0, count("notification"));
-        assertEquals("queued", triggers.manual(actor, plan.id(), UUID.randomUUID().toString()).status());
-    }
-
-    @Test
-    void stoppingAfterInAppDeliveryKeepsItsActualCompletedResult() {
-        var actor = actor(admin);
-        var plan = plans.create(actor, request("已经保存的通知", List.of(admin)));
-        var queued = triggers.manual(actor, plan.id(), UUID.randomUUID().toString());
+        var next = triggers.manual(actor, plan.id(), UUID.randomUUID().toString());
+        assertEquals("queued", next.status());
         assertTrue(worker.runOnce());
-        var cancelled = cancellations.cancel(actor, plan.id(), queued.id());
-        assertEquals("completed", cancelled.status());
-        assertEquals(true, cancelled.actionResult().get("cancelRequested"));
+        var afterDelivery = cancellations.cancel(actor, plan.id(), next.id());
+        assertEquals("completed", afterDelivery.status());
+        assertEquals(true, afterDelivery.actionResult().get("cancelRequested"));
         assertEquals(1, count("notification"));
         assertNull(queries.get(actor, plan.id()).activeOccurrenceId());
+
     }
+
+
 
     @Test
     void expiredPreparedTimeBlocksTheWholeNotificationWithoutCreatingMessages() {

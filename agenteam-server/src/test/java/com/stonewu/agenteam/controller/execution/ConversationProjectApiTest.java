@@ -76,10 +76,22 @@ class ConversationProjectApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void sharedFilesFollowProjectSelectionAndSurviveConversationDeletion() throws Exception {
-        var first = create(null);
-        String projectId = snapshot(first).path("projectId").asText();
-        var second = create(projectId);
+    void projectSelectionKeepsRunTargetsAndSharedFilesThroughConversationDeletion() throws Exception {
+        String key = UUID.randomUUID().toString();
+        var input = Map.of("name", "财务分析", "directory", "财务分析");
+        var project = data(write(base() + "/projects", input, key).andExpect(status().isCreated()).andReturn());
+        assertEquals(project, data(write(base() + "/projects", input, key).andExpect(status().isCreated()).andReturn()));
+        assertEquals("projects/财务分析", project.path("directory").asText());
+        var first = create(project.path("id").asText());
+        var second = create(project.path("id").asText());
+        String shared = project.path("id").asText();
+        assertEquals(shared, snapshot(first).path("projectId").asText());
+        assertEquals(shared, snapshot(second).path("projectId").asText());
+        assertEquals(shared, runs.find(enterprise, first.path("runId").asText(), false).orElseThrow().executionConfig().path("workspaceProjectId").asText());
+        var fixed = runs.find(enterprise, first.path("runId").asText(), false).orElseThrow().executionConfig();
+        assertEquals("财务分析", fixed.path("workspaceProjectName").asText());
+        assertEquals("projects/财务分析", fixed.path("workspaceProjectDirectory").asText());
+        String projectId = shared;
         var run = runs.find(enterprise, first.path("runId").asText(), false).orElseThrow();
         byte[] content = "长期保留的项目输入".getBytes(StandardCharsets.UTF_8);
         var stored = storage.write(enterprise, new ByteArrayInputStream(content), content.length);
@@ -117,27 +129,6 @@ class ConversationProjectApiTest extends ExecutionApiTestSupport {
         assertNull(files.find(enterprise, inputId, false).orElseThrow().expiresAt());
         assertEquals("第二条会话继续修改", data(mvc.perform(get(secondPath + suffix).cookie(cookie)).andExpect(status().isOk()).andReturn()).path("content").asText());
         assertEquals(projectId, projects.require(enterprise, admin, projectId).getId());
-    }
-
-    @Test
-    void createsDefaultsSharesProjectsAndKeepsSubmittedRunTargets() throws Exception {
-        String key = UUID.randomUUID().toString();
-        var input = Map.of("name", "财务分析", "directory", "财务分析");
-        var project = data(write(base() + "/projects", input, key).andExpect(status().isCreated()).andReturn());
-        assertEquals(project, data(write(base() + "/projects", input, key).andExpect(status().isCreated()).andReturn()));
-        assertEquals("projects/财务分析", project.path("directory").asText());
-        var first = create(project.path("id").asText());
-        var second = create(project.path("id").asText());
-        String shared = project.path("id").asText();
-        assertEquals(shared, snapshot(first).path("projectId").asText());
-        assertEquals(shared, snapshot(second).path("projectId").asText());
-        assertEquals(shared, runs.find(enterprise, first.path("runId").asText(), false).orElseThrow().executionConfig().path("workspaceProjectId").asText());
-        var fixed = runs.find(enterprise, first.path("runId").asText(), false).orElseThrow().executionConfig();
-        assertEquals("财务分析", fixed.path("workspaceProjectName").asText());
-        assertEquals("projects/财务分析", fixed.path("workspaceProjectDirectory").asText());
-        cancel(first);
-        cancel(second);
-
         var automatic = create(null);
         String generated = snapshot(automatic).path("projectId").asText();
         assertNotEquals(shared, generated);

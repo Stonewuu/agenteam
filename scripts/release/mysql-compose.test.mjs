@@ -7,7 +7,12 @@ import {test} from "node:test";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const deploy = resolve(root, "deploy");
 
+const configurations = new Map();
 function configuration(extra, role, servicesOnly = false) {
+  const key = JSON.stringify([extra, role, servicesOnly]);
+  if (configurations.has(key)) {
+    return configurations.get(key);
+  }
   const files = ["compose.yaml", "compose.registry.yaml", "compose.single.yaml", ...extra];
   const args = ["compose", "--project-directory", deploy, "--env-file", resolve(deploy, "registry/release.env"),
     ...files.flatMap((file) => ["-f", resolve(deploy, file)]), "config",
@@ -23,7 +28,9 @@ function configuration(extra, role, servicesOnly = false) {
     HTTP_PORT: role === "client" ? "8089" : "8088"};
   const output = execFileSync("docker", args, {env, encoding: "utf8", windowsHide: true,
     timeout: 30000, maxBuffer: 4 * 1024 * 1024});
-  return servicesOnly ? output.trim().split(/\r?\n/) : JSON.parse(output);
+  const result = servicesOnly ? output.trim().split(/\r?\n/) : JSON.parse(output);
+  configurations.set(key, result);
+  return result;
 }
 
 test("默认部署继续运行自己的 MySQL，保留新驱动和等待数据库的配置", () => {

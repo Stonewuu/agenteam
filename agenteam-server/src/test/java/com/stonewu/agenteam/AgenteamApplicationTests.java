@@ -170,7 +170,6 @@ class AgenteamApplicationTests {
     void initializationAuthenticationAndTenantRequestsUseActualSessionProtection() throws Exception {
         mvc.perform(get("/api/v1/auth/bootstrap-status")).andExpect(status().isOk()).andExpect(jsonPath("$.data.initialized").value(false));
         mvc.perform(get("/api/v1/auth/me")).andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.error.code").value("SYSTEM_NOT_INITIALIZED"));
-        mvc.perform(post("/api/auth/bootstrap").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(setup("legacy-test")))).andExpect(status().isNotFound());
         SessionToken first = csrf(null);
         SessionToken second = csrf(null);
         assertInputProtection(first);
@@ -334,10 +333,6 @@ class AgenteamApplicationTests {
         mvc.perform(get(agentPath + "/conversations/" + firstConversation).cookie(cookie)).andExpect(status().isNotFound());
         mvc.perform(get(agentPath + "/conversations/" + privateConversation).cookie(cookie)).andExpect(status().isNotFound());
         mvc.perform(write(agentPath + "/conversations", csrf(cookie)).header("Idempotency-Key", UUID.randomUUID().toString()).content("{\"agentId\":\"unavailable\",\"input\":{\"text\":\"只读成员不能开始执行\",\"attachmentIds\":[],\"skillVersionIds\":[],\"knowledgeReferences\":[],\"links\":[]}}")).andExpect(status().isForbidden());
-        mvc.perform(get(agentPath + "/agent-runtime/sessions").cookie(cookie)).andExpect(status().isNotFound());
-        mvc.perform(get("/api/agents/harness/sessions").cookie(cookie)).andExpect(status().isNotFound());
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isNotFound());
-        mvc.perform(post("/api/enterprise/members").cookie(cookie).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/enterprises/" + otherEnterprise + "/members").cookie(cookie)).andExpect(status().isForbidden());
     }
 

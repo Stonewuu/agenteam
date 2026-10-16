@@ -64,12 +64,12 @@ class ActivityTrendApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void dailyCountsIncludeInteractiveSubmissionsButExcludeAutomaticOrAmbiguousRunsAndRequestReplays() throws Exception {
+    void interactiveAndTodoActivityCountsOnlyEffectiveUserChangesOnce() throws Exception {
         long beforeConversations = sum("conversations");
         long beforeSchedules = sum("schedules");
-        String requestKey = UUID.randomUUID().toString();
-        var first = data(write(base() + "/conversations", body(), requestKey).andExpect(status().isAccepted()).andReturn());
-        write(base() + "/conversations", body(), requestKey).andExpect(status().isAccepted());
+        String conversationKey = UUID.randomUUID().toString();
+        var first = data(write(base() + "/conversations", body(), conversationKey).andExpect(status().isAccepted()).andReturn());
+        write(base() + "/conversations", body(), conversationKey).andExpect(status().isAccepted());
         String automatic = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn()).path("runId").asText();
         String manual = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn()).path("runId").asText();
         assertTrue(!first.path("runId").asText().isBlank());
@@ -83,6 +83,21 @@ class ActivityTrendApiTest extends ExecutionApiTestSupport {
             // 这两条仅用于查询分类验证；恢复模式后交给公共测试清理流程停止。
             runs.update(new LambdaUpdateWrapper<AgentRunRow>().in(AgentRunRow::getId, automatic, manual).set(AgentRunRow::getMode, "interactive"));
         }
+        long before = sum("todos");
+        var value = new TodoWriteRequest("活动统计测试", "仅用于隔离测试", admin, null, null, "normal", "manual", null, null, null);
+        var actor = new AuthContext(users.findById(admin).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
+        todos.create(actor, value);
+        assertEquals(before, sum("todos"));
+        String requestKey = UUID.randomUUID().toString();
+        var saved = data(write(base() + "/todos", value, requestKey).andExpect(status().isCreated()).andReturn());
+        write(base() + "/todos", value, requestKey).andExpect(status().isCreated());
+        assertEquals(before + 1, sum("todos"));
+        String path = base() + "/todos/" + saved.path("id").asText() + "/status";
+        change(HttpMethod.PATCH, path, Map.of("status", "pending", "reason", ""), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
+        assertEquals(before + 1, sum("todos"));
+        change(HttpMethod.PATCH, path, Map.of("status", "completed", "reason", ""), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
+        change(HttpMethod.PATCH, path, Map.of("status", "pending", "reason", ""), "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
+        assertEquals(before + 2, sum("todos"));
     }
 
     @Test
@@ -122,25 +137,6 @@ class ActivityTrendApiTest extends ExecutionApiTestSupport {
         assertEquals(before + 3, sum("schedules"));
         assertTrue(actionWorker.runOnce());
         lifecycle.stopForUser(enterprise, admin);
-    }
-
-    @Test
-    void manualTodoChangesAreAtomicAndDoNotCountAutomaticToolsNoChangesOrFailedRequests() throws Exception {
-        long before = sum("todos");
-        var value = new TodoWriteRequest("活动统计测试", "仅用于隔离测试", admin, null, null, "normal", "manual", null, null, null);
-        var actor = new AuthContext(users.findById(admin).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
-        todos.create(actor, value);
-        assertEquals(before, sum("todos"));
-        String requestKey = UUID.randomUUID().toString();
-        var saved = data(write(base() + "/todos", value, requestKey).andExpect(status().isCreated()).andReturn());
-        write(base() + "/todos", value, requestKey).andExpect(status().isCreated());
-        assertEquals(before + 1, sum("todos"));
-        String path = base() + "/todos/" + saved.path("id").asText() + "/status";
-        change(HttpMethod.PATCH, path, Map.of("status", "pending", "reason", ""), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        assertEquals(before + 1, sum("todos"));
-        change(HttpMethod.PATCH, path, Map.of("status", "completed", "reason", ""), "1", UUID.randomUUID().toString()).andExpect(status().isOk());
-        change(HttpMethod.PATCH, path, Map.of("status", "pending", "reason", ""), "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
-        assertEquals(before + 2, sum("todos"));
     }
 
     @Test

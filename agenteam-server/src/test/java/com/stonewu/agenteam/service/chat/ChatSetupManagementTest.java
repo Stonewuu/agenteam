@@ -39,6 +39,11 @@ class ChatSetupManagementTest extends ChatApiTestSupport {
 
     @Test
     void pendingConnectionsExcludeBoundBotsAcrossPagesAndKeepCursorFilters() throws Exception {
+        var result = data(mvc.perform(get("/api/v1/enterprises/" + enterprise + "/chat/bots").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertEquals(bot.getId(), result.at("/items/0/id").asText());
+        assertEquals(agent, result.at("/items/0/agentId").asText());
+        assertFalse(result.at("/items/0/agentName").asText().isBlank());
         String first = connection("未完成岗位一");
         String second = connection("未完成岗位二");
         String bound = connection("已经关联的岗位");
@@ -71,15 +76,6 @@ class ChatSetupManagementTest extends ChatApiTestSupport {
         var all = data(mvc.perform(get(path).cookie(cookie).param("purpose", "chat_bot"))
             .andExpect(status().isOk()).andReturn());
         assertEquals(3, all.path("items").size());
-    }
-
-    @Test
-    void botListReturnsAssociatedAgentNameWithoutAnotherBindingStep() throws Exception {
-        var result = data(mvc.perform(get("/api/v1/enterprises/" + enterprise + "/chat/bots").cookie(cookie))
-            .andExpect(status().isOk()).andReturn());
-        assertEquals(bot.getId(), result.at("/items/0/id").asText());
-        assertEquals(agent, result.at("/items/0/agentId").asText());
-        assertFalse(result.at("/items/0/agentName").asText().isBlank());
     }
 
     private String connection(String name) {
