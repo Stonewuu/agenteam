@@ -45,4 +45,13 @@
   </select>
   <select id="lockEnterprise" resultType="string">SELECT id FROM enterprise WHERE id = #{id} FOR UPDATE</select>
   <select id="lockRequest" resultType="string">SELECT id FROM api_request WHERE id = #{id} FOR UPDATE</select>
+  <select id="lockUserForShare" resultType="string">SELECT id FROM app_user WHERE id = #{id} FOR SHARE</select>
+  <select id="waitingForUserLockAfterEnterpriseLock" resultType="int">
+    SELECT COUNT(*) FROM performance_schema.data_lock_waits w
+    JOIN performance_schema.data_locks waiting ON waiting.ENGINE_LOCK_ID = w.REQUESTING_ENGINE_LOCK_ID
+    JOIN performance_schema.data_locks held ON held.ENGINE_TRANSACTION_ID = waiting.ENGINE_TRANSACTION_ID
+    WHERE waiting.OBJECT_SCHEMA = DATABASE() AND waiting.OBJECT_NAME = 'app_user'
+      AND held.OBJECT_SCHEMA = DATABASE() AND held.OBJECT_NAME = 'enterprise'
+      AND held.LOCK_STATUS = 'GRANTED' AND held.LOCK_MODE LIKE 'X%'
+  </select>
 </mapper>

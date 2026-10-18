@@ -14,6 +14,7 @@ import com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow;
 import com.stonewu.agenteam.service.execution.ConversationTitleWorker;
 import com.stonewu.agenteam.service.execution.RunWorker;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
+import com.stonewu.agenteam.support.MybatisTestDatabase;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.sun.net.httpserver.HttpExchange;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -95,9 +97,16 @@ class ConversationTitleApiTest extends ExecutionApiTestSupport {
             waitFor(title ? titleFinish : answerFinish);
             reply(exchange, title ? "活动筹备安排" : "活动准备事项已经整理完成。");
         };
-        try (var worker = new RunWorker(lifecycle, tasks)) {
+        try (var accountRead = databaseAccess.getDataSource().getConnection();
+             var worker = new RunWorker(lifecycle, tasks)) {
+            accountRead.setAutoCommit(false);
+            // 请求外键检查会持有账号共享锁，标题必须先锁企业再等待账号。
+            var locks = MybatisTestDatabase.administration(new SingleConnectionDataSource(accountRead, true));
+            locks.mapper(TestDatabaseAdministrationMapper.class).lockUserForShare(admin);
             String key = UUID.randomUUID().toString();
             var accepted = create(key);
+            await(() -> locks.mapper(TestDatabaseAdministrationMapper.class).waitingForUserLockAfterEnterpriseLock() > 0);
+            accountRead.rollback();
             assertEquals(accepted, create(key));
             String conversation = accepted.path("conversationId").asText();
             assertEquals("请整理这次活动的准备事项。", conversations.selectById(conversation).getTitle());
@@ -108,6 +117,7 @@ class ConversationTitleApiTest extends ExecutionApiTestSupport {
             assertEquals("running", runs.find(enterprise, accepted.path("runId").asText(), false).orElseThrow().status());
             titleFinish.countDown();
             await(() -> "completed".equals(job(conversation).getStatus()));
+            assertEquals(1, job(conversation).getAttemptCount());
             var metadata = metadata(conversation);
             schemas.validate("ConversationMetadata", metadata.get(0));
             assertEquals("活动筹备安排", metadata.at("/0/conversation/title").asText());

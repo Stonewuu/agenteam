@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
+import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
 import com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper;
@@ -23,6 +24,7 @@ import java.util.concurrent.CancellationException;
 @Component
 public class ModelUsageRegistrationGuard {
     private final AuthMapper users;
+    private final EnterpriseMapper enterprises;
     private final RunMapper runs;
     private final AccountBehaviorService behavior;
     private final BackgroundJobSqlMapper jobs;
@@ -31,10 +33,11 @@ public class ModelUsageRegistrationGuard {
     private final ResourceJson json;
     private final Clock clock;
 
-    public ModelUsageRegistrationGuard(AuthMapper users, RunMapper runs, AccountBehaviorService behavior,
+    public ModelUsageRegistrationGuard(AuthMapper users, EnterpriseMapper enterprises, RunMapper runs, AccountBehaviorService behavior,
                                        BackgroundJobSqlMapper jobs, ConversationSqlMapper conversations,
                                        EnterpriseAuthorizationService authorization, ResourceJson json, Clock clock) {
         this.users = users;
+        this.enterprises = enterprises;
         this.runs = runs;
         this.behavior = behavior;
         this.jobs = jobs;
@@ -45,6 +48,11 @@ public class ModelUsageRegistrationGuard {
     }
 
     public void requireActive(ModelCallContext context) {
+        if (context.purpose().equals("title")) {
+            // 标题还需锁企业校验权限，必须在账号更新锁之前取得企业锁。
+            enterprises.lockEnterprise(context.enterpriseId()).filter("active"::equals)
+                .orElseThrow(() -> new CancellationException("标题所属企业已不可用。"));
+        }
         var user = users.findByIdForUpdate(context.userId(), 2).orElseThrow(() -> new CancellationException("模型调用账号已不可用。"));
         if (!user.status().equals("active") || !behavior.allowed(user)) {
             throw new CancellationException("模型调用账号已不可用。");

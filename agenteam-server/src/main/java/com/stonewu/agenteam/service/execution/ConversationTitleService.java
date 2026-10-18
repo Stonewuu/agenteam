@@ -2,6 +2,7 @@ package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
+import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -35,6 +36,7 @@ public class ConversationTitleService {
     private final ExecutionMessageMapper messages;
     private final RunMapper runs;
     private final AuthMapper users;
+    private final EnterpriseMapper enterprises;
     private final EnterpriseAuthorizationService authorization;
     private final ModelProfileCatalog models;
     private final ResourceJson json;
@@ -43,13 +45,14 @@ public class ConversationTitleService {
 
     public ConversationTitleService(BackgroundJobMapper jobs, ConversationSqlMapper conversations,
                                     ExecutionMessageMapper messages, RunMapper runs, AuthMapper users,
-                                    EnterpriseAuthorizationService authorization, ModelProfileCatalog models,
+                                    EnterpriseMapper enterprises, EnterpriseAuthorizationService authorization, ModelProfileCatalog models,
                                     ResourceJson json, ApplicationEventPublisher events, Clock clock) {
         this.jobs = jobs;
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
         this.users = users;
+        this.enterprises = enterprises;
         this.authorization = authorization;
         this.models = models;
         this.json = json;
@@ -158,6 +161,9 @@ public class ConversationTitleService {
         if (!ConversationTitleJob.KIND.equals(lease.kind())) {
             throw unavailable();
         }
+        // 与企业请求和账号清理保持相同顺序，避免账号锁与企业锁相互等待。
+        enterprises.lockEnterprise(lease.enterpriseId()).filter("active"::equals)
+            .orElseThrow(ConversationTitleService::unavailable);
         var user = users.findByIdForUpdate(lease.ownerUserId(), 2).orElseThrow(ConversationTitleService::unavailable);
         authorization.lockAndRequire(new AuthContext(user, lease.enterpriseId(), Set.of()), "agent.run");
     }

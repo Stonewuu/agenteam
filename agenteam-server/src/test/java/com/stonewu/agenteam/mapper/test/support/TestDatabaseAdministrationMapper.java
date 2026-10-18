@@ -44,4 +44,8 @@ public interface TestDatabaseAdministrationMapper {
     String lockEnterprise(@Param("id") String id);
 
     String lockRequest(@Param("id") String id);
+
+    String lockUserForShare(@Param("id") String id);
+
+    int waitingForUserLockAfterEnterpriseLock();
 }
