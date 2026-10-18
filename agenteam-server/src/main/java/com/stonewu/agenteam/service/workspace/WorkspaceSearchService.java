@@ -34,6 +34,7 @@ public class WorkspaceSearchService {
         menu("user", "employees", "数字员工", "agent.market_view", "agent.run", "agent.hire", "agent.hire_approve"),
         menu("user", "schedules", "定时任务", "schedule.view"),
         menu("user", "todos", "我的待办", "todo.view"),
+        menu("user", "environment", "我的环境", "agent.run"),
         menu("capabilities", "capabilities/agents", "智能体", "agent.view", "agent.create"),
         menu("capabilities", "capabilities/skills", "技能", "skill.view", "skill.create"),
         menu("capabilities", "capabilities/plugins", "插件", "plugin.view", "plugin.create"),

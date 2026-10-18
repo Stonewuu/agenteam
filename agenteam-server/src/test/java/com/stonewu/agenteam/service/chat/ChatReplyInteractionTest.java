@@ -140,7 +140,7 @@ class ChatReplyInteractionTest extends CollaborationToolTestSupport {
         startTask("请检查这段文字中的链接");
         assertEquals("summary_link", onlyTask().getOutputVisibility());
         var task = onlyTask();
-        var change = receive("task-choice", task.getShortCode() + " 本次直接回复内容");
+        var change = receive("task-choice", "任务 【" + task.getShortCode() + "】：本次直接回复内容");
         routing.route(enterprise, change.getId());
         assertEquals(1, taskCount());
         assertEquals(task.getInputRevision(), onlyTask().getInputRevision());

@@ -20,6 +20,7 @@ import {
   Category2,
   Chart,
   Clock,
+  Code1,
   Command,
   Copy,
   Cpu,
@@ -38,6 +39,7 @@ import {
   Flag,
   Flash,
   Folder2,
+  Gallery,
   Global,
   Hierarchy,
   Hierarchy2,
@@ -104,10 +106,10 @@ type IconTone = "copper" | "blue" | "teal" | "violet" | "amber" | "mint" | "rose
 const iconTones = new Map<Icon, IconTone>([
   ...[Messages2, Edit2, Send2].map(value => [value, "copper"] as const),
   ...[Chart, DocumentText, DocumentText1, NoteText, Book1, Copy, DirectInbox, SearchNormal1, Calendar1, Clock,
-    ExportSquare, ProfileCircle, User, People].map(value => [value, "blue"] as const),
+    ExportSquare, ProfileCircle, User, People, Monitor, Code1].map(value => [value, "blue"] as const),
   ...[Data, Link21, ImportCurve, ExportCurve, Save2, Refresh, Wallet2, Buildings2, Profile2User, ShieldTick]
     .map(value => [value, "teal"] as const),
-  ...[Cpu, Flash, Layer, Box1, Hierarchy, Hierarchy2, Hierarchy3, HierarchySquare2, Setting2, Setting4,
+  ...[Cpu, Flash, Layer, Box1, Gallery, Hierarchy, Hierarchy2, Hierarchy3, HierarchySquare2, Setting2, Setting4,
     SidebarLeft, SidebarRight, Global, Moon, Lock1, Unlock, SecuritySafe, More, Element3, Category2]
     .map(value => [value, "violet"] as const),
   ...[Star1, Bookmark, LampOn, Notification, Sun1, Folder2, Key, Pause, Flag, InfoCircle, Receipt1, CalendarTick]
@@ -185,6 +187,7 @@ export const IconCircle = agenteamIcon(Record);
 export const IconCircleCheck = agenteamIcon(TickCircle);
 export const IconClock = agenteamIcon(Clock);
 export const IconCommand = agenteamIcon(Command);
+export const IconTerminal = agenteamIcon(Code1);
 export const IconCopy = agenteamIcon(Copy);
 export const IconDatabase = agenteamIcon(Data);
 export const IconDeviceDesktop = agenteamIcon(Monitor);
@@ -197,6 +200,7 @@ export const IconEye = agenteamIcon(Eye);
 export const IconEyeOff = agenteamIcon(EyeSlash);
 export const IconFileText = agenteamIcon(DocumentText);
 export const IconFolder = agenteamIcon(Folder2);
+export const IconImage = agenteamIcon(Gallery);
 export const IconFlag = agenteamIcon(Flag);
 export const IconGitBranch = agenteamIcon(Hierarchy3);
 export const IconHexagons = agenteamIcon(Box1);

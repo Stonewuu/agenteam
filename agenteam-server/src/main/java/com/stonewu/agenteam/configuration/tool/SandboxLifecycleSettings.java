@@ -16,7 +16,7 @@ public record SandboxLifecycleSettings(int idleSeconds, int scanSeconds, int sta
     }
 
     @Autowired
-    public SandboxLifecycleSettings(@Value("${execution.sandbox.idle-seconds:900}") int idleSeconds,
+    public SandboxLifecycleSettings(@Value("${execution.sandbox.idle-seconds:1800}") int idleSeconds,
                                     @Value("${execution.sandbox.idle-scan-seconds:30}") int scanSeconds,
                                     @Value("${execution.sandbox.usage-stale-seconds:60}") int staleSeconds,
                                     @Value("${execution.sandbox.stop-seconds:10}") int stopSeconds,

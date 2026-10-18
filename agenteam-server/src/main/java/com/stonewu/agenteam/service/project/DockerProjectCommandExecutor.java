@@ -65,7 +65,7 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
                                          SandboxCapacity capacity, ProjectCommandProcess processes) {
         this(settings, layout, containers, capacity, processes,
             new UserSandboxLifecycle(layout, new UserSandboxRegistry(layout), containers, processes,
-                new SandboxLifecycleSettings(900, 30, 60, 10), Clock.systemUTC()));
+                new SandboxLifecycleSettings(1800, 30, 60, 10), Clock.systemUTC()));
     }
 
     @Autowired

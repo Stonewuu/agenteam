@@ -5,6 +5,7 @@ import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.model.project.entity.SandboxRunUsage;
+import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.SandboxExecutor;
@@ -75,7 +76,7 @@ class UserSandboxLifecycleTest {
             assertFalse(lifecycle.collect(project.workspaceId()), "父任务或子任务仍在使用容器");
             registry.remove(usage);
             registry.markActivity(project.workspaceId(), clock.millis());
-            clock.advance(899);
+            clock.advance(1799);
             assertFalse(lifecycle.collect(project.workspaceId()));
             clock.advance(2);
             assertTrue(lifecycle.collect(project.workspaceId()));
@@ -100,7 +101,7 @@ class UserSandboxLifecycleTest {
         try (var control = control(); var pool = Executors.newVirtualThreadPerTaskExecutor()) {
             var first = lifecycle.begin(project, "first", "hash", "true", Duration.ofMinutes(1), control);
             lifecycle.complete(first, new SandboxExecutor.Result(0, false, false, "out", "err"));
-            clock.advance(901);
+            clock.advance(1801);
             var collecting = pool.submit(() -> lifecycle.collect(project.workspaceId()));
             assertTrue(entered.await(3, TimeUnit.SECONDS));
             var started = new CountDownLatch(1);
@@ -141,7 +142,40 @@ class UserSandboxLifecycleTest {
     }
 
     private UserSandboxLifecycle restored() {
-        return new UserSandboxLifecycle(layout, registry, containers, processes, new SandboxLifecycleSettings(900, 30, 60, 10), clock);
+        return new UserSandboxLifecycle(layout, registry, containers, processes, new SandboxLifecycleSettings(1800, 30, 60, 10), clock);
+    }
+
+    @Test
+    void viewingDoesNotRenewIdleButUserActionsDoAndBusyEnvironmentCannotBeStopped() throws Exception {
+        assertEquals("running", lifecycle.environment(project, true).status());
+        Files.writeString(layout.project(project).resolve("keep.txt"), "用户文件");
+        long connected = registry.state(project.workspaceId()).idleSince();
+        clock.advance(1799);
+        assertEquals("running", lifecycle.environment(project, false).status());
+        assertEquals(connected, registry.state(project.workspaceId()).idleSince(), "状态查询不计入用户操作");
+        assertFalse(lifecycle.collect(project.workspaceId()));
+        registry.markActivity(project.workspaceId(), clock.millis());
+        clock.advance(2);
+        assertFalse(lifecycle.collect(project.workspaceId()), "用户刚操作过，不能按连接时间回收");
+        var usage = new SandboxRunUsage("agent", 1, "session", project, "job", "owner", clock.millis());
+        registry.save(usage);
+        assertEquals("ENVIRONMENT_BUSY", assertThrows(ApiException.class, () -> lifecycle.stopEnvironment(project)).code());
+        registry.remove(usage);
+        clock.advance(1799);
+        var terminal = new EnvironmentTerminalState();
+        terminal.id = "terminal";
+        terminal.status = "running";
+        terminal.busy = true;
+        terminal.workerAt = terminal.clientAt = clock.millis();
+        layout.write(layout.control(project.workspaceId()).resolve("terminal.json"), terminal);
+        assertFalse(lifecycle.collect(project.workspaceId()), "交互终端中仍有前台或后台命令时不回收");
+        terminal.busy = false;
+        layout.write(layout.control(project.workspaceId()).resolve("terminal.json"), terminal);
+        assertTrue(lifecycle.collect(project.workspaceId()));
+        assertEquals("stopped", lifecycle.environment(project, false).status());
+        assertEquals("running", lifecycle.environment(project, true).status());
+        assertEquals("用户文件", Files.readString(layout.project(project).resolve("keep.txt")));
+        assertEquals("stopped", lifecycle.stopEnvironment(project).status());
     }
 
     private ToolCallControl control() {

@@ -160,7 +160,8 @@ public class ProjectWorkspaceLayout {
         if (location == null || location.projectId() == null || !location.projectId().matches("[A-Za-z0-9_-]{1,100}")
             || location.enterpriseId() == null || location.userId() == null || location.directory() == null
             || !ProjectPaths.workspaceId(location.enterpriseId(), location.userId()).equals(location.workspaceId())
-            || !ProjectPaths.directory(location.directory(), location.projectId()).equals(location.directory())) {
+            || !("user-environment".equals(location.projectId()) && "environment".equals(location.directory()))
+                && !ProjectPaths.directory(location.directory(), location.projectId()).equals(location.directory())) {
             throw WorkspacePaths.invalid();
         }
         workspace(location.workspaceId());

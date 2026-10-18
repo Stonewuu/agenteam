@@ -79,7 +79,7 @@ public class CollaborationResultService {
             finishTask(context, action, result.getId(), summary, input.path("artifactRefs"), replyText);
         } else if (!owner) {
             works.change(work, "completed");
-            works.notify(context, action, "work_completed", "任务 " + context.task().getShortCode() + "：“" + context.participant().getRoleName() + "”已提交协助成果。");
+            works.notify(context, action, "work_completed", "任务 【" + context.task().getShortCode() + "】：【" + context.participant().getRoleName() + "】已提交协助成果。");
         } else {
             var required = unfinished(context.task(), work.getId());
             if (required.isEmpty() && missingRoles(context.task()).isEmpty()) {
@@ -98,7 +98,7 @@ public class CollaborationResultService {
                     tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, context.task().getEnterpriseId())
                         .eq(CollaborationTaskRow::getId, context.task().getId()).set(CollaborationTaskRow::getStatus, "waiting_input")
                         .set(CollaborationTaskRow::getErrorCode, "COLLABORATION_ROLE_ASSIGNMENT_REQUIRED").setIncrBy(CollaborationTaskRow::getRevision, 1));
-                    works.notify(context, action, "waiting_input", "任务 " + context.task().getShortCode() + " 的部分指定岗位尚未分工，请补充明确分工后继续。");
+                    works.notify(context, action, "waiting_input", "任务 【" + context.task().getShortCode() + "】：部分指定岗位尚未分工，请补充明确分工后继续。");
                 }
             }
         }

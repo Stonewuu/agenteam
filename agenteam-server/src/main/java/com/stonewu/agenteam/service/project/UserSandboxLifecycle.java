@@ -4,6 +4,7 @@ import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectCommandRecord;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.model.project.entity.UserSandboxState;
+import com.stonewu.agenteam.model.environment.response.EnvironmentView;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
@@ -116,6 +117,72 @@ public class UserSandboxLifecycle {
         }
     }
 
+    public EnvironmentView environment(ProjectLocation project, boolean connect) {
+        try (var control = new ToolCallControl(() -> {
+        }); var lock = UserWorkspaceLock.runtime(layout, project.workspaceId(), CHECK_TIMEOUT, control)) {
+            layout.requireRegistered(project);
+            var state = registry.state(project.workspaceId());
+            if (state != null && "stopping".equals(state.status())) {
+                return new EnvironmentView(true, "stopping", true, settings.idleSeconds(), state.updatedAt());
+            }
+            String daemon = containers.daemon(CHECK_TIMEOUT, control);
+            if (state != null && !daemon.equals(state.daemonId())) {
+                throw new ApiException(HttpStatus.CONFLICT, "PROJECT_EXECUTION_HOST_CHANGED",
+                    "环境暂时无法连接，请联系管理员检查执行服务。");
+            }
+            String id = containers.ownedId(project, CHECK_TIMEOUT);
+            boolean running = id != null && containers.running(id, CHECK_TIMEOUT);
+            if (connect) {
+                containers.start(project, CHECK_TIMEOUT, control);
+                id = containers.ownedId(project, CHECK_TIMEOUT);
+                String generation = state != null && running && id.equals(state.containerId())
+                    ? state.generation() : UUID.randomUUID().toString();
+                state = new UserSandboxState(project, id, generation, daemon, "running", clock.millis(), clock.millis());
+                registry.save(state);
+                running = true;
+            }
+            boolean busy = !registry.active(project.workspaceId()).isEmpty() || !registry.usages(project.workspaceId()).isEmpty()
+                || registry.interactive(project.workspaceId(), clock.millis());
+            return new EnvironmentView(true, running ? "running" : "stopped", busy, settings.idleSeconds(),
+                state == null ? null : state.idleSince() > 0 ? state.idleSince() : state.updatedAt());
+        } catch (IOException failure) {
+            throw WorkspacePaths.io(failure);
+        }
+    }
+
+    public EnvironmentView stopEnvironment(ProjectLocation project) {
+        reconcileEnvironmentCommands(project);
+        UserSandboxState state;
+        try (var control = new ToolCallControl(() -> {
+        }); var lock = UserWorkspaceLock.runtime(layout, project.workspaceId(), CHECK_TIMEOUT, control)) {
+            layout.requireRegistered(project);
+            if (!registry.active(project.workspaceId()).isEmpty() || !registry.usages(project.workspaceId()).isEmpty()
+                || registry.interactive(project.workspaceId(), clock.millis())) {
+                throw new ApiException(HttpStatus.CONFLICT, "ENVIRONMENT_BUSY", "环境中仍有任务或命令正在运行，请结束后再停止。");
+            }
+            state = registry.state(project.workspaceId());
+            if (state != null && !"stopped".equals(state.status())) {
+                state = new UserSandboxState(state.project(), state.containerId(), state.generation(), state.daemonId(),
+                    "stopping", state.idleSince(), clock.millis());
+                registry.save(state);
+            }
+        } catch (IOException failure) {
+            throw WorkspacePaths.io(failure);
+        }
+        if (state != null && "stopping".equals(state.status())) {
+            finishStopping(state);
+        }
+        return environment(project, false);
+    }
+
+    private void reconcileEnvironmentCommands(ProjectLocation project) {
+        try {
+            reconcileCommands(project.workspaceId());
+        } catch (IOException failure) {
+            throw WorkspacePaths.io(failure);
+        }
+    }
+
     public void complete(ProjectCommandRecord record, SandboxExecutor.Result result) {
         change(record, result, "completed");
     }
@@ -168,10 +235,6 @@ public class UserSandboxLifecycle {
     }
 
     public boolean collect(String workspace) throws IOException {
-        return collect(workspace, false);
-    }
-
-    private boolean collect(String workspace, boolean pressure) throws IOException {
         reconcileCommands(workspace);
         UserSandboxState selected;
         try (var control = new ToolCallControl(() -> {
@@ -181,14 +244,15 @@ public class UserSandboxLifecycle {
                 return false;
             }
             if (!"stopping".equals(selected.status())) {
-                if (!registry.active(workspace).isEmpty() || !registry.usages(workspace).isEmpty()) {
+                if (!registry.active(workspace).isEmpty() || !registry.usages(workspace).isEmpty()
+                    || registry.interactive(workspace, clock.millis())) {
                     return false;
                 }
                 if (selected.idleSince() == 0) {
                     registry.markActivity(workspace, clock.millis());
                     return false;
                 }
-                if (!pressure && clock.millis() - selected.idleSince() < settings.idleSeconds() * 1000L) {
+                if (clock.millis() - selected.idleSince() < settings.idleSeconds() * 1000L) {
                     return false;
                 }
                 selected = new UserSandboxState(selected.project(), selected.containerId(), selected.generation(),
@@ -213,7 +277,7 @@ public class UserSandboxLifecycle {
             }
             candidates.sort(Comparator.comparingLong(UserSandboxState::idleSince));
             for (var state : candidates) {
-                if (collect(state.project().workspaceId(), true)) {
+                if (collect(state.project().workspaceId())) {
                     return true;
                 }
             }
@@ -271,7 +335,8 @@ public class UserSandboxLifecycle {
                     current.status())) {
                     return;
                 }
-                if (!registry.active(workspace).isEmpty() || !registry.usages(workspace).isEmpty()) {
+                if (!registry.active(workspace).isEmpty() || !registry.usages(workspace).isEmpty()
+                    || registry.interactive(workspace, clock.millis())) {
                     registry.save(new UserSandboxState(current.project(), current.containerId(), current.generation(),
                         current.daemonId(),
                         "running", clock.millis(), clock.millis()));

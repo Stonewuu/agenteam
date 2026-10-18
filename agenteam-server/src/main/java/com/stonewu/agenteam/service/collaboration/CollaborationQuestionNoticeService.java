@@ -29,8 +29,8 @@ public class CollaborationQuestionNoticeService {
         boolean direct = group.getConversationKind().equals("direct");
         var text = new StringBuilder();
         if (!direct) {
-            text.append("任务 ").append(task.getShortCode()).append(" · ")
-                .append(context.participant().getRoleName()).append("需要你补充：\n\n");
+            text.append("任务 【").append(task.getShortCode()).append("】：【")
+                .append(context.participant().getRoleName()).append("】需要你补充：\n\n");
         }
         text.append(question);
         int ordinal = 0;

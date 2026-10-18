@@ -13,24 +13,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 持久挂载保留实际写入；容量检查允许已有超限目录执行清理命令。
  */
-final class ProjectCapacityMonitor {
+public final class ProjectCapacityMonitor {
     private final Path root;
     private final WorkspaceSettings settings;
     private final AtomicBoolean stopped;
 
-    ProjectCapacityMonitor(Path root, WorkspaceSettings settings, AtomicBoolean stopped) {
+    public ProjectCapacityMonitor(Path root, WorkspaceSettings settings, AtomicBoolean stopped) {
         this.root = root;
         this.settings = settings;
         this.stopped = stopped;
     }
 
-    record Usage(long bytes, long largest, int entries) {
-        boolean increasedFrom(Usage before) {
+    public record Usage(long bytes, long largest, int entries) {
+        public boolean increasedFrom(Usage before) {
             return bytes > before.bytes || largest > before.largest || entries > before.entries;
         }
     }
 
-    Usage usage() throws IOException {
+    public Usage usage() throws IOException {
         long[] sizes = {0, 0, 0};
         Files.walkFileTree(root, new SimpleFileVisitor<>() {
             @Override
@@ -58,7 +58,7 @@ final class ProjectCapacityMonitor {
         return new Usage(sizes[0], sizes[1], (int) Math.min(Integer.MAX_VALUE, sizes[2]));
     }
 
-    boolean exceeded(Usage usage) {
+    public boolean exceeded(Usage usage) {
         return usage.bytes > settings.workspaceBytes() || usage.largest > settings.fileBytes() || usage.entries > settings.maximumFiles() * 2;
     }
 }

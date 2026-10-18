@@ -190,7 +190,7 @@ public class CollaborationTaskCreationService {
         }
         actions.finish(action, Map.of("taskId", task.getId(), "workItemId", work.getId(), "status", "ready"));
         outbound.progress(actor.enterpriseId(), group.getId(), entryBot, task.getId(), action.getId(), "task:" + task.getId() + ":accepted",
-            "accepted", "已收到任务 " + task.getShortCode() + "，由“" + owner.getRoleName() + "”负责处理。",
+            "accepted", "任务 【" + task.getShortCode() + "】：已收到，由【" + owner.getRoleName() + "】负责处理。",
             group.getPlatformCode().equals("feishu") ? message.getPlatformMessageId() : null);
         return access.require(actor.enterpriseId(), task.getId());
     }

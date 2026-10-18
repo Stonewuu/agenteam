@@ -269,6 +269,11 @@
   outline: none;
 }
 
+/* 已提供显示密码按钮，隐藏 Edge 的同类原生按钮，避免重复显示。 */
+.auth-input-shell input[type="password"]::-ms-reveal {
+  display: none;
+}
+
 .auth-input-shell:has(input[aria-invalid="true"]) {
   border-color: var(--red);
 }

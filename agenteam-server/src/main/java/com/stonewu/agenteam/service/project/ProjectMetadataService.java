@@ -171,17 +171,16 @@ public class ProjectMetadataService {
         }
     }
 
+    @Transactional
+    public UserWorkspaceRow userWorkspace(AuthContext actor) {
+        authorization.lockAndRequire(actor, "agent.run");
+        ensureWorkspace(actor.enterpriseId(), actor.userId());
+        return workspace(actor.enterpriseId(), actor.userId(), ProjectPaths.workspaceId(actor.enterpriseId(), actor.userId()));
+    }
+
     public void initialized(UserWorkspaceRow workspace, WorkspaceProjectRow project) {
+        initializedWorkspace(workspace);
         var now = clock.instant();
-        int workspaceChanged = workspaces.update(
-            new LambdaUpdateWrapper<UserWorkspaceRow>().eq(UserWorkspaceRow::getId, workspace.getId())
-                .eq(UserWorkspaceRow::getEnterpriseId, workspace.getEnterpriseId())
-                .eq(UserWorkspaceRow::getUserId, workspace.getUserId())
-                .isNull(UserWorkspaceRow::getInitializedAt).set(UserWorkspaceRow::getInitializedAt, now));
-        if (workspaceChanged != 1 && workspace(workspace.getEnterpriseId(), workspace.getUserId(),
-            workspace.getId()).getInitializedAt() == null) {
-            throw new IllegalStateException("用户工作空间初始化结果未保存");
-        }
         int projectChanged = projects.update(
             new LambdaUpdateWrapper<WorkspaceProjectRow>().eq(WorkspaceProjectRow::getId, project.getId())
                 .eq(WorkspaceProjectRow::getEnterpriseId, project.getEnterpriseId())
@@ -190,6 +189,18 @@ public class ProjectMetadataService {
         if (projectChanged != 1 && require(project.getEnterpriseId(), project.getUserId(),
             project.getId()).getInitializedAt() == null) {
             throw new IllegalStateException("项目目录初始化结果未保存");
+        }
+    }
+
+    public void initializedWorkspace(UserWorkspaceRow workspace) {
+        int workspaceChanged = workspaces.update(
+            new LambdaUpdateWrapper<UserWorkspaceRow>().eq(UserWorkspaceRow::getId, workspace.getId())
+                .eq(UserWorkspaceRow::getEnterpriseId, workspace.getEnterpriseId())
+                .eq(UserWorkspaceRow::getUserId, workspace.getUserId())
+                .isNull(UserWorkspaceRow::getInitializedAt).set(UserWorkspaceRow::getInitializedAt, clock.instant()));
+        if (workspaceChanged != 1 && workspace(workspace.getEnterpriseId(), workspace.getUserId(),
+            workspace.getId()).getInitializedAt() == null) {
+            throw new IllegalStateException("用户工作空间初始化结果未保存");
         }
     }
 

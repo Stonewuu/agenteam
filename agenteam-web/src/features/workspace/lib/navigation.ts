@@ -7,6 +7,7 @@ import {
   IconCheckbox,
   IconCollaboration,
   IconDatabase,
+  IconDeviceDesktop,
   IconGitBranch,
   IconKey,
   IconLayoutDashboard,
@@ -78,6 +79,7 @@ export const workspaceNavigation = [
   },
   {path: "schedules", label: "定时任务", permissions: ["schedule.view"], icon: IconCalendarClock},
   {path: "todos", label: "我的待办", permissions: ["todo.view"], icon: IconCheckbox},
+  {path: "environment", label: "我的环境", searchTerms: "environment sandbox terminal files 沙盒 命令 文件", permissions: ["agent.run"], icon: IconDeviceDesktop},
 ];
 
 /** 搜索接口返回业务入口标识，页面路径由正式前端统一定义。 */

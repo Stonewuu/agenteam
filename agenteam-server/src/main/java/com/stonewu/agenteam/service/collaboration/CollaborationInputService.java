@@ -153,7 +153,7 @@ public class CollaborationInputService {
             notify(task, action.getId(), "input_added", "已收到补充要求。仍有操作结果尚未确认，请先在群策核实。");
         } else {
             outbound.progress(task.getEnterpriseId(), task.getConversationId(), task.getEntryBotId(), task.getId(), action.getId(),
-                "action:" + action.getId(), "input_added", "已收到任务 " + task.getShortCode() + " 的补充要求，将继续处理。", null);
+                "action:" + action.getId(), "input_added", "任务 【" + task.getShortCode() + "】：已收到补充要求，将继续处理。", null);
         }
         return actions.finish(action, Map.of("taskId", taskId, "inputRevision", revision, "status", uncertain ? "blocked" : "active"));
     }
@@ -190,7 +190,7 @@ public class CollaborationInputService {
             .eq(ChatOutboundMessageRow::getTaskId, taskId).in(ChatOutboundMessageRow::getStatus, "pending", "retry_wait", "leased")
             .set(ChatOutboundMessageRow::getStatus, "cancelled").set(ChatOutboundMessageRow::getLeaseOwner, null).set(ChatOutboundMessageRow::getLeaseUntil, null));
         if (active == 0) {
-            notify(task, action.getId(), "cancelled", "任务 " + task.getShortCode() + " 已取消。已完成的业务操作与成果保留。"
+            notify(task, action.getId(), "cancelled", "任务 【" + task.getShortCode() + "】：已取消。已完成的业务操作与成果保留。"
                 + (uncertain ? "仍有操作结果尚未确认，请先在群策核实。" : ""));
         }
         return actions.finish(action, Map.of("taskId", taskId, "status", status));

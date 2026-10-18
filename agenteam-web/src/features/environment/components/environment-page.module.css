@@ -1,0 +1,23 @@
+.page {width:100%; max-width:1560px; margin-inline:auto; padding-bottom:24px;}
+.workbench {display:grid; grid-template-columns:minmax(300px,var(--files-width,36%)) 5px minmax(0,1fr); height:clamp(540px,calc(100dvh - 290px),820px); min-height:0; border:1px solid var(--border); border-radius:20px; background:var(--card); box-shadow:0 8px 30px #00000008;}
+.filesPane,.terminalPane {min-width:0; min-height:0;}
+.divider {background:var(--surface-soft); border-left:1px solid var(--border); cursor:col-resize; touch-action:none; position:relative; transition:background 180ms;}
+.divider:hover,.divider:focus-visible {background:var(--ring); outline:2px solid var(--ring); z-index:1;}
+.workbench[data-expanded] {grid-template-columns:minmax(0,1fr);}
+.workbench[data-expanded] .filesPane,.workbench[data-expanded] .divider {display:none;}
+.idleHint {display:flex; align-items:center; justify-content:flex-end; gap:7px; margin:14px 4px 0; color:var(--muted-foreground); font-size:12px; line-height:1.7;}
+.mobileTabs {display:none;}
+@media (max-width:1100px) {.workbench {grid-template-columns:minmax(280px,var(--files-width,36%)) 5px minmax(0,1fr);}}
+@media (max-width:760px) {
+  .page {padding-bottom:16px;}
+  .workbench,.workbench[data-expanded] {display:flex; flex-direction:column; height:clamp(440px,calc(100dvh - 290px),760px);}
+  .mobileTabs {display:flex; padding:5px; gap:4px; border-bottom:1px solid var(--border); background:var(--surface-soft); border-radius:20px 20px 0 0;}
+  .mobileTabs button {display:flex; justify-content:center; align-items:center; gap:8px; flex:1; border:0; min-height:44px; border-radius:13px; background:transparent; color:var(--muted-foreground); font-size:13px;}
+  .mobileTabs button[aria-selected="true"] {background:var(--card); color:var(--foreground); box-shadow:0 1px 4px #0000000a;}
+  .mobileTabs button:focus-visible {outline:2px solid var(--ring); outline-offset:1px;}
+  .filesPane,.terminalPane {flex:1;}
+  .divider,.workbench[data-mobile="terminal"] .filesPane,.workbench[data-mobile="files"] .terminalPane {display:none;}
+  .workbench[data-mobile="files"] .filesPane {display:block;}
+  .idleHint {justify-content:flex-start; font-size:11px;}
+}
+@media (prefers-reduced-motion:reduce) {.divider {transition:none;}}

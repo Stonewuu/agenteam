@@ -6,6 +6,13 @@ import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.controller.sandbox.ProjectSandboxServerController;
+import com.stonewu.agenteam.controller.sandbox.EnvironmentServerController;
+import com.stonewu.agenteam.service.environment.DockerUserEnvironmentRuntime;
+import com.stonewu.agenteam.service.environment.DockerUserTerminalRuntime;
+import com.stonewu.agenteam.service.environment.EnvironmentTerminalStore;
+import com.stonewu.agenteam.service.environment.EnvironmentTerminalWorker;
+import com.stonewu.agenteam.service.environment.EnvironmentTerminalProcess;
+import com.stonewu.agenteam.controller.sandbox.EnvironmentTerminalServerController;
 import com.stonewu.agenteam.controller.sandbox.SandboxContainerCleanupController;
 import com.stonewu.agenteam.controller.sandbox.SandboxServerController;
 import com.stonewu.agenteam.service.project.*;
@@ -62,7 +69,7 @@ public final class SandboxServerMain {
                 settings, new ObjectMapper(), root, runtime.maximumConcurrent() * 2);
             var json = new ObjectMapper();
             var layout = new ProjectWorkspaceLayout(userSettings, json);
-            var idleSettings = new SandboxLifecycleSettings(number("AGENTEAM_SANDBOX_IDLE_SECONDS", 900),
+            var idleSettings = new SandboxLifecycleSettings(number("AGENTEAM_SANDBOX_IDLE_SECONDS", 1800),
                 number("AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS", 30), number("AGENTEAM_SANDBOX_USAGE_STALE_SECONDS", 60),
                 number("AGENTEAM_SANDBOX_STOP_SECONDS", 10), number("AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS", 4));
             var containers = new UserContainerRuntime(settings, runtime, layout, docker, idleSettings);
@@ -71,6 +78,11 @@ public final class SandboxServerMain {
                 idleSettings, Clock.systemUTC());
             var projects = new DockerProjectCommandExecutor(settings, layout, containers, capacity, commands,
                 lifecycle);
+            var terminalStore = new EnvironmentTerminalStore(layout);
+            var terminalRegistry = new UserSandboxRegistry(layout);
+            var terminalWorker = new EnvironmentTerminalWorker(terminalStore, new EnvironmentTerminalProcess(layout),
+                layout, terminalRegistry, settings, json, Clock.systemUTC());
+            var terminals = new DockerUserTerminalRuntime(terminalStore, terminalWorker, terminalRegistry, containers, Clock.systemUTC());
             var idleCheck = Executors.newSingleThreadScheduledExecutor();
             idleCheck.scheduleWithFixedDelay(lifecycle::poll, idleSettings.scanSeconds(), idleSettings.scanSeconds(),
                 TimeUnit.SECONDS);
@@ -82,8 +94,11 @@ public final class SandboxServerMain {
             server.createContext("/project-executions/",
                 new ProjectSandboxServerController(executions, projects, json, token));
             server.createContext("/container-cleanup/", new SandboxContainerCleanupController(docker, json, token));
+            server.createContext("/environments", new EnvironmentServerController(new DockerUserEnvironmentRuntime(lifecycle), json, token));
+            server.createContext("/terminals", new EnvironmentTerminalServerController(terminals, json, token));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 idleCheck.shutdownNow();
+                terminals.close();
                 executions.close();
                 server.stop(1);
                 workers.shutdownNow();

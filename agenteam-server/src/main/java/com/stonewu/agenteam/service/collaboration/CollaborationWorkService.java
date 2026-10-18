@@ -132,8 +132,8 @@ public class CollaborationWorkService {
         if (tasks.update(update) != 1) {
             throw ApiException.versionConflict(task.getRevision());
         }
-        notify(context, action, handoff ? "handed_off" : "assigned", "任务 " + task.getShortCode() + "：“" + context.participant().getRoleName()
-            + "”已" + (handoff ? "移交给“" : "安排“") + target.getRoleName() + "”" + (handoff ? "继续负责。" : "协助处理。"));
+        notify(context, action, handoff ? "handed_off" : "assigned", "任务 【" + task.getShortCode() + "】：【" + context.participant().getRoleName()
+            + "】已" + (handoff ? "移交给【" : "安排【") + target.getRoleName() + "】" + (handoff ? "继续负责。" : "协助处理。"));
         return Map.of("taskId", task.getId(), "workItemId", next.getId(), "inputRevision", task.getInputRevision(),
             "status", status, "goal", goal, "ownerWorkItemId", handoff ? next.getId() : task.getOwnerWorkId());
     }
@@ -147,7 +147,7 @@ public class CollaborationWorkService {
         dependencies.add(context.task(), context.work().getId(), required, "resume");
         String status = dependencies.readiness(context.task(), context.work().getId()).equals("blocked") ? "blocked" : "waiting_dependency";
         change(context.work(), status);
-        notify(context, action, "waiting_dependency", "任务 " + context.task().getShortCode() + "：“" + context.participant().getRoleName() + "”正在等待协作成果。");
+        notify(context, action, "waiting_dependency", "任务 【" + context.task().getShortCode() + "】：【" + context.participant().getRoleName() + "】正在等待协作成果。");
         return Map.of("workItemId", context.work().getId(), "status", status, "nextAction", "结束本轮回答，成果齐备后系统会继续此工作。");
     }
 

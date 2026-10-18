@@ -40,7 +40,7 @@ public class UserContainerRuntime {
 
     public UserContainerRuntime(WorkspaceSettings settings, SandboxRuntimeSettings runtime,
                                 ProjectWorkspaceLayout layout, DockerWorkspaceCommands docker) {
-        this(settings, runtime, layout, docker, new SandboxLifecycleSettings(900, 30, 60, 10));
+        this(settings, runtime, layout, docker, new SandboxLifecycleSettings(1800, 30, 60, 10));
     }
 
     @Autowired

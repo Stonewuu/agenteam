@@ -32,7 +32,7 @@ public class ChatReplyCommandService {
     public Handled handle(AuthContext actor, ChatConversationRow group, String bot, ChatMessageRow message,
             String text, JsonNode mentions, String explicitTask, String currentTask) {
         String command = ChatCommandText.withoutLeadingMentions(text, mentions).strip()
-            .replaceFirst("(?i)^GC-[A-F0-9]{12}\\s*[:：+]?\\s*", "");
+            .replaceFirst("(?i)^(?:任务\\s*)?(?:【GC-[A-F0-9]{12}】|GC-[A-F0-9]{12})\\s*[:：+]?\\s*", "");
         if (!"回复方式".equals(command) && !TASK_MODES.containsKey(command) && !DEFAULT_MODES.containsKey(command)) {
             return null;
         }

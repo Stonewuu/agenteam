@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.project;
 import com.stonewu.agenteam.model.project.entity.ProjectCommandRecord;
 import com.stonewu.agenteam.model.project.entity.SandboxRunUsage;
 import com.stonewu.agenteam.model.project.entity.UserSandboxState;
+import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -57,6 +58,15 @@ public class UserSandboxRegistry {
 
     public List<SandboxRunUsage> usages(String workspace) throws IOException {
         return readDirectory(layout.control(workspace).resolve("run-usages"), SandboxRunUsage.class);
+    }
+
+    public boolean interactive(String workspace, long now) throws IOException {
+        Path path = layout.control(workspace).resolve("terminal.json");
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+            return false;
+        }
+        var terminal = layout.read(path, EnvironmentTerminalState.class);
+        return terminal.protects(now);
     }
 
     public void save(SandboxRunUsage value) throws IOException {

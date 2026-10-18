@@ -91,7 +91,7 @@ execution:
     process-limit: "${AGENTEAM_SANDBOX_PROCESS_LIMIT:128}"
     # 单次文件读写与沙盒命令的时间上限，单位为秒；助手整次执行时间在助手的执行设置中配置。
     timeout-seconds: "${AGENTEAM_SANDBOX_TIMEOUT_SECONDS:1800}"
-    idle-seconds: "${AGENTEAM_SANDBOX_IDLE_SECONDS:900}"
+    idle-seconds: "${AGENTEAM_SANDBOX_IDLE_SECONDS:1800}"
     idle-scan-seconds: "${AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS:30}"
     usage-stale-seconds: "${AGENTEAM_SANDBOX_USAGE_STALE_SECONDS:60}"
     stop-seconds: "${AGENTEAM_SANDBOX_STOP_SECONDS:10}"

@@ -137,7 +137,7 @@ public class CollaborationRecoveryService {
         }
         if (active == 0) {
             outbound.text(enterprise, task.getConversationId(), task.getEntryBotId(), taskId, null, "task-ended:" + taskId, "cancelled",
-                "任务 " + task.getShortCode() + (expired ? " 已到截止时间，未继续执行。已保存的成果仍可在群策查看。" : " 已取消。已完成的业务操作与成果保留。")
+                "任务 【" + task.getShortCode() + "】：" + (expired ? "已到截止时间，未继续执行。已保存的成果仍可在群策查看。" : "已取消。已完成的业务操作与成果保留。")
                     + ("TOOL_RESULT_UNKNOWN".equals(task.getErrorCode()) ? "仍有操作结果尚未确认，请先在群策核实。" : ""), null);
         }
     }

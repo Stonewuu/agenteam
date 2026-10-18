@@ -2,6 +2,17 @@ package com.stonewu.agenteam.service.sandbox;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
+import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
+import com.stonewu.agenteam.controller.sandbox.EnvironmentServerController;
+import com.stonewu.agenteam.service.environment.DockerUserEnvironmentRuntime;
+import com.stonewu.agenteam.service.environment.RemoteUserEnvironmentRuntime;
+import com.stonewu.agenteam.service.environment.DockerUserTerminalRuntime;
+import com.stonewu.agenteam.service.environment.RemoteUserTerminalRuntime;
+import com.stonewu.agenteam.service.environment.EnvironmentTerminalStore;
+import com.stonewu.agenteam.service.environment.EnvironmentTerminalWorker;
+import com.stonewu.agenteam.service.environment.EnvironmentTerminalProcess;
+import com.stonewu.agenteam.controller.sandbox.EnvironmentTerminalServerController;
+import com.stonewu.agenteam.service.sandbox.TerminalInteractionAssertions.TerminalClock;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.controller.sandbox.ProjectSandboxServerController;
@@ -24,6 +35,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -58,10 +70,28 @@ class RemoteProjectCommandExecutorTest {
             var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 8);
             server.setExecutor(pool);
             server.createContext("/project-executions/", new ProjectSandboxServerController(service, commands, json, token));
+            var lifecycle = new UserSandboxLifecycle(layout, new UserSandboxRegistry(layout),
+                new UserContainerRuntime(settings, runtime, layout, docker), new ProjectCommandProcess(layout, docker, json),
+                new SandboxLifecycleSettings(1800, 30, 60, 10), Clock.systemUTC());
+            server.createContext("/environments", new EnvironmentServerController(new DockerUserEnvironmentRuntime(lifecycle), json, token));
+            var terminalStore = new EnvironmentTerminalStore(layout);
+            var terminalRegistry = new UserSandboxRegistry(layout);
+            var terminalClock = new TerminalClock();
+            var terminals = new DockerUserTerminalRuntime(terminalStore, new EnvironmentTerminalWorker(terminalStore,
+                new EnvironmentTerminalProcess(layout), layout, terminalRegistry, settings, json, terminalClock),
+                terminalRegistry, new UserContainerRuntime(settings, runtime, layout, docker), terminalClock);
+            server.createContext("/terminals", new EnvironmentTerminalServerController(terminals, json, token));
             server.start();
             try {
                 String origin = "http://127.0.0.1:" + server.getAddress().getPort();
                 var remote = new RemoteProjectCommandExecutor(settings, json, origin, token);
+                var environment = new RemoteUserEnvironmentRuntime(json, origin, token);
+                assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(origin + "/environments"))
+                    .POST(HttpRequest.BodyPublishers.ofString("{}")).build(), HttpResponse.BodyHandlers.discarding()).statusCode());
+                assertEquals("running", environment.manage("connect", project).status());
+                assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(origin + "/terminals"))
+                    .POST(HttpRequest.BodyPublishers.ofString("{}")).build(), HttpResponse.BodyHandlers.discarding()).statusCode());
+                TerminalInteractionAssertions.verify(new RemoteUserTerminalRuntime(json, origin, token), project, layout, terminalStore, terminalClock);
                 assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(origin + "/project-executions/" + UUID.randomUUID())).DELETE().build(),
                     HttpResponse.BodyHandlers.discarding()).statusCode());
                 try (var control = new ToolCallControl(() -> {
@@ -72,6 +102,9 @@ class RemoteProjectCommandExecutorTest {
                     assertEquals("远程结果", Files.readString(layout.project(project).resolve("result.txt")));
                     assertEquals(result, remote.execute(project, "first", "printf '远程结果' > result.txt", ".", Duration.ofSeconds(settings.timeoutSeconds()), control));
                     assertEquals("保留的文件", Files.readString(layout.project(project).resolve("keep.txt")));
+                    assertEquals("stopped", environment.manage("stop", project).status());
+                    assertEquals("保留的文件", Files.readString(layout.project(project).resolve("keep.txt")));
+                    assertEquals("running", environment.manage("connect", project).status());
                     var unregistered = new ProjectLocation(project.workspaceId(), "missing", enterprise, "user", "projects/missing");
                     assertEquals("PROJECT_STORAGE_UNAVAILABLE", assertThrows(ApiException.class,
                         () -> remote.execute(unregistered, "missing", "touch nope", ".", Duration.ofSeconds(10), control)).code());
@@ -93,6 +126,7 @@ class RemoteProjectCommandExecutorTest {
                     assertEquals(0, remote.execute(project, "after-cancel", "test -f started.txt && test -f keep.txt", ".", Duration.ofSeconds(20), control).exitCode());
                 }
             } finally {
+                terminals.close();
                 server.stop(0);
                 docker.remove(UserContainerOwnership.name(layout.hostPath(layout.files(project.workspaceId()))));
             }

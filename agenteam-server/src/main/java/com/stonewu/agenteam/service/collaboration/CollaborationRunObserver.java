@@ -248,7 +248,7 @@ public class CollaborationRunObserver {
                 .eq(CollaborationTaskRow::getId, task.getId()).eq(CollaborationTaskRow::getStatus, "active")
                 .set(CollaborationTaskRow::getStatus, "waiting_approval").setIncrBy(CollaborationTaskRow::getRevision, 1));
             outbound.text(task.getEnterpriseId(), task.getConversationId(), task.getEntryBotId(), task.getId(), null, "approval:" + run.id(),
-                "waiting_approval", "任务 " + task.getShortCode() + " 有一项操作需要原发起人确认。\n" + publicLinks.task(task.getEnterpriseId(), task.getId()), null);
+                "waiting_approval", "任务 【" + task.getShortCode() + "】：有一项操作需要原发起人确认。\n" + publicLinks.task(task.getEnterpriseId(), task.getId()), null);
         } else if (run.status().equals("running") && work.getStatus().equals("waiting_approval")) {
             works.change(work, "running");
             tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
@@ -258,7 +258,7 @@ public class CollaborationRunObserver {
         if (run.status().equals("running") && run.startedAt() != null && link.getLastStatus().equals("queued")) {
             var role = access.participant(task, work.getParticipantId());
             outbound.progress(task.getEnterpriseId(), task.getConversationId(), role.getBotBindingId(), task.getId(), null, "started:" + run.id(),
-                "started", "任务 " + task.getShortCode() + "：“" + role.getRoleName() + "”已开始处理。", null);
+                "started", "任务 【" + task.getShortCode() + "】：【" + role.getRoleName() + "】已开始处理。", null);
         }
     }
 

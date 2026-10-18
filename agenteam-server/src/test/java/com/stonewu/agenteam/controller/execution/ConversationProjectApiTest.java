@@ -18,6 +18,9 @@ import com.stonewu.agenteam.service.file.FileContentStorage;
 import com.stonewu.agenteam.service.file.FileRetentionService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.project.ProjectMetadataService;
+import com.stonewu.agenteam.service.project.ProjectWorkspaceLayout;
+import com.stonewu.agenteam.service.environment.EnvironmentWorkspaceService;
+import com.stonewu.agenteam.support.EnterpriseTestData;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.ConversationWorkspaceStore;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
@@ -31,6 +34,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -40,6 +44,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -53,6 +58,10 @@ class ConversationProjectApiTest extends ExecutionApiTestSupport {
     private RunMapper runs;
     @Autowired
     private ProjectMetadataService projects;
+    @Autowired
+    private EnvironmentWorkspaceService environments;
+    @Autowired
+    private ProjectWorkspaceLayout projectLayout;
     @Autowired
     private ConversationWorkspaceStore workspaces;
     @Autowired
@@ -171,6 +180,40 @@ class ConversationProjectApiTest extends ExecutionApiTestSupport {
             body.put("projectId", project);
         }
         return data(write(base() + "/conversations", body, UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+    }
+
+    @Test
+    void environmentFilesUseCurrentIdentityAndRejectTraversalAndUnverifiedCommands() throws Exception {
+        var actor = new AuthContext(users.findById(admin).orElseThrow(), enterprise,
+            Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
+        var own = environments.prepare(actor);
+        Files.writeString(projectLayout.project(own).resolve("note.txt"), "我的环境文件");
+        var other = EnterpriseTestData.member(users, permissions, enterprise, "env_" + UUID.randomUUID().toString().substring(0, 8),
+            "isolated-environment-password", "其他用户", List.of(permissions.builtinRoleId(enterprise, "member")));
+        var foreignActor = new AuthContext(other, enterprise, Set.copyOf(permissions.listPermissionCodes(other.id(), enterprise)));
+        var foreign = environments.prepare(foreignActor);
+        Files.writeString(projectLayout.project(foreign).resolve("note.txt"), "其他用户私密内容");
+        String path = base() + "/environment";
+        mvc.perform(get(path + "/files")).andExpect(status().isUnauthorized());
+        var preview = data(mvc.perform(get(path + "/files/preview").cookie(cookie).param("path", "/workspace/environment/note.txt")
+            .param("userId", other.id())).andExpect(status().isOk()).andReturn());
+        assertEquals("我的环境文件", preview.path("content").asText());
+        assertFalse(preview.toString().contains(projectLayout.root().toString()));
+        mvc.perform(get(path + "/files/preview").cookie(cookie).param("path", "/workspace/../../" + foreign.workspaceId() + "/files/environment/note.txt"))
+            .andExpect(status().isBadRequest());
+        assertEquals("我的环境文件", mvc.perform(get(path + "/files/content").cookie(cookie).param("path", "/workspace/environment/note.txt"))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+        mvc.perform(post(path + "/terminal").cookie(cookie).contentType("application/json")
+            .content(json.writeValueAsString(Map.of("action", "open", "id", UUID.randomUUID().toString(), "sequence", 0,
+                "cursor", 0, "cols", 100, "rows", 30))))
+            .andExpect(status().isForbidden());
+        var filtered = data(mvc.perform(get(path + "/files").cookie(cookie).param("path", "/workspace/environment")
+            .param("query", "NOTE").param("sort", "size")).andExpect(status().isOk()).andReturn());
+        assertEquals(1, filtered.path("total").asInt());
+        assertEquals("note.txt", filtered.path("entries").get(0).path("name").asText());
+        var rootListing = data(mvc.perform(get(path + "/files").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals("/workspace", rootListing.path("path").asText());
+        assertFalse(rootListing.toString().contains("其他用户私密内容"));
     }
 
     private JsonNode snapshot(JsonNode accepted) throws Exception {

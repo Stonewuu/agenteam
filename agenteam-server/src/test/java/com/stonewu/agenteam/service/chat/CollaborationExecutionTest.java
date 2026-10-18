@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
+import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
+import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationArtifactMapper;
@@ -84,6 +86,10 @@ class CollaborationExecutionTest extends CollaborationApiTestSupport {
         var incoming = receive("submission", "统计考勤");
         routing.route(enterprise, incoming.getId());
         var task = onlyTask();
+        var acceptedNotice = databaseAccess.mapper(ChatOutboundMessageMapper.class).selectOne(new LambdaQueryWrapper<ChatOutboundMessageRow>()
+            .eq(ChatOutboundMessageRow::getTaskId, task.getId()).eq(ChatOutboundMessageRow::getKind, "accepted"));
+        var acceptedText = cipher.decrypt(enterprise, "outbound", acceptedNotice.getId(), acceptedNotice.getPayloadEncrypted()).path("content").path("text").asText();
+        assertEquals("任务 【" + task.getShortCode() + "】：已收到，由【" + role(task.getOwnerParticipantId()).getRoleName() + "】负责处理。", acceptedText);
         var lease = dispatch.claim("test-dispatch").orElseThrow();
         var accepted = dispatch.submit(lease);
         assertNull(dispatch.submit(lease));
