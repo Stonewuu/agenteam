@@ -54,6 +54,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -232,10 +233,13 @@ public abstract class ExecutionApiTestSupport {
 
     protected void await(BooleanSupplier completed) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(8);
-        while (!completed.getAsBoolean() && System.nanoTime() < deadline) {
+        while (System.nanoTime() < deadline) {
+            if (completed.getAsBoolean()) {
+                return;
+            }
             Thread.sleep(20);
         }
-        assertTrue(completed.getAsBoolean(), "未在限定时间内保存预期执行结果");
+        fail("未在限定时间内保存预期执行结果");
     }
 
     protected Map<String, Object> body() {

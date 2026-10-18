@@ -213,7 +213,10 @@ class ConversationTitleApiTest extends ExecutionApiTestSupport {
         }
         for (int attempt = 1; attempt < 3; attempt++) {
             int completedAttempts = attempt;
-            await(() -> "queued".equals(job(conversation).getStatus()) && job(conversation).getAttemptCount() == completedAttempts);
+            await(() -> {
+                var current = job(conversation);
+                return "queued".equals(current.getStatus()) && current.getAttemptCount() == completedAttempts;
+            });
             jobs.update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getId, job(conversation).getId())
                 .set(BackgroundJobRow::getAvailableAt, Instant.now()));
             titles.wake();
