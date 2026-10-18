@@ -13,6 +13,7 @@
     "../src/features/agent/state/conversation-event-state.ts",
     "../src/features/agent/state/conversation-protocol.ts",
     "../src/features/agent/lib/conversation-display.ts",
-    "../src/features/agent/lib/conversation-reading.ts"
+    "../src/features/agent/lib/conversation-reading.ts",
+    "../src/features/agent/lib/conversation-metadata.ts"
   ]
 }

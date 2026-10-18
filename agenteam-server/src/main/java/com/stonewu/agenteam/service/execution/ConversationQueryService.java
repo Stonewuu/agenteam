@@ -5,6 +5,10 @@ import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantRow;
 import com.stonewu.agenteam.mapper.agent.ConversationAppearanceMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
+import com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper;
+import com.stonewu.agenteam.model.background.entity.BackgroundJobRow;
+import com.stonewu.agenteam.model.execution.entity.ConversationTitleJob;
+import com.stonewu.agenteam.model.execution.response.ConversationMetadataView;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
@@ -55,13 +59,14 @@ public class ConversationQueryService {
     private final ConversationAppearanceMapper appearances;
     private final CollaborationParticipantMapper collaborationParticipants;
     private final CollaborationMessageDisplayService collaborationMessages;
+    private final BackgroundJobSqlMapper backgroundJobs;
 
     public ConversationQueryService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                     ExecutionConfigurationService configuration,
                                     EnterpriseAuthorizationService authorization,
                                     ListPagination pagination, Clock clock, ResourceVersionMapper versions,
                                     ConversationAppearanceMapper appearances, CollaborationParticipantMapper collaborationParticipants,
-                                    CollaborationMessageDisplayService collaborationMessages) {
+                                    CollaborationMessageDisplayService collaborationMessages, BackgroundJobSqlMapper backgroundJobs) {
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
@@ -73,6 +78,29 @@ public class ConversationQueryService {
         this.appearances = appearances;
         this.collaborationParticipants = collaborationParticipants;
         this.collaborationMessages = collaborationMessages;
+        this.backgroundJobs = backgroundJobs;
+    }
+
+    public List<ConversationMetadataView> metadata(AuthContext actor, List<String> ids) {
+        authorization.require(actor, "conversation.view");
+        if (ids == null || ids.isEmpty() || ids.size() > 50
+            || ids.stream().anyMatch(id -> id == null || id.isBlank() || id.length() > 100)) {
+            throw ApiException.invalidField("ids", "每次只能读取 1 至 50 条有效对话。");
+        }
+        var rows = conversations.metadata(actor.enterpriseId(), actor.userId(), ids.stream().distinct().toList());
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        var keys = rows.stream().map(row -> ConversationTitleJob.key(row.getId())).toList();
+        var pending = new HashSet<>(backgroundJobs.selectList(new LambdaQueryWrapper<BackgroundJobRow>()
+            .select(BackgroundJobRow::getDedupeKey).eq(BackgroundJobRow::getEnterpriseId, actor.enterpriseId())
+            .eq(BackgroundJobRow::getOwnerUserId, actor.userId()).eq(BackgroundJobRow::getKind, ConversationTitleJob.KIND)
+            .in(BackgroundJobRow::getDedupeKey, keys).in(BackgroundJobRow::getStatus, List.of("queued", "leased")))
+            .stream().map(BackgroundJobRow::getDedupeKey).toList());
+        Map<String, String> checked = new HashMap<>();
+        cacheCollaborationTasks(actor, rows.stream().map(conversations::map).toList(), checked);
+        return rows.stream().map(row -> new ConversationMetadataView(view(actor, conversations.map(row), checked),
+            Integer.valueOf(0).equals(row.getTitleCustomized()) && pending.contains(ConversationTitleJob.key(row.getId())))).toList();
     }
 
     public PageResponse<ConversationView> list(AuthContext actor, String query, String status, Boolean favorite,

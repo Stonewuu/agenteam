@@ -466,5 +466,15 @@
   "请输入有效日期，例如 2026-10-12。": "Enter a valid date, for example 2026-10-12.",
   "请输入有效时间，例如 09:30。": "Enter a valid time, for example 09:30.",
   "请输入有效日期和时间，例如 2026-10-12 09:30。": "Enter a valid date and time, for example 2026-10-12 09:30.",
-  "所选日期或时间不符合范围或间隔要求。": "The selected date or time is outside the allowed range or interval."
+  "所选日期或时间不符合范围或间隔要求。": "The selected date or time is outside the allowed range or interval.",
+  "图表": "Diagram",
+  "展开图表": "Expand diagram",
+  "收起图表": "Collapse diagram",
+  "全屏查看图表": "View diagram fullscreen",
+  "全屏查看": "Fullscreen",
+  "正在生成图表…": "Generating diagram…",
+  "图表暂时无法显示，请检查图表语法。": "The diagram could not be displayed. Check its syntax.",
+  "放大": "Zoom in",
+  "缩小": "Zoom out",
+  "重置视图": "Reset view"
 }

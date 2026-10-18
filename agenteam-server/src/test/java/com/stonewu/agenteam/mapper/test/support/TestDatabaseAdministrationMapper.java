@@ -31,6 +31,10 @@ public interface TestDatabaseAdministrationMapper {
 
     void allowRunJobCreation();
 
+    void rejectTitleJobCreation();
+
+    void allowTitleJobCreation();
+
     int waitingForEnterpriseLock();
 
     Map<String, Object> environment();

@@ -7,10 +7,14 @@ import {type ComponentProps, memo, useMemo} from "react";
 import {Block, type BlockProps, type ControlsConfig, type ExtraProps, type IconMap, Streamdown} from "streamdown";
 import {cjk} from "@streamdown/cjk";
 import {code} from "@streamdown/code";
+import {createMathPlugin} from "@streamdown/math";
+import "katex/dist/katex.min.css";
 import {IconCheck, IconCopy} from "./icons";
 import {compactAnimationNodes} from "./markdown-animation-nodes";
+import {MarkdownDiagram} from "./markdown-diagram";
 
-const plugins = {code, cjk};
+const plugins = {code, cjk, math: createMathPlugin({singleDollarTextMath: true}),
+  renderers: [{language: "mermaid", component: MarkdownDiagram}]};
 const controls: ControlsConfig = {code: {copy: true, download: false}, table: false, mermaid: false};
 const icons: Partial<IconMap> = {
   CopyIcon: ({size = 14}) => <IconCopy size={size}/>,

@@ -42,6 +42,11 @@ public class BackgroundJobService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    public Optional<JobLease> claimConversationTitle(String workerId) {
+        return mapper.claim("conversation_title", workerId, clock.instant());
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Optional<JobLease> claimExport(String workerId) {
         return mapper.claim("export", workerId, clock.instant());
     }

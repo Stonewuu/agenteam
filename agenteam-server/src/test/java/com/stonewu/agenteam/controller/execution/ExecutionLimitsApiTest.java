@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -48,8 +49,8 @@ class ExecutionLimitsApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/execution-limits/framework");
-        registry.add("execution.state-root", () -> "target/execution-limits/states");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("execution-limits/framework").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("execution-limits/states").toString());
     }
 
     @AfterAll

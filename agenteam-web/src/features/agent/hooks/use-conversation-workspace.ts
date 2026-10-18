@@ -12,6 +12,7 @@ import {conversationPath, loadRun, runPath, textInput} from "../api/conversation
 import type {Conversation, RunAccepted} from "../types/execution";
 import {displayMessages} from "../lib/conversation-display";
 import {useConversationList} from "./use-conversation-list";
+import {useConversationMetadata} from "./use-conversation-metadata";
 import {useConversationStream} from "./use-conversation-stream";
 import {useConversationResultViewed} from "./use-conversation-result-viewed";
 import {useConversationScroll} from "./use-conversation-scroll";
@@ -55,6 +56,14 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const localList = useConversationList(enterpriseId, !sharedList, userId);
   const list = sharedList ?? localList;
   const stream = useConversationStream(enterpriseId, conversationId);
+  const metadataIds = list.items.filter(value => value.mode === "normal" && !value.collaboration).map(value => value.id);
+  if (conversationId) {
+    metadataIds.push(conversationId);
+  }
+  useConversationMetadata(enterpriseId, metadataIds, location?.active !== false, values => {
+    stream.updateMetadata(values);
+    list.updateMetadata(values);
+  });
   useConversationResultViewed(enterpriseId, conversationId, stream.state?.latestRun,
     location?.active !== false && Boolean(stream.state && !stream.state.replaying && !stream.loading && !stream.error));
   const steps = useConversationStepHistory(enterpriseId, stream.state?.snapshot.messages, stream.historyVersion, stream.historySequence);

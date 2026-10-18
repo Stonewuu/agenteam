@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -42,8 +43,8 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/delegated-tools/framework");
-        registry.add("execution.state-root", () -> "target/delegated-tools/states");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("delegated-tools/framework").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("delegated-tools/states").toString());
     }
 
     @AfterAll

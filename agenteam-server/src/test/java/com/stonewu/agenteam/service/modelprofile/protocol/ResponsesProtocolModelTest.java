@@ -12,6 +12,7 @@ import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.ThinkingBlock;
 import io.agentscope.core.model.ChatResponse;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import okhttp3.Request;
 
@@ -76,7 +78,7 @@ class ResponsesProtocolModelTest {
                 requests.add(json.readTree(exchange.getRequestBody()));
                 String reply = replies.poll();
                 byte[] bytes = (reply == null ? "" : reply).getBytes(StandardCharsets.UTF_8);
-                exchange.getResponseHeaders().add("Content-Type", httpStatus == 200
+                exchange.getResponseHeaders().add("Content-Type", httpStatus == 200 && reply != null && reply.startsWith("event:")
                     ? "text/event-stream" : "application/json");
                 exchange.sendResponseHeaders(httpStatus, bytes.length);
                 exchange.getResponseBody().write(bytes);
@@ -156,9 +158,59 @@ class ResponsesProtocolModelTest {
             && item.path("call_id").asText().equals("call-one")
             && item.path("output").asText().contains("hello")));
         assertTrue(items.stream().anyMatch(item -> item.path("type").asText().equals("reasoning")
-            && item.path("encrypted_content").asText().equals("opaque-private-state")));
+            && item.path("encrypted_content").asText().equals("opaque-private-state")
+            && item.path("summary").path(0).path("text").asText().equals("先检查输入")));
         assertEquals(2, usages.size());
         assertTrue(usages.stream().allMatch(value -> value.snapshot().status().equals("complete")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"raw", "summary", "raw-summary", "summary-raw"})
+    void thinkingTextIsVisibleOnceAndPrivateStateIsPreserved(String order) throws Exception {
+        String raw = reasoningDelta("reasoning_text", "content_index", "先检查输入");
+        String summary = reasoningDelta("reasoning_summary_text", "summary_index", "检查摘要");
+        String events = switch (order) {
+            case "raw" -> raw;
+            case "summary" -> summary;
+            case "raw-summary" -> raw + summary;
+            default -> summary + raw;
+        };
+        var terminal = response(completeUsage());
+        terminal.withArray("output").add(reasoningItem());
+        replies.add(events + event("response.output_text.delta", "\"item_id\":\"msg-one\",\"output_index\":1,"
+            + "\"content_index\":0,\"delta\":\"完成\"")
+            + event("response.completed", "\"response\":" + terminal));
+        var chunks = model().stream(List.of(user()), List.of(), null).collectList().block(Duration.ofSeconds(8));
+        assertNotNull(chunks);
+        var thinking = chunks.stream().flatMap(chunk -> chunk.getContent().stream())
+            .filter(ThinkingBlock.class::isInstance).map(ThinkingBlock.class::cast).toList();
+        assertEquals(order.startsWith("raw") ? "先检查输入" : "检查摘要", thinking.stream()
+            .map(ThinkingBlock::getThinking).filter(value -> value != null).reduce("", String::concat));
+        assertEquals("opaque-private-state", thinking.getLast().getMetadata().get("openai.reasoning.encrypted_content"));
+        if (order.contains("raw")) {
+            assertEquals("先检查输入", thinking.getLast().getMetadata().get("openai.reasoning.text"));
+        }
+        assertEquals(1, dispatches.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void nonStreamingReasoningUsesTextWhenNoSummaryIsPresent(boolean hasSummary) throws Exception {
+        var terminal = response(completeUsage());
+        var reasoning = reasoningItem();
+        if (hasSummary) {
+            reasoning.withArray("summary").addObject().put("type", "summary_text").put("text", "检查摘要");
+        }
+        terminal.withArray("output").add(reasoning);
+        replies.add(terminal.toString());
+        var chunks = model().stream(List.of(user()), List.of(), GenerateOptions.builder().stream(false).build())
+            .collectList().block(Duration.ofSeconds(8));
+        assertNotNull(chunks);
+        var thinking = (ThinkingBlock) chunks.getFirst().getContent().getFirst();
+        assertEquals(hasSummary ? "检查摘要" : "先检查输入", thinking.getThinking());
+        assertEquals("opaque-private-state", thinking.getMetadata().get("openai.reasoning.encrypted_content"));
+        assertEquals("先检查输入", thinking.getMetadata().get("openai.reasoning.text"));
+        assertEquals(1, dispatches.get());
     }
 
     @Test
@@ -184,19 +236,20 @@ class ResponsesProtocolModelTest {
         assertEquals("failed", usages.getFirst().snapshot().metadata().status());
     }
 
-    @Test
-    void cancellationClosesAnOpenResponseWithoutWaitingForAnotherChunk() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"output_text", "reasoning_text", "reasoning_summary_text"})
+    void cancellationClosesAnOpenResponseWithoutWaitingForAnotherChunk(String type) throws Exception {
         var release = new CountDownLatch(1);
         var received = new CountDownLatch(1);
         var error = new AtomicReference<Throwable>();
+        String chunk = reasoningDelta(type,
+            type.equals("reasoning_summary_text") ? "summary_index" : "content_index", "开始");
         server.removeContext("/v1/responses");
         server.createContext("/v1/responses", exchange -> {
             try (exchange) {
                 exchange.getRequestBody().readAllBytes();
                 exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
                 exchange.sendResponseHeaders(200, 0);
-                String chunk = event("response.output_text.delta", "\"item_id\":\"msg-one\",\"output_index\":0,"
-                    + "\"content_index\":0,\"delta\":\"开始\"");
                 exchange.getResponseBody().write(chunk.getBytes(StandardCharsets.UTF_8));
                 exchange.getResponseBody().flush();
                 try {
@@ -207,7 +260,13 @@ class ResponsesProtocolModelTest {
             }
         });
         var subscription = model().stream(List.of(user()), List.of(), null)
-            .subscribe(value -> received.countDown(), error::set);
+            .subscribe(value -> {
+                var block = value.getContent().getFirst();
+                if (type.equals("output_text") ? block instanceof TextBlock
+                    : block instanceof ThinkingBlock thinking && "开始".equals(thinking.getThinking())) {
+                    received.countDown();
+                }
+            }, error::set);
         try {
             assertTrue(received.await(4, TimeUnit.SECONDS));
             assertTimeoutPreemptively(Duration.ofSeconds(2), subscription::dispose);
@@ -264,13 +323,24 @@ class ResponsesProtocolModelTest {
              "arguments":"","status":"in_progress"}
             """);
         var response = response(completeUsage());
-        response.withArray("output").add(json.readTree("""
-            {"type":"reasoning","id":"reason-one","summary":[],"encrypted_content":"opaque-private-state"}
-            """));
-        return event("response.output_item.added", "\"output_index\":0,\"item\":" + call)
+        response.withArray("output").add(reasoningItem());
+        return reasoningDelta("reasoning_text", "content_index", "先检查输入")
+            + event("response.output_item.added", "\"output_index\":0,\"item\":" + call)
             + event("response.function_call_arguments.delta", "\"item_id\":\"item-one\",\"output_index\":0,"
                 + "\"delta\":\"{\\\"value\\\":\\\"hello\\\"}\"")
             + event("response.completed", "\"response\":" + response);
+    }
+
+    private ObjectNode reasoningItem() throws Exception {
+        return (ObjectNode) json.readTree("""
+            {"type":"reasoning","id":"reason-one","summary":[],"encrypted_content":"opaque-private-state",
+             "content":[{"type":"reasoning_text","text":"先检查输入"}]}
+            """);
+    }
+
+    private String reasoningDelta(String type, String index, String text) throws Exception {
+        return event("response." + type + ".delta", "\"item_id\":\"reason-one\",\"output_index\":0,\""
+            + index + "\":0,\"delta\":" + json.writeValueAsString(text));
     }
 
     private ObjectNode response(String usage) throws Exception {

@@ -2,17 +2,17 @@
 
 AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过 Docker Hub 的 `stonewuu` 账号获取镜像，即可在自己的服务器上部署工作空间。
 
-本文使用 0.3.0 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
+本文使用 0.4.0 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
 
 ## 镜像清单
 
 | 用途 | 镜像 |
 | --- | --- |
-| 后端 | `docker.io/stonewuu/agenteam-backend:0.3.0` |
-| 前端 | `docker.io/stonewuu/agenteam-frontend:0.3.0` |
-| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.3.0` |
-| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.3.0` |
-| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.3.0` |
+| 后端 | `docker.io/stonewuu/agenteam-backend:0.4.0` |
+| 前端 | `docker.io/stonewuu/agenteam-frontend:0.4.0` |
+| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.4.0` |
+| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.4.0` |
+| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.4.0` |
 
 部署包包含本版本的 Compose（多容器服务配置）文件、入口代理配置和初始化工具。使用部署包即可完成服务器安装。
 
@@ -21,10 +21,10 @@ AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过
 在 Linux 服务器准备 Docker、Docker Compose、Python 3，以及指向该服务器的域名。以下命令在空的部署工作目录执行：
 
 ```sh
-deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.3.0)
-docker cp "$deployment_container":/deployment ./agenteam-0.3.0
+deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.4.0)
+docker cp "$deployment_container":/deployment ./agenteam-0.4.0
 docker rm "$deployment_container"
-cd agenteam-0.3.0
+cd agenteam-0.4.0
 python3 configure-server.py --domain app.example.com
 ```
 

@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.workflow;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,8 +67,8 @@ abstract class WorkflowExecutionApiTestSupport extends ExecutionApiTestSupport {
     static protected void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("network.allowed-private-origins", () -> origin() + "," + REMOTE.origin());
-        registry.add("execution.workspace-root", () -> "target/p06-workflow-execution-workspace");
-        registry.add("execution.state-root", () -> "target/p06-workflow-execution-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p06-workflow-execution-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p06-workflow-execution-state").toString());
     }
 
     @AfterAll

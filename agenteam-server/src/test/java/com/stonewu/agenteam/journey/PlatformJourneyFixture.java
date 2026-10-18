@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.journey;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -303,7 +304,7 @@ public abstract class PlatformJourneyFixture extends ExecutionApiTestSupport {
 
     private static Path directory() {
         try {
-            return Files.createTempDirectory(Path.of("target").toAbsolutePath(), "platform-journey-");
+            return Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "platform-journey-");
         } catch (IOException failure) {
             throw new IllegalStateException("无法创建独立流程验收目录", failure);
         }

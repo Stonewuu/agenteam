@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -59,8 +60,8 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/p03-full-dialog-workspace");
-        registry.add("execution.state-root", () -> "target/p03-full-dialog-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p03-full-dialog-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p03-full-dialog-state").toString());
     }
 
     @AfterAll

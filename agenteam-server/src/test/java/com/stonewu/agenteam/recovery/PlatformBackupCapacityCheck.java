@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.recovery;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -76,7 +77,7 @@ class PlatformBackupCapacityCheck extends ExecutionApiTestSupport {
         try {
             ENVIRONMENT.close();
         } finally {
-            Path target = Path.of("target").toRealPath();
+            Path target = TestOutputPaths.root().toRealPath();
             for (Path directory : createdDirectories) {
                 if (!Files.exists(directory)) {
                     continue;
@@ -182,12 +183,12 @@ class PlatformBackupCapacityCheck extends ExecutionApiTestSupport {
     }
 
     private void save(Map<String, Object> report) throws IOException {
-        Files.writeString(Path.of("target/p09-backup-capacity-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(report));
+        Files.writeString(TestOutputPaths.path("p09-backup-capacity-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(report));
     }
 
     private static Path directory() {
         try {
-            return Files.createTempDirectory(Path.of("target").toAbsolutePath(), "backup-capacity-");
+            return Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "backup-capacity-");
         } catch (IOException failure) {
             throw new IllegalStateException("无法创建容量恢复的隔离目录", failure);
         }

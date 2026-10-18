@@ -180,6 +180,7 @@
   "员工对话": "Agent conversation",
   "子智能体": "Subagent",
   "上下文整理": "Context compaction",
+  "标题生成": "Title generation",
   "本次请求发生时尚未配置价格。": "No prices were configured when this request was sent.",
   "价格日历已超过覆盖日期，需要补充日期配置。": "The pricing calendar has expired. Update its date coverage.",
   "提供方未确认实际服务档位，暂时无法选价。": "The provider did not confirm the actual service tier, so a price cannot be selected yet.",

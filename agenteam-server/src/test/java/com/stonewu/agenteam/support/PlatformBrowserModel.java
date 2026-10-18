@@ -83,6 +83,13 @@ public final class PlatformBrowserModel implements AutoCloseable {
             }
             exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
+            if (input.path("messages").toString().contains("为用户提供的资料拟一个")) {
+                TimeUnit.SECONDS.sleep(6);
+                frame(exchange, Map.of("content", "团队活动筹备"), "stop");
+                exchange.getResponseBody().write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+                exchange.getResponseBody().flush();
+                return;
+            }
             String selectedTool = null;
             boolean writing = question.contains("记录"), reading = question.contains("网页") || question.contains("大结果");
             for (var tool : input.path("tools")) {

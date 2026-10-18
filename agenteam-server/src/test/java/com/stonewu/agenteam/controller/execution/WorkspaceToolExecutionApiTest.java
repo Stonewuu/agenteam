@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.InProcessDocumentParsing;
 
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
@@ -65,7 +66,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
     private static final FileScanTestServer SCANNER = new FileScanTestServer();
-    private static final Path USER_WORKSPACES = Path.of("target/workspace-api", "users-" + UUID.randomUUID());
+    private static final Path USER_WORKSPACES = TestOutputPaths.path("workspace-api", "users-" + UUID.randomUUID());
     @Autowired
     private SandboxContainerCleanup containerCleanup;
     @Autowired
@@ -90,9 +91,9 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry properties) {
         ENVIRONMENT.properties(properties);
-        properties.add("execution.workspace-files-root", () -> "target/workspace-api/files");
-        properties.add("execution.workspace-root", () -> "target/workspace-api/framework");
-        properties.add("execution.state-root", () -> "target/workspace-api/states");
+        properties.add("execution.workspace-files-root", () -> TestOutputPaths.path("workspace-api/files").toString());
+        properties.add("execution.workspace-root", () -> TestOutputPaths.path("workspace-api/framework").toString());
+        properties.add("execution.state-root", () -> TestOutputPaths.path("workspace-api/states").toString());
         properties.add("execution.user-workspaces-root", USER_WORKSPACES::toString);
         properties.add("files.scan.host", () -> "127.0.0.1");
         properties.add("files.scan.port", SCANNER::port);

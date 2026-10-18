@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.knowledge;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.capacity.KnowledgeDatabaseTimings;
@@ -219,7 +220,7 @@ abstract class KnowledgeApiTestSupport {
 
     static protected Path temporary() {
         try {
-            return Files.createTempDirectory(Path.of("target").toAbsolutePath(), "knowledge-api-");
+            return Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "knowledge-api-");
         } catch (IOException failure) {
             throw new IllegalStateException("无法创建资料验收目录", failure);
         }

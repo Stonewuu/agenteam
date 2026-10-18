@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -77,8 +78,8 @@ class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/execution-recovery-workspace");
-        registry.add("execution.state-root", () -> "target/execution-recovery-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("execution-recovery-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("execution-recovery-state").toString());
     }
 
     @AfterAll

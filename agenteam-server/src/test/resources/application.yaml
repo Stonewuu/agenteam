@@ -35,16 +35,24 @@ java-plugins:
   cleanup:
     enabled: "false"
 execution:
+  titles:
+    enabled: "false"
   worker:
     enabled: "false"
   events:
     worker-enabled: "false"
-  workspace-files-root: "target/test-workspace-files"
-  user-workspaces-root: "target/test-user-workspaces"
-  workspace-preview-root: "target/test-file-preview"
+  workspace-root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/framework-workspaces"
+  state-root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/execution-states"
+  workspace-files-root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/test-workspace-files"
+  user-workspaces-root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/test-user-workspaces"
+  workspace-preview-root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/test-file-preview"
   workspace:
     retention-enabled: "false"
 agenteam:
+  storage:
+    root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/storage"
+  security:
+    keys-file: "${agenteam.test.artifacts-root:../.runtime/tests/data}/security/application-keys.properties"
   maintenance:
     worker-enabled: "false"
   demo:
@@ -64,7 +72,7 @@ files:
     enabled: "false"
   retention:
     enabled: "false"
-  root: "target/test-files"
+  root: "${agenteam.test.artifacts-root:../.runtime/tests/data}/test-files"
   parser:
     sandbox-enabled: "false"
 exports:

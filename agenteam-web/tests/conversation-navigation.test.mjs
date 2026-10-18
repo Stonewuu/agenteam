@@ -33,8 +33,8 @@ test("搜索结果指定的岗位和旧岗位链接不被默认负责人替代",
 });
 
 test("列表刷新保留任务位置和最新内容，代表岗位变化不产生重复条目", () => {
-  const previous = [{id: "hr", navigationKey: "task:one", title: "旧标题"}, {id: "chat", navigationKey: "conversation:chat"}];
-  const incoming = [{id: "new", navigationKey: "conversation:new"}, {id: "chat", navigationKey: "conversation:chat"}, {id: "finance", navigationKey: "task:one", title: "新标题"}];
+  const previous = [{id: "hr", revision: "1", collaboration: group, navigationKey: "task:one", title: "旧标题"}, {id: "chat", revision: "2", navigationKey: "conversation:chat"}];
+  const incoming = [{id: "new", revision: "1", navigationKey: "conversation:new"}, {id: "chat", revision: "3", navigationKey: "conversation:chat"}, {id: "finance", revision: "1", collaboration: group, navigationKey: "task:one", title: "新标题"}];
   const result = retainConversationOrder(previous, incoming);
   assert.deepEqual(result.map(value => value.id), ["new", "finance", "chat"]);
   assert.equal(result[1].title, "新标题");

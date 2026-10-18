@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.capacity;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -235,7 +236,7 @@ class PlatformCapacityCheck extends ExecutionApiTestSupport {
         URI connection = URI.create(environment.getRequiredProperty("spring.datasource.url").substring("jdbc:".length()));
         Path config = FILES.resolve("inspection-client.cnf"), stop = FILES.resolve("inspection.stop");
         Files.writeString(config, "[client]\nhost=" + connection.getHost() + "\nport=" + connection.getPort() + "\nuser=root\npassword=" + environment.getRequiredProperty("spring.datasource.password") + "\ndatabase=" + database + "\ndefault-character-set=utf8mb4\n");
-        Files.writeString(Path.of("target/p09-capacity-inspection.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("processId", ProcessHandle.current().pid(), "connectionFile", config.toString(), "stopFile", stop.toString(), "database", database, "enterprise", enterprise.id(), "knowledge", enterprise.knowledgeId())));
+        Files.writeString(TestOutputPaths.path("p09-capacity-inspection.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("processId", ProcessHandle.current().pid(), "connectionFile", config.toString(), "stopFile", stop.toString(), "database", database, "enterprise", enterprise.id(), "knowledge", enterprise.knowledgeId())));
         System.out.println("容量采样完成，本轮隔离数据库保留十分钟供查询诊断；写入 inspection.stop 后立即清理。");
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(10);
         while (!Files.exists(stop) && System.nanoTime() < deadline) {
@@ -246,19 +247,19 @@ class PlatformCapacityCheck extends ExecutionApiTestSupport {
     private void save(Map<String, Object> report, CapacityMeasurements measurements) throws IOException {
         report.put("measurements", measurements.report());
         report.put("knowledgeDatabaseMeasurements", databaseTimes.report());
-        Files.writeString(Path.of("target/p09-capacity-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(report), StandardCharsets.UTF_8);
+        Files.writeString(TestOutputPaths.path("p09-capacity-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(report), StandardCharsets.UTF_8);
     }
 
     private static Path temporary() {
         try {
-            return Files.createTempDirectory(Path.of("target").toAbsolutePath(), "capacity-files-");
+            return Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "capacity-files-");
         } catch (IOException failure) {
             throw new IllegalStateException("无法创建容量验收文件目录", failure);
         }
     }
 
     private static void removeGeneratedFiles() throws IOException {
-        Path target = Path.of("target").toRealPath(), generated = FILES.toRealPath();
+        Path target = TestOutputPaths.root().toRealPath(), generated = FILES.toRealPath();
         if (!generated.startsWith(target) || generated.equals(target) || !generated.getFileName().toString().startsWith("capacity-files-")) {
             throw new IllegalStateException("拒绝清理不属于本轮容量验收的文件目录");
         }

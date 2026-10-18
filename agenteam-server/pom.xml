@@ -10,7 +10,7 @@
   </parent>
   <groupId>com.stonewu</groupId>
   <artifactId>agenteam</artifactId>
-  <version>0.3.0</version>
+  <version>0.4.0</version>
   <name>AgenTeam</name>
   <description>AgenTeam 智能体工作平台</description>
   <url>https://github.com/Stonewuu/agenteam</url>
@@ -35,13 +35,14 @@
   </scm>
   <properties>
     <agenteam.build.directory>${project.basedir}/target</agenteam.build.directory>
+    <agenteam.test.artifacts-root>${project.basedir}/../.runtime/tests/data</agenteam.test.artifacts-root>
     <agenteam.test.forks>2</agenteam.test.forks>
     <agenteam.test.heap>1024m</agenteam.test.heap>
     <agenteam.test.compiler-level>4</agenteam.test.compiler-level>
     <agenteam.test.processors>2</agenteam.test.processors>
     <skipTests>false</skipTests>
     <agenteam.test.skip.processes>${skipTests}</agenteam.test.skip.processes>
-    <agenteam.test.reports>${agenteam.build.directory}/surefire-reports</agenteam.test.reports>
+    <agenteam.test.reports>${project.basedir}/../.runtime/tests/reports</agenteam.test.reports>
     <java.version>21</java.version>
     <agentscope.version>2.0.4</agentscope.version>
     <aws-sdk.version>2.49.6</aws-sdk.version>
@@ -275,6 +276,9 @@
           <!-- 独立进程并发，类结束后由测试扩展关闭应用并释放缓存，进程内复用容器。 -->
           <forkCount>${agenteam.test.forks}</forkCount>
           <reuseForks>true</reuseForks>
+          <systemPropertyVariables>
+            <agenteam.test.artifacts-root>${agenteam.test.artifacts-root}</agenteam.test.artifacts-root>
+          </systemPropertyVariables>
           <reportsDirectory>${agenteam.test.reports}</reportsDirectory>
           <!-- 长时间复用测试进程时保留完整优化编译，避免所有场景持续使用低优化代码。 -->
           <argLine>-Xmx${agenteam.test.heap} -XX:ActiveProcessorCount=${agenteam.test.processors} -XX:TieredStopAtLevel=${agenteam.test.compiler-level}</argLine>

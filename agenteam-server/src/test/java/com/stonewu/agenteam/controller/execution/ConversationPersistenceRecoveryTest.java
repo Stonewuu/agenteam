@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -50,8 +51,8 @@ class ConversationPersistenceRecoveryTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/p03-persistence-recovery-workspace");
-        registry.add("execution.state-root", () -> "target/p03-persistence-recovery-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p03-persistence-recovery-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p03-persistence-recovery-state").toString());
     }
 
     @AfterAll

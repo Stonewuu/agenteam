@@ -4,7 +4,7 @@ export const tokenLabels: Record<string, string> = {
 };
 
 export const usagePurposes: Record<string, string> = {
-  agent: "员工对话", subagent: "子智能体", workflow: "工作流", compaction: "上下文整理", preview: "预览",
+  agent: "员工对话", subagent: "子智能体", workflow: "工作流", compaction: "上下文整理", preview: "预览", title: "标题生成",
 };
 
 export const priceReasons: Record<string, string> = {

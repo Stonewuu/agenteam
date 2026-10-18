@@ -13,6 +13,7 @@ import com.stonewu.agenteam.service.http.ApiResponses;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 /**
  * 正式会话接口只适配请求与响应，提交后由后台工作进程执行。
@@ -86,6 +87,12 @@ public class ConversationApiController {
         return responses.success(
             snapshots.read(identity.requireEnterprise(request.getSession(false), enterpriseId), conversationId),
             request);
+    }
+
+    @GetMapping("/conversations/metadata")
+    public ApiResponse<?> metadata(@PathVariable String enterpriseId, @RequestParam List<String> ids,
+                                    HttpServletRequest request) {
+        return responses.success(queries.metadata(identity.requireEnterprise(request.getSession(false), enterpriseId), ids), request);
     }
 
     @GetMapping("/conversations/{conversationId}/messages")

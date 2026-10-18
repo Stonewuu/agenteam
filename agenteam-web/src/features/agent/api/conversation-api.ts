@@ -58,6 +58,19 @@ export async function loadSnapshot(enterprise: string, conversation: string, sig
   return snapshot;
 }
 
+export async function loadConversationMetadata(enterprise: string, ids: readonly string[], signal?: AbortSignal) {
+  const params = new URLSearchParams();
+  ids.forEach(id => params.append("ids", id));
+  const result = await apiRequest<{conversation: Conversation; titlePending: boolean}[]>(
+    `${conversationPath(enterprise)}/metadata?${params}`, {signal});
+  if (!Array.isArray(result) || result.some(item => !item.conversation || !ids.includes(item.conversation.id)
+    || !/^[1-9][0-9]*$/.test(item.conversation.revision) || typeof item.conversation.title !== "string"
+    || typeof item.titlePending !== "boolean")) {
+    throw new Error("对话基本信息格式不正确。");
+  }
+  return result;
+}
+
 export function olderMessages(enterprise: string, conversation: string, before: string, signal?: AbortSignal) {
   return apiRequest<MessageHistory>(`${conversationPath(enterprise, conversation)}/messages?${new URLSearchParams({
     beforeMessageId: before,

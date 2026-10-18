@@ -6,6 +6,8 @@
 
 /* 组合构建只扫描应用源码，避免把生成目录中的缓存当作样式来源。 */
 @source "../../";
+@source "../../../node_modules/@streamdown/math/dist/*.js";
+@source "../../../node_modules/@streamdown/mermaid/dist/*.js";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 

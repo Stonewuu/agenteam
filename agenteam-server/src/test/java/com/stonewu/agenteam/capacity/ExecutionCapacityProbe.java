@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.capacity;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -287,6 +288,6 @@ final class ExecutionCapacityProbe implements AutoCloseable {
         progress.put("timings", measurements.report());
         progress.put("modelsReachedInCurrentRound", modelStarts.values().stream().filter(value -> value > 0).count());
         progress.put("status", Boolean.TRUE.equals(progress.get("passed")) ? "passed" : "failed");
-        Files.writeString(Path.of("target/p09-execution-capacity-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(progress));
+        Files.writeString(TestOutputPaths.path("p09-execution-capacity-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(progress));
     }
 }

@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.recovery;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.AgenteamApplication;
@@ -114,8 +115,8 @@ public final class RestoredPlatformInstance implements AutoCloseable {
 
     public static void copyFiles(Path source, Path target) throws Exception {
         Path original = source.toRealPath(), copy = target.toAbsolutePath().normalize();
-        if (!copy.startsWith(Path.of("target").toAbsolutePath().normalize()) || copy.startsWith(original)) {
-            throw new IllegalArgumentException("恢复文件必须写入 target 内另一个独立目录");
+        if (!copy.startsWith(TestOutputPaths.root().toAbsolutePath().normalize()) || copy.startsWith(original)) {
+            throw new IllegalArgumentException("恢复文件必须写入 测试输出根目录内另一个独立目录");
         }
         Files.createDirectories(copy);
         try (var paths = Files.walk(original)) {

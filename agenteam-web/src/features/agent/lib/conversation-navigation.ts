@@ -1,4 +1,5 @@
 import type {Conversation, ConversationNavigationItem} from "../types/execution";
+import {mergeConversationMetadata} from "./conversation-metadata";
 
 export function navigationConversation(item: ConversationNavigationItem): Conversation {
   return {...item.conversation, navigationKey: item.key, title: item.title, updatedAt: item.updatedAt,
@@ -62,5 +63,14 @@ export function retainConversationOrder(previous: Conversation[], incoming: Conv
   const key = (value: Conversation) => value.navigationKey ?? value.id;
   const next = new Map(incoming.map(value => [key(value), value]));
   const old = new Set(previous.map(key));
-  return [...incoming.filter(value => !old.has(key(value))), ...previous.flatMap(value => next.has(key(value)) ? [next.get(key(value))!] : [])];
+  return [...incoming.filter(value => !old.has(key(value))), ...previous.flatMap(value => {
+    const updated = next.get(key(value));
+    if (!updated) {
+      return [];
+    }
+    if (value.id !== updated.id || updated.collaboration) {
+      return [updated];
+    }
+    return [mergeConversationMetadata(value, updated)];
+  })];
 }

@@ -36,7 +36,7 @@ class IntegrationPurposeMigrationTest {
         try (var database = new IsolatedDatabase()) {
             var access = database.databaseAccess();
             Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
-                .target("0.3.0.7").cleanDisabled(true).load().migrate();
+                .target("0.4.0.4").cleanDisabled(true).load().migrate();
             String owner = user(access);
             String enterprise = enterprise(access, owner);
             String agent = agent(access, enterprise, owner);

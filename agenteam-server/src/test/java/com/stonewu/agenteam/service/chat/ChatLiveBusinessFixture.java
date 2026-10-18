@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -62,7 +63,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnabledIfSystemProperty(named = "chat.live.verify", matches = "true")
 class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
     private static final InvitationHttpTestEnvironment ENV = new InvitationHttpTestEnvironment();
-    private static final Path DIRECTORY = Path.of("target", "chat-live").toAbsolutePath().normalize();
+    private static final Path DIRECTORY = TestOutputPaths.path("chat-live").toAbsolutePath().normalize();
     @LocalServerPort private int port;
     @Autowired private ChatConfiguration chat;
     @Autowired private CollaborationConfiguration collaboration;

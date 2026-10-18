@@ -19,6 +19,15 @@ import java.util.List;
  */
 @Mapper
 public interface ConversationSqlMapper extends MPJBaseMapper<AgentConversationRow> {
+    default int saveAutomaticTitle(String enterprise, String user, String conversation, long revision, String title) {
+        return update(new LambdaUpdateWrapper<AgentConversationRow>()
+            .eq(AgentConversationRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getUserId, user)
+            .eq(AgentConversationRow::getId, conversation).eq(AgentConversationRow::getRevision, revision)
+            .eq(AgentConversationRow::getMode, "normal").eq(AgentConversationRow::getSourceType, "web")
+            .ne(AgentConversationRow::getStatus, "deleted").eq(AgentConversationRow::getTitleCustomized, 0)
+            .set(AgentConversationRow::getTitle, title).setIncrBy(AgentConversationRow::getRevision, 1));
+    }
+
     default String eventDeliveryMode(String enterprise, String id) {
         var row = selectOne(
             new LambdaQueryWrapper<AgentConversationRow>().select(AgentConversationRow::getEventDeliveryMode)

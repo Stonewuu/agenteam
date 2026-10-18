@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import org.junit.jupiter.api.Tag;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -107,7 +108,7 @@ class OfficeSandboxIntegrationTest {
         }
         var invalid = new ByteArrayInputStream("不是办公文件".getBytes());
         assertThrows(ApiException.class, () -> parser.render(invalid, "docx", directory.resolve("invalid.pdf"), () -> true));
-        Path evidence = Path.of("target/office-runtime-evidence").toAbsolutePath();
+        Path evidence = TestOutputPaths.path("office-runtime-evidence").toAbsolutePath();
         Files.createDirectories(evidence);
         for (String kind : List.of("docx", "xlsx", "pptx")) {
             Files.copy(second.resolve("outputs/preview/" + kind + "/sample.pdf"), evidence.resolve(kind + ".pdf"), StandardCopyOption.REPLACE_EXISTING);

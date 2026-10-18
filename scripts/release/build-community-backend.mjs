@@ -23,6 +23,7 @@ const save = () => writeFileSync(recordPath, JSON.stringify(record, null, 2) + "
 save();
 try {
   const args = ["-B", "--no-transfer-progress", `-Dmaven.repo.local=${repository}`,
+    `-Dagenteam.test.reports=${resolve(artifactsDirectory, "surefire-reports")}`,
     `-Dagenteam.build.directory=${artifactsDirectory}`];
   if (values["skip-tests"]) {
     args.push("-DskipTests");

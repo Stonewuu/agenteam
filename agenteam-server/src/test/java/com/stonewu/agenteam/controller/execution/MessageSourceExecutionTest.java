@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.InProcessDocumentParsing;
 
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
@@ -80,13 +81,13 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("files.root", () -> "target/p05-message-source-files");
+        registry.add("files.root", () -> TestOutputPaths.path("p05-message-source-files").toString());
         registry.add("files.scan.host", () -> "127.0.0.1");
         registry.add("files.scan.port", SCANNER::port);
         registry.add("knowledge.processing.enabled", () -> false);
         registry.add("knowledge.retention.enabled", () -> false);
-        registry.add("execution.workspace-root", () -> "target/p05-message-source-workspace");
-        registry.add("execution.state-root", () -> "target/p05-message-source-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p05-message-source-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p05-message-source-state").toString());
     }
 
     @AfterAll

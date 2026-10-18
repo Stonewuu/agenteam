@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.recovery;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.test.recovery.BackupFixtureMapper;
 import com.stonewu.agenteam.model.test.recovery.BackupTableScan;
@@ -58,8 +59,8 @@ public final class MysqlBackupFixture implements AutoCloseable {
         this.databaseAccess = databaseAccess;
         this.root = root.toAbsolutePath().normalize();
         database = databaseAccess.catalog();
-        if (database == null || !database.matches("agenteam_test_[a-f0-9]{32}") || !this.root.startsWith(Path.of("target").toAbsolutePath().normalize())) {
-            throw new IllegalArgumentException("备份演练只能读取本次隔离库并写入 target 内的独立目录");
+        if (database == null || !database.matches("agenteam_test_[a-f0-9]{32}") || !this.root.startsWith(TestOutputPaths.root().toAbsolutePath().normalize())) {
+            throw new IllegalArgumentException("备份演练只能读取本次隔离库并写入测试输出根目录内的独立目录");
         }
     }
 

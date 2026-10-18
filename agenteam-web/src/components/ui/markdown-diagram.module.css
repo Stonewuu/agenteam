@@ -1,0 +1,165 @@
+.root {
+  margin: 24px 0;
+  min-width: 0;
+}
+
+.viewport {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  transition: height 220ms ease;
+}
+
+.preview {
+  padding: 12px 4px;
+  pointer-events: none;
+}
+
+.openOverlay {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  border-radius: 10px;
+  cursor: zoom-in;
+}
+
+.openOverlay:hover {
+  background: transparent;
+}
+
+.fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 112px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg) 95%);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.fade[data-visible="true"] {
+  opacity: 1;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.action {
+  min-height: 36px;
+  gap: 8px;
+  color: var(--secondary);
+}
+
+.action svg {
+  transition: transform 220ms ease;
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.canvas :global([data-streamdown="mermaid-block"]) {
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  background: transparent;
+}
+
+.canvas :global([data-streamdown="mermaid-block"]) > div:first-child {
+  display: none;
+}
+
+.canvas :global([data-streamdown="mermaid-block"]) > div:last-child {
+  border: 0;
+  background: transparent;
+}
+
+.canvas :global([data-streamdown="mermaid"]) div:has(> svg) {
+  width: 100%;
+}
+
+.canvas :global([data-streamdown="mermaid"]) svg {
+  display: block;
+  margin: 0 auto;
+  height: auto;
+}
+
+.dialog:global(.agenteam-dialog.modal.large) {
+  width: calc(100vw - 48px);
+  height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px);
+}
+
+.dialogBody {
+  overflow: hidden !important;
+  padding: 8px 20px 20px !important;
+}
+
+:global(body):has(.dialog) :global([data-slot="dialog-overlay"]) {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.fullCanvas :global([data-streamdown="mermaid"]) > div {
+  height: calc(100dvh - 160px);
+}
+
+.fullCanvas :global([data-streamdown="mermaid"]) button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.pending,
+.error {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.error pre {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .action {
+    min-height: 44px;
+  }
+
+  .dialog:global(.agenteam-dialog.modal.large) {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .dialogBody {
+    padding: 4px 8px 12px !important;
+  }
+
+  .fullCanvas :global([data-streamdown="mermaid"]) > div {
+    height: calc(100dvh - 124px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport,
+  .fade,
+  .action svg,
+  .canvas :global([role="application"]) {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  :global(body):has(.dialog) :global([data-slot="dialog-overlay"]) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

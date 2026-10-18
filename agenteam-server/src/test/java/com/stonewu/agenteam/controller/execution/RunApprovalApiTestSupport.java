@@ -2,6 +2,7 @@ package com.stonewu.agenteam.controller.execution;
 
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -83,8 +84,8 @@ abstract class RunApprovalApiTestSupport extends ExecutionApiTestSupport {
     static protected void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("network.allowed-private-origins", REMOTE::origin);
-        registry.add("execution.workspace-root", () -> "target/p04-approval-workspace");
-        registry.add("execution.state-root", () -> "target/p04-approval-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p04-approval-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p04-approval-state").toString());
     }
 
     @AfterAll

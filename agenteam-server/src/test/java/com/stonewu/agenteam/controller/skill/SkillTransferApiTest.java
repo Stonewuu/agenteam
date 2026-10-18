@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.skill;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.InProcessDocumentParsing;
 
 
@@ -331,7 +332,7 @@ class SkillTransferApiTest {
 
     private static Path temporary() {
         try {
-            return Files.createTempDirectory(Path.of("target").toAbsolutePath(), "skill-transfer-");
+            return Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "skill-transfer-");
         } catch (IOException failure) {
             throw new IllegalStateException("无法创建技能文件验收目录", failure);
         }

@@ -27,6 +27,11 @@
     BEGIN IF NEW.kind = 'run' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '执行测试主动拒绝任务保存'; END IF; END
   </update>
   <update id="allowRunJobCreation">DROP TRIGGER p03_fail_run_job</update>
+  <update id="rejectTitleJobCreation">
+    CREATE TRIGGER title_fail_job BEFORE INSERT ON background_job FOR EACH ROW
+    BEGIN IF NEW.kind = 'conversation_title' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '标题测试主动拒绝任务保存'; END IF; END
+  </update>
+  <update id="allowTitleJobCreation">DROP TRIGGER title_fail_job</update>
   <select id="waitingForEnterpriseLock" resultType="int">
     SELECT COUNT(*) FROM performance_schema.data_lock_waits w
     JOIN performance_schema.data_locks l ON l.ENGINE_LOCK_ID = w.REQUESTING_ENGINE_LOCK_ID

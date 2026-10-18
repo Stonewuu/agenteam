@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.workflow;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -110,8 +111,8 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/p06-workflow-preview-workspace");
-        registry.add("execution.state-root", () -> "target/p06-workflow-preview-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p06-workflow-preview-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p06-workflow-preview-state").toString());
     }
 
     @AfterAll

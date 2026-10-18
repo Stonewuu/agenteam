@@ -46,7 +46,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: community-backend-tests
-          path: agenteam-server/target/surefire-reports/
+          path: .runtime/tests/reports/
+          include-hidden-files: true
           retention-days: 7
           if-no-files-found: ignore
 

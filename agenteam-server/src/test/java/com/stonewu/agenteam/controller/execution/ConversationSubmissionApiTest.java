@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -53,8 +54,8 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.workspace-root", () -> "target/p03-model-test-workspace");
-        registry.add("execution.state-root", () -> "target/p03-model-test-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p03-model-test-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p03-model-test-state").toString());
     }
 
     @AfterAll

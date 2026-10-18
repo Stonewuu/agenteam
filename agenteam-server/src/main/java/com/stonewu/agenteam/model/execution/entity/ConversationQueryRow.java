@@ -22,7 +22,10 @@ public class ConversationQueryRow {
     private String agentVersionId;
     private String hireId;
     private String title;
+    private Integer titleCustomized;
     private String agentName;
+    private String versionName;
+    private String versionConfigJson;
     private String agentIcon;
     private String agentColor;
     private String mode;

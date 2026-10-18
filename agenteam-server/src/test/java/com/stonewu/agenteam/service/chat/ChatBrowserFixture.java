@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -59,7 +60,7 @@ import java.util.Set;
 class ChatBrowserFixture extends CollaborationApiTestSupport {
     private static final InvitationHttpTestEnvironment ENV = new InvitationHttpTestEnvironment();
     private static final ChatBrowserPlatform PLATFORM = platform();
-    private static final Path DIRECTORY = Path.of("target", "chat-browser").toAbsolutePath().normalize();
+    private static final Path DIRECTORY = TestOutputPaths.path("chat-browser").toAbsolutePath().normalize();
     @LocalServerPort private int port;
     @Autowired private CollaborationDispatchService dispatch;
     @Autowired private CollaborationRunObserver observer;

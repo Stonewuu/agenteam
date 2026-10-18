@@ -22,7 +22,8 @@ public final class PlatformBrowserEnvironment {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("spring.devtools.restart.enabled", "false");
-        Path root = Path.of("target", "platform-ui-" + UUID.randomUUID()).toAbsolutePath().normalize();
+        Path artifacts = TestOutputPaths.root();
+        Path root = artifacts.resolve("platform-ui-" + UUID.randomUUID());
         Files.createDirectories(root);
         Path stop = root.resolve("stop");
         Path mailbox = root.resolve("mailbox.json");
@@ -46,6 +47,7 @@ public final class PlatformBrowserEnvironment {
             properties.put("execution.workspace-root", root.resolve("execution-workspace").toString());
             properties.put("execution.state-root", root.resolve("execution-state").toString());
             properties.put("execution.worker.enabled", "true");
+            properties.put("execution.titles.enabled", "true");
             properties.put("execution.events.worker-enabled", "true");
             properties.put("network.allowed-private-origins", plugin.origin());
             properties.put("files.root", root.resolve("files").toString());
@@ -75,8 +77,8 @@ public final class PlatformBrowserEnvironment {
                 state.putAll(PlatformBrowserFixtures.create(context, model.baseUrl(), plugin.endpoint()));
                 state.put("pluginEndpoint", plugin.endpoint());
                 state.put("operationsFile", root.resolve("plugin-operations.jsonl").toString());
-                Files.writeString(Path.of("target", "platform-ui-state.json"), json.writeValueAsString(state), StandardCharsets.UTF_8);
-                System.out.println("隔离界面验收环境已启动，地址信息已保存到 target/platform-ui-state.json");
+                Files.writeString(artifacts.resolve("platform-ui-state.json"), json.writeValueAsString(state), StandardCharsets.UTF_8);
+                System.out.println("隔离界面验收环境已启动，地址信息已保存到 " + artifacts.resolve("platform-ui-state.json"));
                 int previousCount = -1;
                 while (!Files.exists(stop)) {
                     var messages = isolated.mailbox().getReceivedMessages();

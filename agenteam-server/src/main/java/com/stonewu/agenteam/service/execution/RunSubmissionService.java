@@ -65,6 +65,7 @@ public class RunSubmissionService {
     private final ConversationProjectService projects;
     private final CollaborationSubmissionRecords collaboration;
     private final CollaborationSourceAccess collaborationSources;
+    private final ConversationTitleService titles;
 
     public RunSubmissionService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                 RunJobMapper jobs,
@@ -73,7 +74,8 @@ public class RunSubmissionService {
                                 Clock clock, SkillExecutionService skills, ExecutionSourceService sources,
                                 EnterpriseMapper enterprises, WorkflowGraphValidator workflowGraphs,
                                 WorkflowControlNodes workflowInputs, WorkflowValues workflowValues,
-                                ConversationProjectService projects, CollaborationSubmissionRecords collaboration, CollaborationSourceAccess collaborationSources) {
+                                ConversationProjectService projects, CollaborationSubmissionRecords collaboration, CollaborationSourceAccess collaborationSources,
+                                ConversationTitleService titles) {
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
@@ -92,6 +94,7 @@ public class RunSubmissionService {
         this.projects = projects;
         this.collaboration = collaboration;
         this.collaborationSources = collaborationSources;
+        this.titles = titles;
     }
 
     @Transactional
@@ -104,8 +107,10 @@ public class RunSubmissionService {
             selected.versionId(), selected.hireId(),
             title(actor, input.text()), "normal", ToolApprovalPolicy.from(request.approvalPolicy()).value(),
             clock.instant());
-        return submit(actor, projects.initial(actor.enterpriseId(), actor.userId(), conversation, request.projectId()),
+        var accepted = submit(actor, projects.initial(actor.enterpriseId(), actor.userId(), conversation, request.projectId()),
             selected, input, null);
+        titles.enqueue(actor, accepted, ModelSelection.fromConfig(selected.snapshot().path("config")));
+        return accepted;
     }
 
     @Transactional

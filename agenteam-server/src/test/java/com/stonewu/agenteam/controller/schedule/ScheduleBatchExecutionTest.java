@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.schedule;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -151,7 +152,7 @@ class ScheduleBatchExecutionTest extends ExecutionApiTestSupport {
         var report = Map.of("planCount", PLAN_COUNT, "workerInstances", 2, "schedulerThreads", 2, "sameJvm", true,
             "elapsedMillis", elapsed, "readSamples", reads.size(), "readP95Millis", p95, "readMaxMillis", sorted.getLast(),
             "observedPendingPeak", peak.get(), "finishedAt", Instant.now().toString());
-        Files.writeString(Path.of("target/schedule-batch-result.json"), json.writeValueAsString(report));
+        Files.writeString(TestOutputPaths.path("schedule-batch-result.json"), json.writeValueAsString(report));
         System.out.println("定时计划批次验证结果：" + json.writeValueAsString(report));
         assertTrue(elapsed < TimeUnit.MINUTES.toMillis(1), "跨批次计划应在本次验证截止前全部处理完毕");
         assertTrue(p95 < 5000, "后台处理期间计划查询不应长时间失去响应");

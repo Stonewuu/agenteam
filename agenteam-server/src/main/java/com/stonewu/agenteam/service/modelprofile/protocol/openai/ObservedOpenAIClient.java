@@ -58,16 +58,17 @@ public final class ObservedOpenAIClient extends OpenAIClientDelegate {
 
         @Override
         public Response create(ResponseCreateParams params, RequestOptions options) {
-            return observer.observe(delegate.create(params, options), true);
+            return ResponsesReasoningTextAdapter.adapt(observer.observe(delegate.create(params, options), true));
         }
 
         @Override
         public StreamResponse<ResponseStreamEvent> createStreaming(ResponseCreateParams params, RequestOptions options) {
             var original = delegate.createStreaming(params, options);
+            var reasoning = new ResponsesReasoningTextAdapter();
             return new StreamResponse<>() {
                 @Override
                 public Stream<ResponseStreamEvent> stream() {
-                    return original.stream().map(observer::observe);
+                    return original.stream().map(observer::observe).flatMap(reasoning::adapt);
                 }
 
                 @Override

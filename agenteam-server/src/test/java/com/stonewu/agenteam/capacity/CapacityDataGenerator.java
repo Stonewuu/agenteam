@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.capacity;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.auth.AccountPasswordEncoder;
@@ -76,9 +77,9 @@ public final class CapacityDataGenerator {
     }
 
     public List<Enterprise> create(String firstEnterprise, String administrator, String originalAgent, String modelUrl) throws Exception {
-        var target = Path.of("target").toAbsolutePath().normalize();
+        var target = TestOutputPaths.root().toAbsolutePath().normalize();
         if (!filesRoot.startsWith(target) || filesRoot.equals(target)) {
-            throw new IllegalStateException("容量资料只能放入本轮 target 子目录");
+            throw new IllegalStateException("容量资料只能放入本轮测试输出根目录的子目录");
         }
         var original = json.read(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ResourceDraftTableMapper.class).selectList(new LambdaQueryWrapper<ResourceDraftRow>().select(ResourceDraftRow::getConfigJson).eq(ResourceDraftRow::getEnterpriseId, firstEnterprise).eq(ResourceDraftRow::getResourceId, originalAgent)).stream().map(ResourceDraftRow::getConfigJson).toList()));
         var owner = users.findById(administrator).orElseThrow();

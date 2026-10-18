@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.recovery;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -52,13 +53,13 @@ class PlatformRecoveryCheck extends PlatformJourneyFixture {
         report.put("startedAt", Instant.now().toString());
         report.put("status", "running");
         report.put("scope", "完整业务样本的跨二进制日志恢复与新实例读取；百万规模恢复耗时另行测量");
-        Path archive = Files.createTempDirectory(Path.of("target").toAbsolutePath(), "recovery-archive-");
-        Path restoredFiles = Files.createTempDirectory(Path.of("target").toAbsolutePath(), "recovery-files-");
+        Path archive = Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "recovery-archive-");
+        Path restoredFiles = Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "recovery-files-");
         try (var backup = new MysqlBackupFixture(databaseAccess, archive);
              var restored = new RestoredPlatformInstance()) {
             var journey = completeJourney();
             report.put("journey", journey);
-            Files.writeString(Path.of("target/p09-platform-journey-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("completedAt", Instant.now().toString(), "status", "passed", "scope", "真实业务接口、模型网络请求、受控工具写入及正式调度，不包含浏览器操作", "result", journey, "remoteWrites", remoteWrites.get())));
+            Files.writeString(TestOutputPaths.path("p09-platform-journey-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("completedAt", Instant.now().toString(), "status", "passed", "scope", "真实业务接口、模型网络请求、受控工具写入及正式调度，不包含浏览器操作", "result", journey, "remoteWrites", remoteWrites.get())));
             backup.fullBackup();
             var pending = submitForApproval();
             String pendingRun = pending.path("runId").asText();
@@ -115,7 +116,7 @@ class PlatformRecoveryCheck extends PlatformJourneyFixture {
             throw failure;
         } finally {
             report.put("finishedAt", Instant.now().toString());
-            Files.writeString(Path.of("target/p09-recovery-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(report));
+            Files.writeString(TestOutputPaths.path("p09-recovery-results.json"), json.writerWithDefaultPrettyPrinter().writeValueAsString(report));
         }
     }
 }

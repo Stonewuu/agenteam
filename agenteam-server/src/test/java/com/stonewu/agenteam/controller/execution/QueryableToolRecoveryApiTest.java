@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
@@ -72,8 +73,8 @@ class QueryableToolRecoveryApiTest extends ExecutionApiTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("network.allowed-private-origins", REMOTE::origin);
-        registry.add("execution.workspace-root", () -> "target/p04-query-workspace");
-        registry.add("execution.state-root", () -> "target/p04-query-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p04-query-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p04-query-state").toString());
     }
 
     @AfterAll

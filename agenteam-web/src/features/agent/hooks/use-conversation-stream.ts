@@ -11,7 +11,8 @@ import {
   streamSequence
 } from "../state/conversation-event-state";
 import {SnapshotRequired, validateMessage} from "../state/conversation-protocol";
-import type {ConversationMessage, ConversationSnapshot} from "../types/execution";
+import type {Conversation, ConversationMessage, ConversationSnapshot} from "../types/execution";
+import {mergeConversationMetadata} from "../lib/conversation-metadata";
 import {fileToolActivity} from "../lib/conversation-file-activity";
 
 /** 每次打开先取完整快照；重复、遗漏或版本不符的事件不会被追加到页面。 */
@@ -29,6 +30,7 @@ export function useConversationStream(enterprise: string, conversation: string |
   }
   const [value, setValue] = useState<ConversationState | null>(null);
   const state = useRef<ConversationState | null>(null);
+  const metadata = useRef<{scope: string; value: Conversation} | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reloadVersion, setReloadVersion] = useState(0);
@@ -42,6 +44,20 @@ export function useConversationStream(enterprise: string, conversation: string |
     setValue(next);
   }, []);
   const reload = useCallback(() => setReloadVersion((current) => current + 1), []);
+  const updateMetadata = useCallback((values: Conversation[]) => {
+    const incoming = values.find(value => value.id === conversation);
+    if (!incoming) {
+      return;
+    }
+    const previous = metadata.current?.scope === activityScope ? metadata.current.value : null;
+    const value = previous ? mergeConversationMetadata(previous, incoming) : incoming;
+    metadata.current = {scope: activityScope, value};
+    const current = state.current;
+    if (current?.snapshot.conversation.id === conversation) {
+      commit({...current, snapshot: {...current.snapshot,
+        conversation: mergeConversationMetadata(current.snapshot.conversation, value)}});
+    }
+  }, [conversation, activityScope, commit]);
   useEffect(() => {
     const controller = new AbortController();
     scope.current = controller;
@@ -57,6 +73,14 @@ export function useConversationStream(enterprise: string, conversation: string |
     };
     const show = (snapshot: ConversationSnapshot) => {
       const next = fromSnapshot(snapshot);
+      const previous = state.current?.snapshot.conversation;
+      if (previous?.id === snapshot.conversation.id) {
+        next.snapshot = {...next.snapshot, conversation: mergeConversationMetadata(previous, snapshot.conversation)};
+      }
+      if (metadata.current?.scope === activityScope) {
+        next.snapshot = {...next.snapshot,
+          conversation: mergeConversationMetadata(next.snapshot.conversation, metadata.current.value)};
+      }
       if (snapshot.protocolVersion !== 2 && state.current?.snapshot.conversation.id === snapshot.conversation.id) {
         next.approvals = state.current.approvals;
         next.steps = state.current.steps;
@@ -243,6 +267,7 @@ export function useConversationStream(enterprise: string, conversation: string |
     loading,
     error,
     reload,
+    updateMetadata,
     loadOlder,
     loadingOlder,
     setFeedback,

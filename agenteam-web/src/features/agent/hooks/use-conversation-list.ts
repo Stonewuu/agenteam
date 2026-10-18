@@ -8,6 +8,7 @@ import {type ConversationFilter, listConversations} from "../api/conversation-ap
 import type {Conversation} from "../types/execution";
 import {useConversationScope} from "./use-conversation-scope";
 import {retainConversationOrder} from "../lib/conversation-navigation";
+import {mergeConversationMetadataList} from "../lib/conversation-metadata";
 
 type EmployeeOption = { name: string; icon: string | null; color: string | null; updatedAt: string };
 
@@ -33,6 +34,9 @@ export function useConversationList(enterprise: string, enabled = true, user = "
   const loadingMore = useRef(false);
   const previousBinding = useRef("");
   const refresh = useCallback(() => setVersion((value) => value + 1), []);
+  const updateMetadata = useCallback((values: Conversation[]) => {
+    setItems(previous => mergeConversationMetadataList(previous, values));
+  }, []);
   // 保留当前企业已经加载过的员工选项，搜索无结果时仍可调整员工条件。
   const rememberEmployees = useCallback((conversations: Conversation[]) => {
     setEmployeeOptions((previous) => {
@@ -132,6 +136,7 @@ export function useConversationList(enterprise: string, enabled = true, user = "
     employeeOptions: enabled && employeeOptions.enterprise === enterprise ? employeeOptions.values : new Map<string, EmployeeOption>(),
     hasMore: matches && cursor !== null,
     more,
-    refresh
+    refresh,
+    updateMetadata
   };
 }

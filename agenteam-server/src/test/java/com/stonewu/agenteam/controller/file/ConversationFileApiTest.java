@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.file;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -59,8 +60,8 @@ class ConversationFileApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry properties) {
         ENVIRONMENT.properties(properties);
-        properties.add("execution.workspace-files-root", () -> "target/sidebar-api/workspaces");
-        properties.add("files.root", () -> "target/sidebar-api/files");
+        properties.add("execution.workspace-files-root", () -> TestOutputPaths.path("sidebar-api/workspaces").toString());
+        properties.add("files.root", () -> TestOutputPaths.path("sidebar-api/files").toString());
     }
 
     @AfterAll

@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -70,9 +71,9 @@ class PluginToolExecutionApiTest extends ExecutionApiTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("network.allowed-private-origins", PluginToolExecutionApiTest::origin);
-        registry.add("execution.workspace-root", () -> "target/p04-plugin-execution-workspace");
-        registry.add("execution.state-root", () -> "target/p04-plugin-execution-state");
-        registry.add("files.root", () -> "target/p04-plugin-execution-files");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p04-plugin-execution-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p04-plugin-execution-state").toString());
+        registry.add("files.root", () -> TestOutputPaths.path("p04-plugin-execution-files").toString());
     }
 
     @AfterAll

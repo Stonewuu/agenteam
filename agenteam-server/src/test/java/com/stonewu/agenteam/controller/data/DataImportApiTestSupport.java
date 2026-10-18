@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.data;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -82,7 +83,7 @@ abstract class DataImportApiTestSupport {
     @DynamicPropertySource
     static protected void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("files.root", () -> "target/p05-data-import-files");
+        registry.add("files.root", () -> TestOutputPaths.path("p05-data-import-files").toString());
         registry.add("files.scan.host", () -> "127.0.0.1");
         registry.add("files.scan.port", SCANNER::port);
         registry.add("data.mysql.allowed-origins", () -> "mysql://localhost:" + IsolatedInfrastructure.mysql().getMappedPort(3306));

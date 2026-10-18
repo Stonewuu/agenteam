@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -64,8 +65,8 @@ class ConversationApprovalPolicyApiTest extends ExecutionApiTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("network.allowed-private-origins", REMOTE::origin);
-        registry.add("execution.workspace-root", () -> "target/approval-policy-workspace");
-        registry.add("execution.state-root", () -> "target/approval-policy-state");
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("approval-policy-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("approval-policy-state").toString());
     }
 
     @AfterAll

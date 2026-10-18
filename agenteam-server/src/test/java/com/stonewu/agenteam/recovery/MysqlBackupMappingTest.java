@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.recovery;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.test.recovery.BackupFixtureMapper;
 import com.stonewu.agenteam.mapper.user.AppUserTableMapper;
@@ -34,7 +35,7 @@ class MysqlBackupMappingTest {
             row.setUpdatedAt(row.getCreatedAt());
             assertEquals(1, users.insert(row));
 
-            try (var backup = new MysqlBackupFixture(access, Path.of("target", "backup-mapping-" + UUID.randomUUID()))) {
+            try (var backup = new MysqlBackupFixture(access, TestOutputPaths.path("backup-mapping-" + UUID.randomUUID()))) {
                 var original = backup.tableContents(access);
                 assertEquals(1L, ((Map<?, ?>) original.get("app_user")).get("rows"));
                 assertEquals(original, backup.tableContents(access));

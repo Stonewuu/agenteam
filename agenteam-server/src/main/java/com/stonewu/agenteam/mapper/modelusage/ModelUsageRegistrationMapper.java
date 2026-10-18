@@ -26,8 +26,8 @@ public class ModelUsageRegistrationMapper {
         row.setUserId(context.userId());
         row.setConversationId(context.conversationId());
         row.setRunId(context.runId());
-        row.setRunAttemptNo(context.attemptNo());
-        row.setRunLeaseVersion(context.leaseVersion());
+        row.setRunAttemptNo(context.backgroundJob() == null ? context.attemptNo() : null);
+        row.setRunLeaseVersion(context.backgroundJob() == null ? context.leaseVersion() : null);
         row.setAgentId(context.agentId());
         row.setAgentSessionId(context.agentSessionId());
         row.setWorkflowNodeId(context.workflowNodeId());

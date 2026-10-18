@@ -6,6 +6,11 @@ import com.stonewu.agenteam.model.execution.entity.ModelSelection;
 import com.stonewu.agenteam.model.execution.entity.ToolApprovalPolicy;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.github.yulichang.toolkit.JoinWrappers;
+import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
+import com.stonewu.agenteam.model.resource.entity.ResourceRow;
+import com.stonewu.agenteam.model.resource.entity.ResourceVersionRow;
+import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
 
@@ -22,9 +27,37 @@ import static com.stonewu.agenteam.mapper.execution.ExecutionJson.timestamp;
 @Repository
 public class ConversationMapper {
     private final ConversationSqlMapper statements;
+    private final ResourceJson json;
 
-    public ConversationMapper(ConversationSqlMapper statements) {
+    public ConversationMapper(ConversationSqlMapper statements, ResourceJson json) {
         this.statements = statements;
+        this.json = json;
+    }
+
+    public List<ConversationQueryRow> metadata(String enterprise, String user, List<String> ids) {
+        var rows = statements.selectJoinList(ConversationQueryRow.class, JoinWrappers.lambda(AgentConversationRow.class)
+            .selectAll(AgentConversationRow.class)
+            .selectAs(ResourceRow::getName, ConversationQueryRow::getAgentName)
+            .selectAs(ResourceVersionRow::getName, ConversationQueryRow::getVersionName)
+            .selectAs(ResourceVersionRow::getConfigJson, ConversationQueryRow::getVersionConfigJson)
+            .innerJoin(ResourceRow.class, on -> on.eq(ResourceRow::getEnterpriseId, AgentConversationRow::getEnterpriseId)
+                .eq(ResourceRow::getId, AgentConversationRow::getAgentId))
+            .leftJoin(ResourceVersionRow.class, on -> on.eq(ResourceVersionRow::getEnterpriseId, AgentConversationRow::getEnterpriseId)
+                .eq(ResourceVersionRow::getId, AgentConversationRow::getAgentVersionId))
+            .eq(AgentConversationRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getUserId, user)
+            .eq(AgentConversationRow::getMode, "normal").ne(AgentConversationRow::getStatus, "deleted")
+            .in(AgentConversationRow::getId, ids));
+        for (var row : rows) {
+            if (row.getVersionName() != null) {
+                row.setAgentName(row.getVersionName());
+            }
+            var config = json.read(row.getVersionConfigJson());
+            if (config != null) {
+                row.setAgentIcon(config.path("icon").asText(null));
+                row.setAgentColor(config.path("color").asText(null));
+            }
+        }
+        return rows;
     }
 
     public Optional<ConversationRecord> find(String enterprise, String user, String id, boolean lock) {

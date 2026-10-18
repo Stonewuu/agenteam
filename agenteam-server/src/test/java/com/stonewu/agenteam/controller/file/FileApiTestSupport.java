@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.file;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
@@ -250,7 +251,7 @@ abstract class FileApiTestSupport {
 
     static protected Path temporary() {
         try {
-            return Files.createTempDirectory(Path.of("target").toAbsolutePath(), "file-api-");
+            return Files.createTempDirectory(TestOutputPaths.root().toAbsolutePath(), "file-api-");
         } catch (IOException failure) {
             throw new IllegalStateException("无法创建文件验收目录", failure);
         }

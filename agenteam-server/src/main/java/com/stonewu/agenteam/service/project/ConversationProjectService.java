@@ -18,13 +18,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 会话只引用项目，切换引用不移动项目文件，也不删除原项目。
  */
 @Service
 public class ConversationProjectService {
+    private static final ZoneId PROJECT_NAME_ZONE = ZoneId.of("Asia/Shanghai");
+    private static final String PROJECT_NAME_CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789";
     private final ConversationMapper conversations;
     private final ProjectMetadataService projects;
     private final EnterpriseAuthorizationService authorization;
@@ -47,13 +53,22 @@ public class ConversationProjectService {
     public ConversationRecord initial(String enterprise, String user, String conversation, String selectedProject) {
         var row = owned(enterprise, user, conversation, true);
         if (row.projectId() == null) {
-            var project = selectedProject == null ? projects.createOwned(enterprise, user, row.title(), null,
+            var project = selectedProject == null ? projects.createOwned(enterprise, user, newProjectName(), null,
                 conversation)
                 : projects.require(enterprise, user, selectedProject);
             conversations.selectProject(row, project.getId(), true, clock.instant());
             row = owned(enterprise, user, conversation, false);
         }
         return row;
+    }
+
+    private String newProjectName() {
+        String date = LocalDate.ofInstant(clock.instant(), PROJECT_NAME_ZONE).format(DateTimeFormatter.BASIC_ISO_DATE);
+        var suffix = new StringBuilder(5);
+        for (int index = 0; index < 5; index++) {
+            suffix.append(PROJECT_NAME_CHARACTERS.charAt(ThreadLocalRandom.current().nextInt(PROJECT_NAME_CHARACTERS.length())));
+        }
+        return "new-chat-" + date + "-" + suffix;
     }
 
     @Transactional

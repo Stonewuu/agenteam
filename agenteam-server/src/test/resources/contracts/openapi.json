@@ -51990,6 +51990,126 @@
           }
         }
       }
+    },
+    "/enterprises/{enterpriseId}/conversations/metadata": {
+      "get": {
+        "operationId": "readConversationMetadata",
+        "summary": "批量读取本人对话基本信息",
+        "description": "一次读取最多50个对话，只返回当前企业本人未删除的普通对话。不读取聊天消息；标题生成结束后停止定时读取。",
+        "x-permissions": [
+          "conversation.view"
+        ],
+        "x-tables": [
+          "agent_conversation",
+          "background_job"
+        ],
+        "x-feature-ids": [
+          "F06"
+        ],
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 50,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              }
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "当前可读取的对话；无权读取或不存在的编号不出现在结果中",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "$ref": "#/components/schemas/ConversationMetadata"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -70013,6 +70133,23 @@
           "matchedRole"
         ],
         "additionalProperties": false
+      },
+      "ConversationMetadata": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "$ref": "#/components/schemas/Conversation"
+          },
+          "titlePending": {
+            "type": "boolean",
+            "description": "仅用于决定是否继续读取标题，不显示为页面状态。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conversation",
+          "titlePending"
+        ]
       }
     }
   },

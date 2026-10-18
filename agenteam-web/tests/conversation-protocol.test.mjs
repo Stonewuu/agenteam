@@ -7,6 +7,26 @@ const { fromSnapshot, applyConversationFrame } = load("../.test-build/conversati
 const { parseConversationFrame, SnapshotRequired } = load("../.test-build/conversation/agent/state/conversation-protocol.js");
 const { displayMessages, mergeRunApprovals } = load("../.test-build/conversation/agent/lib/conversation-display.js");
 const time = "2026-09-14T08:00:00Z";
+const {mergeConversationMetadata, mergeConversationMetadataList} = load("../.test-build/conversation/agent/lib/conversation-metadata.js");
+
+test("自动标题、旧快照与人工改名按对话版本合并，保留完整设置及导航属性", () => {
+  const original = {id: "conversation", revision: "2", title: "提示词", favorite: false, projectId: "first", navigationKey: "conversation:key"};
+  const automatic = {...original, revision: "3", title: "活动安排"};
+  const manual = {...original, revision: "4", title: "人工名称", favorite: true, projectId: "second"};
+  assert.equal(mergeConversationMetadata(automatic, original), automatic);
+  const updated = mergeConversationMetadata(automatic, manual);
+  assert.equal(updated.title, "人工名称");
+  assert.equal(updated.projectId, "second");
+  assert.equal(updated.favorite, true);
+  assert.equal(updated.navigationKey, "conversation:key");
+  assert.equal(mergeConversationMetadata(updated, automatic), updated);
+  assert.equal(mergeConversationMetadata(updated, {...manual, id: "other"}), updated);
+  const group = {...original, collaboration: {taskId: "task"}, title: "协作任务标题"};
+  assert.equal(mergeConversationMetadata(group, automatic), group);
+  const list = mergeConversationMetadataList([automatic, {id: "other", revision: "1", title: "其他"}], [manual]);
+  assert.equal(list[0].title, "人工名称");
+  assert.equal(list[1].title, "其他");
+});
 
 test("执行结束立即清除等待提示，服务端确认前仍不能发送下一条消息", () => {
   for (const status of ["completed", "failed", "cancelled"]) {

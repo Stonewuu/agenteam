@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.InProcessDocumentParsing;
 
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
@@ -88,9 +89,9 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
         ENVIRONMENT.properties(registry);
         registry.add("files.scan.host", () -> "127.0.0.1");
         registry.add("files.scan.port", SCANNER::port);
-        registry.add("files.root", () -> "target/p05-source-tool-files");
-        registry.add("execution.workspace-root", () -> "target/p05-source-tool-workspace");
-        registry.add("execution.state-root", () -> "target/p05-source-tool-state");
+        registry.add("files.root", () -> TestOutputPaths.path("p05-source-tool-files").toString());
+        registry.add("execution.workspace-root", () -> TestOutputPaths.path("p05-source-tool-workspace").toString());
+        registry.add("execution.state-root", () -> TestOutputPaths.path("p05-source-tool-state").toString());
     }
 
     @AfterAll

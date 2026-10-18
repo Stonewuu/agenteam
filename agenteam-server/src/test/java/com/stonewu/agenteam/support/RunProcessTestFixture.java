@@ -42,13 +42,14 @@ public final class RunProcessTestFixture {
         try (var output = Files.newOutputStream(properties)) {
             values.store(output, "仅用于当前隔离测试");
         }
-        return start(properties, Path.of("target", logName + ".log"), enterprise, run);
+        return start(properties, TestOutputPaths.path(logName + ".log"), enterprise, run);
     }
 
     public static Process start(Path properties, Path log, String enterprise, String run) throws IOException {
         String executable = Path.of(System.getProperty("java.home"), "bin", System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java").toString();
         String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
         var arguments = List.of("-Xmx512m", "-XX:ActiveProcessorCount=2",
+            "-Dagenteam.test.artifacts-root=" + TestOutputPaths.root(),
             "-XX:TieredStopAtLevel=" + System.getProperty("agenteam.test.compiler-level", "1"),
             "-cp", classpath, RestartedRunWorker.class.getName(), properties.toString(), enterprise, run);
         Path argumentFile = properties.resolveSibling(properties.getFileName() + ".args");

@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.controller.execution;
 
+import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -37,6 +38,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,7 +80,7 @@ class ConversationProjectApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.user-workspaces-root", () -> "target/project-api-workspaces");
+        registry.add("execution.user-workspaces-root", () -> TestOutputPaths.path("project-api-workspaces").toString());
     }
 
     @AfterAll
@@ -142,6 +146,19 @@ class ConversationProjectApiTest extends ExecutionApiTestSupport {
         String generated = snapshot(automatic).path("projectId").asText();
         assertNotEquals(shared, generated);
         assertTrue(generated.length() > 10);
+        var automaticProject = projects.require(enterprise, admin, generated);
+        String projectDate = LocalDate.ofInstant(automaticProject.getCreatedAt(), ZoneId.of("Asia/Shanghai"))
+            .format(DateTimeFormatter.BASIC_ISO_DATE);
+        assertTrue(automaticProject.getName().matches("new-chat-" + projectDate + "-[a-z0-9]{5}"));
+        assertNotEquals(snapshot(automatic).path("title").asText(), automaticProject.getName());
+        assertEquals(automaticProject.getName(), runs.find(enterprise, automatic.path("runId").asText(), false)
+            .orElseThrow().executionConfig().path("workspaceProjectName").asText());
+        for (int attempt = 0; attempt < 2; attempt++) {
+            var currentProject = data(mvc.perform(get(path(automatic) + "/project").cookie(cookie))
+                .andExpect(status().isOk()).andReturn());
+            assertEquals(generated, currentProject.path("id").asText());
+            assertEquals(automaticProject.getName(), currentProject.path("name").asText());
+        }
         change(HttpMethod.PUT, path(automatic) + "/project", Map.of("projectId", shared), snapshot(automatic).path("revision").asText(),
             UUID.randomUUID().toString()).andExpect(status().isConflict());
         cancel(automatic);

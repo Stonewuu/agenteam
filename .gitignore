@@ -1,5 +1,6 @@
 # 本机构建输出与依赖
 /.build/
+/.runtime/
 /.codegraph/
 **/target/
 **/target-*/
