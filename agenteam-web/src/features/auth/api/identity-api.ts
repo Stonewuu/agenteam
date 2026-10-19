@@ -1,5 +1,6 @@
 import {ApiError, ApiMutation, apiRequest} from "@/lib/http/api-client";
 import type {BootstrapInput, EnterpriseContext, IdentityUser} from "../types/identity";
+import {acceptRequestIdentity} from "@/lib/http/request-identity";
 
 export const bootstrapStatus = (signal?: AbortSignal) => apiRequest<{
   initialized: boolean
@@ -7,7 +8,10 @@ export const bootstrapStatus = (signal?: AbortSignal) => apiRequest<{
 
 export async function loadIdentity(signal?: AbortSignal): Promise<IdentityUser | null> {
   try {
-    return await apiRequest<IdentityUser>("/api/v1/auth/me", {signal});
+    const user = await apiRequest<IdentityUser>("/api/v1/auth/me", {signal});
+    signal?.throwIfAborted();
+    acceptRequestIdentity(user.identityRevision);
+    return user;
   } catch (error) {
     // 空数据库没有可用身份，由入口继续读取初始化状态并显示对应表单。
     if (error instanceof ApiError && (error.status === 401

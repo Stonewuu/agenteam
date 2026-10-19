@@ -30,7 +30,8 @@ import {useConversationProject} from "@/features/project/hooks/use-conversation-
 import {ComposerProjectFrame} from "@/features/agent/components/composer-project-frame";
 import {
   ConversationModelControls,
-  ConversationModelFeedback
+  ConversationModelFeedback,
+  ConversationModelPlaceholder
 } from "@/features/agent/components/conversation-model-controls";
 import type {RunAccepted} from "@/features/agent/types/execution";
 import type {Employee} from "@/features/employee/types/employee";
@@ -38,14 +39,12 @@ import type {DocumentOption} from "@/features/knowledge/types/knowledge";
 import {Dialog, DialogAction, DialogActions, DialogCancel} from "@/components/ui/dialog";
 import {EmployeePickerButton} from "@/features/employee/components/employee-picker-button";
 import {
-  IconArrowRight,
   IconArrowUpRight,
   IconChartBar,
   IconFileText,
   IconNotes,
   IconPencil,
   IconSend,
-  IconUsers,
   IconX
 } from "@/components/ui/icons";
 import {ComposerExtraTools} from "@/features/agent/components/composer-extra-tools";
@@ -93,6 +92,7 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
   const [documents, setDocuments] = useState<DocumentOption[]>([]);
   const [replacement, setReplacement] = useState<string | null>(null);
   const employee = selected ?? employees.find((value) => value.canRun);
+  const noEmployees = employees.length === 0 && !selected;
   const model = useConversationModel({
     enterprise, agentId: employee?.agentId, draftKey: `${userId}:home:${employee?.agentId ?? ""}`,
     enabled: permissions.includes("agent.run"), busy
@@ -100,10 +100,10 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
   const project = useConversationProject({
     enterprise,
     draftKey: `${userId}:${enterprise}:home`,
-    enabled: permissions.includes("agent.run"),
+    enabled: permissions.includes("agent.run") && !noEmployees,
     busy: busy || model.saving
   });
-  const root = `/enterprises/${encodeURIComponent(enterprise)}`;
+  const root = ``;
   const canSkills = permissions.includes("skill.use");
   const canKnowledge = permissions.includes("knowledge.search");
   const canMarket = permissions.includes("agent.market_view");
@@ -175,20 +175,9 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
     }, "");
   }
 
-  if (!employees.length && !selected) {
-    return <section className={styles.emptyTask} aria-labelledby="empty-task-title">
-      <span className={styles.emptyTaskIcon} data-icon-surface aria-hidden="true"><IconUsers size={30} variant="Bulk"/></span>
-      <div className={styles.emptyTaskCopy}>
-        <h2 id="empty-task-title">{canMarket ? uiText("找一位数字员工，开始协作") : uiText("暂无可用的数字员工")}</h2>
-        <p>{canMarket ? uiText("前往员工广场，雇佣适合当前工作的数字员工。") : uiText("请联系企业管理员获取帮助。")}</p>
-      </div>
-      {canMarket && <Link className={`${ui.primary} ${styles.emptyTaskAction}`}
-                          href={`${root}/employees`}>{uiText("前往员工广场")}<IconArrowRight size={17}
-                                                                                             aria-hidden="true"/>
-      </Link>}
-    </section>;
-  }
-  return <><ComposerProjectFrame state={project} alwaysShowProject><ComposerTransition part="surface">
+  return <><div className={styles.taskShell}>
+    <div inert={noEmployees}>
+    <ComposerProjectFrame state={project} alwaysShowProject><ComposerTransition part="surface">
     <section className={styles.task} data-composer-part="surface" data-composer-location="home"
              aria-label={uiText("开始任务")}>
       <form onSubmit={(event) => {
@@ -197,9 +186,9 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
       }}>
         <ComposerTransition part="text"><Textarea ref={input} className={styles.input} data-composer-part="text"
                                                   aria-label={uiText("任务内容")} rows={4} maxLength={20000}
-                                                  value={draft} disabled={busy}
+                                                  value={draft} disabled={busy || noEmployees}
                                                   onPaste={(event) => pasteUpload(event, files.add, !busy && Boolean(employee?.attachmentsEnabled))}
-                                                  placeholder={employee ? uiText("描述你想完成的工作，剩下的我们一起推进…") : uiText("选择一位数字员工，开始新的任务")}
+                                                  placeholder={employee || noEmployees ? uiText("描述你想完成的工作，剩下的我们一起推进…") : uiText("选择一位数字员工，开始新的任务")}
                                                   onChange={(event) => {
                                                     setDraft(event.target.value);
                                                     if ((event.nativeEvent as InputEvent).isComposing) {
@@ -232,9 +221,9 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
             size={14}/></Button></span>)}</div>}
         <div className={styles.taskActions}>
           <div className={styles.mainTools}>
-            <ComposerTransition part="employee"><EmployeePickerButton name={employee?.name} icon={employee?.icon}
+            <ComposerTransition part="employee"><EmployeePickerButton name={noEmployees ? uiText("暂无员工") : employee?.name} icon={employee?.icon}
                                                                       color={employee?.color} expanded={picker}
-                                                                      disabled={busy}
+                                                                      disabled={busy || noEmployees}
                                                                       onClick={(event) => showPicker("employee", {anchor: event.currentTarget})}/></ComposerTransition>
             <ComposerExtraTools files={files} attachmentsEnabled={Boolean(employee?.attachmentsEnabled)}
                                 canChooseSkills={canSkills} canChooseDocuments={canKnowledge}
@@ -243,9 +232,9 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
                                 onChooseDocuments={(context) => showPicker("document", context)}/>
           </div>
           <div className={styles.submitTools}>
-            <ConversationModelControls state={model}/>
+            {noEmployees ? <ConversationModelPlaceholder/> : <ConversationModelControls state={model}/>}
             <ComposerTransition part="policy"><ConversationApprovalPolicy value={approvalPolicy}
-                                                                          onChange={setApprovalPolicy} disabled={busy}
+                                                                          onChange={setApprovalPolicy} disabled={busy || noEmployees}
                                                                           saving={false}
                                                                           running={false}/></ComposerTransition>
             <ComposerTransition part="submit"><Button className={styles.send} data-composer-part="submit"
@@ -255,20 +244,27 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
           </div>
         </div>
         <ConversationModelFeedback state={model}/>
-        {!employee && canMarket &&
+        {!employee && !noEmployees && canMarket &&
           <Link className="text-button" href={`${root}/employees`}>{uiText("前往员工广场")}</Link>}
         <MutationFeedback action={action} showFieldErrors/>{skills.error &&
         <p className={ui.error} role="alert">{localizeUiMessage(skills.error ?? "", uiText)}</p>}
       </form>
     </section>
   </ComposerTransition></ComposerProjectFrame>
-    {employee && <div className={styles.examples}
+    </div>
+    {noEmployees && <div className={styles.taskMask} aria-labelledby="empty-task-title">
+      <h2 id="empty-task-title">{uiText("暂未雇佣员工")}</h2>
+      {canMarket ? <Link href={`${root}/employees`}>{uiText("前往数字员工广场雇佣员工")}</Link>
+        : <p>{uiText("请联系企业管理员获取帮助。")}</p>}
+    </div>}
+  </div>
+    {(employee || noEmployees) && <div className={styles.examples}
                       aria-label={uiText("任务建议")}>{localizeCatalog(suggestions, uiText).map(({
                                                                                                    icon: Icon,
                                                                                                    title,
                                                                                                    text
                                                                                                  }) => <Button
-      key={title} type="button" disabled={busy}
+      key={title} type="button" disabled={busy || noEmployees}
       onClick={() => draft && draft !== text ? setReplacement(text) : fill(text)}><Icon size={17}
                                                                                         variant="Bulk"/><span>{title}</span><IconArrowUpRight
       size={13}/></Button>)}</div>}

@@ -6,6 +6,7 @@ import {localizeCatalog} from "@/lib/i18n/translate";
 import {usePathname} from "next/navigation";
 import type {ReactNode} from "react";
 import {EnterpriseGate} from "@/features/auth/components/enterprise-gate";
+import {workspaceParts} from "@/features/auth/lib/workspace-path";
 import {SystemManagementGate} from "@/features/auth/components/system-management-gate";
 import {PlatformShell} from "./platform-shell";
 import {
@@ -20,7 +21,7 @@ export function EnterpriseLayout({enterpriseId, children}: { enterpriseId: strin
   const uiText = useT();
   const pathname = usePathname();
   const platformPage = localizeCatalog(platformManagementNavigation, uiText).find((item) => item.path === pathname);
-  const [, , , section, detail, resourceId] = pathname.split("/");
+  const [section, detail, resourceId] = workspaceParts(pathname);
   const area = platformPage || section === "management" ? "management" : section === "capabilities" ? "capabilities" : "user";
   const fullHeight = section === "new-task" || section === "conversations" ||
     section === "capabilities" && detail === "workflows" && Boolean(resourceId);

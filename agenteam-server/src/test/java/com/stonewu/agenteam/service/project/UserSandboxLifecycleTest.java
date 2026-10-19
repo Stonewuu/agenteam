@@ -12,8 +12,10 @@ import com.stonewu.agenteam.service.workspace.SandboxExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.http.HttpStatus;
 
 import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.*;
 import java.util.concurrent.CountDownLatch;
@@ -69,7 +71,12 @@ class UserSandboxLifecycleTest {
             clock.advance(1000);
             lifecycle = restored();
             assertFalse(lifecycle.collect(project.workspaceId()), "无输出的长命令仍然受到保护");
-            lifecycle.complete(record, new SandboxExecutor.Result(0, false, false, "out", "err"));
+            var result = new SandboxExecutor.Result(0, false, false, "out", "err");
+            doThrow(new IOException("模拟缓存登记写入失败")).doNothing().when(processes).complete(record);
+            assertThrows(ApiException.class, () -> lifecycle.complete(record, result));
+            assertNull(registry.command(project.workspaceId(), record.callId()).result(), "输出登记失败时保留执行登记供恢复");
+            lifecycle = restored();
+            lifecycle.complete(record, result);
             var usage = new SandboxRunUsage("run", 1, "child", project, "job", "worker", clock.millis());
             registry.save(usage);
             clock.advance(1000);
@@ -82,6 +89,14 @@ class UserSandboxLifecycleTest {
             assertTrue(lifecycle.collect(project.workspaceId()));
             assertFalse(running.get());
             assertEquals("保留文件", Files.readString(layout.project(project).resolve("keep.txt")));
+            doThrow(new ApiException(HttpStatus.TOO_MANY_REQUESTS, "SANDBOX_CAPACITY", "模拟运行名额不足"))
+                .doAnswer(call -> {
+                    running.set(true);
+                    return null;
+                }).when(containers).start(eq(project), any(), any());
+            assertEquals("SANDBOX_CAPACITY", assertThrows(ApiException.class,
+                () -> lifecycle.begin(project, "next", "next-hash", "true", Duration.ofMinutes(1), control)).code());
+            verify(processes, never()).prepare(project, "next", "true");
             var next = lifecycle.begin(project, "next", "next-hash", "true", Duration.ofMinutes(1), control);
             assertTrue(running.get());
             assertNotEquals(record.generation(), next.generation());

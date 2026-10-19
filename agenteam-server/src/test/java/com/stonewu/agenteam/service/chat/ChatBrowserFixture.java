@@ -85,7 +85,7 @@ class ChatBrowserFixture extends CollaborationApiTestSupport {
     static void properties(DynamicPropertyRegistry registry) {
         ENV.properties(registry);
         registry.add("chat.enabled", () -> true);
-        registry.add("chat.feishu.enabled", () -> true);
+
         registry.add("chat.worker-enabled", () -> false);
         registry.add("chat.public-base-url", () -> "http://127.0.0.2:3014");
         registry.add("files.storage", () -> "local");

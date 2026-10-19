@@ -66,7 +66,12 @@ public final class UserWorkspaceLock implements AutoCloseable {
 
     private static UserWorkspaceLock acquire(ProjectWorkspaceLayout layout, Path path, Duration timeout,
                                              ToolCallControl control) throws IOException {
-        WorkspacePaths.requireInside(layout.root(), path);
+        return acquire(layout.root(), path, timeout, control);
+    }
+
+    public static UserWorkspaceLock acquire(Path root, Path path, Duration timeout,
+                                            ToolCallControl control) throws IOException {
+        WorkspacePaths.requireInside(root, path);
         long deadline = System.nanoTime() + timeout.toNanos();
         Path key = path.toAbsolutePath().normalize();
         var local = LOCAL.compute(key, (ignored, previous) -> {

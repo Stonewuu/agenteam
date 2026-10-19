@@ -2,7 +2,6 @@ package com.stonewu.agenteam.service.collaboration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationActionMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
@@ -26,18 +25,16 @@ public class CollaborationRunAccessService {
     private final CollaborationAccessService access;
     private final Clock clock;
     private final ChatConfiguration chat;
-    private final CollaborationConfiguration configuration;
     private final CollaborationActionMapper actions;
 
     public CollaborationRunAccessService(CollaborationRunLinkMapper links, CollaborationWorkItemMapper works,
-            CollaborationAccessService access, Clock clock, ChatConfiguration chat, CollaborationConfiguration configuration,
+            CollaborationAccessService access, Clock clock, ChatConfiguration chat,
             CollaborationActionMapper actions) {
         this.links = links;
         this.works = works;
         this.access = access;
         this.clock = clock;
         this.chat = chat;
-        this.configuration = configuration;
         this.actions = actions;
     }
 
@@ -62,7 +59,7 @@ public class CollaborationRunAccessService {
     }
 
     public CollaborationExecutionContext require(RunRecord run, String session, boolean write) {
-        if (write && (!chat.isEnabled() || !configuration.isEnabled())) {
+        if (write && (!chat.isEnabled())) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_DISABLED", "协作已关闭，不能继续发起外部操作。");
         }
         if (!applies(run) || !run.mode().equals("interactive") || !run.conversationId().equals(session)) {

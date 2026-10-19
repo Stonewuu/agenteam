@@ -1,6 +1,8 @@
 package com.stonewu.agenteam.mapper.audit;
 
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
+import com.stonewu.agenteam.model.auth.entity.OperationActor;
+import com.stonewu.agenteam.configuration.auth.OperationActorContext;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
@@ -24,9 +26,17 @@ public class AuditEventMapper {
 
     public void append(String enterpriseId, String userId, String name, String action, String objectType,
                        String objectId, String summary, String detailJson, String requestId, Instant now) {
+        append(enterpriseId, userId, name, action, objectType, objectId, summary, detailJson, requestId, now,
+            OperationActorContext.current(userId));
+    }
+
+    public void append(String enterpriseId, String userId, String name, String action, String objectType,
+                       String objectId, String summary, String detailJson, String requestId, Instant now,
+                       OperationActor operator) {
         String actorName = identityQueryMapper.appendEnterpriseMember(enterpriseId, userId).stream().findFirst()
             .orElse(name);
         statements.appendAuditEvent(UUID.randomUUID().toString(), enterpriseId, userId, actorName, action, objectType,
-            objectId, summary, detailJson, requestId, Timestamp.from(now));
+            objectId, summary, detailJson, requestId, Timestamp.from(now),
+            operator == null ? null : operator.authenticatedUserId(), operator == null ? null : operator.impersonationId());
     }
 }

@@ -33,6 +33,13 @@ import styles from "./conversation-model-controls.module.css";
 
 type ModelState = ReturnType<typeof useConversationModel>;
 
+export function ConversationModelPlaceholder() {
+  const uiText = useT();
+  return <Button type="button" className={styles.trigger} data-composer-part="model" disabled>
+    <span className={styles.name}>{uiText("选择模型")}</span><IconChevronDown size={12}/>
+  </Button>;
+}
+
 /** 二级菜单同时选择模型与思考强度，一次提交后保留原入口焦点。 */
 export function ConversationModelControls({state}: { state: ModelState }) {
   const uiText = useT();

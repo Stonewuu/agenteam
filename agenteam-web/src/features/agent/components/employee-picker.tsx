@@ -64,7 +64,7 @@ export function EmployeePicker({
       </QueryState></div>
     <Pagination {...employees} hasMore={employees.data?.hasMore}/>
     {showMarket && <div className="selection-footer"><Link className={ui.button}
-                                                           href={`/enterprises/${encodeURIComponent(enterprise)}/employees`}>{uiText("查看员工广场")}</Link>
+                                                           href={`/employees`}>{uiText("查看员工广场")}</Link>
     </div>}
   </SelectionSurface>;
 }

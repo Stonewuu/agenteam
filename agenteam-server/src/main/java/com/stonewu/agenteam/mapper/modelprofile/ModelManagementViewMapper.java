@@ -12,15 +12,10 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ModelManagementViewMapper {
-    private final ModelProviderMapper providers;
-    private final ModelProfileMapper profiles;
     private final ModelProfileSqlMapper modelProfileSqlMapper;
 
-    public ModelManagementViewMapper(ModelProviderMapper providers, ModelProfileMapper profiles,
-                                     ModelProfileSqlMapper modelProfileSqlMapper) {
+    public ModelManagementViewMapper(ModelProfileSqlMapper modelProfileSqlMapper) {
         this.modelProfileSqlMapper = modelProfileSqlMapper;
-        this.providers = providers;
-        this.profiles = profiles;
     }
 
     public ModelProviderView provider(ModelProviderRecord value) {
@@ -28,7 +23,6 @@ public class ModelManagementViewMapper {
             value.baseUrl(),
             !value.apiKey().isEmpty(), value.enabled(),
             modelProfileSqlMapper.modelCount(value.enterpriseId(), value.id()),
-            profiles.providerInUse(value.enterpriseId(), value.id()),
             value.createdAt().toString(), value.updatedAt().toString());
     }
 
@@ -36,7 +30,6 @@ public class ModelManagementViewMapper {
         return new ManagedModelProfileView(value.id(), Long.toString(value.revision()), value.providerId(),
             value.providerName(), value.providerEnabled(),
             value.name(), value.modelName(), value.capabilities(), value.enabled(),
-            profiles.inUse(value.enterpriseId(), value.id()),
             value.createdAt().toString(), value.updatedAt().toString());
     }
 }

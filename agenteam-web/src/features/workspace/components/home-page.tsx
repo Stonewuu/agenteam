@@ -46,7 +46,7 @@ export function HomePage({enterpriseId}: { enterpriseId: string }) {
 function HomeContent({user, context}: { user: IdentityUser; context: EnterpriseContext }) {
   const uiText = useT();
   const enterprise = context.enterprise.id;
-  const root = `/enterprises/${encodeURIComponent(enterprise)}`;
+  const root = ``;
   const result = useApiQuery<HomeSummary>(organizationPath(enterprise, "/home"), context.permissionVersion);
   const [activityRevision, setActivityRevision] = useState(0);
   const changed = () => {
@@ -157,7 +157,7 @@ function HomeTodo({enterprise, todo, onChanged, canManage}: {
           onChanged();
         }, "")}><IconCircle size={21}/></Button>}
       <Link className={styles.itemLink}
-            href={`/enterprises/${encodeURIComponent(enterprise)}/todos/${encodeURIComponent(todo.id)}`}><strong>{todo.title}</strong><small>{todo.dueDate ? uiText("{0} 截止", [todo.dueDate]) : uiText("未设置截止日期")}</small></Link>
+            href={`/todos/${encodeURIComponent(todo.id)}`}><strong>{todo.title}</strong><small>{todo.dueDate ? uiText("{0} 截止", [todo.dueDate]) : uiText("未设置截止日期")}</small></Link>
       {todo.priority === "high" && <span className="badge amber">{uiText("高优先级")}</span>}
     </div>
     <MutationFeedback action={action} onReload={onChanged}/></div>;

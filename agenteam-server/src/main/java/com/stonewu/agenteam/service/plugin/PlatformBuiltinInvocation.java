@@ -1,6 +1,8 @@
 package com.stonewu.agenteam.service.plugin;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.stonewu.agenteam.configuration.auth.OperationActorContext;
+import com.stonewu.agenteam.service.auth.OperationActorService;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
@@ -35,12 +37,13 @@ public class PlatformBuiltinInvocation {
     private final ToolCallTransactions transactions;
     private final ToolResultService results;
     private final ToolSchemaValidation schemas;
+    private final OperationActorService operators;
 
     public PlatformBuiltinInvocation(EnterpriseMapper enterprises, RunLifecycleService lifecycle,
                                      ExecutionAccessService access,
                                      ExecutionToolCatalog catalog, ToolCallMapper calls,
                                      ToolCallTransactions transactions, ToolResultService results,
-                                     ToolSchemaValidation schemas) {
+                                     ToolSchemaValidation schemas, OperationActorService operators) {
         this.enterprises = enterprises;
         this.lifecycle = lifecycle;
         this.access = access;
@@ -49,14 +52,17 @@ public class PlatformBuiltinInvocation {
         this.transactions = transactions;
         this.results = results;
         this.schemas = schemas;
+        this.operators = operators;
     }
 
     public JsonNode read(PlatformBuiltinPluginAdapter adapter, RunRecord run, ToolCallRecord call, JsonNode arguments,
                          ToolCallControl control) {
         var actor = access.actor(run);
         control.beforeSend();
-        var result = adapter.call(new BuiltinExecutionContext(actor, run, call.operationId()), call.toolName(),
-            arguments);
+        JsonNode result;
+        try (var scope = OperationActorContext.background(operators.load(run.enterpriseId(), run.userId(), "run", run.id()))) {
+            result = adapter.call(new BuiltinExecutionContext(actor, run, call.operationId()), call.toolName(), arguments);
+        }
         control.requireActive();
         access.actor(run);
         return result;
@@ -91,8 +97,10 @@ public class PlatformBuiltinInvocation {
             return transactions.result(call);
         }
         control.beforeSend();
-        var response = adapter.call(new BuiltinExecutionContext(actor, run, call.operationId()), call.toolName(),
-            arguments);
+        JsonNode response;
+        try (var scope = OperationActorContext.background(operators.load(run.enterpriseId(), run.userId(), "run", run.id()))) {
+            response = adapter.call(new BuiltinExecutionContext(actor, run, call.operationId()), call.toolName(), arguments);
+        }
         control.requireActive();
         if (System.nanoTime() > deadline) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "TOOL_EXECUTION_TIMEOUT",

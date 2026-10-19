@@ -4,6 +4,7 @@ import {useT} from "@/lib/i18n/locale-provider";
 
 import {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
+import {workspaceParts} from "@/features/auth/lib/workspace-path";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
@@ -47,8 +48,8 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     [embedded, search, browserParams]);
   const scope = useId();
   const guarded = useGuardedNavigation(embedded ? scope : undefined);
-  const parts = pathname.split("/");
-  const conversationId = parts[3] === "conversations" && parts[4] ? decodeURIComponent(parts[4]) : null;
+  const parts = workspaceParts(pathname);
+  const conversationId = parts[0] === "conversations" && parts[1] ? decodeURIComponent(parts[1]) : null;
   const handoff = useComposerHandoff();
   const arrival = handoff?.value?.conversationId === conversationId ? handoff.value : null;
   const recent = useApiQuery<HomeSummary>(!conversationId && !params.get("agent") && canRun ? organizationPath(enterpriseId, "/home") : null);
@@ -121,7 +122,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     }
   }, [draftKey, conversationId, historySnapshot, stream]);
   const messages = useMemo(() => displayMessages(stream.state), [stream.state]);
-  const base = `/enterprises/${encodeURIComponent(enterpriseId)}`;
+  const base = ``;
 
   useEffect(() => {
     currentRoute.current = pathname + "?" + params.toString();

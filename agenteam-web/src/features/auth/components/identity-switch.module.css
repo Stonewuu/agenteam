@@ -1,0 +1,77 @@
+.controls {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: var(--amber-text);
+  white-space: nowrap;
+}
+
+.returnButton {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.error {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 90;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--danger);
+}
+
+.floating {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 80;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 800px) {
+  .returnButton {
+    min-height: 44px;
+  }
+
+  :global(.topbar):has(.controls) :global(.enterprise-trigger),
+  :global(.topbar):has(.controls) :global(.global-search) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls {
+    gap: 2px;
+  }
+
+  .returnText {
+    display: none;
+  }
+
+  .returnButton {
+    min-width: 44px;
+    padding: 8px;
+  }
+}

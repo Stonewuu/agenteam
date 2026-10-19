@@ -17,12 +17,11 @@ type Props = {
   value: ModelProtocolOptions;
   onChange: (value: ModelProtocolOptions) => void;
   efforts: ReasoningEffort[];
-  fixed?: ModelProtocolOptions;
   disabled: boolean;
   errors: Record<string, string[]>;
 };
 
-export function ModelProtocolFields({protocol, value, onChange, efforts, fixed, disabled, errors}: Props) {
+export function ModelProtocolFields({protocol, value, onChange, efforts, disabled, errors}: Props) {
   const t = useT();
   const native = protocol === "anthropic" || protocol === "gemini";
   const error = (name: string) => errors[`capabilities.protocolOptions.${name}`]?.join(" ");
@@ -43,7 +42,7 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, fixed, 
       <div className={ui.form}>
         {native && efforts.length > 0 && <>
           <Field label={t("思考方式")} error={error("reasoningMode")}><Select name="capabilities.protocolOptions.reasoningMode"
-            value={value.reasoningMode} disabled={disabled || Boolean(fixed)}
+            value={value.reasoningMode} disabled={disabled}
             onChange={(event) => onChange({...value, reasoningMode: event.target.value as ModelProtocolOptions["reasoningMode"]})}>
             <option value="budget">{t("按 Token 预算")}</option>
             <option value={protocol === "anthropic" ? "adaptive" : "level"}>{protocol === "anthropic" ? t("自适应思考") : t("原生思考等级")}</option>
@@ -52,12 +51,12 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, fixed, 
             <Field key={effort} label={t("{0}：思考预算", [t(reasoningEffortLabels[effort])])}
               error={error(`thinkingBudgets.${effort}`) ?? error("thinkingBudgets")}>
               <Input type="number" min={0} max={1000000} step={1} name={`capabilities.protocolOptions.thinkingBudgets.${effort}`}
-                value={value.thinkingBudgets[effort] ?? ""} disabled={disabled || fixed?.thinkingBudgets[effort] !== undefined}
+                value={value.thinkingBudgets[effort] ?? ""} disabled={disabled}
                 onChange={(event) => budget(effort, event.target.value)}/>
             </Field> : effort !== "none" && <Field key={effort} label={t("{0}：原生等级", [t(reasoningEffortLabels[effort])])}
               error={error(`thinkingLevels.${effort}`) ?? error("thinkingLevels")}>
               <Select name={`capabilities.protocolOptions.thinkingLevels.${effort}`} value={value.thinkingLevels[effort] ?? ""}
-                disabled={disabled || fixed?.thinkingLevels[effort] !== undefined} onChange={(event) => onChange({...value,
+                disabled={disabled} onChange={(event) => onChange({...value,
                   thinkingLevels: {...value.thinkingLevels, [effort]: event.target.value}})}>
                 <option value="">{t("请选择")}</option>
                 {levels.map((level) => <option key={level} value={level}>{labels[level]}</option>)}
@@ -65,13 +64,13 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, fixed, 
             </Field>)}</div>
         </>}
         {protocol === "anthropic" && <Field label={t("缓存创建有效期")} error={error("cacheTtlSeconds")}>
-          <Select name="capabilities.protocolOptions.cacheTtlSeconds" value={value.cacheTtlSeconds} disabled={disabled || Boolean(fixed)}
+          <Select name="capabilities.protocolOptions.cacheTtlSeconds" value={value.cacheTtlSeconds} disabled={disabled}
             onChange={(event) => onChange({...value, cacheTtlSeconds: Number(event.target.value)})}>
             <option value={0}>{t("不开启自动缓存")}</option><option value={300}>{t("5 分钟")}</option><option value={3600}>{t("1 小时")}</option>
           </Select>
         </Field>}
         {protocol !== "gemini" && <Field label={t("服务档位")} error={error("serviceTier")}>
-          <Select name="capabilities.protocolOptions.serviceTier" value={value.serviceTier ?? ""} disabled={disabled || Boolean(fixed)}
+          <Select name="capabilities.protocolOptions.serviceTier" value={value.serviceTier ?? ""} disabled={disabled}
             onChange={(event) => onChange({...value, serviceTier: event.target.value || null})}>
             <option value="">{t("使用提供方默认值")}</option><option value="auto">{t("自动选择")}</option>
             {protocol === "anthropic" ? <option value="standard_only">{t("仅标准服务")}</option> : <>

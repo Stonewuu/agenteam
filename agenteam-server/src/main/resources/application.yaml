@@ -70,6 +70,11 @@ execution:
   workspace:
     retention-days: "${AGENTEAM_WORKSPACE_RETENTION_DAYS:30}"
     retention-enabled: "${AGENTEAM_WORKSPACE_RETENTION_ENABLED:true}"
+  command-results:
+    # 每个用户工作空间独立限制，执行中及活跃任务引用的完整输出不会被清理。
+    retention-days: "${AGENTEAM_COMMAND_RESULTS_RETENTION_DAYS:7}"
+    maximum-mb: "${AGENTEAM_COMMAND_RESULTS_MAXIMUM_MB:256}"
+    maximum-entries: "${AGENTEAM_COMMAND_RESULTS_MAXIMUM_ENTRIES:1000}"
   sandbox:
     enabled: "${AGENTEAM_SANDBOX_ENABLED:true}"
     image: "${AGENTEAM_SANDBOX_IMAGE:agenteam/sandbox-office:local}"
@@ -147,16 +152,10 @@ logging:
       amazon:
         awssdk: "WARN"
 chat:
-  # 聊天入口、各个平台和内部协作分别启用；已有个人通知不受这些开关影响。
-  enabled: "${AGENTEAM_CHAT_ENABLED:false}"
+  # 岗位机器人按页面配置启停；部署总开关仅用于紧急暂停聊天，个人通知不受影响。
+  enabled: "${AGENTEAM_CHAT_ENABLED:true}"
   worker-enabled: "${AGENTEAM_CHAT_WORKER_ENABLED:true}"
   public-base-url: "${AGENTEAM_CHAT_PUBLIC_BASE_URL:${AGENTEAM_PUBLIC_ORIGIN:http://localhost:3000}}"
-  feishu:
-    enabled: "${AGENTEAM_CHAT_FEISHU_ENABLED:false}"
-  wecom-aibot:
-    enabled: "${AGENTEAM_CHAT_WECOM_AIBOT_ENABLED:false}"
-collaboration:
-  enabled: "${AGENTEAM_COLLABORATION_ENABLED:false}"
 network:
   # 内网连接由部署管理员逐个配置完整协议、主机和端口，以逗号分隔；默认不开放。
   allowed-private-origins: "${AGENTEAM_ALLOWED_PRIVATE_ORIGINS:}"

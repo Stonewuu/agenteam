@@ -12,6 +12,9 @@ public final class AuthSessionAttributes {
     public static final String AUTHENTICATED_AT = "agenteam.auth.authenticated-at";
 
     public static final String METHOD = "agenteam.auth.method";
+    public static final String IMPERSONATION = "agenteam.auth.impersonation";
+    public static final String IDENTITY_ROOT = "agenteam.auth.identity-root";
+    public static final String IDENTITY_REVISION = "agenteam.auth.identity-revision";
     public static final String RESTRICTED_ENTERPRISE = "agenteam.auth.restricted-enterprise";
     public static final String CHANNEL_BINDING = "agenteam.auth.channel-binding";
     public static final String CHANNEL_CONNECTION = "agenteam.auth.channel-connection";

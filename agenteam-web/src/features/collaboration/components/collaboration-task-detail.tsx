@@ -22,7 +22,7 @@ import styles from "./collaboration.module.css";
 export function CollaborationTaskDetail({enterpriseId, taskId, openReplyMode}: {enterpriseId: string; taskId: string; openReplyMode?: boolean}) {
   const t = useT();
   const path = `${collaborationPath(enterpriseId)}/${encodeURIComponent(taskId)}`;
-  const root = `/enterprises/${encodeURIComponent(enterpriseId)}`;
+  const root = ``;
   const [refresh, setRefresh] = useState({version: 0, manual: false});
   const [artifact, setArtifact] = useState<CollaborationArtifact | null>(null);
   const query = useApiQuery<CollaborationDetail>(path, refresh.version);

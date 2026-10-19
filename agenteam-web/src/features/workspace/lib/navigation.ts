@@ -97,5 +97,5 @@ export function menuPath(target: string): string | null {
     return target;
   }
   const management = managementNavigation.find((item) => `admin/${item.id}` === target);
-  return management ? `management/${management.id}` : null;
+  return management ? `organization/${management.id}` : null;
 }

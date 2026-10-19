@@ -2,6 +2,9 @@ package com.stonewu.agenteam.service.auth;
 
 import com.stonewu.agenteam.configuration.auth.AuthSessionAttributes;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
+import com.stonewu.agenteam.mapper.auth.SessionIdentityMapper;
+import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
+import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
 import com.stonewu.agenteam.service.edition.EnterpriseEditionPolicy;
@@ -24,9 +27,17 @@ class AuthSessionSecurityTest {
     static final Instant NOW = Instant.parse("2026-09-13T10:00:00Z");
     private final AuthMapper accounts = mock(AuthMapper.class);
     private final PermissionMapper permissions = mock(PermissionMapper.class);
-    private final AuthContextService context = new AuthContextService(accounts, permissions, Clock.fixed(NOW, ZoneOffset.UTC),
-        new AccountBehaviorService(List.of()), mock(ChannelSessionGuard.class),
-        mock(EnterpriseEditionPolicy.class));
+    private final AuthContextService context = context(accounts, permissions, Clock.fixed(NOW, ZoneOffset.UTC));
+
+    static AuthContextService context(AuthMapper accounts, PermissionMapper permissions, Clock clock) {
+        var revisions = mock(SessionIdentityMapper.class);
+        when(revisions.matches(anyString(), anyString())).thenReturn(true);
+        var behavior = new AccountBehaviorService(List.of());
+        var channels = new ChannelSessionGuard(mock(EnterpriseIntegrationMapper.class),
+            mock(UserChannelBindingMapper.class), accounts, clock);
+        var identity = new SessionIdentityService(accounts, revisions, behavior, channels, new RequestForgeryProtection(), clock);
+        return new AuthContextService(accounts, permissions, behavior, identity, mock(EnterpriseEditionPolicy.class));
+    }
 
     @Test
     void explicitEnterpriseNeverUsesAnotherTabsPreference() {

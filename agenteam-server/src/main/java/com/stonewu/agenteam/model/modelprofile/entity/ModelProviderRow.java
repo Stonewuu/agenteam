@@ -45,4 +45,7 @@ public class ModelProviderRow {
 
     @TableField(value = "updated_at")
     private Instant updatedAt;
+
+    @TableField(value = "deleted_at")
+    private Instant deletedAt;
 }

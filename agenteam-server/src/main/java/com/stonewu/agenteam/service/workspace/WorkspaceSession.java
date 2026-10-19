@@ -25,6 +25,13 @@ public interface WorkspaceSession extends AutoCloseable {
 
     void commit(Set<String> sources, Set<String> inputs);
 
+    default CommandResultCache.Area commandResults() {
+        return new CommandResultCache.Area(directory().resolve("cache"), directory().resolve("command-results"), "preview");
+    }
+
+    default void protectCommandResults() {
+    }
+
     default boolean persistent() {
         return false;
     }

@@ -1,4 +1,5 @@
 import {fieldErrorMessages} from "@/lib/form-errors";
+import {identityRequestRejected, requestIdentity} from "./request-identity";
 
 type ErrorBody = {
   code: string;
@@ -95,6 +96,11 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   }
   const method = options.method ?? "GET";
   const headers = new Headers({Accept: "application/json"});
+  const identity = requestIdentity();
+  if (identity && !["/api/v1/auth/me", "/api/v1/auth/csrf", "/api/v1/auth/impersonation",
+    "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/bootstrap"].includes(path)) {
+    headers.set("X-Identity-Revision", identity);
+  }
   if (options.body !== undefined) {
     headers.set("Content-Type", "application/json");
   }
@@ -140,6 +146,9 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
         continue;
       }
       if (error instanceof ApiError) {
+        if (error.code === "IDENTITY_CHANGED") {
+          identityRequestRejected();
+        }
         notifyAccessFailure(path, error);
         if (error.status === 401) {
           clearCsrf();

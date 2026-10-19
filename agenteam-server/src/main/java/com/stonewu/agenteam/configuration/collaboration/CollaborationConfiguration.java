@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "collaboration")
 public class CollaborationConfiguration {
-    private boolean enabled;
     private int maxWorks = 20;
     private int maxHandoffs = 8;
     private int maxRuns = 40;

@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
@@ -57,7 +56,6 @@ public class ChatRoutingService {
     private final CollaborationInputService inputs;
     private final ChatOutboundService outbound;
     private final ChatConfiguration chat;
-    private final CollaborationConfiguration configuration;
     private final Clock clock;
     private final ChatReplyAttachmentService replyAttachments;
     private final ChatGroupActivationService activation;
@@ -68,7 +66,7 @@ public class ChatRoutingService {
             EnterpriseMapper enterprises, ChatBotBindingService bots, ChatConversationService conversations,
             ChatIdentityService identities, ChatPayloadCipher cipher, ResourceJson json, ChatTaskReferenceService references,
             CollaborationAccessService access, CollaborationTaskCreationService creation, CollaborationInputService inputs,
-            ChatOutboundService outbound, ChatConfiguration chat, CollaborationConfiguration configuration, Clock clock,
+            ChatOutboundService outbound, ChatConfiguration chat, Clock clock,
             ChatReplyAttachmentService replyAttachments, ChatGroupActivationService activation, ChatReplyCommandService replyCommands) {
         this.messages = messages;
         this.resources = resources;
@@ -88,7 +86,6 @@ public class ChatRoutingService {
         this.inputs = inputs;
         this.outbound = outbound;
         this.chat = chat;
-        this.configuration = configuration;
         this.clock = clock;
         this.replyAttachments = replyAttachments;
         this.activation = activation;
@@ -107,7 +104,7 @@ public class ChatRoutingService {
     public void route(String enterprise, String id) {
         enterprises.lockEnterprise(enterprise).orElseThrow();
         var message = message(enterprise, id);
-        if (!configuration.isEnabled() || !Set.of("pending", "awaiting_binding").contains(message.getRoutingStatus())) {
+        if (!chat.isEnabled() || !Set.of("pending", "awaiting_binding").contains(message.getRoutingStatus())) {
             return;
         }
         var content = cipher.decrypt(enterprise, "message", id, message.getContentEncrypted());

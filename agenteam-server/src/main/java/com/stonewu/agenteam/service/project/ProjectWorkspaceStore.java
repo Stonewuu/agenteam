@@ -215,6 +215,18 @@ public class ProjectWorkspaceStore {
         }
 
         @Override
+        public CommandResultCache.Area commandResults() {
+            return layout.commandResults(location);
+        }
+
+        @Override
+        public void protectCommandResults() {
+            if (run != null && sandboxUsage != null) {
+                sandboxUsage.touch(run, session, location, remaining(), control);
+            }
+        }
+
+        @Override
         public Duration remaining() {
             control.requireActive();
             return ProjectWorkspaceStore.remaining(deadline);

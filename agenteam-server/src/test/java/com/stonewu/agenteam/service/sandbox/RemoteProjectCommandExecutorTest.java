@@ -15,6 +15,7 @@ import com.stonewu.agenteam.controller.sandbox.EnvironmentTerminalServerControll
 import com.stonewu.agenteam.service.sandbox.TerminalInteractionAssertions.TerminalClock;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
+import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
 import com.stonewu.agenteam.controller.sandbox.ProjectSandboxServerController;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -22,6 +23,7 @@ import com.stonewu.agenteam.service.project.*;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
+import com.stonewu.agenteam.service.workspace.CommandResultCache;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
@@ -71,7 +73,8 @@ class RemoteProjectCommandExecutorTest {
             server.setExecutor(pool);
             server.createContext("/project-executions/", new ProjectSandboxServerController(service, commands, json, token));
             var lifecycle = new UserSandboxLifecycle(layout, new UserSandboxRegistry(layout),
-                new UserContainerRuntime(settings, runtime, layout, docker), new ProjectCommandProcess(layout, docker, json),
+                new UserContainerRuntime(settings, runtime, layout, docker), new ProjectCommandProcess(layout, docker, json,
+                    new CommandResultCache(new CommandResultSettings(7, 256, 1000), settings, json, Clock.systemUTC())),
                 new SandboxLifecycleSettings(1800, 30, 60, 10), Clock.systemUTC());
             server.createContext("/environments", new EnvironmentServerController(new DockerUserEnvironmentRuntime(lifecycle), json, token));
             var terminalStore = new EnvironmentTerminalStore(layout);

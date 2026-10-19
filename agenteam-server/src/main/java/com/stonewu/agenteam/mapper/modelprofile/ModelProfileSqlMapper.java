@@ -11,6 +11,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -28,7 +29,8 @@ public interface ModelProfileSqlMapper extends MPJBaseMapper<ModelProfileRow> {
             .innerJoin(ModelProviderRow.class,
                 on -> on.eq(ModelProviderRow::getEnterpriseId, ModelProfileRow::getEnterpriseId)
                     .eq(ModelProviderRow::getId, ModelProfileRow::getProviderId))
-            .eq(ModelProfileRow::getEnterpriseId, enterprise).eq(ModelProfileRow::getId, id);
+            .eq(ModelProfileRow::getEnterpriseId, enterprise).eq(ModelProfileRow::getId, id)
+            .isNull(ModelProfileRow::getDeletedAt).isNull(ModelProviderRow::getDeletedAt);
         return selectJoinList(ModelProfileQueryRow.class, criteria);
     }
 
@@ -41,7 +43,9 @@ public interface ModelProfileSqlMapper extends MPJBaseMapper<ModelProfileRow> {
             .innerJoin(ModelProviderRow.class,
                 on -> on.eq(ModelProviderRow::getEnterpriseId, ModelProfileRow::getEnterpriseId)
                     .eq(ModelProviderRow::getId, ModelProfileRow::getProviderId))
-            .eq(ModelProfileRow::getEnterpriseId, enterprise).orderByAsc(ModelProviderRow::getName)
+            .eq(ModelProfileRow::getEnterpriseId, enterprise)
+            .isNull(ModelProfileRow::getDeletedAt).isNull(ModelProviderRow::getDeletedAt)
+            .orderByAsc(ModelProviderRow::getName)
             .orderByAsc(ModelProfileRow::getName).orderByAsc(ModelProfileRow::getId);
         return selectJoinList(ModelProfileQueryRow.class, criteria);
     }
@@ -65,28 +69,24 @@ public interface ModelProfileSqlMapper extends MPJBaseMapper<ModelProfileRow> {
     default int updateModelProfile(String providerId, String name, String modelName, String capabilitiesJson,
                                    Boolean enabled, Timestamp now, String enterprise, String id) {
         return update(new LambdaUpdateWrapper<ModelProfileRow>().eq(ModelProfileRow::getEnterpriseId, enterprise)
-            .eq(ModelProfileRow::getId, id).set(ModelProfileRow::getProviderId, providerId)
+            .eq(ModelProfileRow::getId, id).isNull(ModelProfileRow::getDeletedAt)
+            .set(ModelProfileRow::getProviderId, providerId)
             .set(ModelProfileRow::getName, name).set(ModelProfileRow::getModelName, modelName)
             .set(ModelProfileRow::getCapabilitiesJson, capabilitiesJson).set(ModelProfileRow::getEnabled, enabled)
             .setIncrBy(ModelProfileRow::getRevision, 1).set(ModelProfileRow::getUpdatedAt, now));
     }
 
-    default int deleteModelProfile(String enterprise, String id) {
-        return delete(new LambdaQueryWrapper<ModelProfileRow>().eq(ModelProfileRow::getEnterpriseId, enterprise)
-            .eq(ModelProfileRow::getId, id));
-    }
-
-    List<Boolean> inUseResourceDraft(@Param("enterprise") String enterprise, @Param("id") String id);
-
-    default List<String> providerInUseModelProfile(String enterprise, String providerId) {
-        var criteria = new LambdaQueryWrapper<ModelProfileRow>().select(ModelProfileRow::getId)
-            .eq(ModelProfileRow::getEnterpriseId, enterprise).eq(ModelProfileRow::getProviderId, providerId);
-        return selectList(criteria).stream().map(storedRow -> storedRow.getId()).toList();
+    default int deleteModelProfile(String enterprise, String id, long revision, Instant now) {
+        return update(new LambdaUpdateWrapper<ModelProfileRow>().eq(ModelProfileRow::getEnterpriseId, enterprise)
+            .eq(ModelProfileRow::getId, id).eq(ModelProfileRow::getRevision, revision)
+            .isNull(ModelProfileRow::getDeletedAt).set(ModelProfileRow::getDeletedAt, now)
+            .set(ModelProfileRow::getEnabled, 0).set(ModelProfileRow::getUpdatedAt, now)
+            .setIncrBy(ModelProfileRow::getRevision, 1));
     }
 
     default int modelCount(String enterprise, String id) {
         return Math.toIntExact(selectCount(
             new LambdaQueryWrapper<ModelProfileRow>().eq(ModelProfileRow::getEnterpriseId, enterprise)
-                .eq(ModelProfileRow::getProviderId, id)));
+                .eq(ModelProfileRow::getProviderId, id).isNull(ModelProfileRow::getDeletedAt)));
     }
 }

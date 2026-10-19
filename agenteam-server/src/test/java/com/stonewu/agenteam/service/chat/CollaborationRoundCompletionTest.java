@@ -31,7 +31,7 @@ class CollaborationRoundCompletionTest extends CollaborationToolTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENV.properties(registry);
         registry.add("chat.enabled", () -> true);
-        registry.add("chat.feishu.enabled", () -> true);
+
         registry.add("chat.worker-enabled", () -> false);
     }
 

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
+import com.stonewu.agenteam.model.chat.response.ChatServiceStatus;
 import com.stonewu.agenteam.model.chat.request.ChatBotWriteRequest;
 import com.stonewu.agenteam.model.chat.request.ChatConversationUpdateRequest;
 import com.stonewu.agenteam.model.chat.request.ChatCheckRequest;
@@ -36,10 +38,12 @@ public class ChatManagementApiService {
     private final ChatOutboundQueryService outgoing;
     private final ChatAgentChoiceService agents;
     private final ChatTestMemberService testMembers;
+    private final ChatConfiguration configuration;
 
     public ChatManagementApiService(AuthContextService identity, IntegrationManagementPolicy policy, ChatBotBindingService bots,
                                     ChatConversationService conversations, ChatPlatformRegistry platforms, IdempotentRequestService requests,
-                                    ChatCapabilityService capabilities, ChatOutboundQueryService outgoing, ChatAgentChoiceService agents, ChatTestMemberService testMembers) {
+                                    ChatCapabilityService capabilities, ChatOutboundQueryService outgoing, ChatAgentChoiceService agents,
+                                    ChatTestMemberService testMembers, ChatConfiguration configuration) {
         this.identity = identity;
         this.policy = policy;
         this.bots = bots;
@@ -50,6 +54,13 @@ public class ChatManagementApiService {
         this.outgoing = outgoing;
         this.agents = agents;
         this.testMembers = testMembers;
+        this.configuration = configuration;
+    }
+
+    public ChatServiceStatus status(String enterprise, HttpServletRequest request) {
+        var actor = actor(enterprise, request);
+        policy.require(actor, enterprise, system(request), "integration.view", false);
+        return new ChatServiceStatus(!configuration.isEnabled() || !configuration.isWorkerEnabled());
     }
 
     public PageResponse<ChatTestMemberService.Choice> testMembers(String enterprise, String botId, String query, String cursor, Integer limit, HttpServletRequest request) {

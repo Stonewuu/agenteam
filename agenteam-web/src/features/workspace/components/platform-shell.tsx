@@ -8,7 +8,8 @@ import {Button} from "@/components/ui/button";
 import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {createContext, type ReactNode, useContext, useState} from "react";
-import {enterprisePath, landingPath} from "@/features/auth/lib/identity-navigation";
+import {landingPath} from "@/features/auth/lib/identity-navigation";
+import {workspaceParts, workspacePath} from "@/features/auth/lib/workspace-path";
 import type {EnterpriseContext, IdentityUser} from "@/features/auth/types/identity";
 import {ThemeMenu} from "@/features/auth/components/theme-menu";
 import {LanguageMenu} from "@/features/auth/components/language-menu";
@@ -41,6 +42,7 @@ import {
   workspaceNavigation
 } from "../lib/navigation";
 import {PlatformManagementNavigation} from "./platform-management-navigation";
+import {IdentitySwitchControls} from "@/features/auth/components/identity-switch-boundary";
 import {SidebarNavigation} from "./sidebar-navigation";
 import {NavigationLink} from "./navigation-link";
 import {usePageScroll} from "../hooks/use-page-scroll";
@@ -88,26 +90,25 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
   const setMobile = (open: boolean) => setMobileNavigation({pathname, open});
   const {container} = usePageScroll(pathname, !fullHeight);
   const guarded = useGuardedNavigation();
-  const root = context ? enterprisePath(context.enterprise.id) : "";
+  const root = "";
   const allowed = (permission: string) => Boolean(context?.permissions.includes(permission));
   const go = (action: () => void) => (onNavigate ?? guarded ?? ((action: () => void) => action()))(action);
   const areaName = area === "capabilities" ? uiText("能力中心") : area === "management" ? uiText("管理端") : uiText("工作空间");
   const items = area === "management" ? localizeCatalog(managementNavigation, uiText).filter((item) => canViewManagementSection(item, context?.permissions ?? [], context?.capabilities ?? []) && !("hidden" in item && item.hidden)).map((item) => ({
       ...item,
-      path: `management/${item.id}`
+      path: `organization/${item.id}`
     }))
     : area === "capabilities" ? localizeCatalog(capabilityNavigation, uiText).filter((item) => allowed(`${item.permission}.view`) || allowed(`${item.permission}.create`)).map((item) => ({
         ...item,
         path: `capabilities/${item.path}`
       }))
       : localizeCatalog(workspaceNavigation, uiText).filter((item) => item.permissions.some(allowed));
-  const section = pathname.slice(root.length).split("/")[1];
+  const [section, pageSection] = workspaceParts(pathname);
   const chatArea = area === "user" && (section === "conversations" || section === "new-task") && allowed("conversation.view");
-  const navigationPath = pathname.replace(/\/management\/invitations$/, "/management/members").replace(/\/management\/permissions$/, "/management/roles");
+  const navigationPath = pathname.replace(/\/organization\/invitations$/, "/organization/members").replace(/\/organization\/permissions$/, "/organization/roles");
   const isActive = (path: string, index: number) => navigationPath === `${root}/${path}` || navigationPath.startsWith(`${root}/${path}/`) || path === "conversations" && section === "new-task"
-    || area !== "user" && pathname === `${root}/${area}` && index === 0;
+    || area !== "user" && pathname === workspacePath(`/${area}`) && index === 0;
   const selectedIndex = items.findIndex((item, index) => isActive(item.path, index));
-  const pageSection = pathname.slice(root.length).split("/")[2];
   const PageIcon = localizeCatalog(platformManagementNavigation, uiText).find((item) => item.path === pathname)?.icon ?? (pathname.startsWith("/settings") ? IconSettings : section === "notifications" ? IconBell : section === "memories" ? IconBookmark
     : area === "management" ? localizeCatalog(managementNavigation, uiText).find((item) => item.id === pageSection)?.icon ?? items[selectedIndex]?.icon ?? IconShield
       : items[selectedIndex]?.icon ?? IconLayoutGrid);
@@ -144,7 +145,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
           size={15}/></NavigationLink>}
       {allowed("admin.view") &&
         <NavigationLink label={uiText("管理端")} className={`nav-item${area === "management" ? " selected" : ""}`}
-                        href={`${root}/management`}><IconShield size={20}
+                        href="/organization"><IconShield size={20}
                                                                 variant="Bulk"/><span>{uiText("管理端")}</span><IconArrowUpRight
           size={15}/></NavigationLink>}
     </div>
@@ -174,7 +175,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
           <div className="topbar-divider"/>
         </>}<LanguageMenu/><ThemeMenu className="icon-button theme-trigger"/>{context && !platformPage &&
           <NotificationLink enterpriseId={context.enterprise.id}
-                            className="icon-button notification-trigger"/>}<AccountMenu user={user} go={go}/></div>
+                            className="icon-button notification-trigger"/>}<IdentitySwitchControls/><AccountMenu user={user} go={go}/></div>
       </header>
       <main ref={container} id="main-content" tabIndex={-1} data-page-scroll={fullHeight ? undefined : ""}
             className={`workspace-scroll-region${fullHeight ? " workspace-full-height" : ""}`}>

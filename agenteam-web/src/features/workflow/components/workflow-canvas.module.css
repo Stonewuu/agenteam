@@ -119,24 +119,11 @@
 .dropMenu {
   position: absolute;
   z-index: 25;
-  width: min(270px, calc(100% - 24px));
-  max-height: min(420px, calc(100% - 24px));
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: 10px;
+  width: min(320px, calc(100% - 24px));
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
   box-shadow: var(--shadow);
-}
-
-.dropHeading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px 6px 8px;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 @media (max-width: 600px) {

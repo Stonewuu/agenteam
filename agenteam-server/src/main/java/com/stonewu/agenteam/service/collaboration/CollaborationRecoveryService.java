@@ -23,7 +23,6 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 
 /** 持续复核当前授权与任务期限，把取消请求交给既有执行器处理。 */
 @Service
@@ -38,11 +37,10 @@ public class CollaborationRecoveryService {
     private final ChatOutboundService outbound;
     private final Clock clock;
     private final ChatConfiguration chat;
-    private final CollaborationConfiguration configuration;
 
     public CollaborationRecoveryService(CollaborationRunLinkMapper links, CollaborationTaskMapper tasks,
             CollaborationWorkItemMapper works, EnterpriseMapper enterprises, RunMapper runs,
-            CollaborationAccessService access, ChatOutboundService outbound, Clock clock, ChatConfiguration chat, CollaborationConfiguration configuration) {
+            CollaborationAccessService access, ChatOutboundService outbound, Clock clock, ChatConfiguration chat) {
         this.links = links;
         this.tasks = tasks;
         this.works = works;
@@ -52,7 +50,6 @@ public class CollaborationRecoveryService {
         this.outbound = outbound;
         this.clock = clock;
         this.chat = chat;
-        this.configuration = configuration;
     }
 
     @Transactional
@@ -69,7 +66,7 @@ public class CollaborationRecoveryService {
         }
         var task = access.require(enterprise, link.getTaskId());
         String reason = link.getRequestedStopReason();
-        if (reason == null && (!chat.isEnabled() || !configuration.isEnabled())) {
+        if (reason == null && (!chat.isEnabled())) {
             reason = "feature_disabled";
         }
         if (reason == null && task.getStatus().equals("completed")) {

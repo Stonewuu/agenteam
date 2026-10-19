@@ -185,21 +185,31 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         var failure = new AtomicReference<JsonNode>();
         var timeout = new AtomicReference<JsonNode>();
         var recovered = new AtomicReference<String>();
+        var fullOutput = new AtomicReference<String>();
+        var timeoutOutput = new AtomicReference<String>();
         modelResponse = exchange -> {
             var input = json.readTree(exchange.getRequestBody());
             switch (step.getAndIncrement()) {
                 case 0 ->
-                    tool(exchange, "bad-command", "execute", Map.of("command", "printf '需要修正命令' >&2; exit 7", "timeout_seconds", 15));
+                    tool(exchange, "bad-command", "execute", Map.of("command", "python -c \"print('过程输出' * 8000); print('完整结尾')\"; printf '需要修正命令' >&2; exit 7", "timeout_seconds", 15));
                 case 1 -> {
                     failure.set(result(input, "bad-command"));
-                    tool(exchange, "slow-command", "execute", Map.of("command", "printf '已开始处理'; sleep 30", "timeout_seconds", 6));
+                    tool(exchange, "read-full-output", "read_file", Map.of("path", failure.get().path("stdoutPath").asText(), "start_line", 2, "end_line", 2));
                 }
                 case 2 -> {
+                    fullOutput.set(result(input, "read-full-output").path("content").asText().trim());
+                    tool(exchange, "slow-command", "execute", Map.of("command", "printf '已开始处理'; sleep 30", "timeout_seconds", 6));
+                }
+                case 3 -> {
                     timeout.set(result(input, "slow-command"));
+                    tool(exchange, "read-timeout-output", "read_file", Map.of("path", timeout.get().path("stdoutPath").asText()));
+                }
+                case 4 -> {
+                    timeoutOutput.set(result(input, "read-timeout-output").path("content").asText());
                     tool(exchange, "fixed-command", "execute", Map.of("command", "printf '已修正' > outputs/recovered.txt", "timeout_seconds", 15));
                 }
-                case 3 -> tool(exchange, "read-recovered", "read_file", Map.of("path", "outputs/recovered.txt"));
-                case 4 -> {
+                case 5 -> tool(exchange, "read-recovered", "read_file", Map.of("path", "outputs/recovered.txt"));
+                case 6 -> {
                     recovered.set(result(input, "read-recovered").path("content").asText());
                     tool(exchange, "alternative", "write_file", Map.of("path", "outputs/alternative.txt", "content", "已改用文件工具完成。"));
                 }
@@ -213,13 +223,17 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         assertTrue(failure.get().path("isError").asBoolean());
         assertEquals(7, failure.get().path("exitCode").asInt());
         assertEquals("需要修正命令", failure.get().path("stderr").asText());
+        assertTrue(failure.get().path("stdoutTruncated").asBoolean());
+        assertTrue(failure.get().path("stdoutPath").asText().startsWith("command-results/"));
+        assertEquals("完整结尾", fullOutput.get());
         assertTrue(timeout.get().path("isError").asBoolean());
         assertTrue(timeout.get().path("timedOut").asBoolean());
         assertEquals(124, timeout.get().path("exitCode").asInt());
         assertEquals("已开始处理", timeout.get().path("stdout").asText());
+        assertEquals("已开始处理", timeoutOutput.get());
         assertEquals("已修正", recovered.get());
         assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
-        assertEquals(List.of("failed", "failed", "succeeded", "succeeded", "succeeded"),
+        assertEquals(List.of("failed", "succeeded", "failed", "succeeded", "succeeded", "succeeded", "succeeded"),
             calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
         var saved = workspaces.read(enterprise, admin, accepted.path("conversationId").asText(),
             snapshot -> snapshot.files().bytes("outputs/alternative.txt"));

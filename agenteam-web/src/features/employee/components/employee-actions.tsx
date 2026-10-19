@@ -54,7 +54,7 @@ export function EmployeeActions({enterpriseId, employee, permissions, onChanged,
   const canWithdraw = canManage && employee.hireStatus === "pending" && Boolean(employee.applicationId);
   const canChat = canRun && permissions.includes("conversation.view");
   const canOpenChat = permissions.includes("agent.run") && permissions.includes("conversation.view");
-  const chatPath = `/enterprises/${encodeURIComponent(enterpriseId)}/new-task?agent=${encodeURIComponent(employee.agentId)}`;
+  const chatPath = `/new-task?agent=${encodeURIComponent(employee.agentId)}`;
   const canSchedule = canRun && Boolean(employee.hireId) && permissions.includes("schedule.manage") && permissions.includes("schedule.view");
   if (!canChat && !canSchedule && !managesHire && !canWithdraw && !(canManage && (employee.canHire || employee.canResume))) {
     return null;
@@ -62,7 +62,7 @@ export function EmployeeActions({enterpriseId, employee, permissions, onChanged,
   return <>
     <div className={`${styles.actions} ${compact ? styles.compact : ""}`} inert={disabled || operation !== null || quickHire.busy} aria-busy={disabled || quickHire.busy}>
       {canChat && <Link className={`${ui.primary} ${styles.primary}`}
-                        href={`/enterprises/${encodeURIComponent(enterpriseId)}/new-task?agent=${encodeURIComponent(employee.agentId)}`}><IconMessages
+                        href={`/new-task?agent=${encodeURIComponent(employee.agentId)}`}><IconMessages
         size={18}/>{uiText("开始对话")}</Link>}
       {canManage && employee.canHire && <Button type="button" className={`${ui.primary} ${styles.primary}`}
                                                 disabled={quickHire.busy} onClick={() => {
@@ -85,7 +85,7 @@ export function EmployeeActions({enterpriseId, employee, permissions, onChanged,
                                                   onClick={() => setOperation("active")}><IconPlayerPlay
         size={18}/>{uiText("恢复雇佣")}</Button>}
       {!compact && canSchedule && <Link className={ui.button}
-                            href={`/enterprises/${encodeURIComponent(enterpriseId)}/schedules?agent=${encodeURIComponent(employee.agentId)}`}><IconCalendar
+                            href={`/schedules?agent=${encodeURIComponent(employee.agentId)}`}><IconCalendar
         size={17}/>{uiText("创建计划")}</Link>}
       {!compact && canWithdraw && <Button type="button" className={ui.button} onClick={() => setOperation("withdraw")}><IconX
         size={17}/>{uiText("撤回申请")}</Button>}

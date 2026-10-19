@@ -212,6 +212,10 @@ public class UserContainerRuntime {
         }
         mount(arguments, layout.files(location.workspaceId()), ProjectExecutionPaths.ROOT, false);
         mount(arguments, layout.control(location.workspaceId()).resolve("command"), "/agenteam-command", true);
+        Path cache = layout.commandResults(location).data();
+        WorkspacePaths.requireInside(layout.root(), cache);
+        Files.createDirectories(cache);
+        mount(arguments, cache, "/agenteam-command-results", false);
         arguments.addAll(List.of(image, "sh", "-c", "while :; do sleep 3600; done"));
         return arguments;
     }

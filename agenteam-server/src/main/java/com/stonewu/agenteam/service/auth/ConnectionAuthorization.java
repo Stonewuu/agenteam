@@ -7,8 +7,6 @@ import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.Clock;
-import java.time.Duration;
 
 /**
  * 长连接直接重读服务端会话，退出登录后不能继续使用连接建立时保留的会话对象。
@@ -17,27 +15,23 @@ import java.time.Duration;
 public class ConnectionAuthorization {
     private final SessionRepository<? extends Session> sessions;
     private final EnterpriseAuthorizationService authorization;
-    private final Clock clock;
+    private final SessionIdentityService identity;
 
     public ConnectionAuthorization(SessionRepository<? extends Session> sessions,
-                                   EnterpriseAuthorizationService authorization, Clock clock) {
+                                   EnterpriseAuthorizationService authorization, SessionIdentityService identity) {
         this.sessions = sessions;
         this.authorization = authorization;
-        this.clock = clock;
+        this.identity = identity;
     }
 
     public boolean allowed(String sessionId, AuthContext actor, String operation) {
         try {
             var current = sessions.findById(sessionId);
-            if (current == null || current.isExpired() || !actor.userId()
-                .equals(current.getAttribute(AuthSessionAttributes.USER_ID))) {
+            if (current == null || current.isExpired()) {
                 return false;
             }
-            Object version = current.getAttribute(AuthSessionAttributes.SESSION_VERSION);
-            Object authenticatedAt = current.getAttribute(AuthSessionAttributes.AUTHENTICATED_AT);
-            if (!(version instanceof Number number) || number.longValue() != actor.user().sessionVersion()
-                || !(authenticatedAt instanceof Number time) || time.longValue() < 0 || time.longValue() > clock.millis()
-                || clock.millis() - time.longValue() >= Duration.ofDays(7).toMillis()) {
+            var effective = identity.effective(current.getId(), current::getAttribute);
+            if (!actor.userId().equals(effective.id()) || actor.user().sessionVersion() != effective.sessionVersion()) {
                 return false;
             }
             authorization.require(actor, operation);

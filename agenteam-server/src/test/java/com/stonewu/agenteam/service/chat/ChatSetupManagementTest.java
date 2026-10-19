@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
+import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
 import com.stonewu.agenteam.model.integration.request.IntegrationCreateRequest;
 import com.stonewu.agenteam.service.integration.IntegrationManagementService;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /** 验证配置列表依据完整绑定关系筛选，不依赖客户端当前分页。 */
 class ChatSetupManagementTest extends ChatApiTestSupport {
@@ -28,13 +30,35 @@ class ChatSetupManagementTest extends ChatApiTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("chat.enabled", () -> true);
-        registry.add("chat.feishu.enabled", () -> true);
+
         registry.add("chat.worker-enabled", () -> false);
     }
 
     @AfterAll
     static void stopDependencies() throws Exception {
         ENVIRONMENT.close();
+    }
+
+    @Test
+    void runtimeStatusReportsEmergencyPauseWithoutChangingBotConfiguration() throws Exception {
+        var defaults = new ChatConfiguration();
+        assertTrue(defaults.enabled("feishu"));
+        assertTrue(defaults.enabled("wecom_aibot"));
+        assertFalse(defaults.enabled("unknown"));
+        String path = "/api/v1/enterprises/" + enterprise + "/chat/status";
+        mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        configuration.setEnabled(false);
+        mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.paused").value(true));
+        assertEquals("enabled", bots.require(enterprise, bot.getId()).getStatus());
+        configuration.setEnabled(true);
+        try {
+            configuration.setWorkerEnabled(true);
+            mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.paused").value(false));
+        } finally {
+            configuration.setWorkerEnabled(false);
+        }
     }
 
     @Test

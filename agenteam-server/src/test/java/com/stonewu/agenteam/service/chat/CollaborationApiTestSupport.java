@@ -55,7 +55,7 @@ abstract class CollaborationApiTestSupport extends ChatApiTestSupport {
 
     @BeforeEach
     void userFixture() {
-        collaboration.setEnabled(true);
+
         initiator = EnterpriseTestData.member(users, permissions, enterprise, "chat_" + UUID.randomUUID().toString().substring(0, 8),
             "chat-isolated-user-password", "真实任务发起人", List.of(permissions.builtinRoleId(enterprise, "member")));
         databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().eq(ResourceRow::getEnterpriseId, enterprise)

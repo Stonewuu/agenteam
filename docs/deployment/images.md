@@ -2,17 +2,17 @@
 
 AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过 Docker Hub 的 `stonewuu` 账号获取镜像，即可在自己的服务器上部署工作空间。
 
-本文使用 0.4.0 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
+本文使用 0.4.1 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
 
 ## 镜像清单
 
 | 用途 | 镜像 |
 | --- | --- |
-| 后端 | `docker.io/stonewuu/agenteam-backend:0.4.0` |
-| 前端 | `docker.io/stonewuu/agenteam-frontend:0.4.0` |
-| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.4.0` |
-| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.4.0` |
-| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.4.0` |
+| 后端 | `docker.io/stonewuu/agenteam-backend:0.4.1` |
+| 前端 | `docker.io/stonewuu/agenteam-frontend:0.4.1` |
+| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.4.1` |
+| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.4.1` |
+| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.4.1` |
 
 部署包包含本版本的 Compose（多容器服务配置）文件、入口代理配置和初始化工具。使用部署包即可完成服务器安装。
 
@@ -21,10 +21,10 @@ AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过
 在 Linux 服务器准备 Docker、Docker Compose、Python 3，以及指向该服务器的域名。以下命令在空的部署工作目录执行：
 
 ```sh
-deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.4.0)
-docker cp "$deployment_container":/deployment ./agenteam-0.4.0
+deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.4.1)
+docker cp "$deployment_container":/deployment ./agenteam-0.4.1
 docker rm "$deployment_container"
-cd agenteam-0.4.0
+cd agenteam-0.4.1
 python3 configure-server.py --domain app.example.com
 ```
 
@@ -69,10 +69,35 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 更新时保持五类 AgenTeam 镜像使用同一版本，并保留原账号、资源、任务、平台绑定及应用密钥。已有部署按当前版本对应的升级步骤操作。
 
+希望跟随最新正式版时，将现有 `.env` 中以下五个镜像改为 `latest`，移除这些引用末尾原有的 `@sha256:...` 内容摘要；其他配置保持原值：
+
+```dotenv
+APP_IMAGE=docker.io/stonewuu/agenteam-backend:latest
+FRONTEND_IMAGE=docker.io/stonewuu/agenteam-frontend:latest
+EXECUTOR_IMAGE=docker.io/stonewuu/agenteam-sandbox-server:latest
+SANDBOX_IMAGE=docker.io/stonewuu/agenteam-sandbox-office:latest
+DEPLOYMENT_IMAGE=docker.io/stonewuu/agenteam-deployment:latest
+```
+
+两版正式发布完成后，latest 会更新到对应版本。保存备份并阅读该版本升级说明后，在部署目录执行：
+
+```sh
+docker compose pull
+docker compose up -d --no-build --pull never --wait --wait-timeout 300
+```
+
+`pull` 包含办公沙箱镜像；后续启动使用本次拉取的内容。部署文件镜像不属于常驻服务，版本要求调整配置时另行拉取 `DEPLOYMENT_IMAGE` 并提取到新目录比较，保留原 `.env`、密码、数据卷与资源设置。需要固定版本时仍可使用上表中的版本号标签。
+
 ## 查看项目版权信息
 
 项目版权声明保存在 `licenses/agenteam/NOTICE`，版权名称为 stonewu。
 
 解出的部署包在 `licenses/agenteam/LICENSE` 保存项目许可。后端、前端、执行器和办公镜像内的对应目录为 `/usr/share/licenses/agenteam/agenteam/`。可以使用 `docker cp` 从已创建的容器取得文件，不需要启动应用或连接数据库。
 
-代码和依赖原有版权信息继续保留。镜像与安装说明使用明确的版本号，便于部署维护和后续更新。
+代码和依赖原有版权信息继续保留。固定版本号标签和完整版本清单继续提供，便于核对部署内容和安排更新。
+
+## 基础组件更新
+
+部署配置默认使用 `nginx:1-alpine`、`mysql:8`、`redis:7-alpine`，分别跟随当前大版本的更新。已有部署同步修改 `.env` 中的 `GATEWAY_IMAGE`、`MYSQL_IMAGE`、`REDIS_IMAGE`，并移除这三项旧的 `@sha256:...` 内容摘要后，`docker compose pull` 会拉取对应大版本的新镜像；执行 `docker compose up -d` 后才应用更新。
+
+更新前保留原镜像摘要及数据库、Redis、业务文件和配置备份。数据库需要先验证升级和独立恢复；不能仅换回旧镜像就视为完成数据回退。需要保持某次已验证环境时，可以自行使用完整版本号或内容摘要。应用镜像的 `latest` 与基础组件的大版本标签分别管理，不使用数据库的 `latest` 自动跨大版本升级。

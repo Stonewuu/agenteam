@@ -8,6 +8,7 @@ import {Button} from "@/components/ui/button";
 
 import {useEffect, useId, useRef, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
+import {workspaceParts} from "@/features/auth/lib/workspace-path";
 import Link from "next/link";
 import {SearchInput} from "@/components/ui/search-input";
 import {Select} from "@/components/ui/select";
@@ -51,8 +52,9 @@ export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
   }
   const {list, context} = navigation;
   const enterprise = context.enterprise.id;
-  const root = `/enterprises/${encodeURIComponent(enterprise)}`;
-  const selectedId = pathname.split("/")[3] === "conversations" ? pathname.split("/")[4] : null;
+  const root = ``;
+  const [section, detail] = workspaceParts(pathname);
+  const selectedId = section === "conversations" ? detail : null;
   const canManage = context.permissions.includes("conversation.manage");
   const category = list.filter.status === "deleted" ? "deleted" : list.filter.status === "archived" ? "archived" : list.filter.favorite ? "favorite" : "all";
   const activeFilters = Number(category !== "all") + Number(Boolean(list.filter.agentId)) + Number(list.filter.scope !== "all");

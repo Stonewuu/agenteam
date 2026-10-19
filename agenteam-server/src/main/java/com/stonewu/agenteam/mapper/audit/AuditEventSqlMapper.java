@@ -14,11 +14,13 @@ public interface AuditEventSqlMapper extends MPJBaseMapper<AuditEventRow> {
 
     default int appendAuditEvent(String id, String enterpriseId, String userId, String actorName, String action,
                                  String objectType, String objectId, String summary, String detailJson,
-                                 String requestId, Timestamp now) {
+                                 String requestId, Timestamp now, String authenticatedUserId, String impersonationId) {
         var databaseRow = new AuditEventRow();
         databaseRow.setId(id);
         databaseRow.setEnterpriseId(enterpriseId);
         databaseRow.setActorUserId(userId);
+        databaseRow.setAuthenticatedUserId(authenticatedUserId);
+        databaseRow.setImpersonationId(impersonationId);
         databaseRow.setActorName(actorName);
         databaseRow.setAction(action);
         databaseRow.setObjectType(objectType);

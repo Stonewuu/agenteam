@@ -22,27 +22,34 @@ public class IdentityApiService {
     private final AuthBootstrapService bootstrap;
     private final AuthSessionService sessions;
     private final AccountRecoveryService recovery;
+    private final ImpersonationService impersonation;
+    private final SessionIdentityService sessionIdentity;
 
     public IdentityApiService(AuthService authentication, AuthContextService context, IdentityResponseService views,
                               AuthBootstrapService bootstrap, AuthSessionService sessions,
-                              AccountRecoveryService recovery) {
+                              AccountRecoveryService recovery, ImpersonationService impersonation,
+                              SessionIdentityService sessionIdentity) {
         this.authentication = authentication;
         this.context = context;
         this.views = views;
         this.bootstrap = bootstrap;
         this.sessions = sessions;
         this.recovery = recovery;
+        this.impersonation = impersonation;
+        this.sessionIdentity = sessionIdentity;
     }
 
     public CurrentIdentityResponse current(HttpSession session) {
         var current = views.current(context.requireUser(session));
         if (!ChannelSessionGuard.external(session)) {
-            return current;
+            return current.withSession(SessionIdentityService.revision(session),
+                impersonation.view(session, sessionIdentity.authenticated(session)));
         }
         String enterprise = ChannelSessionGuard.enterprise(session);
         return new CurrentIdentityResponse(current.id(), current.username(), current.displayName(), null, false,
             false, enterprise, current.enterprises().stream().filter(value -> value.id().equals(enterprise)).toList(),
-            current.preferences(), current.revision(), "channel", enterprise, List.of());
+            current.preferences(), current.revision(), "channel", enterprise, List.of())
+            .withSession(SessionIdentityService.revision(session), null);
     }
 
     public CurrentIdentityResponse login(ApiLoginRequest request, HttpServletRequest servletRequest) {

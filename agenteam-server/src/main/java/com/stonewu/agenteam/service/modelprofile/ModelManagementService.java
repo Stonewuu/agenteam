@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 管理修改与授权、审计一起提交；已使用模型只允许修改显示名称和启停状态。
+ * 管理修改与授权、审计一起提交；删除配置时保留历史记录所需的关联。
  */
 @Service
 public class ModelManagementService {
@@ -90,12 +90,8 @@ public class ModelManagementService {
         var current = provider(actor, id);
         checkRevision(current.revision(), revision);
         var value = validation.provider(input);
-        if ((!current.protocol().equals(value.protocol()) || !current.baseUrl()
-            .equals(value.baseUrl())) && profiles.providerInUse(actor.enterpriseId(), id)) {
-            throw inUse("该提供方已有模型被使用，请新建提供方配置新的服务地址。");
-        }
         try {
-            providers.update(actor.enterpriseId(), id, value, clock.instant());
+            checkChanged(providers.update(actor.enterpriseId(), id, value, clock.instant()), revision);
         } catch (DuplicateKeyException duplicate) {
             throw duplicateName();
         }
@@ -111,8 +107,8 @@ public class ModelManagementService {
         if (modelProfileSqlMapper.modelCount(actor.enterpriseId(), id) > 0) {
             throw inUse("该提供方下仍有模型，请先删除模型后再删除提供方。");
         }
-        providers.delete(actor.enterpriseId(), id);
-        authorization.changed(actor, "model_provider.delete", "model_provider", id, "删除未使用的模型提供方", Map.of());
+        checkChanged(providers.delete(actor.enterpriseId(), id, revision, clock.instant()), revision);
+        authorization.changed(actor, "model_provider.delete", "model_provider", id, "删除模型提供方", Map.of());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -139,12 +135,8 @@ public class ModelManagementService {
         checkRevision(current.revision(), revision);
         var value = validation.model(input);
         new ModelProtocolValidation().validate(provider(actor, value.providerId()).protocol(), value.capabilities());
-        if ((!current.providerId().equals(value.providerId()) || !current.modelName().equals(value.modelName())
-            || !current.capabilities().canExtendTo(value.capabilities())) && profiles.inUse(actor.enterpriseId(), id)) {
-            throw inUse("该模型已有使用记录或价格配置，请新建模型调整提供方、模型标识或能力。");
-        }
         try {
-            profiles.update(actor.enterpriseId(), id, value, clock.instant());
+            checkChanged(profiles.update(actor.enterpriseId(), id, value, clock.instant()), revision);
         } catch (DuplicateKeyException duplicate) {
             throw duplicateName();
         }
@@ -157,11 +149,8 @@ public class ModelManagementService {
     public void deleteModel(AuthContext actor, String id, long revision) {
         authorize(actor, true);
         checkRevision(model(actor, id).revision(), revision);
-        if (profiles.inUse(actor.enterpriseId(), id)) {
-            throw inUse("该模型已有使用记录或价格配置，可以停用；仅有价格草稿时可先删除草稿再删除模型。");
-        }
-        profiles.delete(actor.enterpriseId(), id);
-        authorization.changed(actor, "model_profile.delete", "model_profile", id, "删除未使用的模型", Map.of());
+        checkChanged(profiles.delete(actor.enterpriseId(), id, revision, clock.instant()), revision);
+        authorization.changed(actor, "model_profile.delete", "model_profile", id, "删除模型", Map.of());
     }
 
     private ModelProviderRecord provider(AuthContext actor, String id) {
@@ -180,6 +169,12 @@ public class ModelManagementService {
 
     private ApiException duplicateName() {
         return ApiException.invalidField("name", "当前企业已存在同名配置，请修改名称。");
+    }
+
+    private void checkChanged(int changed, long revision) {
+        if (changed != 1) {
+            throw ApiException.versionConflict(revision);
+        }
     }
 
     private ApiException inUse(String message) {

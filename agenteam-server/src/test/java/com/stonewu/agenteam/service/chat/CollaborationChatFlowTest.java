@@ -51,7 +51,7 @@ class CollaborationChatFlowTest extends CollaborationToolTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("chat.enabled", () -> true);
-        registry.add("chat.feishu.enabled", () -> true);
+
         registry.add("chat.worker-enabled", () -> false);
         registry.add("execution.maintenance-enabled", () -> false);
     }

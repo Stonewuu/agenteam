@@ -9,6 +9,7 @@ import com.stonewu.agenteam.service.chat.ChatAgentChoiceService;
 import com.stonewu.agenteam.service.chat.ChatTestMemberService;
 import com.stonewu.agenteam.model.chat.response.ChatBotView;
 import com.stonewu.agenteam.model.chat.response.ChatConversationView;
+import com.stonewu.agenteam.model.chat.response.ChatServiceStatus;
 import com.stonewu.agenteam.model.http.response.ApiResponse;
 import com.stonewu.agenteam.model.http.response.PageResponse;
 import com.stonewu.agenteam.service.chat.ChatManagementApiService;
@@ -40,6 +41,11 @@ public class ChatManagementApiController {
     public ApiResponse<PageResponse<ChatBotView>> bots(@PathVariable String enterpriseId, @RequestParam(required = false) String cursor,
             @RequestParam(required = false) Integer limit, HttpServletRequest request) {
         return responses.success(chats.bots(enterpriseId, cursor, limit, request), request);
+    }
+
+    @GetMapping("/status")
+    public ApiResponse<ChatServiceStatus> status(@PathVariable String enterpriseId, HttpServletRequest request) {
+        return responses.success(chats.status(enterpriseId, request), request);
     }
 
     @PostMapping("/bots")

@@ -51,104 +51,79 @@
   box-shadow: 0 0 0 4px var(--hero-ring), var(--hero-shadow);
 }
 
-.emptyTask {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 24px;
-  min-height: 172px;
-  padding: 32px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+.taskShell {
+  position: relative;
+  isolation: isolate;
 }
 
-.emptyTaskIcon {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
+.taskShell [inert] [data-composer-part="employee"],
+.taskShell [inert] [data-composer-part="model"] {
+  opacity: 1;
+}
+
+.taskMask {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 25%, transparent), color-mix(in srgb, var(--surface) 88%, transparent) 38%, color-mix(in srgb, var(--surface) 88%, transparent) 60%, transparent 88%);
+  text-align: center;
+}
+
+.taskMask h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.taskMask a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px 8px;
+  border-radius: 8px;
   color: var(--accent-text);
+  font-size: 13px;
+  line-height: 1.7;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.taskMask a:hover {
   background: var(--accent-soft);
 }
 
-.emptyTaskCopy {
-  min-width: 0;
+.taskMask a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
-.emptyTaskCopy h2 {
+.taskMask p {
   margin: 0;
-  color: var(--text);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.5;
-  letter-spacing: -.3px;
-}
-
-.emptyTaskCopy p {
-  margin: 8px 0 0;
   color: var(--secondary);
   font-size: 13px;
-  line-height: 1.8;
+  line-height: 1.7;
 }
 
-.emptyTaskAction {
-  min-height: 44px;
-  gap: 10px;
-  white-space: nowrap;
-  transition: background-color 200ms ease, box-shadow 200ms ease;
-}
-
-.emptyTaskAction:hover {
-  background: var(--accent-hover);
-}
-
-.emptyTaskAction svg {
-  flex-shrink: 0;
-}
-
-@media (max-width: 800px) {
-  .emptyTask {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 16px 20px;
-    padding: 28px;
+@media (max-width: 680px) {
+  .taskMask {
+    gap: 4px;
+    padding: 16px;
+    border-radius: 18px;
   }
 
-  .emptyTaskAction {
-    grid-column: 2;
-    justify-self: start;
-  }
-}
-
-@media (max-width: 520px) {
-  .emptyTask {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-    padding: 24px;
-  }
-
-  .emptyTaskIcon {
-    width: 52px;
-    height: 52px;
-    border-radius: 15px;
-  }
-
-  .emptyTaskCopy h2 {
-    font-size: 19px;
-  }
-
-  .emptyTaskAction {
-    grid-column: 1;
-    justify-self: stretch;
-    margin-top: 2px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .emptyTaskAction {
-    transition: none;
+  .taskMask h2 {
+    font-size: 16px;
   }
 }
 

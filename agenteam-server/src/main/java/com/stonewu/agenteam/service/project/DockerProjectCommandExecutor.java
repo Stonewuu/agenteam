@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
+import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectCommandRecord;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.file.Utf8Text;
@@ -13,6 +14,7 @@ import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.SandboxCapacity;
 import com.stonewu.agenteam.service.workspace.SandboxExecutor;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
+import com.stonewu.agenteam.service.workspace.CommandResultCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +59,8 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
     public DockerProjectCommandExecutor(WorkspaceSettings settings, ProjectWorkspaceLayout layout,
                                         UserContainerRuntime containers, DockerWorkspaceCommands docker,
                                         SandboxCapacity capacity) {
-        this(settings, layout, containers, capacity, new ProjectCommandProcess(layout, docker, new ObjectMapper()));
+        this(settings, layout, containers, capacity, new ProjectCommandProcess(layout, docker, new ObjectMapper(),
+            new CommandResultCache(new CommandResultSettings(7, 256, 1000), settings, new ObjectMapper(), Clock.systemUTC())));
     }
 
     private DockerProjectCommandExecutor(WorkspaceSettings settings, ProjectWorkspaceLayout layout,
@@ -140,7 +143,8 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
             watchdog.scheduleWithFixedDelay(() -> {
                 try {
                     var usage = monitor.usage();
-                    if (!done.get() && monitor.exceeded(usage) && usage.increasedFrom(baseline)) {
+                    if (!done.get() && (monitor.exceeded(usage) && usage.increasedFrom(baseline)
+                        || processes.capacityExceeded(record))) {
                         exceeded.set(true);
                         cancelSafely(record);
                     }
@@ -152,7 +156,8 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
             control.beforeSend();
             processes.run(record, directory, remaining(deadline), control);
             var status = processes.status(record, Duration.ofSeconds(10));
-            var result = lifecycle.result(record, status, exceeded.get() || monitor.exceeded(monitor.usage()));
+            var result = lifecycle.result(record, status, exceeded.get() || monitor.exceeded(monitor.usage())
+                || processes.capacityExceeded(record));
             lifecycle.complete(record, result);
             complete = true;
             return result;

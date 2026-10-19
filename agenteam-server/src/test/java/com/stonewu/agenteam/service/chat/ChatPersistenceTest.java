@@ -57,7 +57,7 @@ class ChatPersistenceTest extends ChatApiTestSupport {
 
     @Test
     void wecomControlEventCannotCreateAnEnabledConversation() {
-        configuration.getWecomAibot().setEnabled(true);
+
         databaseAccess.mapper(EnterpriseIntegrationMapper.class).update(new LambdaUpdateWrapper<EnterpriseIntegrationRow>()
             .eq(EnterpriseIntegrationRow::getId, bot.getConnectionId()).set(EnterpriseIntegrationRow::getProviderCode, "wecom_aibot")
             .set(EnterpriseIntegrationRow::getIdentityScope, "bot").set(EnterpriseIntegrationRow::getExternalTenantId, null)
@@ -93,7 +93,7 @@ class ChatPersistenceTest extends ChatApiTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
         registry.add("chat.enabled", () -> true);
-        registry.add("chat.feishu.enabled", () -> true);
+
         registry.add("chat.worker-enabled", () -> false);
     }
 

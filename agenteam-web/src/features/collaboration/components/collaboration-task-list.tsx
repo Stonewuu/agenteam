@@ -90,7 +90,7 @@ export function CollaborationTaskList({enterpriseId, userId}: {enterpriseId: str
           <p>{t("在飞书或企微中向机器人发送需求；在群聊中，请先 @ 机器人。任务进展和成果会显示在这里。")}</p>
         </Guidance>}>
       <ul className={styles.list} aria-label={t("协作任务列表")}>
-        {list.data?.items.map(task => <TaskRow key={task.id} task={task} enterprise={enterpriseId}/>)}
+        {list.data?.items.map(task => <TaskRow key={task.id} task={task}/>)}
       </ul>
     </QueryState>
     {list.error && list.state.cursor && <Button className={`${ui.button} ${styles.reloadFirst}`} onClick={list.first}>{t("从第一页重新加载")}</Button>}
@@ -98,9 +98,9 @@ export function CollaborationTaskList({enterpriseId, userId}: {enterpriseId: str
   </div>;
 }
 
-function TaskRow({task, enterprise}: {task: CollaborationTask; enterprise: string}) {
+function TaskRow({task}: {task: CollaborationTask}) {
   const t = useT();
-  const root = `/enterprises/${encodeURIComponent(enterprise)}`;
+  const root = ``;
   const detailPath = `${root}/collaboration/tasks/${encodeURIComponent(task.id)}`;
   const platform = task.source?.platformCode === "feishu" ? t("飞书") : task.source?.platformCode === "wecom_aibot" ? t("企业微信") : "";
   const source = task.source ? task.source.kind === "direct" ? t("机器人私聊") : task.source.name || t("群聊") : "";

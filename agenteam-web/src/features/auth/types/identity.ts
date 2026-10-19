@@ -16,9 +16,23 @@ export type Preferences = {
   revision: string;
 };
 
+export type ImpersonationView = {
+  id: string;
+  userId: string;
+  displayName: string;
+  username: string;
+  administratorName: string;
+  enterpriseId: string;
+  returnPath: string;
+};
+
+export type ImpersonationStatus = {identityRevision: string; impersonation: ImpersonationView | null};
+
 export type IdentityUser = {
   capabilities: string[];
-  authenticationMethod?: "password" | "channel";
+  authenticationMethod?: "password" | "channel" | "impersonation";
+  identityRevision?: string;
+  impersonation?: ImpersonationView | null;
   restrictedEnterpriseId?: string | null;
   id: string;
   username: string;

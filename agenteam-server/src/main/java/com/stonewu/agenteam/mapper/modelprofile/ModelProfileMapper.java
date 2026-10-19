@@ -6,7 +6,6 @@ import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileQueryRow;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
 import com.stonewu.agenteam.model.modelprofile.request.ModelProfileWriteRequest;
-import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
@@ -15,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 模型按提供方归属保存，使用状态覆盖资源草稿、发布版本和对话执行。
+ * 管理及执行只读取未删除模型，删除时保留历史用量和价格所需的数据库记录。
  */
 @Repository
 public class ModelProfileMapper {
@@ -40,22 +39,13 @@ public class ModelProfileMapper {
             capabilities(value.capabilities()), value.enabled(), Timestamp.from(now));
     }
 
-    public void update(String enterprise, String id, ModelProfileWriteRequest value, Instant now) {
-        statements.updateModelProfile(value.providerId(), value.name(), value.modelName(),
+    public int update(String enterprise, String id, ModelProfileWriteRequest value, Instant now) {
+        return statements.updateModelProfile(value.providerId(), value.name(), value.modelName(),
             capabilities(value.capabilities()), value.enabled(), Timestamp.from(now), enterprise, id);
     }
 
-    public void delete(String enterprise, String id) {
-        statements.deleteModelProfile(enterprise, id);
-    }
-
-    public boolean inUse(String enterprise, String id) {
-        return Boolean.TRUE.equals(DataAccessUtils.nullableSingleResult(statements.inUseResourceDraft(enterprise, id)));
-    }
-
-    public boolean providerInUse(String enterprise, String providerId) {
-        return statements.providerInUseModelProfile(enterprise, providerId)
-            .stream().anyMatch(id -> inUse(enterprise, id));
+    public int delete(String enterprise, String id, long revision, Instant now) {
+        return statements.deleteModelProfile(enterprise, id, revision, now);
     }
 
     private String capabilities(ModelCapabilities value) {

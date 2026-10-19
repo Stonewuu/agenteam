@@ -8,7 +8,6 @@ import org.hibernate.validator.constraints.UniqueElements;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 管理员明确配置的原生参数与计量能力，不按型号名称猜测厂商能力。
@@ -47,10 +46,4 @@ public record ModelProtocolOptions(
         return new ModelProtocolOptions(null, null, null, null, null, null, null);
     }
 
-    public boolean canExtendTo(ModelProtocolOptions next) {
-        return version.equals(next.version) && reasoningMode.equals(next.reasoningMode) && cacheTtlSeconds.equals(next.cacheTtlSeconds)
-            && Objects.equals(serviceTier, next.serviceTier)
-            && next.thinkingBudgets.entrySet().containsAll(thinkingBudgets.entrySet())
-            && next.thinkingLevels.entrySet().containsAll(thinkingLevels.entrySet());
-    }
 }

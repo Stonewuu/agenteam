@@ -124,8 +124,8 @@ class ModelBillingPersistenceTest {
                 .target("0.2.0.1").cleanDisabled(true).load().migrate();
             var fixture = new Fixture(access);
             var upgrade = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
-                .target("0.3.0.2").cleanDisabled(true).validateMigrationNaming(true).load();
-            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(2);
+                .cleanDisabled(true).validateMigrationNaming(true).load();
+            assertThat(upgrade.migrate().migrationsExecuted).isPositive();
             assertThat(upgrade.migrate().migrationsExecuted).isZero();
             assertThat(upgrade.validateWithResult().validationSuccessful).isTrue();
             assertThat(fixture.providers.find(fixture.enterprise, fixture.provider.id()).orElseThrow().protocol()).isEqualTo("openai");
@@ -253,12 +253,16 @@ class ModelBillingPersistenceTest {
             providers = db.mapper(ModelProviderMapper.class);
             String providerId = UUID.randomUUID().toString();
             providers.insert(enterprise, providerId, new ModelProviderWriteRequest("测试连接", "openai", "https://example.com", "not-a-real-key", true), NOW);
-            provider = providers.find(enterprise, providerId).orElseThrow();
+            // 此准备过程也用于旧库升级，插入后直接使用已知值，不用当前查询读取尚不存在的新增列。
+            provider = new ModelProviderRecord(providerId, enterprise, "测试连接", "openai", "https://example.com",
+                "not-a-real-key", true, 1, NOW, NOW);
             var profiles = new ModelProfileMapper(db.mapper(ModelProfileSqlMapper.class), json);
             String modelId = UUID.randomUUID().toString();
             profiles.insert(enterprise, modelId, new ModelProfileWriteRequest(providerId, "测试模型", "test-model",
                 new ModelCapabilities(true, true, 1024, 8000, List.of("text")), true), NOW);
-            model = profiles.find(enterprise, modelId).orElseThrow();
+            model = new ModelProfileRecord(modelId, enterprise, providerId, "测试模型", "test-model",
+                new ModelCapabilities(true, true, 1024, 8000, List.of("text")), true, 1,
+                provider.name(), provider.protocol(), provider.baseUrl(), true, NOW, NOW);
             context = new ModelCallContext(enterprise, user.getId(), "conversation", "run", 2, 7, "agent", "session", "node", "schedule", "schedule", "workflow");
             rows = db.mapper(ModelUsageRecordMapper.class);
             items = db.mapper(ModelUsageCostItemMapper.class);

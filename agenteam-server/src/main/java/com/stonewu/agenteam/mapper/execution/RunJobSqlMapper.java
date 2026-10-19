@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.github.yulichang.base.MPJBaseMapper;
+import com.stonewu.agenteam.configuration.auth.OperationActorContext;
 import com.stonewu.agenteam.model.background.entity.BackgroundJobRow;
 import com.stonewu.agenteam.model.execution.entity.RunJobQueryRow;
 import org.apache.ibatis.annotations.Mapper;
@@ -25,6 +26,11 @@ public interface RunJobSqlMapper extends MPJBaseMapper<BackgroundJobRow> {
         databaseRow.setId(id);
         databaseRow.setEnterpriseId(enterprise);
         databaseRow.setOwnerUserId(user);
+        var operator = OperationActorContext.current(user);
+        if (operator != null) {
+            databaseRow.setAuthenticatedUserId(operator.authenticatedUserId());
+            databaseRow.setImpersonationId(operator.impersonationId());
+        }
         databaseRow.setKind("run");
         databaseRow.setDedupeKey(dedupeKey);
         databaseRow.setPayloadJson(JsonNodeFactory.instance.objectNode().put("runId", run).toString());

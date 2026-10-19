@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.mapper.background;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.stonewu.agenteam.configuration.auth.OperationActorContext;
 import com.github.yulichang.base.MPJBaseMapper;
 import com.stonewu.agenteam.model.background.entity.BackgroundJobQueryRow;
 import com.stonewu.agenteam.model.background.entity.BackgroundJobRow;
@@ -21,6 +22,11 @@ public interface BackgroundJobSqlMapper extends MPJBaseMapper<BackgroundJobRow> 
         databaseRow.setId(id);
         databaseRow.setEnterpriseId(enterpriseId);
         databaseRow.setOwnerUserId(userId);
+        var operator = OperationActorContext.current(userId);
+        if (operator != null) {
+            databaseRow.setAuthenticatedUserId(operator.authenticatedUserId());
+            databaseRow.setImpersonationId(operator.impersonationId());
+        }
         databaseRow.setKind(kind);
         databaseRow.setDedupeKey(dedupeKey);
         databaseRow.setPayloadJson(payload);

@@ -191,7 +191,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
           <div className={controls.heading}><h1 title={title}>{title}</h1></div>
           <div className={`${styles.accountActions} ${controls.conversationActions}`}>
             {workspace.detail?.collaborationTaskId && workspace.conversationId &&
-              <ConversationRoleSwitcher group={group} current={workspace.conversationId} enterprise={enterprise}
+              <ConversationRoleSwitcher group={group} current={workspace.conversationId}
                 taskId={workspace.detail.collaborationTaskId}/>}
             <div className={controls.desktopActions}>
               {workspace.detail && <Button className="icon-button" type="button" aria-label={uiText("查看对话累计用量")}
@@ -278,7 +278,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
         toast.success(uiText("偏好已保存。"), {
           actionProps: {
             children: uiText("管理偏好"),
-            onClick: () => router.push(`/enterprises/${encodeURIComponent(enterprise)}/memories/${encodeURIComponent(memorySource.agentId)}`)
+            onClick: () => router.push(`/memories/${encodeURIComponent(memorySource.agentId)}`)
           }
         });
       }}/>}

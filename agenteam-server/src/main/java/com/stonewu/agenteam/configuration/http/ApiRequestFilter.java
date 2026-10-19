@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.service.auth.RequestForgeryProtection;
+import com.stonewu.agenteam.service.auth.SessionIdentityService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.http.ApiResponses;
 import com.stonewu.agenteam.service.http.BinaryRequestBodyPolicy;
@@ -50,6 +51,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
     private final RequestForgeryProtection protection;
 
     private final AuthMapper users;
+    private final SessionIdentityService identity;
 
     private final List<BinaryRequestBodyPolicy> binaryPolicies;
 
@@ -60,10 +62,11 @@ public class ApiRequestFilter extends OncePerRequestFilter {
         DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, DeserializationFeature.USE_BIG_INTEGER_FOR_INTS);
 
     public ApiRequestFilter(ApiResponses responses, RequestForgeryProtection protection, AuthMapper users,
-                            List<BinaryRequestBodyPolicy> binaryPolicies) {
+                            List<BinaryRequestBodyPolicy> binaryPolicies, SessionIdentityService identity) {
         this.responses = responses;
         this.protection = protection;
         this.users = users;
+        this.identity = identity;
         this.binaryPolicies = List.copyOf(binaryPolicies);
     }
 
@@ -84,6 +87,18 @@ public class ApiRequestFilter extends OncePerRequestFilter {
             if (!BEFORE_INITIALIZATION.contains(path) && !users.superAdminInitialized()) {
                 throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SYSTEM_NOT_INITIALIZED",
                     "系统尚未初始化，请联系部署人员。");
+            }
+            // 身份变化必须先于防伪重试被识别；状态和恢复入口不依赖目标用户仍然有效。
+            boolean identityEntry = path.startsWith("/api/v1/auth/")
+                && !path.startsWith("/api/v1/auth/impersonation/") && !path.equals("/api/v1/auth/reauthenticate");
+            if (!identityEntry && !path.startsWith("/api/v1/chat/callbacks/")) {
+                identity.verifyRequest(request);
+            }
+            if (!SAFE_METHODS.contains(request.getMethod())
+                && SessionIdentityService.state(request.getSession(false)) != null
+                && Set.of("/api/v1/me/password", "/api/v1/me/email-change").contains(path)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED",
+                    "此操作需要账号本人验证，请结束身份切换后使用本人账号登录。");
             }
             if (!SAFE_METHODS.contains(request.getMethod())) {
                 // 此唯一平台入口由专用服务验证签名、时间戳、校验令牌和加密正文。

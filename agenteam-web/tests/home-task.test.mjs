@@ -121,23 +121,34 @@ test("工作台直接粘贴文件会上传，纯文字粘贴与附件禁用不�
   assert.deepEqual(disabled.calls.filter(call => call.kind === "pasteFiles"), []);
 });
 
-test("没有员工时显示员工广场入口，收起不可用的任务输入和工具", () => {
+test("没有员工时保留对话框布局，蒙版外仅提供员工广场入口且不允许发送", async () => {
   const home = homeTask(async () => ({}), { employees: [], permissions: ["agent.run", "agent.market_view"] });
-  assert.equal(home.find("h2").props.children, "找一位数字员工，开始协作");
-  assert.equal(home.find("Link").props.href, "/enterprises/enterprise-1/employees");
-  assert.equal(home.find("form"), null);
-  assert.equal(home.find("Textarea"), null);
-  assert.equal(home.find("EmployeePickerButton"), null);
+  assert.equal(home.find("h2").props.children, "暂未雇佣员工");
+  assert.equal(home.find("Link").props.href, "/employees");
+  assert.equal(home.find("Link").props.children, "前往数字员工广场雇佣员工");
+  const shell = home.find("div");
+  const [content, overlay] = shell.props.children;
+  assert.equal(content.props.inert, true);
+  assert.equal(content.props.children.type, "ComposerProjectFrame");
+  assert.equal(overlay.props.children[1].type, "Link");
+  assert.notEqual(home.find("form"), null);
+  assert.equal(home.find("Textarea").props.disabled, true);
+  assert.equal(home.find("EmployeePickerButton").props.name, "暂无员工");
+  assert.equal(home.find("EmployeePickerButton").props.disabled, true);
   assert.equal(home.find("ConversationModelControls"), null);
-  assert.equal(home.find("ConversationApprovalPolicy"), null);
+  assert.notEqual(home.find("ConversationModelPlaceholder"), null);
+  assert.equal(home.find("ConversationApprovalPolicy").props.disabled, true);
+  home.type("不能发送的任务");
+  await home.submit();
   assert.equal(home.calls.length, 0);
 });
 
 test("没有员工广场权限时不显示无法访问的入口", () => {
   const home = homeTask(async () => ({}), { employees: [], permissions: ["agent.run"] });
-  assert.equal(home.find("h2").props.children, "暂无可用的数字员工");
+  assert.equal(home.find("h2").props.children, "暂未雇佣员工");
   assert.equal(home.find("Link"), null);
-  assert.equal(home.find("form"), null);
+  assert.notEqual(home.find("form"), null);
+  assert.equal(home.find("p").props.children, "请联系企业管理员获取帮助。");
 });
 
 test("已有员工但暂时不可运行时保留员工选择，不显示无员工引导", () => {
@@ -163,7 +174,7 @@ test(`首页发送保存 ${policy}，过渡期间沿用同一员工和策略`, a
   assert.equal(handoff.conversationId, "conversation-1");
   assert.equal(handoff.modelOptions, home.model.handoff);
   const navigation = home.calls.find((call) => call.kind === "navigate");
-  assert.equal(navigation.path, "/enterprises/enterprise-1/conversations/conversation-1");
+  assert.equal(navigation.path, "/conversations/conversation-1");
   assert.equal(navigation.options.transitionTypes.join(","), "composer-send");
   assert.equal(home.find("Textarea").props.value, "");
 });

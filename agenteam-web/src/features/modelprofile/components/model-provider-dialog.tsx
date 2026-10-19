@@ -56,17 +56,15 @@ export function ModelProviderDialog({enterpriseId, provider, onClose, onSaved}: 
                                                                             disabled={action.busy} autoFocus
                                                                             onChange={(event) => setName(event.target.value)}/></label>
       <label className={ui.field}><span>{uiText("连接协议")}</span><Select className={ui.select} name="protocol"
-        value={protocol} disabled={action.busy || provider?.inUse} onChange={(event) => setProtocol(event.target.value as ModelProtocol)}>
+        value={protocol} disabled={action.busy} onChange={(event) => setProtocol(event.target.value as ModelProtocol)}>
         {modelProtocols.map((value) => <option key={value.value} value={value.value}>{value.label}</option>)}
       </Select></label>
       <label className={ui.field}><span>{uiText("服务地址")}</span><Input className={ui.input} type="url"
                                                                           value={baseUrl} required maxLength={2048}
                                                                           placeholder={modelProtocols.find((value) => value.value === protocol)?.example}
-                                                                          disabled={action.busy || provider?.inUse}
+                                                                          disabled={action.busy}
                                                                           onChange={(event) => setBaseUrl(event.target.value)}/><span
         className={ui.description}>{uiText("填写所选协议的服务基础地址。")}</span></label>
-      {provider?.inUse &&
-        <p className={ui.description}>{uiText("该提供方已有模型被使用。如需更换服务地址，请新增提供方。")}</p>}
       <label
         className={ui.field}><span>{provider?.keyConfigured ? uiText("更新访问密钥") : uiText("访问密钥")}</span><Input
         className={ui.input} type="password"

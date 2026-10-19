@@ -22,6 +22,12 @@ public class BackgroundJobRow {
     @TableField(value = "owner_user_id")
     private String ownerUserId;
 
+    @TableField(value = "authenticated_user_id")
+    private String authenticatedUserId;
+
+    @TableField(value = "impersonation_id")
+    private String impersonationId;
+
     @TableField(value = "kind")
     private String kind;
 

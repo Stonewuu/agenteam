@@ -150,6 +150,24 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
         assertThat(json.readTree(rejectedCursor.getResponse().getContentAsString()).at("/error/code").asText()).isEqualTo("CURSOR_INVALID");
         databaseAccess.mapper(ModelUsageRecordMapper.class).deleteById(duplicate.getId());
         verifyCatalogDraft(model, path, published);
+        change(HttpMethod.DELETE, base() + "/models/" + model, null, "1", UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        change(HttpMethod.DELETE, base() + "/model-providers/" + call.getProviderId(), null, "1", UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        var retained = data(mvc.perform(get(conversationPath).param("runId", runId).cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(retained.at("/calls/items/0/totalAmount").asText()).isEqualTo("0.0024");
+        assertThat(retained.at("/calls/items/0/modelProfileName").asText()).isEqualTo(own.at("/calls/items/0/modelProfileName").asText());
+        assertThat(databaseAccess.mapper(ModelUsageRecordMapper.class).selectById(call.getId()).getModelNameSnapshot()).isEqualTo("billing-model");
+        mvc.perform(get(path + "/current").cookie(cookie)).andExpect(status().isOk());
+        write(path, Map.of("configuration", price()), UUID.randomUUID().toString()).andExpect(status().isNotFound());
+        var availableModels = data(mvc.perform(get(base() + "/model-profiles").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertThat(availableModels.findValuesAsText("id")).doesNotContain(model);
+        var availableProviders = data(mvc.perform(get(base() + "/model-providers").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertThat(availableProviders.findValuesAsText("id")).doesNotContain(call.getProviderId());
+        var historicalOptions = data(mvc.perform(get(base() + "/usage/model-options").param("kind", "model").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(historicalOptions.findValuesAsText("id")).contains(model);
         String other = provisioning.create("另一用量企业", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
         mvc.perform(get("/api/v1/enterprises/" + other + "/usage/model-calls/" + call.getId()).cookie(cookie)).andExpect(status().isNotFound());
         String username = "billing-member-" + UUID.randomUUID();

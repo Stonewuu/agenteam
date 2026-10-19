@@ -27,6 +27,7 @@ async function forwardBackendRequest(request: Request, path: string) {
   copyRequestHeader(request.headers, requestHeaders, "origin");
   copyRequestHeader(request.headers, requestHeaders, "referer");
   copyRequestHeader(request.headers, requestHeaders, "x-csrf-token");
+  copyRequestHeader(request.headers, requestHeaders, "x-identity-revision");
   copyRequestHeader(request.headers, requestHeaders, "idempotency-key");
   copyRequestHeader(request.headers, requestHeaders, "if-match");
   copyRequestHeader(request.headers, requestHeaders, "range");

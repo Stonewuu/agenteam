@@ -57,16 +57,12 @@ class AgentModelSelectionServiceTest {
     }
 
     @Test
-    void legacyCapabilitiesRemainReadableAndInUseCapabilitiesCanOnlyGainReasoningLevels() throws Exception {
+    void legacyCapabilitiesRemainReadableAndReasoningLevelsMustBeValid() throws Exception {
         var old = json.readValue("""
             {"supportsTools":true,"supportsTemperature":false,"maxOutputTokens":8192,
              "maxContextTokens":32768,"inputTypes":["text"]}
             """, ModelCapabilities.class);
         assertTrue(old.reasoningEfforts().isEmpty());
-        var extended = new ModelCapabilities(true, false, 8192, 32768, List.of("text"), List.of("low", "high"));
-        assertTrue(old.canExtendTo(extended));
-        assertFalse(extended.canExtendTo(old));
-        assertFalse(old.canExtendTo(new ModelCapabilities(false, false, 8192, 32768, List.of("text"))));
         for (var levels : List.of(List.of("high", "high"), List.of("unknown"), Arrays.asList("low", null))) {
             var invalid = new ModelCapabilities(true, false, 8192, 32768, List.of("text"), levels);
             assertThrows(ApiException.class, () -> new ModelConfigurationValidation().model(

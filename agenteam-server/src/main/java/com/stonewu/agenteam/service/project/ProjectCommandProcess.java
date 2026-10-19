@@ -7,6 +7,7 @@ import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
+import com.stonewu.agenteam.service.workspace.CommandResultCache;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 命令脚本互不覆盖，取消信号只交给对应的命令管理进程。
@@ -32,11 +34,14 @@ public class ProjectCommandProcess {
     private final ProjectWorkspaceLayout layout;
     private final DockerWorkspaceCommands docker;
     private final ObjectMapper json;
+    private final CommandResultCache cache;
 
-    public ProjectCommandProcess(ProjectWorkspaceLayout layout, DockerWorkspaceCommands docker, ObjectMapper json) {
+    public ProjectCommandProcess(ProjectWorkspaceLayout layout, DockerWorkspaceCommands docker, ObjectMapper json,
+                                  CommandResultCache cache) {
         this.layout = layout;
         this.docker = docker;
         this.json = json;
+        this.cache = cache;
     }
 
     public void prepare(ProjectLocation project, String call, String command) throws IOException {
@@ -70,16 +75,18 @@ public class ProjectCommandProcess {
         readable(scripts, true);
         readable(runner, false);
         readable(script, false);
-        Path output = layout.project(project).resolve("work/command-results/" + call);
-        WorkspacePaths.requireInside(layout.root(), output);
-        Files.createDirectories(output);
-        writable(output.getParent());
-        writable(output);
+        var registry = new UserSandboxRegistry(layout);
+        var protectedScopes = registry.usages(project.workspaceId()).stream()
+            .map(usage -> usage.project().projectId()).collect(Collectors.toSet());
+        registry.active(project.workspaceId()).forEach(active -> protectedScopes.add(active.projectId()));
+        try (var control = new ToolCallControl(() -> {
+        })) {
+            cache.prepare(layout.commandResults(project), call, protectedScopes, control);
+        }
     }
 
     public void run(ProjectCommandRecord record, String directory, Duration timeout, ToolCallControl control) {
-        String output = ProjectExecutionPaths.projectDirectory(
-            record.project().directory()) + "/work/command-results/" + record.callId();
+        String output = "/agenteam-command-results/" + record.projectId() + "/command-results/" + record.callId();
         double seconds = Math.max(0.1, timeout.toMillis() / 1000.0 - 2);
         docker.require(
             List.of("exec", record.containerId(), "python3", "-u", "/agenteam-command/runner.py", "run", record.token(),
@@ -90,6 +97,23 @@ public class ProjectCommandProcess {
 
     public Status status(ProjectCommandRecord record, Duration timeout) {
         return action(record, "status", timeout);
+    }
+
+    public void complete(ProjectCommandRecord record) throws IOException {
+        try (var control = new ToolCallControl(() -> {
+        })) {
+            cache.complete(layout.commandResults(record.project()), record.callId(), control);
+        }
+    }
+
+    public String output(ProjectCommandRecord record, String stream) {
+        return cache.contains(layout.commandResults(record.project()), record.callId())
+            ? CommandResultCache.output(record.callId(), stream)
+            : "work/command-results/" + record.callId() + "/" + stream + ".txt";
+    }
+
+    public boolean capacityExceeded(ProjectCommandRecord record) throws IOException {
+        return cache.capacityExceeded(layout.commandResults(record.project()));
     }
 
     public Status cancel(ProjectCommandRecord record, Duration timeout) {
@@ -122,9 +146,4 @@ public class ProjectCommandProcess {
         }
     }
 
-    private void writable(Path path) throws IOException {
-        if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
-            Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rwxrwxrwx"));
-        }
-    }
 }

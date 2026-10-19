@@ -34,6 +34,12 @@ export function useEnterpriseIdentity() {
   return useContext(EnterpriseIdentity);
 }
 
+export function EnterpriseIdentityProvider({user, context, children}: {
+  user: IdentityUser; context: EnterpriseContext; children: ReactNode
+}) {
+  return <EnterpriseIdentity.Provider value={{kind: "ready", user, context}}>{children}</EnterpriseIdentity.Provider>;
+}
+
 type EnterpriseGateProps = {
   enterpriseId: string;
   permission?: string | string[];

@@ -18,12 +18,14 @@ import java.util.Optional;
 public interface ModelProviderMapper extends MPJBaseMapper<ModelProviderRow> {
     default List<ModelProviderRecord> list(String enterprise) {
         return selectList(Wrappers.<ModelProviderRow>lambdaQuery().eq(ModelProviderRow::getEnterpriseId, enterprise)
+            .isNull(ModelProviderRow::getDeletedAt)
             .orderByAsc(ModelProviderRow::getName, ModelProviderRow::getId)).stream().map(this::map).toList();
     }
 
     default Optional<ModelProviderRecord> find(String enterprise, String id) {
         return Optional.ofNullable(selectOne(Wrappers.<ModelProviderRow>lambdaQuery()
-            .eq(ModelProviderRow::getEnterpriseId, enterprise).eq(ModelProviderRow::getId, id))).map(this::map);
+            .eq(ModelProviderRow::getEnterpriseId, enterprise).eq(ModelProviderRow::getId, id)
+            .isNull(ModelProviderRow::getDeletedAt))).map(this::map);
     }
 
     default void insert(String enterprise, String id, ModelProviderWriteRequest value, Instant now) {
@@ -40,9 +42,10 @@ public interface ModelProviderMapper extends MPJBaseMapper<ModelProviderRow> {
         insert(row);
     }
 
-    default void update(String enterprise, String id, ModelProviderWriteRequest value, Instant now) {
-        update(Wrappers.<ModelProviderRow>lambdaUpdate().eq(ModelProviderRow::getEnterpriseId, enterprise)
+    default int update(String enterprise, String id, ModelProviderWriteRequest value, Instant now) {
+        return update(Wrappers.<ModelProviderRow>lambdaUpdate().eq(ModelProviderRow::getEnterpriseId, enterprise)
             .eq(ModelProviderRow::getId, id)
+            .isNull(ModelProviderRow::getDeletedAt)
             .set(ModelProviderRow::getName, value.name()).set(ModelProviderRow::getProtocol, value.protocol())
             .set(ModelProviderRow::getBaseUrl, value.baseUrl())
             .set(value.apiKey() != null, ModelProviderRow::getApiKey, value.apiKey())
@@ -51,9 +54,12 @@ public interface ModelProviderMapper extends MPJBaseMapper<ModelProviderRow> {
     }
 
 
-    default void delete(String enterprise, String id) {
-        delete(Wrappers.<ModelProviderRow>lambdaQuery().eq(ModelProviderRow::getEnterpriseId, enterprise)
-            .eq(ModelProviderRow::getId, id));
+    default int delete(String enterprise, String id, long revision, Instant now) {
+        return update(Wrappers.<ModelProviderRow>lambdaUpdate().eq(ModelProviderRow::getEnterpriseId, enterprise)
+            .eq(ModelProviderRow::getId, id).eq(ModelProviderRow::getRevision, revision)
+            .isNull(ModelProviderRow::getDeletedAt).set(ModelProviderRow::getDeletedAt, now)
+            .set(ModelProviderRow::getEnabled, 0).set(ModelProviderRow::getApiKey, "")
+            .set(ModelProviderRow::getUpdatedAt, now).setIncrBy(ModelProviderRow::getRevision, 1));
     }
 
 

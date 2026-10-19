@@ -2,21 +2,22 @@
 
 import {useT} from "@/lib/i18n/locale-provider";
 import {localizeCatalog} from "@/lib/i18n/translate";
-import {useEffect, useId, useMemo, useRef, useState} from "react";
+import {useEffect, useId, useMemo, useRef, useState, type CSSProperties} from "react";
 import {
   Background, ConnectionLineType, MarkerType, MiniMap, NodeToolbar, Panel, Position, ReactFlow, SelectionMode,
   type Edge, type NodeDimensionChange, type NodeSelectionChange, type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {Button} from "@/components/ui/button";
-import {IconCopy, IconLayoutGrid, IconMap, IconMaximize, IconMinus, IconPan, IconPencil, IconPlus, IconSelect, IconStack, IconTrash, IconX} from "@/components/ui/icons";
+import {IconCopy, IconLayoutGrid, IconMap, IconMaximize, IconMinus, IconPan, IconPencil, IconPlus, IconSelect, IconStack, IconTrash} from "@/components/ui/icons";
 import type {BlockStatus} from "@/features/agent/types/execution";
 import type {Branch, WorkflowGraph} from "../types/workflow";
 import type {ConnectionOrigin} from "../lib/workflow-commands";
 import {expandedSelection} from "../lib/workflow-commands";
 import {absoluteCanvasPositions, workflowGroupBounds, type Point} from "../lib/workflow-canvas-model";
 import {branchNames, nodeNames} from "../lib/workflow-graph";
-import {workflowIcons, nodeChoices, type AddableNode} from "./workflow-node-catalog";
+import type {AddableNode} from "./workflow-node-catalog";
+import {WorkflowNodePicker} from "./workflow-node-picker";
 import {routeWorkflowEdges, type WorkflowRoutingGraph} from "../lib/workflow-routing";
 import {WorkflowConnection} from "./workflow-connection";
 import {DiagramGroup, DiagramItem, type DiagramNode, type GroupNode} from "./workflow-diagram-node";
@@ -69,10 +70,12 @@ export function WorkflowGraphCanvas({graph, selected, selection, onSelection, on
   const [dragged, setDragged] = useState<Record<string, Point>>({});
   const [measurements, setMeasurements] = useState<Record<string, {width: number; height: number}>>({});
   const [context, setContext] = useState<{point: Point; node?: string}>({point: {x: 40, y: 40}});
-  const [drop, setDrop] = useState<{point: Point; screen: Point; origin: ConnectionOrigin} | null>(null);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [drop, setDrop] = useState<{point: Point; screen: Point; maxHeight: number; origin: ConnectionOrigin} | null>(null);
   const origin = useRef<ConnectionOrigin | null>(null);
   const reconnecting = useRef(false);
   const dropMenu = useRef<HTMLDivElement>(null);
+  const dropOpen = Boolean(drop);
   const chosen = useMemo(() => selection ?? (selected ? [selected] : emptyIds), [selection, selected]);
   const bounds = useMemo(() => workflowGroupBounds(graph), [graph]);
   const measured = graph.nodes.every((node) => measurements[node.nodeId])
@@ -166,10 +169,25 @@ export function WorkflowGraphCanvas({graph, selected, selection, onSelection, on
     return () => window.clearTimeout(timer);
   }, [instance, selected, inspectorOpen, measured, fitKey]);
   useEffect(() => {
-    if (drop) {
-      dropMenu.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    if (!dropOpen || !canvas.current) {
+      return;
     }
-  }, [drop]);
+    const container = canvas.current;
+    const observer = new ResizeObserver(() => {
+      const maxHeight = Math.min(460, container.clientHeight - 24);
+      setDrop((current) => {
+        if (!current) {
+          return current;
+        }
+        const screen = {x: Math.max(12, Math.min(current.screen.x, container.clientWidth - 332)),
+          y: Math.max(12, Math.min(current.screen.y, container.clientHeight - maxHeight - 12))};
+        return current.maxHeight === maxHeight && current.screen.x === screen.x && current.screen.y === screen.y
+          ? current : {...current, screen, maxHeight};
+      });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [dropOpen]);
   const selectMany = (ids: string[]) => {
     if (onSelection) {
       onSelection(ids);
@@ -202,10 +220,12 @@ export function WorkflowGraphCanvas({graph, selected, selection, onSelection, on
       : members.length >= 2 && onGroup && <Button type="button" className={canvasStyles.action} aria-label={text("创建分组")} title={text("创建分组")}
         onClick={() => onGroup(members)}><IconStack size={17}/><span>{text("分组")}</span></Button>}
   </>;
-  return <ContextMenu onOpenChange={(open, details) => {
+  return <ContextMenu open={contextOpen} onOpenChange={(open, details) => {
     if (open && !onAdd) {
       details.cancel();
+      return;
     }
+    setContextOpen(open);
   }}><ContextMenuTrigger className={styles.canvasFrame} ref={canvas} aria-label={text("流程画布")} tabIndex={0}
     onKeyDown={(event) => {
       if ((event.target as HTMLElement).closest("input,textarea,select,[contenteditable=true]")) {
@@ -242,6 +262,9 @@ export function WorkflowGraphCanvas({graph, selected, selection, onSelection, on
         setMode(key === "v" ? "select" : "pan");
       }
     }} onContextMenuCapture={(event) => {
+      if (dropMenu.current?.contains(event.target as HTMLElement)) {
+        return;
+      }
       const target = event.target as HTMLElement;
       const rect = canvas.current?.getBoundingClientRect();
       const client = event.clientX || event.clientY ? {x: event.clientX, y: event.clientY} : {x: (rect?.left ?? 0) + 100, y: (rect?.top ?? 0) + 100};
@@ -300,8 +323,10 @@ export function WorkflowGraphCanvas({graph, selected, selection, onSelection, on
           return;
         }
         const client = {x: pointer.clientX, y: pointer.clientY};
-        setDrop({origin: source, point: instance.screenToFlowPosition(client),
-          screen: {x: Math.max(12, Math.min(client.x - rect.left, rect.width - 282)), y: Math.max(12, Math.min(client.y - rect.top, rect.height - 432))}});
+        const maxHeight = Math.min(460, rect.height - 24);
+        setDrop({origin: source, point: instance.screenToFlowPosition(client), maxHeight,
+          screen: {x: Math.max(12, Math.min(client.x - rect.left, rect.width - 332)),
+            y: Math.max(12, Math.min(client.y - rect.top, rect.height - maxHeight - 12))}});
       }} onReconnectStart={() => {
         reconnecting.current = true;
         origin.current = null;
@@ -377,41 +402,30 @@ export function WorkflowGraphCanvas({graph, selected, selection, onSelection, on
         nodeStrokeColor="var(--border)" nodeStrokeWidth={1} maskColor="color-mix(in srgb, var(--surface-soft) 75%, transparent)"
         style={{width: 170, height: 110, bottom: "var(--workflow-minimap-bottom, 72px)", background: "var(--surface)"}}/>}
     </ReactFlow>
-    {drop && <div ref={dropMenu} className={canvasStyles.dropMenu} style={{left: drop.screen.x, top: drop.screen.y}} aria-label={text("连接到新节点")}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          setDrop(null);
-          canvas.current?.focus();
-        }
-      }}>
-      <div className={canvasStyles.dropHeading}>{text("连接到新节点")}<Button type="button" className={canvasStyles.action} aria-label={text("取消添加节点")} onClick={() => setDrop(null)}><IconX size={16}/></Button></div>
-      {nodeChoices.map(({type, description}) => {
-        const Icon = workflowIcons[type];
-        return <Button key={type} type="button" className={styles.libraryItem} disabled={canAdd && !canAdd(type)} onClick={() => {
-          onAdd?.(type, drop.point, drop.origin);
-          setDrop(null);
-        }}><Icon size={18}/><span><strong>{text(nodeNames[type])}</strong><small>{text(description)}</small></span></Button>;
-      })}
+    {drop && <div ref={dropMenu} className={canvasStyles.dropMenu} role="dialog" aria-label={text("连接到新节点")}
+      style={{left: drop.screen.x, top: drop.screen.y, "--node-picker-max-height": `${drop.maxHeight}px`} as CSSProperties}>
+      <WorkflowNodePicker title={text("连接到新节点")} canAdd={canAdd} onClose={() => {
+        setDrop(null);
+        canvas.current?.focus();
+      }} onAdd={(type) => {
+        onAdd?.(type, drop.point, drop.origin);
+        setDrop(null);
+      }}/>
     </div>}
-  </ContextMenuTrigger><ContextMenuContent className={styles.contextMenu}>
-    {contextNode && <><ContextMenuGroup><ContextMenuLabel>{contextNode.name}</ContextMenuLabel>
-      <ContextMenuItem onClick={() => onSelect(contextNode.nodeId)}>{text("编辑节点")}</ContextMenuItem>
-      {!["start", "end"].includes(contextNode.type) && <>
-        <ContextMenuItem onClick={() => onCopy?.([contextNode.nodeId])}><IconCopy size={16}/>{text("复制节点")}</ContextMenuItem>
-        <ContextMenuItem variant="destructive" onClick={() => onDelete?.([contextNode.nodeId])}><IconTrash size={16}/>{text("删除节点")}</ContextMenuItem>
-      </>}
-    </ContextMenuGroup><ContextMenuSeparator/></>}
-    {members.length >= 2 && <><ContextMenuItem onClick={() => group ? onUngroup?.(group.groupId) : onGroup?.(members)}>
-      <IconStack size={16}/>{text(group ? "取消分组" : "创建分组")}</ContextMenuItem><ContextMenuSeparator/></>}
-    <ContextMenuGroup><ContextMenuLabel>{text("添加节点")}</ContextMenuLabel>
-      {nodeChoices.map(({type, description}) => {
-        const Icon = workflowIcons[type];
-        return <ContextMenuItem key={type} disabled={canAdd && !canAdd(type)} className={styles.contextItem}
-          onClick={() => onAdd?.(type, context.point)}><Icon size={18}/><span><strong>{text(nodeNames[type])}</strong><small>{text(description)}</small></span>
-        </ContextMenuItem>;
-      })}
-    </ContextMenuGroup><ContextMenuSeparator/>
-    <ContextMenuItem onClick={onArrange}><IconLayoutGrid size={16}/>{text("整理布局")}</ContextMenuItem>
+  </ContextMenuTrigger><ContextMenuContent className={styles.contextMenu} aria-label={text("添加节点")}>
+    <WorkflowNodePicker menu title={text("添加节点")} canAdd={canAdd} onAdd={(type) => onAdd?.(type, context.point)}
+      onClose={() => setContextOpen(false)} footer={<>
+        {contextNode && <><ContextMenuGroup><ContextMenuLabel className={styles.contextLabel}>{contextNode.name}</ContextMenuLabel>
+          <ContextMenuItem onClick={() => onSelect(contextNode.nodeId)}><IconPencil size={16}/>{text("编辑节点")}</ContextMenuItem>
+          {!["start", "end"].includes(contextNode.type) && <>
+            <ContextMenuItem disabled={!onCopy} onClick={() => onCopy?.([contextNode.nodeId])}><IconCopy size={16}/>{text("复制节点")}</ContextMenuItem>
+            <ContextMenuItem disabled={!onDelete} variant="destructive" onClick={() => onDelete?.([contextNode.nodeId])}><IconTrash size={16}/>{text("删除节点")}</ContextMenuItem>
+          </>}
+        </ContextMenuGroup><ContextMenuSeparator/></>}
+        {members.length >= 2 && <ContextMenuItem disabled={group ? !onUngroup : !onGroup}
+          onClick={() => group ? onUngroup?.(group.groupId) : onGroup?.(members)}>
+          <IconStack size={16}/>{text(group ? "取消分组" : "创建分组")}</ContextMenuItem>}
+        <ContextMenuItem disabled={!onArrange} onClick={onArrange}><IconLayoutGrid size={16}/>{text("整理布局")}</ContextMenuItem>
+      </>}/>
   </ContextMenuContent></ContextMenu>;
 }

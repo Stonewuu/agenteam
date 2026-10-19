@@ -6,7 +6,7 @@ import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {localizeCatalog} from "@/lib/i18n/translate";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Popover, PopoverContent, PopoverTitle, PopoverTrigger} from "@/components/ui/shadcn/popover";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/shadcn/popover";
 import {IconArrowLeft, IconArrowRight, IconCheck, IconCopy, IconLayoutGrid, IconPlus, IconStack, IconTrash, IconX} from "@/components/ui/icons";
 import {Dialog, DialogActions} from "@/components/ui/dialog";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
@@ -19,7 +19,7 @@ import {arrangeWorkflow} from "../lib/workflow-layout";
 import {graphAtPath, replaceGraph, validGraphPath} from "../lib/workflow-editor-state";
 import {useWorkflowHistory} from "../hooks/use-workflow-history";
 import {WorkflowGraphCanvas} from "./workflow-graph-canvas";
-import {workflowIcons, nodeChoices} from "./workflow-node-catalog";
+import {WorkflowNodePicker} from "./workflow-node-picker";
 import {WorkflowNodeFields} from "./workflow-node-fields";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./workflow.module.css";
@@ -201,13 +201,8 @@ function WorkflowEditorView({enterprise, value, permissions, readOnly, resource,
       <div className={ui.actions}>
         {!readOnly && <><Popover open={adding} onOpenChange={setAdding}>
           <PopoverTrigger className={ui.primary} disabled={locked || totalCount >= 50}><IconPlus size={16}/>{uiText("添加节点")}</PopoverTrigger>
-          <PopoverContent align="start" className={styles.nodeLibrary}><PopoverTitle>{uiText("选择节点")}</PopoverTitle>
-            {nodeChoices.map(({type, description}) => {
-              const Icon = workflowIcons[type];
-              return <Button className={styles.libraryItem} type="button" key={type} disabled={!canAdd(type)} onClick={() => add(type)}>
-                <Icon size={19}/><span><strong>{uiText(nodeNames[type])}</strong><small>{uiText(description)}</small></span>
-              </Button>;
-            })}
+          <PopoverContent align="start" className={styles.nodeLibrary} aria-label={uiText("选择节点")}>
+            <WorkflowNodePicker title={uiText("选择节点")} canAdd={canAdd} onAdd={add} onClose={() => setAdding(false)}/>
           </PopoverContent></Popover>
           <Button className={ui.button} type="button" disabled={locked} onClick={() => void arrange()}><IconLayoutGrid size={16}/>{uiText(arranging ? "正在整理…" : "整理布局")}</Button>
           <span className={styles.historyControls}>

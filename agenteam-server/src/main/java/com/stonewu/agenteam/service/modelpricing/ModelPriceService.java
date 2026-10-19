@@ -178,7 +178,7 @@ public class ModelPriceService {
         var row = lock ? models.lockForPricing(actor.enterpriseId(), model) : models.selectOne(
             Wrappers.<ModelProfileRow>lambdaQuery().eq(ModelProfileRow::getEnterpriseId, actor.enterpriseId())
                 .eq(ModelProfileRow::getId, model));
-        if (row == null) {
+        if (row == null || lock && row.getDeletedAt() != null) {
             throw ResourceAuthorizationService.unavailable();
         }
     }

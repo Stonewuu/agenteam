@@ -95,8 +95,8 @@ public class EnvironmentWorkspaceService {
             }); var lock = UserWorkspaceLock.acquire(layout, workspace.getId(), Duration.ofSeconds(15), control)) {
                 var directory = layout.project(project);
                 WorkspacePaths.requireInside(layout.root(), directory);
-                WorkspacePaths.requireInside(layout.root(), directory.resolve("work/command-results"));
-                Files.createDirectories(directory.resolve("work/command-results"));
+                WorkspacePaths.requireInside(layout.root(), directory.resolve("work"));
+                Files.createDirectories(directory.resolve("work"));
                 layout.register(project);
                 metadata.initializedWorkspace(workspace);
             }

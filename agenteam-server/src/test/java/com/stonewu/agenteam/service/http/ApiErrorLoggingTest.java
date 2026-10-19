@@ -7,6 +7,7 @@ import com.stonewu.agenteam.controller.http.ApiExceptionHandler;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.service.auth.LoginRateLimitException;
 import com.stonewu.agenteam.service.auth.RequestForgeryProtection;
+import com.stonewu.agenteam.service.auth.SessionIdentityService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -92,7 +93,8 @@ class ApiErrorLoggingTest {
 
     @Test
     void filterFailuresUseTheSameLoggingAndResponse(CapturedOutput output) throws Exception {
-        var filter = new ApiRequestFilter(responses, mock(RequestForgeryProtection.class), mock(AuthMapper.class), List.of());
+        var filter = new ApiRequestFilter(responses, mock(RequestForgeryProtection.class), mock(AuthMapper.class),
+            List.of(), mock(SessionIdentityService.class));
         var request = new MockHttpServletRequest("GET", "/api/v1/auth/bootstrap-status");
         var response = new MockHttpServletResponse();
         filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> {

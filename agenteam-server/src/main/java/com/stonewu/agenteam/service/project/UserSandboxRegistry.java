@@ -56,6 +56,23 @@ public class UserSandboxRegistry {
         return readDirectory(layout.control(workspace).resolve("active-commands"), ProjectCommandRecord.class);
     }
 
+    public List<ProjectCommandRecord> commands(String workspace, String after, int limit) throws IOException {
+        Path directory = layout.control(workspace).resolve("commands");
+        if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
+            return List.of();
+        }
+        try (var paths = Files.list(directory)) {
+            var selected = paths.filter(path -> path.getFileName().toString().endsWith(".json"))
+                .filter(path -> after == null || path.getFileName().toString().compareTo(after + ".json") > 0)
+                .sorted().limit(limit).toList();
+            var result = new ArrayList<ProjectCommandRecord>();
+            for (Path path : selected) {
+                result.add(layout.read(path, ProjectCommandRecord.class));
+            }
+            return result;
+        }
+    }
+
     public List<SandboxRunUsage> usages(String workspace) throws IOException {
         return readDirectory(layout.control(workspace).resolve("run-usages"), SandboxRunUsage.class);
     }

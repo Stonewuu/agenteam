@@ -59,13 +59,12 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
   const [contextLength, setContextLength] = useState(formatTokenLength(model?.capabilities.maxContextTokens));
   const [outputLength, setOutputLength] = useState(formatTokenLength(model?.capabilities.maxOutputTokens));
   const [selected, setSelected] = useState<RemoteModel | null>(null);
-  const [capabilitiesOpen, setCapabilitiesOpen] = useState(!model?.inUse);
+  const [capabilitiesOpen, setCapabilitiesOpen] = useState(true);
   const [localErrors, setLocalErrors] = useState<Record<string, string[]>>({});
   const errors = {...action.fieldErrors, ...localErrors};
   const formId = useId();
   const inputErrorId = useId();
   const reasoningId = useId();
-  const readOnly = action.busy || Boolean(model?.inUse);
   const draft = JSON.stringify({name, providerId, modelName, enabled, options, protocolOptions, contextLength, outputLength});
   const [initialDraft] = useState(draft);
   const closing = useConfirmClose(draft !== initialDraft, action.busy, onClose);
@@ -162,9 +161,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                                                                                                          disabled={action.busy}>{action.busy ? uiText("正在保存…") : uiText("保存模型")}</Button></>}>
     <div className={formStyles.formMotion}><AnimatedHeight preserveControlShadows>
       <form id={formId} className={`${ui.form} ${formStyles.formContent}`} noValidate onSubmit={submit}>
-        {model?.inUse && <p
-          className={ui.description}>{uiText("该模型已被使用，可以修改显示名称、启用状态及补充思考强度。其他能力请通过新增模型调整。")}</p>}
-        <Fieldset className={styles.fields} disabled={readOnly}>
+        <Fieldset className={styles.fields} disabled={action.busy}>
           <Field label={uiText("模型提供方")} required error={errors.providerId?.[0]}><Select className={ui.select}
                                                                                               name="providerId"
                                                                                               value={providerId}
@@ -182,7 +179,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                                                  value={provider.id}>{provider.name}{provider.enabled ? "" : uiText("（已停用）")}</option>)}
           </Select></Field>
           <RemoteModelPicker key={providerId} enterpriseId={enterpriseId} providerId={providerId} value={modelName}
-                             disabled={readOnly}
+                             disabled={action.busy}
                              error={errors.modelName?.[0]}
                              onSelect={chooseRemote} onChange={(value) => {
             if (selected && value !== selected.id) {
@@ -205,7 +202,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
           <p className={ui.description}>{uiText("Token（模型计量文本的单位）：1K = 1,000，1M = 1,000,000。")}</p>
           {selected && (selected.maxContextTokens === null || selected.maxOutputTokens === null) &&
             <p className={ui.description}>{uiText("提供方未公布完整长度，请按模型说明补全。")}</p>}
-          <Fieldset className={styles.fields} disabled={readOnly}>
+          <Fieldset className={styles.fields} disabled={action.busy}>
             <div className={formStyles.lengthColumns}>
               <TokenLengthInput label={uiText("上下文长度")} name="capabilities.maxContextTokens" value={contextLength}
                                 presets={[128_000, 256_000, 1_000_000, 2_000_000]}
@@ -228,7 +225,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
           <CollapsibleContent className="agenteam-disclosure-content" keepMounted inert={!capabilitiesOpen}>
             <div className={formStyles.capabilityContent}>
               <div className={formStyles.capabilitySettings}>
-                <Fieldset className={formStyles.capabilityFields} disabled={readOnly}>
+                <Fieldset className={formStyles.capabilityFields} disabled={action.busy}>
                   <div className={formStyles.inputSetting}>
                     <span id={`${inputErrorId}-label`}>{uiText("输入类型")}</span>
                     <Fieldset aria-labelledby={`${inputErrorId}-label`} className={formStyles.inputOptions}>
@@ -271,7 +268,6 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                     {reasoningEfforts.map((effort) => <label className={formStyles.reasoningOption} key={effort}>
                       <Checkbox name="capabilities.reasoningEfforts"
                                 checked={options.reasoningEfforts?.includes(effort) ?? false}
-                                disabled={Boolean(model?.inUse && model.capabilities.reasoningEfforts?.includes(effort))}
                                 aria-invalid={Boolean(errors["capabilities.reasoningEfforts"])}
                                 aria-describedby={errors["capabilities.reasoningEfforts"] ? `${reasoningId}-error` : undefined}
                                 onCheckedChange={(checked) => {
@@ -291,7 +287,6 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
           </CollapsibleContent>
         </Collapsible>
         <ModelProtocolFields protocol={protocol} value={protocolOptions} efforts={options.reasoningEfforts ?? []}
-          fixed={model?.inUse ? model.capabilities.protocolOptions ?? defaultProtocolOptions(protocol) : undefined}
           disabled={action.busy} errors={errors} onChange={(value) => {
             setProtocolOptions(value);
             action.resetFeedback();

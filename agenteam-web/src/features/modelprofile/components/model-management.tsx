@@ -129,7 +129,7 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
                   size={17}/></Button>}{canManage && <DropdownMenu><DropdownMenuTrigger
                 render={<Button className="icon-button" aria-label={uiText("{0}的更多操作", [value.name])}><IconDots
                   size={18}/></Button>}/><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setPricing(value)}>
-                <IconPencil size={16}/>{uiText("价格配置")}</DropdownMenuItem><DropdownMenuItem disabled={value.inUse}
+                <IconPencil size={16}/>{uiText("价格配置")}</DropdownMenuItem><DropdownMenuItem
                                                                                             onClick={() => setDeleting({
                                                                                               kind: "model",
                                                                                               value
@@ -170,7 +170,9 @@ function DeleteModelConfiguration({enterpriseId, target, onClose, onSaved}: {
   const dialog = useDialogControl();
   return <Dialog title={uiText("删除“{0}”？", [target.value.name])} busy={action.busy} onClose={onClose}
                  dialogRef={dialog.ref}>
-    <p className={ui.description}>{uiText("删除后无法恢复，需要使用时可以重新添加。")}</p><MutationFeedback
+    <p className={ui.description}>{target.kind === "model"
+      ? uiText("删除后，使用此模型的员工和对话需要重新选择模型。历史调用和费用记录会保留。")
+      : uiText("删除后无法继续使用此提供方，历史调用和费用记录会保留。")}</p><MutationFeedback
     action={action}/>
     <DialogActions className={ui.footer}><DialogCancel className={ui.button}
                                                        disabled={action.busy}>{uiText("取消")}</DialogCancel>

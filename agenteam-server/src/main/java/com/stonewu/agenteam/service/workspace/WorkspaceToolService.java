@@ -53,12 +53,13 @@ public class WorkspaceToolService {
     private final FileContentStorage storage;
     private final ResourceJson json;
     private final WorkspaceImageReader images;
+    private final CommandResultCache commandCache;
 
     public WorkspaceToolService(WorkspaceReadToolService results, WorkspaceAccessService access,
                                 ConversationWorkspaceStore store, WorkspaceInputs inputs,
                                 WorkspaceFileReader reader, SandboxExecutor runner, WorkspaceSettings settings,
                                 FileContentStorage storage, ResourceJson json,
-                                WorkspaceImageReader images) {
+                                WorkspaceImageReader images, CommandResultCache commandCache) {
         this.results = results;
         this.access = access;
         this.store = store;
@@ -69,6 +70,7 @@ public class WorkspaceToolService {
         this.storage = storage;
         this.json = json;
         this.images = images;
+        this.commandCache = commandCache;
     }
 
     public Outcome invoke(RunRecord run, JobLease lease, ExecutionToolBinding binding, ToolCallRecord call,
@@ -94,6 +96,22 @@ public class WorkspaceToolService {
             access.requireSources(actor, origins.results(), fileIds);
             var sourceIds = new LinkedHashSet<>(origins.results());
             WorkspaceFilesystem files = scope.current();
+            boolean cachedCommand = CommandResultCache.matches(path);
+            boolean legacyCommand = path.matches("work/command-results/[A-Za-z0-9_-]{1,100}/(?:stdout|stderr)\\.txt");
+            if (cachedCommand && !Set.of("read_file", "grep_files", "list_files").contains(name)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "COMMAND_RESULT_READ_ONLY", "命令结果只能通过文件读取工具查看，不能修改或覆盖。");
+            }
+            if (WorkspaceToolDefinitions.READ_TOOLS.contains(name) && (cachedCommand || legacyCommand
+                && !Files.exists(files.resolve(path, false), LinkOption.NOFOLLOW_LINKS))) {
+                scope.protectCommandResults();
+                String cachedPath = legacyCommand ? path.substring("work/".length()) : path;
+                var query = arguments.deepCopy();
+                ((ObjectNode) query).put("path", cachedPath);
+                control.beforeSend();
+                var response = commandCache.read(scope.commandResults(), cachedPath, control,
+                    cached -> reader.read(cached, cached.files(cachedPath, true).toString(), name, query, maximum));
+                return new Outcome(response, Set.copyOf(sourceIds), Set.copyOf(fileIds), null, scope.manifest().version(), null);
+            }
             boolean copied = !scope.manifest().inputFileIds().containsAll(fileIds);
             if (copied || !binding.readOnly()) {
                 files = scope.prepare();
@@ -176,14 +194,29 @@ public class WorkspaceToolService {
                     Duration allowed = executionTime.compareTo(
                         Duration.ofSeconds(seconds)) < 0 ? executionTime : Duration.ofSeconds(seconds);
                     String working = arguments.path("working_directory").asText(scope.persistent() ? "." : "work");
+                    if (!scope.persistent()) {
+                        commandCache.prepare(scope.commandResults(), call.id(), Set.of(scope.commandResults().scope()), control);
+                    }
                     var command = scope.persistent() ? scope.execute(call.id(), arguments.path("command").asText(),
                         working, allowed, control)
                         : runner.execute(files.root(), extracted, scope.directory(), call.id(),
                         arguments.path("command").asText(), working, allowed, control);
                     if (!scope.persistent()) {
+                        command = commandCache.receive(scope.commandResults(), call.id(), command, extracted, control);
                         replaceCommandFiles(files, extracted);
                     }
-                    response = commandResult(files, command, maximum);
+                    if (scope.persistent() && ("work/command-results/" + call.id() + "/stdout.txt").equals(command.stdoutPath())
+                        && !Files.exists(files.resolve(command.stdoutPath(), false), LinkOption.NOFOLLOW_LINKS)) {
+                        command = new SandboxExecutor.Result(command.exitCode(), command.timedOut(), command.capacityExceeded(),
+                            CommandResultCache.output(call.id(), "stdout"), CommandResultCache.output(call.id(), "stderr"));
+                    }
+                    if (CommandResultCache.matches(command.stdoutPath())) {
+                        var savedCommand = command;
+                        response = commandCache.read(scope.commandResults(), "command-results/" + call.id(), control,
+                            cached -> commandResult(cached, savedCommand, maximum));
+                    } else {
+                        response = commandResult(files, command, maximum);
+                    }
                     access.requireSources(actor, sourceIds, fileIds);
                     // 无网络沙盒只修改临时文件，在替换已保存版本前才提交修改。
                     if (!scope.persistent() && settings.network().equals("none")) {

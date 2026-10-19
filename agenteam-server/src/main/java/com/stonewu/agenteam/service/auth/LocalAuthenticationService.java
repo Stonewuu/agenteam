@@ -38,6 +38,7 @@ public class LocalAuthenticationService {
 
     public UserEntity requireRecent(HttpSession session) {
         var actor = identity.requireUser(session);
+        requirePersonalSession(session);
         behavior.requireOperation(actor.id(), AccountOperation.BIND_EXTERNAL_ACCOUNT);
         if (ChannelSessionGuard.external(session)
             || !(session.getAttribute(AuthSessionAttributes.AUTHENTICATED_AT) instanceof Number timestamp)
@@ -48,6 +49,7 @@ public class LocalAuthenticationService {
     }
 
     public void reauthenticate(String password, HttpServletRequest request) {
+        requirePersonalSession(request.getSession(false));
         var user = identity.requireUser(request.getSession(false));
         limiter.checkSource(request.getRemoteAddr());
         String account = "user:" + user.id();
@@ -58,5 +60,12 @@ public class LocalAuthenticationService {
         }
         limiter.succeeded(account);
         identity.requireUser(sessions.establish(request, user));
+    }
+
+    private void requirePersonalSession(HttpSession session) {
+        if (SessionIdentityService.state(session) != null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED",
+                "此操作需要账号本人验证，请结束身份切换后使用本人账号登录。");
+        }
     }
 }

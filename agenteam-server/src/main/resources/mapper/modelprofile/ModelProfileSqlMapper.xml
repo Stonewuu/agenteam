@@ -4,15 +4,4 @@
   <select id="lockForPricing" resultType="com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRow">
     SELECT * FROM model_profile WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
   </select>
-  <select id="inUseResourceDraft" resultType="Boolean">
-    SELECT EXISTS (SELECT 1 FROM resource_draft WHERE enterprise_id = #{enterprise} AND JSON_SEARCH(config_json, 'one',
-    #{id}, NULL, '$**.modelProfileId') IS NOT NULL)
-    OR EXISTS (SELECT 1 FROM resource_version WHERE enterprise_id = #{enterprise} AND JSON_SEARCH(config_json, 'one',
-    #{id}, NULL, '$**.modelProfileId') IS NOT NULL)
-    OR EXISTS (SELECT 1 FROM agent_run WHERE enterprise_id = #{enterprise} AND JSON_SEARCH(execution_config_json, 'one',
-    #{id}, NULL, '$**.modelProfileId') IS NOT NULL)
-    OR EXISTS (SELECT 1 FROM agent_conversation WHERE enterprise_id = #{enterprise} AND model_profile_id = #{id})
-    OR EXISTS (SELECT 1 FROM model_price_version WHERE enterprise_id = #{enterprise} AND model_profile_id = #{id})
-    OR EXISTS (SELECT 1 FROM model_usage_record WHERE enterprise_id = #{enterprise} AND model_profile_id = #{id})
-  </select>
 </mapper>

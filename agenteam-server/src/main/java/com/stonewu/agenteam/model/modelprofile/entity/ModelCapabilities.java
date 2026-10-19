@@ -36,13 +36,4 @@ public record ModelCapabilities(
         this(supportsTools, supportsTemperature, maxOutputTokens, maxContextTokens, inputTypes, List.of());
     }
 
-    /**
-     * 已使用的模型只允许补充思考等级，避免改变历史任务和已发布配置的含义。
-     */
-    public boolean canExtendTo(ModelCapabilities next) {
-        return supportsTools.equals(next.supportsTools) && supportsTemperature.equals(next.supportsTemperature)
-            && maxOutputTokens.equals(next.maxOutputTokens) && maxContextTokens.equals(next.maxContextTokens)
-            && inputTypes.equals(next.inputTypes) && next.reasoningEfforts.containsAll(reasoningEfforts)
-            && protocolOptions.canExtendTo(next.protocolOptions);
-    }
 }

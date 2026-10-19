@@ -18,7 +18,6 @@ import java.time.Clock;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -34,11 +33,10 @@ public class CollaborationDispatchService {
     private final RunSubmissionService submissions;
     private final Clock clock;
     private final ChatConfiguration chat;
-    private final CollaborationConfiguration configuration;
 
     public CollaborationDispatchService(CollaborationWorkItemMapper works, CollaborationTaskMapper tasks, EnterpriseMapper enterprises,
             CollaborationAccessService access, CollaborationDependencyService dependencies, CollaborationContextService contexts,
-            RunSubmissionService submissions, Clock clock, ChatConfiguration chat, CollaborationConfiguration configuration) {
+            RunSubmissionService submissions, Clock clock, ChatConfiguration chat) {
         this.works = works;
         this.tasks = tasks;
         this.enterprises = enterprises;
@@ -48,12 +46,11 @@ public class CollaborationDispatchService {
         this.submissions = submissions;
         this.clock = clock;
         this.chat = chat;
-        this.configuration = configuration;
     }
 
     @Transactional
     public Optional<CollaborationWorkLease> claim(String owner) {
-        if (!chat.isEnabled() || !configuration.isEnabled()) {
+        if (!chat.isEnabled()) {
             return Optional.empty();
         }
         var now = clock.instant();
@@ -78,7 +75,7 @@ public class CollaborationDispatchService {
 
     @Transactional
     public RunAccepted submit(CollaborationWorkLease lease) {
-        if (!chat.isEnabled() || !configuration.isEnabled()) {
+        if (!chat.isEnabled()) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_DISABLED", "协作已关闭，不能开始新的岗位执行。");
         }
         enterprises.lockEnterprise(lease.enterpriseId()).orElseThrow();

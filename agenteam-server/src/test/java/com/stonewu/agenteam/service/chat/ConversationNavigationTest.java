@@ -26,6 +26,7 @@ import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workspace.HomeQueryService;
 import com.stonewu.agenteam.service.workspace.WorkspaceSearchService;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
+import com.stonewu.agenteam.support.IdentityHttpClient;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /** 通过实际数据库验证任务搜索、合并后的对话分页、本人权限、旧链接和历史收藏。 */
 class ConversationNavigationTest extends CollaborationApiTestSupport {
@@ -56,7 +60,7 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
     static void dependencies(DynamicPropertyRegistry registry) {
         ENV.properties(registry);
         registry.add("chat.enabled", () -> true);
-        registry.add("chat.feishu.enabled", () -> true);
+
         registry.add("chat.worker-enabled", () -> false);
         registry.add("execution.maintenance-enabled", () -> false);
     }
@@ -130,7 +134,7 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void filterAndCursorAreScopedAndOtherUsersCannotReadRoles() {
+    void filterAndCursorAreScopedAndOtherUsersCannotReadRoles() throws Exception {
         secondBot();
         task("私有协作事项", true);
         conversation("私有单独对话", null);
@@ -142,6 +146,19 @@ class ConversationNavigationTest extends CollaborationApiTestSupport {
         String cursor = navigation.list(actor(), null, null, null, null, "all", null, 1).nextCursor();
         assertNotNull(cursor);
         assertEquals("CURSOR_INVALID", assertThrows(ApiException.class, () -> navigation.list(actor(), null, null, null, null, "standalone", cursor, 1)).code());
+        var http = new IdentityHttpClient(mvc, json);
+        var login = http.postJson("/api/v1/auth/login", http.session(null),
+            Map.of("identifier", initiator.username(), "password", "chat-isolated-user-password"))
+            .andExpect(status().isOk()).andReturn();
+        var owner = http.session(login.getResponse().getCookie("SESSION"));
+        String locate = "/api/v1/navigation/resource?type=conversation&id=" + grouped.conversation().id();
+        http.getJson(locate, owner).andExpect(status().isOk()).andExpect(jsonPath("$.data.enterpriseId").value(enterprise));
+        mvc.perform(get(locate).cookie(cookie)).andExpect(status().isNotFound());
+        mvc.perform(get(locate)).andExpect(status().isUnauthorized());
+        http.getJson("/api/v1/navigation/resource?type=conversation&id=unavailable", owner)
+            .andExpect(status().isNotFound());
+        http.getJson("/api/v1/navigation/resource?type=unknown&id=" + grouped.conversation().id(), owner)
+            .andExpect(status().isNotFound());
     }
 
     @Test

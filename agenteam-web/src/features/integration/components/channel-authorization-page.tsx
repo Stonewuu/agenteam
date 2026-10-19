@@ -13,6 +13,7 @@ import {apiRequest} from "@/lib/http/api-client";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import {useT} from "@/lib/i18n/locale-provider";
 import {channelsPath, type ChannelAuthorizationReview} from "../types/channel-binding";
+import {enterpriseEntryPath} from "@/features/auth/lib/workspace-path";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./integration.module.css";
 
@@ -50,13 +51,13 @@ export function ChannelAuthorizationPage() {
       <div className={styles.authActions}>
         <Button className={ui.button} disabled={action.busy} onClick={() => void action.execute(async () => {
           await apiRequest("/api/v1/auth/channel-authorization/cancel", {method: "POST", body: {authorizationId: review.data!.authorizationId}});
-          window.location.replace(`/enterprises/${encodeURIComponent(review.data!.enterpriseId)}/settings/channels`);
+          window.location.replace(enterpriseEntryPath(review.data!.enterpriseId, "/settings/channels"));
         }, "")}>{t("取消")}</Button>
         <Button className={ui.primary} disabled={action.busy} onClick={() => void action.execute(async () => {
           await action.mutation.run(`${channelsPath(review.data!.enterpriseId)}/confirm`, {method: "POST",
             body: {authorizationId: review.data!.authorizationId, receiveEnabled: Boolean(messagingAvailable && receiveEnabled),
               ...(typeof review.data!.chatAvailable === "boolean" ? {chatEnabled: Boolean(chatAvailable && chatEnabled)} : {}), externalLoginEnabled}});
-          window.location.replace(`/enterprises/${encodeURIComponent(review.data!.enterpriseId)}/settings/channels`);
+          window.location.replace(enterpriseEntryPath(review.data!.enterpriseId, "/settings/channels"));
         }, "")}><IconCheck size={18}/>{action.busy ? t("正在确认…") : t("确认绑定")}</Button>
       </div>
     </div>}</QueryState>

@@ -7,6 +7,12 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
+import com.stonewu.agenteam.mapper.audit.AuditEventSqlMapper;
+import com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper;
+import com.stonewu.agenteam.mapper.user.AppUserTableMapper;
+import com.stonewu.agenteam.model.audit.entity.AuditEventRow;
+import com.stonewu.agenteam.model.background.entity.BackgroundJobRow;
+import com.stonewu.agenteam.model.user.entity.AppUserRow;
 import com.stonewu.agenteam.mapper.enterprise.InvitationSqlMapper;
 import com.stonewu.agenteam.mapper.http.ApiRequestMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -25,6 +31,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.http.MediaType;
 
 import java.time.Instant;
 import java.util.List;
@@ -37,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 /**
  * 验证分享邀请和手动创建的真实事务、会话与企业访问边界。
@@ -64,6 +72,12 @@ class RegistrationApiTest {
     private PasswordEncoder passwords;
     @Autowired
     private ApiRequestMapper requests;
+    @Autowired
+    private AppUserTableMapper userRows;
+    @Autowired
+    private AuditEventSqlMapper auditRows;
+    @Autowired
+    private BackgroundJobSqlMapper jobs;
     private IdentityHttpClient client;
     private Session admin;
     private String adminId;
@@ -180,6 +194,105 @@ class RegistrationApiTest {
             var results = List.of(futures.get(0).get(15, TimeUnit.SECONDS), futures.get(1).get(15, TimeUnit.SECONDS));
             assertEquals(List.of(200, 401), results.stream().sorted().toList());
         }
+    }
+
+    @Test
+    void impersonationUsesTargetPermissionsAndCanRestoreAfterTargetIsDisabled() throws Exception {
+        String username = "impersonated-" + UUID.randomUUID();
+        manual(username, List.of(role)).andExpect(status().isCreated());
+        String target = users.findByUsername(username).orElseThrow().id();
+        var personal = login(username);
+        identityPost("/api/v1/auth/impersonation/start", personal, revision(personal),
+            Map.of("enterpriseId", enterprise, "userId", adminId)).andExpect(status().isForbidden());
+
+        var original = login("registration-admin");
+        String before = revision(original);
+        var start = identityPost("/api/v1/auth/impersonation/start", original, before,
+            Map.of("enterpriseId", enterprise, "userId", target)).andExpect(status().isOk()).andReturn();
+        String during = client.data(start).path("identityRevision").asText();
+        String impersonationId = client.data(start).path("impersonation").path("id").asText();
+        assertNotEquals(before, during);
+        var acting = client.session(start.getResponse().getCookie("SESSION"));
+        assertNotEquals(original.cookie().getValue(), acting.cookie().getValue());
+        client.getJson("/api/v1/auth/me", acting).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(target)).andExpect(jsonPath("$.data.superAdmin").value(false));
+        client.getJson("/api/v1/auth/me", personal).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.impersonation").isEmpty());
+        var creation = Map.of("username", "must-not-create", "password", PASSWORD, "roleIds", List.of(role), "teamIds", List.of());
+        identityPost(base() + "/members", acting, before, creation).andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error.code").value("IDENTITY_CHANGED"));
+        client.postJson(base() + "/members", acting, creation).andExpect(status().isConflict());
+        identityPost(base() + "/members", acting, during, creation).andExpect(status().isForbidden());
+        assertTrue(users.findByUsername("must-not-create").isEmpty());
+        identityPost("/api/v1/auth/impersonation/start", acting, during,
+            Map.of("enterpriseId", enterprise, "userId", target)).andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error.code").value("IMPERSONATION_ACTIVE"));
+        identityPost("/api/v1/auth/reauthenticate", acting, during, Map.of("password", PASSWORD))
+            .andExpect(status().isForbidden());
+
+        assertEquals(1, userRows.update(Wrappers.<AppUserRow>lambdaUpdate().eq(AppUserRow::getId, target)
+            .set(AppUserRow::getStatus, "disabled")));
+        client.getJson("/api/v1/auth/me", acting).andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("IMPERSONATION_TARGET_UNAVAILABLE"));
+        client.getJson("/api/v1/auth/impersonation", acting).andExpect(status().isOk());
+        var stop = identityPost("/api/v1/auth/impersonation/stop", acting, during, Map.of())
+            .andExpect(status().isOk()).andReturn();
+        var restored = client.session(stop.getResponse().getCookie("SESSION"));
+        client.getJson("/api/v1/auth/me", restored).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(adminId)).andExpect(jsonPath("$.data.superAdmin").value(true))
+            .andExpect(jsonPath("$.data.impersonation").isEmpty());
+        assertNotEquals(during, revision(restored));
+        assertEquals(1, auditRows.selectCount(Wrappers.<AuditEventRow>lambdaQuery()
+            .eq(AuditEventRow::getAction, "auth.impersonation.start").eq(AuditEventRow::getObjectId, target)));
+        var stopped = auditRows.selectOne(Wrappers.<AuditEventRow>lambdaQuery()
+            .eq(AuditEventRow::getAction, "auth.impersonation.stop").eq(AuditEventRow::getImpersonationId, impersonationId));
+        assertEquals(adminId, stopped.getAuthenticatedUserId());
+    }
+
+    @Test
+    void impersonatedExportKeepsOriginalAdministratorInDurableJobAndAudit() throws Exception {
+        String username = "export-operator-" + UUID.randomUUID();
+        manual(username, List.of(roles.builtinRoleId(enterprise, "enterprise-admin"))).andExpect(status().isCreated());
+        String target = users.findByUsername(username).orElseThrow().id();
+        var original = login("registration-admin");
+        var start = identityPost("/api/v1/auth/impersonation/start", original, revision(original),
+            Map.of("enterpriseId", enterprise, "userId", target)).andExpect(status().isOk()).andReturn();
+        var acting = client.session(start.getResponse().getCookie("SESSION"));
+        String revision = client.data(start).path("identityRevision").asText();
+        String impersonationId = client.data(start).path("impersonation").path("id").asText();
+        var exported = identityPost(base() + "/tool-calls/export", acting, revision,
+            Map.of("from", Instant.now().minusSeconds(3600).toString(), "to", Instant.now().toString()))
+            .andExpect(status().isAccepted()).andReturn();
+        String jobId = client.data(exported).path("id").asText();
+        BackgroundJobRow job = jobs.selectById(jobId);
+        assertNotNull(job);
+        assertEquals(target, job.getOwnerUserId());
+        assertEquals(adminId, job.getAuthenticatedUserId());
+        assertEquals(impersonationId, job.getImpersonationId());
+        var events = auditRows.selectList(Wrappers.<AuditEventRow>lambdaQuery()
+            .eq(AuditEventRow::getImpersonationId, impersonationId).eq(AuditEventRow::getActorUserId, target));
+        assertFalse(events.isEmpty());
+        assertTrue(events.stream().allMatch(event -> adminId.equals(event.getAuthenticatedUserId())));
+        identityPost("/api/v1/auth/impersonation/stop", acting, revision, Map.of()).andExpect(status().isOk());
+        assertEquals(impersonationId, jobs.selectById(jobId).getImpersonationId());
+    }
+
+    private Session login(String username) throws Exception {
+        var result = client.postJson("/api/v1/auth/login", client.session(null),
+            Map.of("identifier", username, "password", PASSWORD)).andExpect(status().isOk()).andReturn();
+        return client.session(result.getResponse().getCookie("SESSION"));
+    }
+
+    private String revision(Session session) throws Exception {
+        return client.data(client.getJson("/api/v1/auth/me", session).andExpect(status().isOk()).andReturn())
+            .path("identityRevision").asText();
+    }
+
+    private ResultActions identityPost(String path, Session session, String revision, Object body) throws Exception {
+        return mvc.perform(post(path).cookie(session.cookie()).header("Origin", "http://localhost:3000")
+            .header("X-CSRF-Token", session.csrf()).header("X-Identity-Revision", revision)
+            .header("Idempotency-Key", UUID.randomUUID().toString()).contentType(MediaType.APPLICATION_JSON)
+            .content(json.writeValueAsBytes(body)));
     }
 
     private JsonNode share(String key) throws Exception {

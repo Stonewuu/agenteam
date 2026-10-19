@@ -25,6 +25,12 @@ public class AuditEventRow {
     @TableField(value = "actor_user_id")
     private String actorUserId;
 
+    @TableField(value = "authenticated_user_id")
+    private String authenticatedUserId;
+
+    @TableField(value = "impersonation_id")
+    private String impersonationId;
+
     @TableField(value = "actor_name")
     private String actorName;
 

@@ -6,6 +6,7 @@ import {useT} from "@/lib/i18n/locale-provider";
 import {localizeCatalog} from "@/lib/i18n/translate";
 
 import {usePathname} from "next/navigation";
+import {workspaceParts} from "@/features/auth/lib/workspace-path";
 import {Button} from "@/components/ui/button";
 import {IconChevronRight} from "@/components/ui/icons";
 import {BrandMark} from "@/components/ui/brand-mark";
@@ -16,7 +17,7 @@ import styles from "./workspace-loading.module.css";
 type LoadingLayout = "home" | "conversation" | "settings" | "list";
 
 function loadingPage(pathname: string) {
-  const [, , , section, detail] = pathname.split("/");
+  const [section, detail] = workspaceParts(pathname);
   if (pathname.startsWith("/settings")) {
     return {title: "个人设置", area: "工作空间", layout: "settings" as const};
   }

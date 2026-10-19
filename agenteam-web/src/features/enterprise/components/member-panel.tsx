@@ -25,6 +25,7 @@ import {useCollectionPage} from "../hooks/use-collection-page";
 import type {Member, Role, Team} from "../types/organization";
 import {CollectionStatus, ConfirmAction, EntityPicker, Modal, statusLabel} from "./organization-shared";
 import {MemberRemovalDialog} from "./member-removal-dialog";
+import {ImpersonationButton} from "@/features/auth/components/impersonation-button";
 import styles from "./organization.module.css";
 
 export function MemberPanel({
@@ -92,6 +93,8 @@ export function MemberPanel({
             <td>
               <div className={styles.rowActions}><Button className={styles.textButton}
                                                          onClick={() => setEditing(member)}>{canManage ? uiText("管理") : uiText("查看")}</Button>
+                <ImpersonationButton enterpriseId={enterpriseId} userId={member.userId} displayName={member.displayName}
+                  status={member.status} className={styles.textButton}/>
               </div>
             </td>
           </tr>)}</tbody>

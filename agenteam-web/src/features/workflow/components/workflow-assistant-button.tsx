@@ -96,7 +96,7 @@ function WorkflowAssistantPanel({enterprise, resourceId, open, floating, onClose
       location={{...location, navigate, active: open}} headerActions={closeButton} onRunFinished={onChanged}/>
       : <><header className={panels.header}><span><IconSparkles size={19}/>{text("工作流助手")}</span>{closeButton}</header>
         <WorkflowAssistantStart enterprise={enterprise} resourceId={resourceId} onStarted={(result) => {
-          navigate(`/enterprises/${encodeURIComponent(enterprise)}/conversations/${encodeURIComponent(result.conversationId)}`);
+          navigate(`/conversations/${encodeURIComponent(result.conversationId)}`);
         }}/></>}
   </aside>;
 }

@@ -10,7 +10,7 @@
   </parent>
   <groupId>com.stonewu</groupId>
   <artifactId>agenteam</artifactId>
-  <version>0.4.0</version>
+  <version>0.4.1</version>
   <name>AgenTeam</name>
   <description>AgenTeam 智能体工作平台</description>
   <url>https://github.com/Stonewuu/agenteam</url>

@@ -1,7 +1,6 @@
 package com.stonewu.agenteam.service.collaboration;
 
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
@@ -22,19 +21,17 @@ public class CollaborationWorker {
     private final CollaborationRecoveryService recovery;
     private final RunLifecycleService lifecycle;
     private final ChatConfiguration chat;
-    private final CollaborationConfiguration configuration;
     private final String owner = UUID.randomUUID().toString();
     private final CollaborationGeneratedResultService generated;
 
     public CollaborationWorker(CollaborationDispatchService dispatch, CollaborationRunObserver observer,
-            CollaborationRecoveryService recovery, RunLifecycleService lifecycle, ChatConfiguration chat, CollaborationConfiguration configuration,
+            CollaborationRecoveryService recovery, RunLifecycleService lifecycle, ChatConfiguration chat,
             CollaborationGeneratedResultService generated) {
         this.dispatch = dispatch;
         this.observer = observer;
         this.recovery = recovery;
         this.lifecycle = lifecycle;
         this.chat = chat;
-        this.configuration = configuration;
         this.generated = generated;
     }
 
@@ -45,7 +42,7 @@ public class CollaborationWorker {
         }
         try {
             recover();
-            if (!chat.isEnabled() || !configuration.isEnabled()) {
+            if (!chat.isEnabled()) {
                 return;
             }
             for (int i = 0; i < Math.min(50, chat.getBatchSize()); i++) {

@@ -9,6 +9,7 @@ import type {
 import {randomResourceAppearance} from "@/components/ui/resource-appearance";
 import {agentConfigInput} from "./agent-config-input";
 import {initialGraph} from "@/features/workflow/lib/workflow-graph";
+import {enterprisePath} from "@/features/auth/lib/identity-navigation";
 
 export const resourceTypes: { kind: ResourceKind; path: string; label: string }[] = [
   {kind: "agent", path: "agents", label: "智能体"}, {kind: "skill", path: "skills", label: "技能"}, {
@@ -33,7 +34,7 @@ export function resourceLabel(kind: ResourceKind) {
 }
 
 export function resourcePage(enterpriseId: string, kind: ResourceKind, id?: string) {
-  return `/enterprises/${encodeURIComponent(enterpriseId)}/capabilities/${resourceTypes.find((value) => value.kind === kind)!.path}${id ? `/${encodeURIComponent(id)}` : ""}`;
+  return enterprisePath(enterpriseId, `/capabilities/${resourceTypes.find((value) => value.kind === kind)!.path}${id ? `/${encodeURIComponent(id)}` : ""}`);
 }
 
 export function resourceStatus(resource: ResourceSummary) {

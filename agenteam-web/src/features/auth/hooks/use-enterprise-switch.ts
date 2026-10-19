@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import {loadEnterpriseContext} from "../api/identity-api";
-import {enterprisePath} from "../lib/identity-navigation";
+import {enterpriseEntryPath, workspacePath} from "../lib/workspace-path";
 import {errorMessage} from "@/lib/http/api-client";
 
 /** 取得目标企业的当前资格后才改变地址；失败和已离开的请求不能覆盖原页面。 */
@@ -33,9 +33,9 @@ export function useEnterpriseSwitch() {
       const allowed = page === "management" ? has("admin.view") : page === "capabilities" ? has("capabilities.view") : page === "conversations" ? has("conversation.view")
         : page === "schedules" ? has("schedule.view") : page === "todos" ? has("todo.view") : page === "employees" ? ["agent.market_view", "agent.run", "agent.hire", "agent.hire_approve"].some(has)
           : page === "notifications" || has("workspace.view");
-      const destination = allowed ? enterprisePath(id, suffix) : has("workspace.view") ? enterprisePath(id, "/workspace")
-        : has("admin.view") ? enterprisePath(id, "/management") : has("capabilities.view") ? enterprisePath(id, "/capabilities") : "/settings";
-      const navigate = () => router.push(destination);
+      const destination = allowed ? workspacePath(suffix) : has("workspace.view") ? "/workspace"
+        : has("admin.view") ? "/organization" : has("capabilities.view") ? "/capabilities" : "/settings";
+      const navigate = () => router.push(enterpriseEntryPath(id, destination));
       if (beforeNavigate) {
         beforeNavigate(navigate);
       } else {

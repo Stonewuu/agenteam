@@ -5,6 +5,7 @@ import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
+import com.stonewu.agenteam.service.workspace.CommandResultCache;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -52,6 +53,12 @@ public class ProjectWorkspaceLayout {
     public Path project(ProjectLocation location) {
         validate(location);
         return files(location.workspaceId()).resolve(location.directory());
+    }
+
+    public CommandResultCache.Area commandResults(ProjectLocation location) {
+        validate(location);
+        return new CommandResultCache.Area(workspace(location.workspaceId()).resolve("cache"),
+            control(location.workspaceId()).resolve("command-results"), location.projectId());
     }
 
     public Path state(ProjectLocation location) {

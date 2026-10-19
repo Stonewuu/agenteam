@@ -5,6 +5,7 @@ import com.stonewu.agenteam.configuration.http.ApiRequestFilter;
 import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.service.auth.RequestForgeryProtection;
+import com.stonewu.agenteam.service.auth.SessionIdentityService;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -98,6 +99,7 @@ class BinaryRequestBodyTest {
     }
 
     private ApiRequestFilter filter(List<BinaryRequestBodyPolicy> policies) {
-        return new ApiRequestFilter(new ApiResponses(Clock.systemUTC(), json), protection, users, policies);
+        return new ApiRequestFilter(new ApiResponses(Clock.systemUTC(), json), protection, users, policies,
+            mock(SessionIdentityService.class));
     }
 }

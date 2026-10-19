@@ -24,6 +24,7 @@ function entry(request) {
     exports,
     require: () => ({
       ApiError: ResponseError,
+      acceptRequestIdentity: () => {},
       ApiMutation: class {},
       apiRequest: async (path, options) => {
         calls.push(path);

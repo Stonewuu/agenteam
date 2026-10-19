@@ -86,22 +86,28 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         String deleteKey = UUID.randomUUID().toString();
         change(HttpMethod.DELETE, base() + "/model-providers/" + providerId, null, "3", deleteKey).andExpect(status().isOk());
         change(HttpMethod.DELETE, base() + "/model-providers/" + providerId, null, "3", deleteKey).andExpect(status().isOk());
-        assertEquals(0, Math.toIntExact(databaseAccess.mapper(ModelProviderMapper.class).selectCount(new LambdaQueryWrapper<ModelProviderRow>().eq(ModelProviderRow::getId, (providerId)))));
+        var deletedProvider = databaseAccess.mapper(ModelProviderMapper.class).selectById(providerId);
+        assertNotNull(deletedProvider.getDeletedAt());
+        assertEquals("", deletedProvider.getApiKey());
+        assertTrue(databaseAccess.mapper(ModelProviderMapper.class).find(enterprise, providerId).isEmpty());
+        var recreated = data(write(base() + "/model-providers", body, UUID.randomUUID().toString())
+            .andExpect(status().isCreated()).andReturn());
+        assertNotEquals(providerId, recreated.path("id").asText());
         assertEquals(0, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ApiRequestFixtureMapper.class).modelManagementApiAdministratorsManageProvidersModelsAndPlaintextKeysThroughTheApiObject(enterprise)));
         assertEquals(0, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(AuditEventFixtureMapper.class).modelManagementApiAdministratorsManageProvidersModelsAndPlaintextKeysThroughTheApiObject(enterprise)));
     }
 
     @Test
-    void savedProviderKeysReachAgentScopeAndUsedConfigurationsCannotBeRewritten() throws Exception {
+    void usedModelsCanBeEditedAndDeletedWhileCurrentKeysAndAvailabilityStillApply() throws Exception {
         allowModelCalls = true;
         String providerId = data(write(base() + "/model-providers", provider("调用测试提供方", "first-call-key", true), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).path("id").asText();
         String modelId = data(write(base() + "/models", model(providerId, "调用测试模型", "managed-chat", true), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).path("id").asText();
         configureAgent(config -> config.put("modelProfileId", modelId));
-        change(HttpMethod.PUT, base() + "/models/" + modelId, model(providerId, "调用测试模型", "another-model", true), "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
+        var revised = model(providerId, "调用测试模型", "another-model", true);
+        revised.put("capabilities", Map.of("supportsTools", false, "supportsTemperature", false, "maxOutputTokens", 4096,
+            "maxContextTokens", 32768, "inputTypes", List.of("text")));
+        change(HttpMethod.PUT, base() + "/models/" + modelId, revised, "1", UUID.randomUUID().toString()).andExpect(status().isOk());
         change(HttpMethod.DELETE, base() + "/models/" + modelId, null, "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
-        var anotherAddress = provider("调用测试提供方", null, true);
-        anotherAddress.put("baseUrl", "http://127.0.0.1:1234/v1");
-        change(HttpMethod.PUT, base() + "/model-providers/" + providerId, anotherAddress, "1", UUID.randomUUID().toString()).andExpect(status().isConflict());
         var headers = new ArrayList<String>();
         var modelNames = new ArrayList<String>();
         var outputLimits = new ArrayList<Integer>();
@@ -127,12 +133,31 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         assertFalse(active.stream(messages, List.of(), options).contextWrite(value -> value.put(ModelCallContext.class, context))
             .collectList().block(Duration.ofSeconds(10)).isEmpty());
         assertEquals(List.of("Bearer first-call-key", "Bearer rotated-call-key"), headers);
-        assertEquals(List.of("managed-chat", "managed-chat"), modelNames);
-        assertEquals(List.of(204800, 204800), outputLimits);
+        assertEquals(List.of("another-model", "another-model"), modelNames);
+        assertEquals(List.of(4096, 4096), outputLimits);
         change(HttpMethod.PUT, base() + "/model-providers/" + providerId, provider("调用测试提供方", null, false), "2", UUID.randomUUID().toString()).andExpect(status().isOk());
         int before = modelCalls.get();
         assertThrows(ApiException.class, () -> active.stream(messages, List.of(), options).blockLast(Duration.ofSeconds(10)));
         assertEquals(before, modelCalls.get());
+        var anotherAddress = provider("调用测试提供方", null, true);
+        anotherAddress.put("baseUrl", "http://127.0.0.1:1234/v1");
+        change(HttpMethod.PUT, base() + "/model-providers/" + providerId, anotherAddress, "3", UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        String replacement = data(write(base() + "/model-providers", provider("替换连接", "replacement-key", true),
+            UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).path("id").asText();
+        revised.put("providerId", replacement);
+        change(HttpMethod.PUT, base() + "/models/" + modelId, revised, "2", UUID.randomUUID().toString()).andExpect(status().isOk());
+        change(HttpMethod.DELETE, base() + "/model-providers/" + providerId, null, "4", UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        String deleteKey = UUID.randomUUID().toString();
+        change(HttpMethod.DELETE, base() + "/models/" + modelId, null, "3", deleteKey).andExpect(status().isOk());
+        change(HttpMethod.DELETE, base() + "/models/" + modelId, null, "3", deleteKey).andExpect(status().isOk());
+        assertThrows(ApiException.class, () -> modelFactory.create(enterprise, modelId));
+        assertThrows(ApiException.class, () -> active.stream(messages, List.of(), options).blockLast(Duration.ofSeconds(10)));
+        assertEquals(before, modelCalls.get());
+        var recreated = data(write(base() + "/models", revised, UUID.randomUUID().toString())
+            .andExpect(status().isCreated()).andReturn());
+        assertNotEquals(modelId, recreated.path("id").asText());
     }
 
 

@@ -294,5 +294,11 @@
   "同时执行多路步骤": "Run multiple branches at once",
   "等待并行分支完成后继续": "Continue after parallel branches finish",
   "条件是否成立": "Condition matched",
-  "确认结果": "Approval decision"
+  "确认结果": "Approval decision",
+  "搜索节点": "Search nodes",
+  "搜索节点名称或功能": "Search nodes by name or function",
+  "没有匹配的节点": "No matching nodes",
+  "执行": "Execution",
+  "流程": "Flow",
+  "合并": "Join"
 }

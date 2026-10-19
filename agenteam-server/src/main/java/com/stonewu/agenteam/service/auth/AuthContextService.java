@@ -12,8 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.util.Set;
 import java.util.Objects;
 
@@ -25,18 +23,16 @@ public class AuthContextService {
 
     private final AuthMapper authMapper;
     private final PermissionMapper permissionMapper;
-    private final Clock clock;
     private final AccountBehaviorService behavior;
-    private final ChannelSessionGuard channels;
+    private final SessionIdentityService sessions;
     private final EnterpriseEditionPolicy edition;
 
-    public AuthContextService(AuthMapper authMapper, PermissionMapper permissionMapper, Clock clock,
-                              AccountBehaviorService behavior, ChannelSessionGuard channels, EnterpriseEditionPolicy edition) {
+    public AuthContextService(AuthMapper authMapper, PermissionMapper permissionMapper,
+                              AccountBehaviorService behavior, SessionIdentityService sessions, EnterpriseEditionPolicy edition) {
         this.authMapper = authMapper;
         this.permissionMapper = permissionMapper;
-        this.clock = clock;
         this.behavior = behavior;
-        this.channels = channels;
+        this.sessions = sessions;
         this.edition = edition;
     }
 
@@ -44,30 +40,14 @@ public class AuthContextService {
         if (session == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录");
         }
-        String userId = stringAttribute(session, AuthSessionAttributes.USER_ID);
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录");
+        try {
+            return sessions.effective(session);
+        } catch (ApiException failure) {
+            if (Set.of("SESSION_EXPIRED", "ACCOUNT_UNAVAILABLE").contains(failure.code())) {
+                session.invalidate();
+            }
+            throw failure;
         }
-        Object version = session.getAttribute(AuthSessionAttributes.SESSION_VERSION);
-        Object authenticatedAt = session.getAttribute(AuthSessionAttributes.AUTHENTICATED_AT);
-        long now = clock.millis();
-        if (!(version instanceof Number) || !(authenticatedAt instanceof Number timestamp)
-            || timestamp.longValue() < 0 || timestamp.longValue() > now
-            || now - timestamp.longValue() >= Duration.ofDays(7).toMillis()) {
-            throw revoke(session);
-        }
-        UserEntity user = authMapper.findById(userId).orElseThrow(() -> revoke(session));
-        if (!"active".equals(user.status()) || !userAllowed(user)) {
-            session.invalidate();
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "用户已被停用");
-        }
-        if (((Number) version).longValue() != user.sessionVersion()) {
-            throw revoke(session);
-        }
-        if (ChannelSessionGuard.external(session) && !channels.valid(session, user)) {
-            throw revoke(session);
-        }
-        return user;
     }
 
     public UserEntity optionalUser(HttpSession session) {
@@ -108,11 +88,6 @@ public class AuthContextService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "没有执行此操作的权限");
         }
         return context;
-    }
-
-    private static ResponseStatusException revoke(HttpSession session) {
-        session.invalidate();
-        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "登录已失效，请重新登录");
     }
 
     private static String stringAttribute(HttpSession session, String name) {

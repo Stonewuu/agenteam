@@ -50,9 +50,9 @@ export function ConversationNavigationProvider({context, children}: {
     if (newTaskAction.current) {
       newTaskAction.current();
     } else {
-      router.push(`/enterprises/${encodeURIComponent(context.enterprise.id)}/new-task`);
+      router.push(`/new-task`);
     }
-  }, [context.enterprise.id, router]);
+  }, [router]);
   const mobile = useSyncExternalStore(subscribeMobile, readMobile, () => false);
   const list = useConversationList(context.enterprise.id, context.permissions.includes("conversation.view"), context.member.userId);
   return <ConversationNavigationContext.Provider value={{

@@ -1,7 +1,6 @@
 package com.stonewu.agenteam.service.chat;
 
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
 import org.slf4j.Logger;
@@ -15,17 +14,15 @@ public class ChatRoutingWorker {
     private static final Logger LOG = LoggerFactory.getLogger(ChatRoutingWorker.class);
     private final ChatRoutingService routing;
     private final ChatConfiguration chat;
-    private final CollaborationConfiguration collaboration;
 
-    public ChatRoutingWorker(ChatRoutingService routing, ChatConfiguration chat, CollaborationConfiguration collaboration) {
+    public ChatRoutingWorker(ChatRoutingService routing, ChatConfiguration chat) {
         this.routing = routing;
         this.chat = chat;
-        this.collaboration = collaboration;
     }
 
     @Scheduled(fixedDelayString = "${chat.routing-poll-interval-ms:2000}")
     public void poll() {
-        if (!chat.isEnabled() || !chat.isWorkerEnabled() || !collaboration.isEnabled()) {
+        if (!chat.isEnabled() || !chat.isWorkerEnabled()) {
             return;
         }
         for (var message : routing.pending()) {

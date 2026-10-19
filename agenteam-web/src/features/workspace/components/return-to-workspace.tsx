@@ -21,8 +21,8 @@ function storageKey(enterprise: string, user: string) {
   return `agenteam:last-user-page:${user}:${enterprise}`;
 }
 
-function userPage(pathname: string, enterprise: string) {
-  const prefix = `/enterprises/${encodeURIComponent(enterprise)}/`;
+function userPage(pathname: string) {
+  const prefix = `/`;
   if (!pathname.startsWith(prefix)) {
     return null;
   }
@@ -37,7 +37,7 @@ function userPage(pathname: string, enterprise: string) {
 export function RememberUserPage({enterpriseId, userId}: { enterpriseId: string; userId: string }) {
   const pathname = usePathname();
   useEffect(() => {
-    const value = userPage(pathname, enterpriseId);
+    const value = userPage(pathname);
     if (!value) {
       return;
     }
@@ -63,7 +63,7 @@ export function ReturnToWorkspace({context, userId, className}: {
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), [pathname]);
   const enterprise = context.enterprise.id;
-  const root = `/enterprises/${encodeURIComponent(enterprise)}`;
+  const root = ``;
   const go = (path: string) => {
     const action = () => router.push(path);
     if (guarded) {
@@ -84,7 +84,7 @@ export function ReturnToWorkspace({context, userId, className}: {
     let suffix = "workspace";
     try {
       const stored = window.localStorage.getItem(storageKey(enterprise, userId));
-      if (stored && userPage(`${root}/${stored}`, enterprise)) {
+      if (stored && userPage(`${root}/${stored}`)) {
         suffix = stored;
       }
     } catch { /* 没有导航偏好时打开工作台。 */

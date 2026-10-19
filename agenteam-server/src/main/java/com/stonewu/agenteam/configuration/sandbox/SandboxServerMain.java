@@ -5,6 +5,7 @@ import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
+import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
 import com.stonewu.agenteam.controller.sandbox.ProjectSandboxServerController;
 import com.stonewu.agenteam.controller.sandbox.EnvironmentServerController;
 import com.stonewu.agenteam.service.environment.DockerUserEnvironmentRuntime;
@@ -20,6 +21,7 @@ import com.stonewu.agenteam.service.sandbox.SandboxExecutionService;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
 import com.stonewu.agenteam.service.workspace.SandboxCapacity;
+import com.stonewu.agenteam.service.workspace.CommandResultCache;
 import com.sun.net.httpserver.HttpServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +75,10 @@ public final class SandboxServerMain {
                 number("AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS", 30), number("AGENTEAM_SANDBOX_USAGE_STALE_SECONDS", 60),
                 number("AGENTEAM_SANDBOX_STOP_SECONDS", 10), number("AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS", 4));
             var containers = new UserContainerRuntime(settings, runtime, layout, docker, idleSettings);
-            var commands = new ProjectCommandProcess(layout, docker, json);
+            var commandCache = new CommandResultCache(new CommandResultSettings(number("AGENTEAM_COMMAND_RESULTS_RETENTION_DAYS", 7),
+                number("AGENTEAM_COMMAND_RESULTS_MAXIMUM_MB", 256), number("AGENTEAM_COMMAND_RESULTS_MAXIMUM_ENTRIES", 1000)),
+                settings, json, Clock.systemUTC());
+            var commands = new ProjectCommandProcess(layout, docker, json, commandCache);
             var lifecycle = new UserSandboxLifecycle(layout, new UserSandboxRegistry(layout), containers, commands,
                 idleSettings, Clock.systemUTC());
             var projects = new DockerProjectCommandExecutor(settings, layout, containers, capacity, commands,

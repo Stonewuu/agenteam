@@ -20,12 +20,12 @@ export type ModelCapabilities = {
 };
 export type ModelProvider = {
   id: string; revision: string; name: string; protocol: ModelProtocol; baseUrl: string;
-  keyConfigured: boolean; enabled: boolean; modelCount: number; inUse: boolean;
+  keyConfigured: boolean; enabled: boolean; modelCount: number;
   createdAt: string; updatedAt: string;
 };
 export type ManagedModel = {
   id: string; revision: string; providerId: string; providerName: string; providerEnabled: boolean;
-  name: string; modelName: string; capabilities: ModelCapabilities; enabled: boolean; inUse: boolean;
+  name: string; modelName: string; capabilities: ModelCapabilities; enabled: boolean;
   createdAt: string; updatedAt: string;
 };
 export type RemoteModel = {

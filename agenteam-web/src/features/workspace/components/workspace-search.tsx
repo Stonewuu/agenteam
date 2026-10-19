@@ -85,7 +85,7 @@ function SearchDialog({enterpriseId, permissions, onClose, control}: {
   const result = useApiQuery<SearchResult>(query.trim() ? organizationPath(enterpriseId, `/search?query=${encodeURIComponent(query)}`) : null, 0, 300);
   const identity = useEnterpriseIdentity();
   const groups = [...searchMenuGroups(query, permissions, uiText, identity?.context.capabilities ?? []), ...searchContentGroups(result.data, uiText)];
-  const root = `/enterprises/${encodeURIComponent(enterpriseId)}`;
+  const root = ``;
   return <Dialog title={uiText("搜索")} onClose={onClose} dialogRef={control.ref}>
     <div className={styles.search}><label
       className={ui.field}><span>{uiText("搜索菜单、对话、员工或能力中心的内容")}</span><Input className={ui.input}

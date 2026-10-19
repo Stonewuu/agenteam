@@ -26,9 +26,7 @@ class AuthLoginSecurityTest {
     private final PermissionMapper permissions = mock(PermissionMapper.class);
     private final AccountPasswordEncoder encoder = new AccountPasswordEncoder();
     private final Clock clock = Clock.fixed(AuthSessionSecurityTest.NOW, ZoneOffset.UTC);
-    private final AuthContextService context = new AuthContextService(accounts, permissions, clock,
-        new AccountBehaviorService(List.of()), mock(ChannelSessionGuard.class),
-        mock(EnterpriseEditionPolicy.class));
+    private final AuthContextService context = AuthSessionSecurityTest.context(accounts, permissions, clock);
     private final AuthLoginRateLimiter rateLimiter = mock(AuthLoginRateLimiter.class);
     private final AuthService service = new AuthService(accounts, new AuthSessionService(clock, new RequestForgeryProtection()), encoder, context, rateLimiter);
 

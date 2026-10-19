@@ -90,13 +90,19 @@ class DockerProjectCommandExecutorTest {
             assert not Path('/var/run/docker.sock').exists()
             assert Path('/workspace/projects/other').is_dir()
             assert not Path('/workspace/control').exists()
+            assert not Path('/workspace/cache').exists()
             assert Path('inputs/source.txt').read_text() == '输入原文'
             Path('report.txt').write_text('第一轮', encoding='utf-8')
+            print('缓存中的完整输出')
             PY
             """;
         try (var control = new ToolCallControl(() -> {
         })) {
-            assertEquals(0, executor().execute(first, "first", command, null, Duration.ofSeconds(20), control).exitCode());
+            var firstResult = executor().execute(first, "first", command, null, Duration.ofSeconds(20), control);
+            assertEquals(0, firstResult.exitCode());
+            assertEquals("command-results/first/stdout.txt", firstResult.stdoutPath());
+            assertEquals("缓存中的完整输出", Files.readString(layout().commandResults(first).files().resolve(firstResult.stdoutPath())).trim());
+            assertFalse(Files.exists(layout().project(first).resolve("work/command-results")));
             String firstRevision = layout().fileRevision(first.workspaceId());
             assertFalse(firstRevision.isEmpty());
             String id = state(first, "{{.Id}}");

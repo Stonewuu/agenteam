@@ -12,7 +12,7 @@ import {AnimatedHeight} from "@/components/ui/animated-height";
 import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
-import {useApiPage} from "@/lib/http/use-api-query";
+import {useApiPage, useApiQuery} from "@/lib/http/use-api-query";
 import {integrationPath, type Integration} from "@/features/integration/types/integration";
 import {useT} from "@/lib/i18n/locale-provider";
 import {chatPath, deliveryStatus, type ChatBot, type ChatGroup, type ChatOutbound} from "../types/chat";
@@ -42,6 +42,7 @@ export function ChatAdminPanel({enterpriseId, system = false, canManage = true, 
   const [retry, setRetry] = useState<ChatOutbound | null>(null);
   const [createdBot, setCreatedBot] = useState(false);
   const action = useFormAction();
+  const service = useApiQuery<{paused: boolean}>(`${path}/status`, refresh);
   const bots = useApiPage<ChatBot>(`${path}/bots`, refresh, 0);
   const pending = useApiPage<Integration>(`${integrationPath(enterpriseId, system)}?purpose=chat_bot&unboundBotOnly=true`, refresh, 0, 30, tab === "bots");
   const groups = useApiPage<ChatGroup>(`${path}/conversations`, refresh, 0, 30, tab === "groups");
@@ -78,6 +79,10 @@ export function ChatAdminPanel({enterpriseId, system = false, canManage = true, 
     setTab("groups");
   }, t("群列表已刷新。"));
   return <div className={styles.panel}>
+    {service.data?.paused && <p role="status" className={styles.notice}>
+      <strong>{t("聊天服务已暂停")}</strong><br/>{t("机器人暂时无法接收和回复消息，请联系系统管理员恢复服务。")}
+    </p>}
+    {service.error && <p role="alert" className={styles.notice}>{t("暂时无法确认聊天服务是否可用，请刷新重试。")}</p>}
     <div className={styles.toolbar}><Tabs value={tab} onChange={setTab} label={t("机器人管理")} items={[
       {value: "bots", label: t("机器人列表"), icon: IconRobot}, {value: "groups", label: t("聊天会话"), icon: IconMessages}, {value: "outbounds", label: t("发送记录"), icon: IconHistory},
     ]}/><div className={styles.actions}><Button className={ui.button} onClick={changed}><IconRefresh size={16}/>{t("刷新")}</Button>

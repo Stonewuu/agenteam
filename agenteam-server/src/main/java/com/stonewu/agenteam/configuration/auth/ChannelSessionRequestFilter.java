@@ -25,7 +25,7 @@ import java.util.Set;
 public class ChannelSessionRequestFilter extends OncePerRequestFilter {
     private static final Set<String> ALLOWED = Set.of("GET /api/v1/auth/me", "GET /api/v1/auth/csrf",
         "GET /api/v1/auth/bootstrap-status", "POST /api/v1/auth/login", "POST /api/v1/auth/logout",
-        "POST /api/v1/auth/reauthenticate");
+        "POST /api/v1/auth/reauthenticate", "GET /api/v1/navigation/resource", "GET /api/v1/auth/impersonation");
     private final AuthContextService identity;
     private final ApiResponses responses;
 

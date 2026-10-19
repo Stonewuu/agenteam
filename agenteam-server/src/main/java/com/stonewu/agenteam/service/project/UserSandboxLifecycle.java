@@ -81,19 +81,17 @@ public class UserSandboxLifecycle {
                         throw new ApiException(HttpStatus.CONFLICT, "PROJECT_EXECUTION_HOST_CHANGED",
                             "执行节点已变化，请先核实原节点的运行任务。");
                     }
-                    processes.prepare(project, call, command);
                     String before = containers.ownedId(project, DockerWorkspaceCommands.remaining(deadline));
                     boolean running = before != null && containers.running(before,
                         DockerWorkspaceCommands.remaining(deadline));
-                    if (state == null || !"running".equals(state.status()) || !running || !before.equals(
-                        state.containerId())) {
-                        containers.start(project, DockerWorkspaceCommands.remaining(deadline), control);
-                    }
+                    // 每次启动命令都核对挂载配置；旧容器仍有任务时只拒绝新命令，不重建或停止它。
+                    containers.start(project, DockerWorkspaceCommands.remaining(deadline), control);
                     String id = running && state != null && "running".equals(state.status()) && before.equals(
                         state.containerId())
                         ? before : containers.ownedId(project, DockerWorkspaceCommands.remaining(deadline));
                     String generation = state != null && running && id.equals(
                         state.containerId()) ? state.generation() : UUID.randomUUID().toString();
+                    processes.prepare(project, call, command);
                     long now = clock.millis();
                     registry.save(new UserSandboxState(project, id, generation, daemon, "running", 0, now));
                     var record = new ProjectCommandRecord(project.projectId(), hash, null, project, call, id,
@@ -194,6 +192,9 @@ public class UserSandboxLifecycle {
             if (current == null || !record.token().equals(current.token()) || current.result() != null) {
                 return;
             }
+            if (result != null || "interrupted".equals(status)) {
+                processes.complete(record);
+            }
             registry.save(new ProjectCommandRecord(record.projectId(), record.commandHash(), result, record.project(),
                 record.callId(),
                 record.containerId(), record.generation(), record.token(), record.deadline(), clock.millis(), status));
@@ -214,9 +215,8 @@ public class UserSandboxLifecycle {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_COMMAND_UNCONFIRMED",
                 "命令执行结果尚无法确认，请先检查项目中的已有文件。");
         }
-        String output = "work/command-results/" + record.callId();
-        return new SandboxExecutor.Result(status.exitCode(), status.timedOut(), exceeded, output + "/stdout.txt",
-            output + "/stderr.txt");
+        return new SandboxExecutor.Result(status.exitCode(), status.timedOut(), exceeded,
+            processes.output(record, "stdout"), processes.output(record, "stderr"));
     }
 
     @Scheduled(fixedDelayString = "${execution.sandbox.idle-scan-seconds:30}000", initialDelayString = "${execution.sandbox.idle-scan-seconds:30}000")

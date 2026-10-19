@@ -7,6 +7,7 @@ import {LocaleProvider} from "@/lib/i18n/locale-provider";
 import {requestLocale} from "@/lib/i18n/server";
 import {createTranslator} from "@/lib/i18n/translate";
 import {locales} from "@/lib/i18n/locales";
+import {IdentitySwitchBoundary} from "@/features/auth/components/identity-switch-boundary";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,7 +29,7 @@ export default async function RootLayout({children}: { children: ReactNode }) {
         dangerouslySetInnerHTML={{__html: `try{var t=localStorage.getItem('agenteam:theme')||'system',d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.dataset.themePreference=t;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch{}`}}/>
     </head>
     <body><LocaleProvider
-      initialLocale={locale}><ThemeInitializer/><NavigationGuard>{children}</NavigationGuard><Toaster/></LocaleProvider>
+      initialLocale={locale}><ThemeInitializer/><IdentitySwitchBoundary><NavigationGuard>{children}</NavigationGuard></IdentitySwitchBoundary><Toaster/></LocaleProvider>
     </body>
     </html>
   );
