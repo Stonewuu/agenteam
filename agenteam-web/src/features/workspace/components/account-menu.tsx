@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/shadcn/dropdown-menu";
 import {Dialog, DialogActions, DialogCancel, useDialogControl} from "@/components/ui/dialog";
 import {
+  IconArrowLeft,
   IconBell,
   IconBookmark,
   IconChevronDown,
@@ -29,9 +30,11 @@ import {
   IconUserCircle
 } from "@/components/ui/icons";
 import {signOut} from "@/features/auth/api/identity-api";
+import {useAccountIdentitySwitch} from "@/features/auth/components/identity-switch-boundary";
 import type {IdentityUser} from "@/features/auth/types/identity";
 import {errorMessage} from "@/lib/http/api-client";
 import ui from "@/components/ui/surface.module.css";
+import identityStyles from "@/features/auth/components/identity-switch.module.css";
 
 const settings = [
   {id: "profile", label: "个人资料", icon: IconUser}, {id: "security", label: "账号安全", icon: IconLock},
@@ -47,6 +50,9 @@ export function AccountMenu({user, go}: { user: IdentityUser; go: (action: () =>
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const identitySwitch = useAccountIdentitySwitch();
+  const acting = identitySwitch?.status?.impersonation ?? user.impersonation;
+  const accountLabel = uiText("个人账户：{0}", [user.displayName]);
 
   async function logout() {
     if (busy) {
@@ -69,15 +75,24 @@ export function AccountMenu({user, go}: { user: IdentityUser; go: (action: () =>
   }
 
   return <><DropdownMenu>
-    <DropdownMenuTrigger className="account-trigger" aria-label={uiText("个人账户：{0}", [user.displayName])}><span
-      className="account-trigger-avatar" data-icon-surface><IconUserCircle size={24} variant="Bulk"/></span><span
+    <DropdownMenuTrigger className="account-trigger" aria-label={acting ? `${accountLabel} · ${uiText("代登录中")}` : accountLabel}><span
+      className={`account-trigger-avatar${acting ? ` ${identityStyles.avatar}` : ""}`} data-icon-surface><IconUserCircle size={24} variant="Bulk"/></span><span
       className="account-trigger-name">{user.displayName}</span><IconChevronDown size={13}/></DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="agenteam-menu agenteam-popup account-menu">
-      <div className="account-summary"><span className="account-summary-avatar" data-icon-surface><IconUserCircle size={30}
+      <div className="account-summary"><span className={`account-summary-avatar${acting ? ` ${identityStyles.avatar}` : ""}`} data-icon-surface><IconUserCircle size={30}
                                                                                                 variant="Bulk"/></span>
         <div className="account-summary-copy"><strong>{user.displayName}</strong>{user.email &&
-          <span>{user.email}</span>}</div>
+          <span>{user.email}</span>}{acting && <span className={identityStyles.menuStatus} role="status">
+            {uiText("代登录中")}</span>}</div>
       </div>
+      {acting && <>
+        <DropdownMenuItem closeOnClick={false} disabled={!identitySwitch?.status?.impersonation || identitySwitch.busy}
+          onClick={() => go(() => void identitySwitch?.restore())}>
+          <IconArrowLeft size={18}/>{identitySwitch?.busy ? uiText("正在返回…") : uiText("返回管理员")}
+        </DropdownMenuItem>
+        {identitySwitch?.error && <p role="alert" className={identityStyles.menuError}>
+          {localizeUiMessage(identitySwitch.error, uiText)}</p>}
+      </>}
       <DropdownMenuSeparator/>
       {localizeCatalog(settings, uiText).filter((item) => (item.id !== "security" || user.authenticationMethod === "channel" || user.capabilities.includes("account.password.change"))
         && (item.id !== "channels" || user.authenticationMethod === "channel" || user.capabilities.includes("account.external.bind"))).map(({id, label, icon: Icon}) => <DropdownMenuItem key={id} onClick={() => {

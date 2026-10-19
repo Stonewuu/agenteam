@@ -42,7 +42,6 @@ import {
   workspaceNavigation
 } from "../lib/navigation";
 import {PlatformManagementNavigation} from "./platform-management-navigation";
-import {IdentitySwitchControls} from "@/features/auth/components/identity-switch-boundary";
 import {SidebarNavigation} from "./sidebar-navigation";
 import {NavigationLink} from "./navigation-link";
 import {usePageScroll} from "../hooks/use-page-scroll";
@@ -175,7 +174,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
           <div className="topbar-divider"/>
         </>}<LanguageMenu/><ThemeMenu className="icon-button theme-trigger"/>{context && !platformPage &&
           <NotificationLink enterpriseId={context.enterprise.id}
-                            className="icon-button notification-trigger"/>}<IdentitySwitchControls/><AccountMenu user={user} go={go}/></div>
+                            className="icon-button notification-trigger"/>}<AccountMenu user={user} go={go}/></div>
       </header>
       <main ref={container} id="main-content" tabIndex={-1} data-page-scroll={fullHeight ? undefined : ""}
             className={`workspace-scroll-region${fullHeight ? " workspace-full-height" : ""}`}>

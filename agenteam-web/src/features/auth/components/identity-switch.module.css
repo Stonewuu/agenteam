@@ -1,3 +1,45 @@
+.avatar[data-icon-surface] {
+  position: relative;
+  box-shadow: 0 0 12px rgb(129 140 248 / 32%), 0 0 5px rgb(34 211 238 / 20%);
+}
+
+.avatar::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  padding: 2.5px;
+  border-radius: inherit;
+  background: conic-gradient(#22d3ee, #818cf8, #e879f9, #fb7185, #fbbf24, #34d399, #22d3ee);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: identity-halo-turn 3s linear infinite;
+}
+
+@keyframes identity-halo-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar::after {
+    animation: none;
+  }
+}
+
+.menuStatus {
+  color: var(--amber-text);
+  font-size: 12px;
+}
+
+.menuError {
+  margin: 4px 12px 10px;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .controls {
   position: relative;
   display: inline-flex;
@@ -50,17 +92,6 @@
   box-shadow: var(--shadow);
 }
 
-@media (max-width: 800px) {
-  .returnButton {
-    min-height: 44px;
-  }
-
-  :global(.topbar):has(.controls) :global(.enterprise-trigger),
-  :global(.topbar):has(.controls) :global(.global-search) {
-    display: none;
-  }
-}
-
 @media (max-width: 480px) {
   .controls {
     gap: 2px;
@@ -72,6 +103,7 @@
 
   .returnButton {
     min-width: 44px;
+    min-height: 44px;
     padding: 8px;
   }
 }

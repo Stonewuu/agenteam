@@ -125,12 +125,12 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
   </IdentitySwitchContext.Provider>;
 }
 
-/** 正常页面合并到原有头部；没有头部的错误页面由外层提供返回入口。 */
-export function IdentitySwitchControls() {
+/** 账户菜单提供正常页面的返回入口，没有菜单的错误页面由外层负责。 */
+export function useAccountIdentitySwitch() {
   const state = useContext(IdentitySwitchContext);
   const registerHeader = state?.registerHeader;
   useEffect(() => registerHeader?.(), [registerHeader]);
-  return state ? <IdentitySwitchActions state={state}/> : null;
+  return state;
 }
 
 function IdentitySwitchActions({state}: {state: SwitchState}) {
