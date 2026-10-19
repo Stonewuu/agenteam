@@ -220,8 +220,12 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
         lifecycle.stopForUser(enterprise, admin);
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (accepted.path("conversationId").asText())).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
         mvc.perform(get(URI.create(download.path("url").asText())).cookie(cookie)).andExpect(status().isNotFound());
-        previews.clean();
-        retention.clean();
+        // 结束事件在后台分发；清理遇到正在使用的会话会留到下一轮，下载权限仍立即失效。
+        await(() -> {
+            previews.clean();
+            retention.clean();
+            return count("message_attachment") == 0;
+        });
         assertEquals(0, count("message_attachment"));
         assertEquals(0, count("agent_message"));
         assertTrue(files.find(enterprise, file, false).isEmpty());

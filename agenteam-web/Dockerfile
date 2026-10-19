@@ -1,6 +1,6 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1 AGENTEAM_STANDALONE=true
+ENV NEXT_TELEMETRY_DISABLED=1 AGENTEAM_STANDALONE=true NODE_USE_ENV_PROXY=1
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
