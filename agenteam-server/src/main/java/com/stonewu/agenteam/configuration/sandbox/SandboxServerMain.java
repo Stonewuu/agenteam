@@ -18,6 +18,7 @@ import com.stonewu.agenteam.controller.sandbox.SandboxContainerCleanupController
 import com.stonewu.agenteam.controller.sandbox.SandboxServerController;
 import com.stonewu.agenteam.service.project.*;
 import com.stonewu.agenteam.service.sandbox.SandboxExecutionService;
+import com.stonewu.agenteam.service.sandbox.SandboxBackendNetworkMonitor;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
 import com.stonewu.agenteam.service.workspace.SandboxCapacity;
@@ -89,6 +90,7 @@ public final class SandboxServerMain {
                 layout, terminalRegistry, settings, json, Clock.systemUTC());
             var terminals = new DockerUserTerminalRuntime(terminalStore, terminalWorker, terminalRegistry, containers, Clock.systemUTC());
             var idleCheck = Executors.newSingleThreadScheduledExecutor();
+            var backendNetwork = SandboxBackendNetworkMonitor.start(docker, value("AGENTEAM_EXECUTOR_CONTAINER", ""));
             idleCheck.scheduleWithFixedDelay(lifecycle::poll, idleSettings.scanSeconds(), idleSettings.scanSeconds(),
                 TimeUnit.SECONDS);
             var server = HttpServer.create(new InetSocketAddress(value("AGENTEAM_SANDBOX_BIND_ADDRESS", "127.0.0.1"),
@@ -103,6 +105,9 @@ public final class SandboxServerMain {
             server.createContext("/terminals", new EnvironmentTerminalServerController(terminals, json, token));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 idleCheck.shutdownNow();
+                if (backendNetwork != null) {
+                    backendNetwork.close();
+                }
                 terminals.close();
                 executions.close();
                 server.stop(1);
