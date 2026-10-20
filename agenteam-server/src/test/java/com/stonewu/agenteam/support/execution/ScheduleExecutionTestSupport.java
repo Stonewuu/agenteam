@@ -21,7 +21,7 @@ import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** 两版定时执行验证共用真实接口准备和后台触发，不包含发行版替代配置。 */
+/** 定时执行验证的真实接口准备和后台触发，不包含替代配置。 */
 public abstract class ScheduleExecutionTestSupport extends ExecutionApiTestSupport {
     @Autowired
     protected ScheduleTriggerService triggers;

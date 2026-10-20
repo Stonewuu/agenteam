@@ -39,7 +39,7 @@ public class InstallationService {
         requireUninitialized(installations.lockInstallation());
         if (enterprises.selectCount(new LambdaQueryWrapper<EnterpriseRow>()) != 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INITIALIZATION_STATE_INVALID",
-                "当前数据库已有企业但初始化记录不完整，请先恢复备份或完成商业版迁移。");
+                "当前数据库已有企业但初始化记录不完整，请先恢复完整的部署记录或备份。");
         }
     }
 
@@ -91,7 +91,7 @@ public class InstallationService {
         }
         if (edition.edition() == ProductEdition.COMMUNITY && !"community".equals(state.getEdition())) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "INSTALLATION_EDITION_MISMATCH",
-                "数据库与当前安装版本不一致，请使用商业版程序启动。");
+                "数据库与当前安装版本不一致，请使用与现有部署匹配的程序启动。");
         }
         return state;
     }

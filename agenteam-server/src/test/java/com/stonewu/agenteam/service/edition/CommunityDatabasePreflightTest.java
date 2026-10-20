@@ -63,7 +63,7 @@ class CommunityDatabasePreflightTest {
                 .eq(InstallationRow::getId, 1).eq(InstallationRow::getRevision, 2L)
                 .set(InstallationRow::getEdition, "pro").set(InstallationRow::getRevision, 3L))).isEqualTo(1);
             assertThatThrownBy(() -> preflight.verify(access.getDataSource()))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("属于商业版");
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("与当前安装包不兼容");
 
         }
     }
@@ -77,7 +77,7 @@ class CommunityDatabasePreflightTest {
             assertThat(legacy.migrate().migrationsExecuted).isEqualTo(4);
             var tables = access.mapper(SchemaSnapshotMapper.class).tables();
             assertThatThrownBy(() -> preflight.verify(access.getDataSource()))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("没有社区版部署记录");
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("没有兼容的部署记录");
             assertThat(access.mapper(SchemaSnapshotMapper.class).tables()).containsExactlyInAnyOrderElementsOf(tables);
             assertThat(legacy.info().applied()).hasSize(4);
             assertThat(legacy.validateWithResult().validationSuccessful).isTrue();

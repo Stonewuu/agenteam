@@ -15,7 +15,7 @@ import org.springframework.core.io.ClassPathResource;
 import javax.sql.DataSource;
 import java.util.Set;
 
-/** 在任何自动迁移之前只读检查；旧完整库及商业库不能被当作社区库继续修改。 */
+/** 在自动迁移之前只读检查，避免修改与当前安装包不兼容的数据库。 */
 public final class CommunityDatabasePreflight {
     private static final Logger LOG = LoggerFactory.getLogger(CommunityDatabasePreflight.class);
 
@@ -27,7 +27,7 @@ public final class CommunityDatabasePreflight {
                 return;
             }
             if (!tables.contains("agenteam_installation")) {
-                throw rejected("此数据库没有社区版部署记录。现有完整版本数据请使用商业版迁移；若另一节点正在首次初始化数据库，请等其完成后重启。");
+                throw rejected("此数据库没有兼容的部署记录，请使用与现有数据匹配的程序；若另一节点正在首次初始化数据库，请等其完成后重启。");
             }
             if (!tables.containsAll(Set.of("enterprise", "app_user", "system_super_admin_lock"))) {
                 throw rejected("数据库缺少必要的企业或初始化记录，请先恢复完整备份。");
@@ -41,14 +41,14 @@ public final class CommunityDatabasePreflight {
             throw rejected("部署记录不完整，请恢复原部署记录，不能重新选择初始化企业。");
         }
         if (!state.getEdition().equals("community")) {
-            throw rejected("此数据库属于商业版，请使用商业版程序启动；社区版不会修改已有数据。");
+            throw rejected("此数据库与当前安装包不兼容，请使用与现有部署匹配的程序启动；已有数据未修改。");
         }
         if (state.getInstallationId() == null) {
             if (state.getEnterpriseCount() == 0 && state.getAdministratorCount() == 0 && state.getUserCount() == 0
                 && state.getInitialEnterpriseId() == null) {
                 return;
             }
-            throw rejected("数据库已经包含业务数据，但缺少完整的初始化部署关系，请使用商业版迁移或恢复备份。");
+            throw rejected("数据库已经包含业务数据，但缺少完整的初始化部署关系，请恢复完整的部署记录或备份。");
         }
         if (!state.getInstallationId().matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) {
             throw rejected("保存的部署编号格式不正确，请恢复原部署记录。");

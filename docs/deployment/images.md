@@ -1,6 +1,6 @@
 # 使用 Docker 镜像部署 AgenTeam
 
-AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。通过 Docker Hub 的 `stonewuu` 账号获取镜像，即可在自己的服务器上部署工作空间。
+AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。从 Docker Hub 获取项目镜像，即可在自己的服务器上部署工作空间。
 
 本文使用 0.4.1 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
 
@@ -61,15 +61,9 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 同机两套部署共用 MySQL 时，使用随包的 `compose.shared-mysql.yaml` 与 `compose.external-mysql.yaml`，步骤见部署包根目录 README.md 的“共用一个 MySQL 实例”。每套应用使用独立库和专用账号；连接共享实例的一套不再启动自己的 MySQL 容器。
 
-## 更新与备份
+## 更新到最新版
 
-停止服务用 `docker compose stop`。需要保留数据时，不要执行 `docker compose down -v`，其中 `-v` 会删除数据卷。
-
-更新前保存数据库、Redis 持久数据、应用与用户文件、工作目录、配置和加密密钥，并保留原镜像内容摘要。下载新版本部署包时使用新的空目录，将原运行配置和数据卷关系逐项带入；不要重新生成密码或对旧数据库重新初始化。
-
-更新时保持五类 AgenTeam 镜像使用同一版本，并保留原账号、资源、任务、平台绑定及应用密钥。已有部署按当前版本对应的升级步骤操作。
-
-希望跟随最新正式版时，将现有 `.env` 中以下五个镜像改为 `latest`，移除这些引用末尾原有的 `@sha256:...` 内容摘要；其他配置保持原值：
+首次选择跟随最新正式版时，将 `.env` 中以下五个镜像设为 `latest`（最新正式版标签），移除这些引用末尾原有的 `@sha256:...` 内容摘要；其他配置保持原值。此设置只需做一次：
 
 ```dotenv
 APP_IMAGE=docker.io/stonewuu/agenteam-backend:latest
@@ -79,14 +73,20 @@ SANDBOX_IMAGE=docker.io/stonewuu/agenteam-sandbox-office:latest
 DEPLOYMENT_IMAGE=docker.io/stonewuu/agenteam-deployment:latest
 ```
 
-两版正式发布完成后，latest 会更新到对应版本。保存备份并阅读该版本升级说明后，在部署目录执行：
+之后日常升级只需在部署目录执行：
 
 ```sh
 docker compose pull
-docker compose up -d --no-build --pull never --wait --wait-timeout 300
+docker compose up -d
 ```
 
-`pull` 包含办公沙箱镜像；后续启动使用本次拉取的内容。部署文件镜像不属于常驻服务，版本要求调整配置时另行拉取 `DEPLOYMENT_IMAGE` 并提取到新目录比较，保留原 `.env`、密码、数据卷与资源设置。需要固定版本时仍可使用上表中的版本号标签。
+确认 `pull` 成功后再执行 `up`。镜像由项目发布流程构建，无需在服务器编译；Compose 会替换有变化的容器并保留持久数据，数据库迁移随应用启动自动执行。正常升级不需要重新初始化、生成密码或手工修改版本号。
+
+部署文件镜像不属于常驻服务。只有发布说明明确要求调整部署结构或处理不兼容变更时，才需要按该版本说明操作。需要固定版本时，可以使用上表中的版本号标签。
+
+## 数据备份
+
+数据库、Redis 持久数据、业务文件、配置和密钥应按日常运维策略备份并定期验证恢复，普通镜像更新不要求重复完整恢复演练。停止服务用 `docker compose stop`；`docker compose down -v` 会删除数据卷，不用于普通升级。
 
 ## 查看项目版权信息
 
@@ -100,4 +100,4 @@ docker compose up -d --no-build --pull never --wait --wait-timeout 300
 
 部署配置默认使用 `nginx:1-alpine`、`mysql:8`、`redis:7-alpine`，分别跟随当前大版本的更新。已有部署同步修改 `.env` 中的 `GATEWAY_IMAGE`、`MYSQL_IMAGE`、`REDIS_IMAGE`，并移除这三项旧的 `@sha256:...` 内容摘要后，`docker compose pull` 会拉取对应大版本的新镜像；执行 `docker compose up -d` 后才应用更新。
 
-更新前保留原镜像摘要及数据库、Redis、业务文件和配置备份。数据库需要先验证升级和独立恢复；不能仅换回旧镜像就视为完成数据回退。需要保持某次已验证环境时，可以自行使用完整版本号或内容摘要。应用镜像的 `latest` 与基础组件的大版本标签分别管理，不使用数据库的 `latest` 自动跨大版本升级。
+基础组件同样通过上述 `pull` 和 `up -d` 更新。跨大版本或存在不兼容数据变更时，按该版本说明安排迁移和恢复验证；普通兼容更新沿用日常备份策略。应用镜像的 `latest` 与基础组件的大版本标签分别管理，不使用数据库的 `latest` 自动跨大版本升级。

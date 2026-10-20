@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 两版共用用量读取权限和周期处理，具体计数范围由发行组件提供。 */
+/** 统一用量读取权限和周期处理，具体计数范围由对应组件提供。 */
 @Service
 public class UsageQueryService {
     private final QuotaPolicyProvider policies;

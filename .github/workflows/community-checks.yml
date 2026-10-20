@@ -6,7 +6,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# 公共贡献只使用本仓库的读取权限，不引用商业仓库、私有发布凭据或签发密钥。
+# 贡献检查只使用本仓库的读取权限，不读取发布凭据或签发密钥。
 permissions:
   contents: read
 

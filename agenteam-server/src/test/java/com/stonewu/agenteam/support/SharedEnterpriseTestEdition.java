@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 
 /**
  * 仅由共有业务的多企业契约测试显式导入，模拟上层发行组件。
- * 保留全部会话、成员和资源权限检查；不用于证明社区创建能力或商业许可证行为。
+ * 保留全部会话、成员和资源权限检查；不用于证明初始化时的企业创建行为。
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class SharedEnterpriseTestEdition {

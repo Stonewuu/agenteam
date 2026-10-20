@@ -9,7 +9,7 @@ import type { Permission, Role } from "../types/organization";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./role-details.module.css";
 
-/** 两版共有的角色只读详情，不加载角色写入接口。 */
+/** 角色只读详情，不加载角色写入接口。 */
 export function RoleDetails({
   enterpriseId,
   role,

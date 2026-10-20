@@ -110,7 +110,7 @@ function copyInput(source, destination, name, records) {
   records[name.replaceAll("\\", "/")] = sha256(content);
 }
 
-/** 调用方提供全新的目录；公共、商业都从同一份部署模板准备明确输入，不读取外层 package。 */
+/** 调用方提供全新的目录；从所属源码仓库的部署模板准备输入，不读取外层目录。 */
 export function createImageInputs({community, productRoot = community, frontend, backend, output, releaseFile, edition, version, targets,
   sourceCommit, communityCommit, release = false, thirdPartyDocuments, sharedThirdPartyDocuments = thirdPartyDocuments, backendBuildSha256}) {
   if (!/^\d+\.\d+\.\d+$/.test(version) || !["community", "pro"].includes(edition)) {

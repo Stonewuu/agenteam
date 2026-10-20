@@ -7,7 +7,7 @@ import com.stonewu.agenteam.model.usage.response.UsageView;
 import java.time.Instant;
 import java.util.List;
 
-/** 社区保留企业实际计数，不设置商业组织的执行次数上限。 */
+/** 记录企业实际执行次数，不设置执行次数上限。 */
 public class CommunityQuotaPolicyProvider implements QuotaPolicyProvider {
     private final EnterpriseUsageMapper usage;
 

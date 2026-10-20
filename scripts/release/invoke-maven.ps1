@@ -8,7 +8,7 @@ $mavenArgumentsJson = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase
 [string[]]$mavenArguments = ConvertFrom-Json -InputObject $mavenArgumentsJson
 Push-Location -LiteralPath $ProjectDirectory
 try {
-    # 两版共用同一入口；参数作为数组传入，不拼接成命令文本。
+    # 参数作为数组传入，不拼接成命令文本。
     & (Join-Path $ProjectDirectory 'mvnw.cmd') @mavenArguments
     $mavenExitCode = $LASTEXITCODE
 } finally {

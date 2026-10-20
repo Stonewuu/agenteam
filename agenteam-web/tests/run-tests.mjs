@@ -26,7 +26,7 @@ function run(args) {
   });
 }
 
-// 每种编译输出只准备一次；商业组合只选择扩展相关用例时，无须重复准备共有用例。
+// 每种编译输出只准备一次；只选择扩展相关用例时，无须重复准备其他用例。
 if (selected.includes("conversation-protocol.test.mjs")) {
   await run([compiler, "-p", "tests/tsconfig.conversation.json", "--pretty", "false"]);
 }

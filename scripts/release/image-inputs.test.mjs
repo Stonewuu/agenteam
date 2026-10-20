@@ -45,7 +45,7 @@ function fixture() {
   write("agenteam/docs/deployment/enterprise-messaging.md", "共有的企业消息安装说明");
   write("agenteam/docs/deployment/web-browsing.md", "共有的浏览器与代码拉取说明");
   // 外层文档、私有仓库与本地部署凭据均真实存在，复制结果不能包含它们。
-  write("agenteam-pro/private.txt", "不可进入公共镜像");
+  write("unrelated-project/private.txt", "不可进入公共镜像");
   write("dev-docs/private.md", "不可进入镜像的维护资料");
   write("agenteam/deploy/.env", "DB_PASSWORD=不复制的验证密码");
   const targets = communityTargets("0.2.0");
@@ -105,9 +105,9 @@ test("只复制声明的输入，保留版权文件，五类镜像同版本且�
   assert.throws(() => createImageInputs(options), /停止覆盖/);
 });
 
-test("社区不能从商业目录取得安装文档", () => {
+test("不能从其他项目目录取得安装文档", () => {
   const value = fixture();
-  assert.throws(() => createImageInputs({...value.options, productRoot: resolve(value.root, "agenteam-pro")}), /所属的源码仓库/);
+  assert.throws(() => createImageInputs({...value.options, productRoot: resolve(value.root, "unrelated-project")}), /所属的源码仓库/);
 });
 
 test("错误镜像仓库、旧版本标签及混入的密码字段均拒绝", () => {
@@ -147,10 +147,10 @@ test("源目录中的私钥和客户授权文件不能随前端资源进入镜�
 
 test("源文件和输出的目录链接不能把构建输入指向私有目录", () => {
   const first = fixture();
-  symlinkSync(resolve(first.root, "agenteam-pro"), resolve(first.options.frontend, "public/linked"), "junction");
+  symlinkSync(resolve(first.root, "unrelated-project"), resolve(first.options.frontend, "public/linked"), "junction");
   assert.throws(() => createImageInputs(first.options), /不允许/);
   const second = fixture();
-  symlinkSync(resolve(second.root, "agenteam-pro"), resolve(second.root, "linked-output"), "junction");
+  symlinkSync(resolve(second.root, "unrelated-project"), resolve(second.root, "linked-output"), "junction");
   assert.throws(() => createImageInputs({...second.options, output: resolve(second.root, "linked-output/output")}), /父目录/);
 });
 
@@ -204,7 +204,7 @@ test("资料中的额外文件、越界原文路径和目录链接都拒绝", ()
   assert.throws(() => createImageInputs({...extra.options, thirdPartyDocuments: extraKit.directory}), /未登记/);
   const escaped = fixture();
   const escapedKit = documents(escaped);
-  escapedKit.index.components[0].notices[0].file = "../agenteam-pro/private.txt";
+  escapedKit.index.components[0].notices[0].file = "../unrelated-project/private.txt";
   escapedKit.persist();
   assert.throws(() => createImageInputs({...escaped.options, thirdPartyDocuments: escapedKit.directory}), /路径或摘要/);
   const linked = fixture();

@@ -316,7 +316,7 @@ class AgenteamApplicationTests {
         assertEquals(otherEnterprise, users.findById(userId).orElseThrow().lastEnterpriseId());
         var first = mvc.perform(get("/api/v1/enterprises/" + firstEnterprise + "/context").cookie(cookie)).andExpect(status().isOk()).andReturn();
         var second = mvc.perform(get("/api/v1/enterprises/" + otherEnterprise + "/context").cookie(cookie)).andExpect(status().isOk()).andReturn();
-        // 使用两版共有的成员管理权限检查企业身份差异；商业角色编辑权限由商业测试验证。
+        // 使用成员管理权限检查企业身份差异。
         assertTrue(json.readTree(first.getResponse().getContentAsString()).at("/data/permissions").toString().contains("enterprise.members.manage"));
         assertFalse(json.readTree(second.getResponse().getContentAsString()).at("/data/permissions").toString().contains("enterprise.members.manage"));
         assertEquals("第二企业只读成员", json.readTree(second.getResponse().getContentAsString()).at("/data/member/displayName").asText());

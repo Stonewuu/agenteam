@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** 两版共用可控模型故障与重试计数断言；发行特有变更由调用用例提供。 */
+/** 提供可控模型故障与重试计数断言，场景特有变更由调用用例提供。 */
 public abstract class ScheduleRetryTestSupport extends ExecutionApiTestSupport {
     @Autowired
     protected ScheduleActionWorker actionWorker;

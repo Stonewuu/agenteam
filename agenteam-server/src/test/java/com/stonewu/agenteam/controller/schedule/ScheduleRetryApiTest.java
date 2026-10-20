@@ -78,7 +78,7 @@ class ScheduleRetryApiTest extends ScheduleRetryTestSupport {
     @ValueSource(ints = {0, 120})
     void twoTransientFailuresUseThreeIndependentOutputsAndOnlyOneQuotaEntry(int timeoutSeconds) throws Exception {
         verifyTransientRetryCounts(timeoutSeconds, () -> {
-            // 社区只检查真实重试和一次计数，商业上限变更由商业用例覆盖。
+            // 检查真实重试和一次计数。
         });
     }
 

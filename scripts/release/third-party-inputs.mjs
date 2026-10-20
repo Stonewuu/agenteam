@@ -89,7 +89,7 @@ function verifyFiles(bundle, family, directory, names, node = false) {
 /** 后端绑定实际文件，前端和办公依赖绑定产生原文报告的锁文件。正式许可审核仍由发布检查承担。 */
 export function verifyThirdPartyInputs({product, shared, backend, frontend, office}) {
   if (!shared) {
-    throw new Error("缺少两版办公镜像共用的第三方资料。");
+    throw new Error("缺少办公镜像所需的第三方资料。");
   }
   if (product.index.applicationArtifact.sha256 !== checksum(regular(backend))) {
     throw new Error("第三方资料对应另一个后端文件，请按当前产物重新收集。");

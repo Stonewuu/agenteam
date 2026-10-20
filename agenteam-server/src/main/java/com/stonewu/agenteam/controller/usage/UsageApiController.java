@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 基础用量读取不依赖商业次数规则管理。 */
+/** 提供当前企业的用量读取接口。 */
 @RestController
 @RequestMapping("/api/v1/enterprises/{enterpriseId}/usage")
 public class UsageApiController {
