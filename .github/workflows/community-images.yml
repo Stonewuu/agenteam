@@ -61,6 +61,7 @@ jobs:
           name: community-release-plan
           path: .runtime/release/plan.json
           include-hidden-files: true
+          overwrite: true
           retention-days: 7
 
   checks:

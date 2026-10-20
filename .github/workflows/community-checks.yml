@@ -66,6 +66,7 @@ jobs:
             .build/backend/build-inputs.json
             .build/backend/artifacts/agenteam-*.jar
           include-hidden-files: true
+          overwrite: true
           retention-days: 7
           if-no-files-found: error
       - name: 保留后端测试报告
@@ -77,6 +78,7 @@ jobs:
             .runtime/tests/reports/
             .build/backend/artifacts/surefire-reports/
           include-hidden-files: true
+          overwrite: true
           retention-days: 7
           if-no-files-found: ignore
 
