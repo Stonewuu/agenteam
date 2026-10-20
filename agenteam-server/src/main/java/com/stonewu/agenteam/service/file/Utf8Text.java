@@ -13,7 +13,14 @@ public final class Utf8Text {
     }
 
     public static int size(String text) {
-        return text.getBytes(StandardCharsets.UTF_8).length;
+        int bytes = 0;
+        for (int offset = 0; offset < text.length();) {
+            int cp = text.codePointAt(offset);
+            int length = cp <= 0x7f || cp >= 0xd800 && cp <= 0xdfff ? 1 : cp <= 0x7ff ? 2 : cp <= 0xffff ? 3 : 4;
+            bytes = Math.addExact(bytes, length);
+            offset += Character.charCount(cp);
+        }
+        return bytes;
     }
 
     public static String revision(String path, String text) {

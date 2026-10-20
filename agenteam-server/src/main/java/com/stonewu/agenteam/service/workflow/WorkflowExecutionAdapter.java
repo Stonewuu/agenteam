@@ -92,8 +92,11 @@ public class WorkflowExecutionAdapter {
 
         @Override
         public void cancel() {
-            context.cancel();
-            stop.tryEmitEmpty();
+            try {
+                context.cancel();
+            } finally {
+                stop.tryEmitEmpty();
+            }
         }
 
         @Override

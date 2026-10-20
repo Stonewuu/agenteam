@@ -20,10 +20,11 @@ services:
   backend:
     environment:
       <<: *low-memory-sandbox
-      # 四协议还需要类信息与编译空间，低内存主机固定堆上限和较轻量的编译等级。
-      JAVA_TOOL_OPTIONS: -Xmx192m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1
-    mem_limit: 512m
-    memswap_limit: 512m
+      # 为类信息、线程和网络缓冲保留堆外空间，并限制同时保留的对话上下文数量。
+      JAVA_TOOL_OPTIONS: -Xmx256m -XX:+ExitOnOutOfMemoryError -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1
+      EXECUTION_WORKER_MAXIMUM_CONCURRENT: "1"
+    mem_limit: 640m
+    memswap_limit: 640m
 
   sandbox-executor:
     environment:

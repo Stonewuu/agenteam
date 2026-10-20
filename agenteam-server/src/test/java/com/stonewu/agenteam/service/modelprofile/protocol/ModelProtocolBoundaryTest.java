@@ -3,6 +3,8 @@ package com.stonewu.agenteam.service.modelprofile.protocol;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.modelprofile.ModelLibraryLogging;
+import com.stonewu.agenteam.configuration.modelprofile.ModelRequestLimits;
+import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProtocolOptions;
@@ -39,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,6 +50,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /** 验证真实开发库请求、异常保存和日志边界，不替代模型或协议转换。 */
 @ExtendWith(OutputCaptureExtension.class)
@@ -60,6 +65,7 @@ class ModelProtocolBoundaryTest {
     private HttpServer server;
     private String reply;
     private int status;
+    private CountDownLatch responseGate;
 
     @BeforeEach
     void start() throws Exception {
@@ -70,6 +76,13 @@ class ModelProtocolBoundaryTest {
         server.createContext("/", exchange -> {
             sends.incrementAndGet();
             request.set(json.readTree(exchange.getRequestBody()));
+            if (responseGate != null) {
+                try {
+                    responseGate.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             byte[] body = reply.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", status == 200 ? "text/event-stream" : "application/json");
             exchange.getResponseHeaders().set("x-request-id", "trace-unit");
@@ -83,6 +96,9 @@ class ModelProtocolBoundaryTest {
 
     @AfterEach
     void stop() {
+        if (responseGate != null) {
+            responseGate.countDown();
+        }
         server.stop(0);
         logging.destroy();
     }
@@ -145,7 +161,41 @@ class ModelProtocolBoundaryTest {
             .doesNotContain("private-prompt", "private-api-key", "private_query");
     }
 
+    @Test
+    void oversizedInputFailsBeforeTheSdkCopiesOrDispatchesTheRequest() {
+        var bounded = new ModelProtocolFactory(new OutboundAddressPolicy(""), json,
+            new ModelUsageJournal(service, Clock.systemUTC()), new ModelProtocolValidation(),
+            new ModelRequestLimits(Duration.ofSeconds(5), 1024));
+        assertThatThrownBy(() -> invoke("openai", ModelProtocolOptions.defaults(), null, bounded,
+            "不得输出到日志的长输入🙂".repeat(2000)))
+            .isInstanceOf(ApiException.class).hasMessageContaining("本次对话内容过大");
+        assertThat(sends.get()).isZero();
+        verifyNoInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"openai", "openai_responses", "anthropic", "gemini"})
+    void silentModelRequestsEndEvenWhenTheTaskHasNoTimeLimit(String protocol, CapturedOutput output) {
+        responseGate = new CountDownLatch(1);
+        reply = "";
+        var bounded = new ModelProtocolFactory(new OutboundAddressPolicy(""), json,
+            new ModelUsageJournal(service, Clock.systemUTC()), new ModelProtocolValidation(),
+            new ModelRequestLimits(Duration.ofSeconds(2), 1024 * 1024));
+        assertThatThrownBy(() -> invoke(protocol, ModelProtocolOptions.defaults(), null, bounded, "private-prompt"))
+            .isInstanceOf(RuntimeException.class);
+        assertThat(sends.get()).isEqualTo(1);
+        var saved = ArgumentCaptor.forClass(ModelUsageSnapshot.class);
+        verify(service).save(saved.capture());
+        assertThat(saved.getValue().callStatus()).isEqualTo("failed");
+        assertThat(output.getAll()).doesNotContain("private-prompt", "private-api-key");
+    }
+
     private void invoke(String protocol, ModelProtocolOptions settings, String effort) {
+        invoke(protocol, settings, effort, factory, "private-prompt");
+    }
+
+    private void invoke(String protocol, ModelProtocolOptions settings, String effort, ModelProtocolFactory selected,
+                        String prompt) {
         var now = Instant.now();
         String url = "http://127.0.0.1:" + server.getAddress().getPort() + (protocol.startsWith("openai") ? "/v1" : "");
         var profile = new ModelProfileRecord("model", "enterprise", "provider", "测试模型", "test-model",
@@ -153,7 +203,7 @@ class ModelProtocolBoundaryTest {
             true, 1, "测试连接", protocol, url, true, now, now);
         var provider = new ModelProviderRecord("provider", "enterprise", "测试连接", protocol, url, "private-api-key", true, 1, now, now);
         var context = new ModelCallContext("enterprise", "user", null, null, 0, 0, null, null, null, "preview", "preview", "测试");
-        factory.stream(profile, provider, context, List.of(new UserMessage("private-prompt")), List.of(),
+        selected.stream(profile, provider, context, List.of(new UserMessage(prompt)), List.of(),
             GenerateOptions.builder().reasoningEffort(effort).build()).collectList().block(Duration.ofSeconds(8));
     }
 

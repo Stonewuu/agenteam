@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Properties;
 
 /**
@@ -16,6 +17,11 @@ public final class RunProcessTestFixture {
     }
 
     public static Process start(Environment environment, Path directory, String enterprise, String run, String logName) throws IOException {
+        return start(environment, directory, enterprise, run, logName, List.of());
+    }
+
+    public static Process start(Environment environment, Path directory, String enterprise, String run, String logName,
+                                List<String> mode) throws IOException {
         var values = new Properties();
         for (String key : List.of("spring.datasource.url", "spring.datasource.username", "spring.datasource.password", "spring.data.redis.host",
             "spring.data.redis.port", "spring.data.redis.password", "spring.data.redis.database", "spring.session.redis.namespace",
@@ -42,16 +48,21 @@ public final class RunProcessTestFixture {
         try (var output = Files.newOutputStream(properties)) {
             values.store(output, "仅用于当前隔离测试");
         }
-        return start(properties, TestOutputPaths.path(logName + ".log"), enterprise, run);
+        return start(properties, TestOutputPaths.path(logName + ".log"), enterprise, run, mode);
     }
 
     public static Process start(Path properties, Path log, String enterprise, String run) throws IOException {
+        return start(properties, log, enterprise, run, List.of());
+    }
+
+    private static Process start(Path properties, Path log, String enterprise, String run, List<String> mode) throws IOException {
         String executable = Path.of(System.getProperty("java.home"), "bin", System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java").toString();
         String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
-        var arguments = List.of("-Xmx512m", "-XX:ActiveProcessorCount=2",
+        var arguments = new ArrayList<>(List.of("-Xmx512m", "-XX:+ExitOnOutOfMemoryError", "-XX:ActiveProcessorCount=2",
             "-Dagenteam.test.artifacts-root=" + TestOutputPaths.root(),
             "-XX:TieredStopAtLevel=" + System.getProperty("agenteam.test.compiler-level", "1"),
-            "-cp", classpath, RestartedRunWorker.class.getName(), properties.toString(), enterprise, run);
+            "-cp", classpath, RestartedRunWorker.class.getName(), properties.toString(), enterprise, run));
+        arguments.addAll(mode);
         Path argumentFile = properties.resolveSibling(properties.getFileName() + ".args");
         // 依赖增加后完整类路径可能超过 Windows 命令行长度，交给 Java 从参数文件读取。
         Files.writeString(argumentFile, String.join("\n", arguments.stream()

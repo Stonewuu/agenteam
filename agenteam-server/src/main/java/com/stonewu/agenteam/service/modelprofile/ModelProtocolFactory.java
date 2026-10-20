@@ -1,11 +1,13 @@
 package com.stonewu.agenteam.service.modelprofile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stonewu.agenteam.configuration.modelprofile.ModelRequestLimits;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRecord;
 import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import com.stonewu.agenteam.service.modelprofile.protocol.ModelGenerationSettings;
 import com.stonewu.agenteam.service.modelprofile.protocol.ModelHttpSession;
+import com.stonewu.agenteam.service.modelprofile.protocol.ModelInputBudget;
 import com.stonewu.agenteam.service.modelprofile.protocol.ModelProtocolHistory;
 import com.stonewu.agenteam.service.modelprofile.protocol.ModelRequestDiagnostics;
 import com.stonewu.agenteam.service.modelprofile.protocol.ModelUsageFrames;
@@ -24,6 +26,7 @@ import io.agentscope.core.model.transport.HttpTransportConfig;
 import io.agentscope.core.model.transport.OkHttpTransport;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -40,28 +43,35 @@ public class ModelProtocolFactory {
     private final ObjectMapper json;
     private final ModelUsageJournal journal;
     private final ModelProtocolValidation validation;
+    private final ModelRequestLimits limits;
 
     public ModelProtocolFactory(OutboundAddressPolicy addresses, ObjectMapper json, ModelUsageJournal journal,
                                  ModelProtocolValidation validation) {
+        this(addresses, json, journal, validation, ModelRequestLimits.defaults());
+    }
+
+    @Autowired
+    public ModelProtocolFactory(OutboundAddressPolicy addresses, ObjectMapper json, ModelUsageJournal journal,
+                                ModelProtocolValidation validation, ModelRequestLimits limits) {
         this.addresses = addresses;
         this.json = json;
         this.journal = journal;
         this.validation = validation;
+        this.limits = limits;
     }
 
     public Flux<ChatResponse> stream(ModelProfileRecord profile, ModelProviderRecord provider, ModelCallContext context,
                                       List<Msg> messages, List<ToolSchema> tools, GenerateOptions requested) {
         return Flux.defer(() -> {
             validation.validate(provider.protocol(), profile.capabilities());
+            ModelInputBudget.requireFits(json, messages, tools, limits.maximumInputBytes());
             var options = ModelGenerationSettings.options(profile, provider, requested);
             var history = new ModelProtocolHistory(provider.protocol(), provider.id(), profile.modelName());
             var prepared = history.prepare(messages);
             return Flux.usingWhen(Mono.fromSupplier(() -> open(profile, provider, context, prepared, options)), session -> {
                 var stream = Flux.defer(() -> session.model.stream(prepared, tools, options)).doOnCancel(session.transport::cancel);
-                Duration timeout = options.getExecutionConfig().getTimeout();
-                if (timeout != null && !timeout.isNegative() && !timeout.isZero()) {
-                    stream = stream.timeout(timeout);
-                }
+                Duration timeout = limits.timeout(options.getExecutionConfig().getTimeout());
+                stream = stream.timeout(timeout);
                 return stream.map(response -> ModelUsageFrames.bounded(response, session.call.usage().snapshot().usage()))
                     .map(history::identify).onErrorMap(session.diagnostics::failure);
             }, session -> finish(session, "completed"), (session, failure) -> finish(session, "failed"),

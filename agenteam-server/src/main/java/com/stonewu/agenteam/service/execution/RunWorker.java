@@ -9,10 +9,12 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import reactor.core.Exceptions;
+import reactor.core.publisher.Sinks;
 
 import java.util.Map;
 import java.util.UUID;
@@ -31,11 +33,8 @@ public class RunWorker implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(RunWorker.class);
     private final String owner = "worker-" + UUID.randomUUID();
     private final Map<String, Active> active = new ConcurrentHashMap<>();
-    private final ExecutorService executor = Executors.newFixedThreadPool(10, task -> {
-        Thread thread = new Thread(task, "execution-worker");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ExecutorService executor;
+    private final int maximumConcurrent;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final RunLifecycleService lifecycle;
     private final ExecutionTaskFactory tasks;
@@ -45,12 +44,27 @@ public class RunWorker implements AutoCloseable {
         this(lifecycle, tasks, null);
     }
 
-    @Autowired
     public RunWorker(RunLifecycleService lifecycle, ExecutionTaskFactory tasks,
                      ProjectSandboxUsageService sandboxUsage) {
+        this(lifecycle, tasks, sandboxUsage, 10);
+    }
+
+    @Autowired
+    public RunWorker(RunLifecycleService lifecycle, ExecutionTaskFactory tasks,
+                     ProjectSandboxUsageService sandboxUsage,
+                     @Value("${execution.worker.maximum-concurrent:10}") int maximumConcurrent) {
+        if (maximumConcurrent < 1 || maximumConcurrent > 32) {
+            throw new IllegalArgumentException("每个工作进程的并发任务数量必须在 1 到 32 之间。");
+        }
         this.lifecycle = lifecycle;
         this.tasks = tasks;
         this.sandboxUsage = sandboxUsage;
+        this.maximumConcurrent = maximumConcurrent;
+        this.executor = Executors.newFixedThreadPool(maximumConcurrent, task -> {
+            Thread thread = new Thread(task, "execution-worker");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     private static final class Active {
@@ -58,6 +72,7 @@ public class RunWorker implements AutoCloseable {
         private volatile ExecutionTask task;
         private volatile boolean started;
         private volatile boolean stopping;
+        private final Sinks.Empty<Void> stop = Sinks.empty();
         private long renewedAt = System.nanoTime();
 
         private Active(JobLease lease) {
@@ -66,9 +81,15 @@ public class RunWorker implements AutoCloseable {
 
         private void cancel() {
             stopping = true;
+            // 即使底层取消抛出异常或流没有完成信号，也先解除工作线程的等待。
+            stop.tryEmitEmpty();
             var current = task;
             if (current != null) {
-                current.cancel();
+                try {
+                    current.cancel();
+                } catch (RuntimeException failure) {
+                    LOG.warn("执行 {} 的底层取消未完成，继续结束任务", lease.runId(), failure);
+                }
             }
         }
     }
@@ -91,7 +112,7 @@ public class RunWorker implements AutoCloseable {
             for (var approval : lifecycle.expiredApprovals()) {
                 lifecycle.expireApproval(approval);
             }
-            while (!closed.get() && active.size() < 10) {
+            while (!closed.get() && active.size() < maximumConcurrent) {
                 var claimed = lifecycle.claim(owner);
                 if (claimed.isEmpty()) {
                     break;
@@ -133,17 +154,19 @@ public class RunWorker implements AutoCloseable {
             try (var task = tasks.create(record.get(), running.lease)) {
                 running.task = task;
                 if (running.stopping || closed.get()) {
-                    task.cancel();
+                    running.cancel();
                 }
-                task.completion().block();
-                task.saveCheckpoint();
-                if (task.waiting()) {
+                task.completion().takeUntilOther(running.stop.asMono()).block();
+                if (!running.stopping && !closed.get()) {
+                    task.saveCheckpoint();
+                }
+                if (task.waiting() && !running.stopping && !closed.get()) {
                     return;
                 }
                 if (closed.get()) {
                     finish(running, "failed", "EXECUTION_INTERRUPTED", "本次执行已中断，请重新执行。");
                 } else {
-                    finish(running, task.cancelled() ? "cancelled" : "completed", null, null);
+                    finish(running, task.cancelled() || running.stopping ? "cancelled" : "completed", null, null);
                 }
             }
         } catch (Throwable failure) {
@@ -151,7 +174,9 @@ public class RunWorker implements AutoCloseable {
             if (!(cause instanceof ExecutionStoppedException)) {
                 LOG.error("对话执行失败，执行编号 {}，工作编号 {}", running.lease.runId(), running.lease.id(), failure);
             }
-            if (cause instanceof ExecutionStoppedException) {
+            if (closed.get()) {
+                finish(running, "failed", "EXECUTION_INTERRUPTED", "本次执行已中断，请重新执行。");
+            } else if (running.stopping || cause instanceof ExecutionStoppedException) {
                 finish(running, "cancelled", null, null);
             } else if (cause instanceof ApiException known) {
                 reject(running, known.code(), known.getReason());
@@ -166,10 +191,15 @@ public class RunWorker implements AutoCloseable {
                 }
             }
         } finally {
-            if (sandboxUsage != null) {
-                sandboxUsage.release(running.lease);
+            try {
+                if (sandboxUsage != null) {
+                    sandboxUsage.release(running.lease);
+                }
+            } catch (RuntimeException failure) {
+                LOG.warn("执行 {} 的沙箱使用记录未及时释放，等待租约到期", running.lease.runId(), failure);
+            } finally {
+                active.remove(running.lease.id());
             }
-            active.remove(running.lease.id());
         }
     }
 

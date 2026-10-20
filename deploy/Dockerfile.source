@@ -23,7 +23,7 @@ COPY --from=build /build/LICENSE /usr/share/licenses/agenteam/agenteam/LICENSE
 COPY --from=build /build/NOTICE /usr/share/licenses/agenteam/agenteam/NOTICE
 USER 10001:10001
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/agenteam.jar"]
+ENTRYPOINT ["java", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/agenteam.jar"]
 
 FROM application AS sandbox-server
 USER root

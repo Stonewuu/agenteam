@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,6 +45,9 @@ public final class RestartedRunWorker {
                 while (System.nanoTime() < deadline) {
                     worker.poll();
                     var run = runs.find(args[1], args[2], false).orElseThrow();
+                    if (args.length == 5 && args[3].equals("exhaust-heap") && Files.exists(Path.of(args[4]))) {
+                        exhaustHeap();
+                    }
                     if (run.terminal()) {
                         if (!run.status().equals("completed")) {
                             throw new IllegalStateException("新进程执行失败：" + run.errorCode());
@@ -56,6 +60,13 @@ public final class RestartedRunWorker {
             } finally {
                 worker.close();
             }
+        }
+    }
+
+    private static void exhaustHeap() {
+        var retained = new ArrayList<byte[]>();
+        while (true) {
+            retained.add(new byte[1024 * 1024]);
         }
     }
 }

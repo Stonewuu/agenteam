@@ -39,6 +39,10 @@ test("默认部署继续运行自己的 MySQL，保留新驱动和等待数据�
   assert.equal(standard.services.backend.depends_on.mysql.condition, "service_healthy");
   assert.match(standard.services.backend.environment.AGENTEAM_DB_URL, /^jdbc:mariadb:\/\/mysql:3306\/agenteam\?/);
   assert.equal(standard.networks["shared-database"], undefined);
+  assert.equal(Number(standard.services.backend.mem_limit), 2 * 1024 ** 3);
+  assert.match(standard.services.backend.environment.JAVA_TOOL_OPTIONS, /MaxRAMPercentage=65\.0/);
+  assert.match(standard.services.backend.environment.JAVA_TOOL_OPTIONS, /\+ExitOnOutOfMemoryError/);
+  assert.equal(standard.services.backend.restart, "unless-stopped");
 });
 
 test("提供共享数据库只增加专用网络，原数据库账号及持久卷保持不变", () => {
@@ -86,6 +90,10 @@ test("低内存双站点共享执行名额，保留独立用户文件且常驻�
       assert.equal(environment.AGENTEAM_SANDBOX_MEMORY_MB, "512");
       assert.equal(environment.AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT, "1");
     }
+    assert.equal(site.services.backend.environment.EXECUTION_WORKER_MAXIMUM_CONCURRENT, "1");
+    assert.match(site.services.backend.environment.JAVA_TOOL_OPTIONS, /-Xmx256m/);
+    assert.match(site.services.backend.environment.JAVA_TOOL_OPTIONS, /\+ExitOnOutOfMemoryError/);
+    assert.equal(Number(site.services.backend.mem_limit), 640 * 1024 * 1024);
     const executor = site.services["sandbox-executor"];
     assert.equal(executor.environment.AGENTEAM_SANDBOX_CAPACITY_ROOT, "/var/lib/agenteam-capacity");
     assert.equal(executor.environment.AGENTEAM_SANDBOX_CGROUP_PARENT, "agenteam-sandboxes.slice");
@@ -94,7 +102,7 @@ test("低内存双站点共享执行名额，保留独立用户文件且常驻�
     assert.ok(site.services["storage-init"].command[0].includes("/sandbox-capacity"));
     assert.equal(site.volumes["sandbox-capacity"].external, true);
   }
-  assert.equal(combined, 3136 * 1024 * 1024);
+  assert.equal(combined, 3392 * 1024 * 1024);
   assert.equal(provider.volumes["sandbox-capacity"].name, client.volumes["sandbox-capacity"].name);
   assert.notEqual(provider.volumes["user-workspaces"].name, client.volumes["user-workspaces"].name);
   assert.ok(!configuration(["compose.external-mysql.yaml", "compose.low-memory.yaml"], "client", true).includes("mysql"));

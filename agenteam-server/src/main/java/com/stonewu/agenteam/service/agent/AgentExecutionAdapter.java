@@ -172,9 +172,19 @@ public class AgentExecutionAdapter {
 
         public void cancel() {
             if (cancelled.compareAndSet(false, true)) {
+                try {
+                    stopInvocation();
+                } finally {
+                    stop.tryEmitEmpty();
+                }
+            }
+        }
+
+        private void stopInvocation() {
+            try {
                 execution.guard().cancel();
+            } finally {
                 invocation.cancel();
-                stop.tryEmitEmpty();
             }
         }
 
@@ -219,17 +229,10 @@ public class AgentExecutionAdapter {
         @Override
         public void close() {
             if (closed.compareAndSet(false, true)) {
-                if (!completed.get()) {
-                    execution.guard().cancel();
-                    invocation.cancel();
-                }
-                try {
-                    stream.close();
-                } finally {
-                    if (ownsPersistence) {
-                        persistence.close();
+                try (execution; var ownedPersistence = ownsPersistence ? persistence : null; stream) {
+                    if (!completed.get()) {
+                        stopInvocation();
                     }
-                    execution.close();
                 }
             }
         }

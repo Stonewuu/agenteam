@@ -10,6 +10,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.mapper.usage.QuotaEntryTableMapper;
+import com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper;
+import com.stonewu.agenteam.mapper.test.background.BackgroundJobFixtureMapper;
+import com.stonewu.agenteam.model.background.entity.BackgroundJobRow;
 import com.stonewu.agenteam.model.execution.entity.AgentMessageRow;
 import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
@@ -85,6 +88,64 @@ class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
     @AfterAll
     void closeEnvironment() throws Exception {
         ENVIRONMENT.close();
+    }
+
+    @Test
+    void actualHeapExhaustionExitsTheProcessAndRecoveryEndsTheRunWithoutReplayingTheRequest() throws Exception {
+        var requested = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        modelResponse = exchange -> {
+            begin(exchange);
+            frame(exchange, "内存异常前已经生成的内容。", false);
+            requested.countDown();
+            try {
+                release.await(60, TimeUnit.SECONDS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } finally {
+                exchange.close();
+            }
+        };
+        var accepted = submit("验证内存异常后的任务恢复");
+        String runId = accepted.path("runId").asText();
+        allowModelCalls = true;
+        Path trigger = directory.resolve("exhaust-heap.trigger");
+        var process = RunProcessTestFixture.start(environment, directory, enterprise, runId, "execution-heap-exhaustion",
+            List.of("exhaust-heap", trigger.toString()));
+        try {
+            assertTrue(requested.await(50, TimeUnit.SECONDS), "独立进程应先进入真实模型请求");
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (!snapshot(accepted).at("/messages/1/content").asText().contains("内存异常前")
+                && System.nanoTime() < deadline) {
+                TimeUnit.MILLISECONDS.sleep(25);
+            }
+            assertTrue(snapshot(accepted).at("/messages/1/content").asText().contains("内存异常前"));
+            Files.writeString(trigger, "仅触发本次隔离测试进程的内存耗尽");
+            assertTrue(process.waitFor(15, TimeUnit.SECONDS), "堆内存耗尽后进程应立即退出");
+            assertNotEquals(0, process.exitValue());
+            String log = Files.readString(TestOutputPaths.path("execution-heap-exhaustion.log"));
+            assertTrue(log.contains("Terminating due to java.lang.OutOfMemoryError"), "必须真实触发堆耗尽退出，不能只模拟异常");
+            var job = databaseAccess.mapper(BackgroundJobSqlMapper.class).selectOne(new LambdaQueryWrapper<BackgroundJobRow>()
+                .eq(BackgroundJobRow::getDedupeKey, "run:" + runId));
+            // 子进程已经退出，只推进测试记录的租约到期，避免固定等待真实的三十秒。
+            databaseAccess.mapper(BackgroundJobFixtureMapper.class).expireLease(job.getId());
+            try (var restarted = new RunWorker(lifecycle, tasks)) {
+                restarted.poll();
+                await(() -> state(accepted).equals("failed"));
+            }
+            assertEquals("EXECUTION_INTERRUPTED", code(accepted));
+            assertEquals(0, reserved());
+            var snapshot = snapshot(accepted);
+            assertEquals("failed", snapshot.at("/messages/1/status").asText());
+            assertTrue(snapshot.at("/messages/1/content").asText().contains("内存异常前"));
+            assertEquals(1, modelCalls.get() - callsBefore, "重启恢复不能重发已有模型请求");
+        } finally {
+            release.countDown();
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                process.waitFor(10, TimeUnit.SECONDS);
+            }
+        }
     }
 
     @Test

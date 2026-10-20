@@ -134,21 +134,19 @@ public final class ExecutionToolRuntime implements AutoCloseable {
             }
         }
         var normalized = ToolResultHistory.replaceLatest(input.messages(), replacements);
-        var bounded = new ModelCallInput(normalized, input.tools(), input.options(), input.model());
-        boolean shorten = AgentContextBudget.needsResultCompaction(bounded);
         var keep = ToolResultHistory.latestCalls(input.messages());
         int maximum = execution.resultSettings().previewBytes();
         var state = RuntimeContext.resolveAgentState(context, agent);
         if (state != null) {
             var mutable = state.contextMutable();
             var replaced = ToolResultHistory.replaceLatest(mutable, replacements);
-            var compact = shorten ? ToolResultHistory.shorten(replaced, keep, json, maximum) : replaced;
+            var compact = ToolResultHistory.shorten(replaced, keep, json, maximum);
             for (int i = 0; i < mutable.size(); i++) {
                 mutable.set(i, compact.get(i));
             }
         }
-        return shorten ? new ModelCallInput(ToolResultHistory.shorten(normalized, keep, json, maximum), input.tools(),
-            input.options(), input.model()) : bounded;
+        return new ModelCallInput(ToolResultHistory.shorten(normalized, keep, json, maximum), input.tools(),
+            input.options(), input.model());
     }
 
     public boolean allowed(Agent agent, String name, boolean child) {
@@ -203,6 +201,10 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                                BiConsumer<ToolUseBlock, RuntimeException> rejected) {
         requireActive();
         String session = context.getSessionId();
+        if (session.equals(run.conversationId())) {
+            // 权限检查只使用当前一轮已准备的调用，历史完整记录仍保存在数据库和结果文件中。
+            preparedTopLevelCalls.clear();
+        }
         sessions.put(parentCall == null ? session : session + ":" + parentCall, session);
         sharedResults.put(session, WorkspaceResultGrants.from(context));
         int maximum = ToolResultBudget.perCall(execution.resultSettings(), contextWindows.getOrDefault(session, 0),

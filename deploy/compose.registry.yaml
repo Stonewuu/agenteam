@@ -46,7 +46,7 @@ services:
     build: !reset null
     pull_policy: always
     environment:
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0 -XX:+ExitOnOutOfMemoryError
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "true"
     logging: *runtime-logging
 
@@ -54,7 +54,7 @@ services:
     build: !reset null
     pull_policy: always
     environment:
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0 -XX:+ExitOnOutOfMemoryError
     mem_limit: ${EXECUTOR_MEMORY:-256m}
     logging: *runtime-logging
 

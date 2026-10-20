@@ -25,10 +25,6 @@ public final class AgentContextBudget {
         }
     }
 
-    public static boolean needsResultCompaction(ModelCallInput input) {
-        return estimatedTokens(input) > input.model().getContextWindowSize() * 0.8;
-    }
-
     private static long estimatedTokens(ModelCallInput input) {
         long output = 0;
         if (input.options() != null) {

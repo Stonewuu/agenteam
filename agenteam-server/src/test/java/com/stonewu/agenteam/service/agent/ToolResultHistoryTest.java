@@ -4,6 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolResultContent;
 import com.stonewu.agenteam.service.file.Utf8Text;
+import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
+import com.stonewu.agenteam.model.execution.entity.RunRecord;
+import com.stonewu.agenteam.service.tool.ToolExecutionService;
+import io.agentscope.core.agent.Agent;
+import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.middleware.ModelCallInput;
+import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.model.Model;
 import io.agentscope.core.message.*;
 import org.junit.jupiter.api.Test;
 
@@ -11,8 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class ToolResultHistoryTest {
     @Test
@@ -40,6 +50,23 @@ class ToolResultHistoryTest {
         assertTrue(Utf8Text.size(reference) <= 2048);
         assertEquals("tool-results/saved/content.txt", json.read(reference).path("path").asText());
         assertEquals(full, ((TextBlock) before.getOutput().getFirst()).getText());
+        // 即使模型上下文很大，已保存的旧结果也立即改成可读取的引用，不继续积累全文副本。
+        var run = mock(RunRecord.class);
+        when(run.executionConfig()).thenReturn(mapper.createObjectNode());
+        var execution = mock(ToolExecutionService.class);
+        when(execution.resultSettings()).thenReturn(new ToolResultSettings(32, 64, 2, 8, 200, 2, 20));
+        var model = mock(Model.class);
+        when(model.getContextWindowSize()).thenReturn(1_000_000);
+        var input = new ModelCallInput(messages, List.of(), GenerateOptions.builder().build(), model);
+        var context = RuntimeContext.builder().userId("user").sessionId("session").build();
+        try (var runtime = new ExecutionToolRuntime(run, null, Map.of(), null, execution, null, json, Duration.ZERO)) {
+            var bounded = runtime.shortenHistory(mock(Agent.class), context, input);
+            String oldResult = ((TextBlock) ((ToolResultBlock) bounded.messages().get(1).getContent().getFirst())
+                .getOutput().getFirst()).getText();
+            assertTrue(Utf8Text.size(oldResult) <= 2048);
+            assertSame(current, bounded.messages().get(3));
+            assertEquals(full, ((TextBlock) before.getOutput().getFirst()).getText());
+        }
         var nextQuestion = new ArrayList<>(messages);
         nextQuestion.add(Msg.builder().role(MsgRole.ASSISTANT).textContent("本轮已完成").build());
         nextQuestion.add(Msg.builder().role(MsgRole.USER).textContent("继续下一轮").build());

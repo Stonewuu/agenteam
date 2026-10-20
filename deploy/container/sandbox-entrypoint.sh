@@ -26,4 +26,4 @@ case "$docker_group" in
         ;;
 esac
 exec setpriv --reuid=10001 --regid=10001 --groups="$docker_group" --inh-caps=-all --ambient-caps=-all \
-    java -jar /app/agenteam.jar --sandbox-server
+    java -XX:+ExitOnOutOfMemoryError -jar /app/agenteam.jar --sandbox-server
