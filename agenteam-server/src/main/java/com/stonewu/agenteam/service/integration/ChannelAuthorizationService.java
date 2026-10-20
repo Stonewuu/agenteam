@@ -1,13 +1,16 @@
 package com.stonewu.agenteam.service.integration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.github.yulichang.toolkit.JoinWrappers;
 import com.stonewu.agenteam.configuration.integration.IntegrationPublicUrls;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
+import com.stonewu.agenteam.model.enterprise.entity.EnterpriseRow;
 import com.stonewu.agenteam.model.integration.entity.ChannelOauthSessionRow;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
 import com.stonewu.agenteam.model.integration.request.ChannelBindingConfirmRequest;
 import com.stonewu.agenteam.model.integration.response.ChannelAuthorizationReview;
 import com.stonewu.agenteam.model.integration.response.ChannelBindingView;
+import com.stonewu.agenteam.model.integration.response.ChannelLoginOption;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
 import com.stonewu.agenteam.service.auth.AuthContextService;
 import com.stonewu.agenteam.service.auth.AuthLoginRateLimiter;
@@ -24,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -80,6 +84,29 @@ public class ChannelAuthorizationService {
             throw ChannelAuthorizationPolicy.unavailable();
         }
         return start(row, "bind", actor, embedded, request);
+    }
+
+    public List<ChannelLoginOption> loginOptions() {
+        var identityProviders = providers.providers().stream().filter(provider -> provider instanceof ChannelIdentityProvider)
+            .map(IntegrationProvider::code).toList();
+        if (identityProviders.isEmpty()) {
+            return List.of();
+        }
+        var criteria = JoinWrappers.lambda(EnterpriseIntegrationRow.class)
+            .select(EnterpriseIntegrationRow::getPublicLoginKey, EnterpriseIntegrationRow::getName, EnterpriseIntegrationRow::getProviderCode)
+            .innerJoin(EnterpriseRow.class, EnterpriseRow::getId, EnterpriseIntegrationRow::getEnterpriseId)
+            .eq(EnterpriseRow::getStatus, "active")
+            .eq(EnterpriseIntegrationRow::getStatus, "enabled")
+            .eq(EnterpriseIntegrationRow::getPurpose, "enterprise")
+            .eq(EnterpriseIntegrationRow::getLoginEnabled, true)
+            .isNotNull(EnterpriseIntegrationRow::getIdentityVerifiedAt)
+            .isNotNull(EnterpriseIntegrationRow::getExternalTenantId)
+            .isNotNull(EnterpriseIntegrationRow::getPublicLoginKey)
+            .in(EnterpriseIntegrationRow::getProviderCode, identityProviders)
+            .orderByAsc(EnterpriseIntegrationRow::getProviderCode, EnterpriseIntegrationRow::getName, EnterpriseIntegrationRow::getId);
+        return connections.selectJoinList(EnterpriseIntegrationRow.class, criteria).stream()
+            .map(row -> new ChannelLoginOption(row.getPublicLoginKey(), row.getName(), row.getProviderCode(),
+                providers.require(row.getProviderCode()).name())).toList();
     }
 
     public Map<String, String> loginInfo(String key) {

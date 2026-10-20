@@ -1,0 +1,91 @@
+.options {
+  display: grid;
+  gap: 14px;
+  padding: 26px 2px 2px;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.separator::before,
+.separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.buttons {
+  display: grid;
+  gap: 10px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  text-align: left;
+  white-space: normal;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.option:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--input-border-focus);
+}
+
+.option > svg,
+.option > img {
+  flex-shrink: 0;
+  color: var(--secondary);
+}
+
+.option > svg:last-child {
+  color: var(--secondary);
+}
+
+.label {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.label small,
+.status,
+.failure {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.status {
+  margin: 0;
+}
+
+.failure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}

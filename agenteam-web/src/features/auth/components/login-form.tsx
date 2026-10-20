@@ -11,6 +11,7 @@ import type {IdentityUser} from "../types/identity";
 import {useFormAction} from "../hooks/use-form-action";
 import {Field} from "@/components/ui/field";
 import {ErrorFeedback} from "@/components/ui/error-feedback";
+import {ChannelLoginOptions} from "@/features/integration/components/channel-login-options";
 import {AuthFrame} from "./auth-frame";
 import {AuthInput} from "./auth-input";
 import styles from "./auth.module.css";
@@ -24,14 +25,19 @@ export function LoginForm({onSuccess, embedded = false, onBusyChange}: {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [recover, setRecover] = useState(false);
+  const [channelBusy, setChannelBusy] = useState(false);
   const action = useFormAction();
+  const busy = action.busy || channelBusy;
   useEffect(() => {
-    onBusyChange?.(action.busy);
+    onBusyChange?.(busy);
     return () => onBusyChange?.(false);
-  }, [action.busy, onBusyChange]);
+  }, [busy, onBusyChange]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) {
+      return;
+    }
     void action.execute(async () => {
       if (recover) {
         await requestPasswordReset(username);
@@ -53,7 +59,7 @@ export function LoginForm({onSuccess, embedded = false, onBusyChange}: {
                                                                          autoComplete="username"
                                                                          placeholder={uiText("用户名或已验证的邮箱")}
                                                                          maxLength={254} required
-                                                                         disabled={action.busy}/></Field>
+                                                                         disabled={busy}/></Field>
       {!recover &&
         <Field label={uiText("密码")} required error={action.fieldErrors.password?.join(" ")}><AuthInput name="password"
                                                                                                          type="password"
@@ -62,21 +68,22 @@ export function LoginForm({onSuccess, embedded = false, onBusyChange}: {
                                                                                                          autoComplete="current-password"
                                                                                                          placeholder={uiText("请输入密码")}
                                                                                                          required
-                                                                                                         disabled={action.busy}/></Field>}
+                                                                                                         disabled={busy}/></Field>}
       {!recover && <div className="auth-links">{!embedded && <span>{uiText("使用你的企业账号登录")}</span>}<Button
-        className="text-button" type="button" disabled={action.busy} onClick={() => {
+        className="text-button" type="button" disabled={busy} onClick={() => {
         setRecover(true);
         action.resetFeedback();
       }}>{uiText("忘记密码？")}</Button></div>}
       <ErrorFeedback error={action.error} fieldErrors={action.fieldErrors} requestId={action.requestId}
                      onFieldChange={action.clearFieldError}/>
       <Button className="button primary" type="submit"
-              disabled={action.busy}>{action.busy ? uiText("正在提交…") : recover ? uiText("发送重置邮件") : embedded ? uiText("登录并继续") : uiText("登录")}</Button>
-      {recover && <Button type="button" className="text-button" disabled={action.busy} onClick={() => {
+              disabled={busy}>{action.busy ? uiText("正在提交…") : recover ? uiText("发送重置邮件") : embedded ? uiText("登录并继续") : uiText("登录")}</Button>
+      {recover && <Button type="button" className="text-button" disabled={busy} onClick={() => {
         setRecover(false);
         action.resetFeedback();
       }}>{uiText("返回登录")}</Button>}
     </form>
+    {!embedded && !recover && <ChannelLoginOptions disabled={action.busy} onBusyChange={setChannelBusy}/>}
     {!embedded && !recover && <p className={styles.hint}>{uiText("还没有账号？")}<Link className={styles.textLink}
                                                                                       href="/register">{uiText("使用邀请码注册")}</Link>
     </p>}

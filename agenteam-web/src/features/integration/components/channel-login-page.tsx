@@ -7,7 +7,7 @@ import {QueryState} from "@/components/ui/query-state";
 import {AuthFrame} from "@/features/auth/components/auth-frame";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
-import {apiRequest} from "@/lib/http/api-client";
+import {startChannelLogin} from "../api/channel-login-api";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import {useT} from "@/lib/i18n/locale-provider";
 import ui from "@/components/ui/surface.module.css";
@@ -25,8 +25,7 @@ export function ChannelLoginPage({loginKey}: {loginKey: string}) {
     <QueryState {...info} hasData={Boolean(info.data)} empty={t("此企业登录入口暂不可用。")}>{info.data && <div className={ui.form}>
       <div className={styles.loginConnection}><ChannelIdentity name={info.data.name} providerName={info.data.providerName} providerCode={info.data.providerCode}/></div>
       <Button className={`${ui.primary} ${styles.loginButton}`} disabled={action.busy} onClick={() => void action.execute(async () => {
-        const result = await apiRequest<{authorizationUrl: string}>(path, {method: "POST",
-          body: {embeddedClient: /wxwork/i.test(navigator.userAgent)}});
+        const result = await startChannelLogin(loginKey);
         window.location.assign(result.authorizationUrl);
       }, "")}>{action.busy ? t("正在跳转…") : t("通过 {platform} 登录", {platform: info.data.providerName})}<IconArrowRight size={18}/></Button>
       <MutationFeedback action={action}/>

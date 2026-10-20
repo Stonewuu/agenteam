@@ -1648,6 +1648,144 @@
         }
       }
     },
+    "/auth/channel-login": {
+      "get": {
+        "operationId": "listChannelLoginOptions",
+        "summary": "查询登录页可用的企业登录方式",
+        "description": "匿名读取已启用登录、身份验证通过且所属企业有效的接入，仅返回公开入口标识与显示名称。",
+        "x-permissions": [],
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "返回当前可用的登录方式；未配置时返回空数组。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChannelLoginOption"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "请求、权限、版本或业务条件不符合要求。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/channel-login/{key}": {
       "get": {
         "operationId": "getChannelLoginInfo",
@@ -52896,6 +53034,37 @@
           "loginAvailable",
           "chatAvailable",
           "messagingAvailable"
+        ],
+        "additionalProperties": false
+      },
+      "ChannelLoginOption": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "providerName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "providerCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          }
+        },
+        "required": [
+          "name",
+          "providerName",
+          "providerCode",
+          "key"
         ],
         "additionalProperties": false
       },

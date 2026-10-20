@@ -4,6 +4,7 @@ import com.stonewu.agenteam.model.http.response.ApiResponse;
 import com.stonewu.agenteam.model.integration.request.ChannelAuthorizationStartRequest;
 import com.stonewu.agenteam.model.integration.request.ChannelAuthorizationCancelRequest;
 import com.stonewu.agenteam.model.integration.response.ChannelAuthorizationReview;
+import com.stonewu.agenteam.model.integration.response.ChannelLoginOption;
 import com.stonewu.agenteam.service.http.ApiResponses;
 import com.stonewu.agenteam.service.http.InputValidation;
 import com.stonewu.agenteam.service.integration.ChannelAuthorizationService;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /** 授权入口及回调，回调无论成功失败都跳转到不含授权码的本站地址。 */
@@ -28,6 +30,11 @@ public class ChannelAuthorizationApiController {
     public ChannelAuthorizationApiController(ChannelAuthorizationService authorization, ApiResponses responses) {
         this.authorization = authorization;
         this.responses = responses;
+    }
+
+    @GetMapping("/api/v1/auth/channel-login")
+    public ApiResponse<List<ChannelLoginOption>> loginOptions(HttpServletRequest request) {
+        return responses.success(authorization.loginOptions(), request);
     }
 
     @GetMapping("/api/v1/auth/channel-login/{key}")

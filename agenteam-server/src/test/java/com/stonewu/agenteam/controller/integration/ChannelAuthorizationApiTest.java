@@ -9,6 +9,8 @@ import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.stonewu.agenteam.mapper.integration.ChannelOauthSessionMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
+import com.stonewu.agenteam.mapper.enterprise.EnterpriseSqlMapper;
+import com.stonewu.agenteam.model.enterprise.entity.EnterpriseRow;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelOauthSessionRow;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
@@ -42,6 +44,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ConcurrentHashMap;
@@ -106,6 +109,61 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         PLATFORM.take();
         change(HttpMethod.PATCH, base() + "/integrations/" + connection + "/status", Map.of("status", "enabled"), "2", key()).andExpect(status().isOk());
         loginKey = databaseAccess.mapper(EnterpriseIntegrationMapper.class).selectById(connection).getPublicLoginKey();
+    }
+
+    @Test
+    void anonymousLoginOptionsOnlyExposeEnabledVerifiedConnectionsInActiveEnterprises() throws Exception {
+        configureConnection();
+        String firstKey = loginKey;
+        configureConnection();
+        var mapper = databaseAccess.mapper(EnterpriseIntegrationMapper.class);
+        var original = mapper.selectById(connection);
+        var options = publicOptions();
+        for (String key : List.of(firstKey, loginKey)) {
+            var option = options.findValues("key").stream().filter(value -> key.equals(value.asText())).findFirst();
+            assertTrue(option.isPresent());
+        }
+        for (var option : options) {
+            schemas.validate("ChannelLoginOption", option);
+            assertEquals(Set.of("key", "name", "providerCode", "providerName"), json.convertValue(option, Map.class).keySet());
+        }
+        var exclusions = List.of(
+            new LambdaUpdateWrapper<EnterpriseIntegrationRow>().set(EnterpriseIntegrationRow::getStatus, "disabled"),
+            new LambdaUpdateWrapper<EnterpriseIntegrationRow>().set(EnterpriseIntegrationRow::getLoginEnabled, false),
+            new LambdaUpdateWrapper<EnterpriseIntegrationRow>().set(EnterpriseIntegrationRow::getStatus, "draft")
+                .set(EnterpriseIntegrationRow::getIdentityVerifiedAt, null),
+            new LambdaUpdateWrapper<EnterpriseIntegrationRow>().set(EnterpriseIntegrationRow::getStatus, "draft")
+                .set(EnterpriseIntegrationRow::getExternalTenantId, null),
+            new LambdaUpdateWrapper<EnterpriseIntegrationRow>().set(EnterpriseIntegrationRow::getPurpose, "chat_bot")
+                .set(EnterpriseIntegrationRow::getLoginEnabled, false).set(EnterpriseIntegrationRow::getMessagingEnabled, false));
+        for (var changes : exclusions) {
+            mapper.update(changes.eq(EnterpriseIntegrationRow::getId, connection));
+            assertFalse(publicOptions().findValues("key").stream().anyMatch(value -> loginKey.equals(value.asText())));
+            mapper.updateById(original);
+        }
+        var enterprises = databaseAccess.mapper(EnterpriseSqlMapper.class);
+        enterprises.update(new LambdaUpdateWrapper<EnterpriseRow>().eq(EnterpriseRow::getId, enterprise).set(EnterpriseRow::getStatus, "disabled"));
+        try {
+            assertFalse(publicOptions().findValues("key").stream().anyMatch(value -> Set.of(firstKey, loginKey).contains(value.asText())));
+        } finally {
+            enterprises.update(new LambdaUpdateWrapper<EnterpriseRow>().eq(EnterpriseRow::getId, enterprise).set(EnterpriseRow::getStatus, "active"));
+        }
+        var browser = anonymous();
+        var start = data(writeAs(browser, HttpMethod.POST, "/api/v1/auth/channel-login/" + loginKey,
+            Map.of("embeddedClient", false), null, key()).andExpect(status().isOk()).andReturn());
+        assertTrue(start.path("authorizationUrl").asText().contains("code_challenge="));
+        mapper.update(new LambdaUpdateWrapper<EnterpriseIntegrationRow>().eq(EnterpriseIntegrationRow::getId, connection)
+            .set(EnterpriseIntegrationRow::getLoginEnabled, false));
+        writeAs(browser, HttpMethod.POST, "/api/v1/auth/channel-login/" + loginKey,
+            Map.of("embeddedClient", false), null, key()).andExpect(status().isNotFound());
+        mapper.update(new LambdaUpdateWrapper<EnterpriseIntegrationRow>().eq(EnterpriseIntegrationRow::getId, connection)
+            .set(EnterpriseIntegrationRow::getStatus, "deleted").set(EnterpriseIntegrationRow::getDeletedAt, Instant.now())
+            .set(EnterpriseIntegrationRow::getDeletedToken, connection));
+        assertFalse(publicOptions().findValues("key").stream().anyMatch(value -> loginKey.equals(value.asText())));
+    }
+
+    private JsonNode publicOptions() throws Exception {
+        return data(mvc.perform(get("/api/v1/auth/channel-login")).andExpect(status().isOk()).andReturn());
     }
 
     @Test
