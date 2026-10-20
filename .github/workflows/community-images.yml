@@ -1,0 +1,171 @@
+name: Community images
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 正式发布填写已发布的 vX.Y.Z；仅验证时留空使用当前分支
+        type: string
+        default: ""
+      publish:
+        description: 推送固定版本和 latest；关闭时只推送独立构建标签
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-image-publication
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  prepare:
+    if: github.repository == 'Stonewuu/agenteam' && (github.event_name != 'release' || !github.event.release.prerelease)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      commit: ${{ steps.plan.outputs.commit }}
+      publish: ${{ steps.plan.outputs.publish }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: 核对发布来源
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUEST_PUBLISH: ${{ inputs.publish }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: node scripts/release/community-release.mjs plan
+      - name: 验证镜像推送凭据
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: community-release-plan
+          path: .runtime/release/plan.json
+          include-hidden-files: true
+          retention-days: 7
+
+  checks:
+    needs: prepare
+    uses: ./.github/workflows/community-checks.yml
+    with:
+      source_ref: ${{ needs.prepare.outputs.commit }}
+      build_release: true
+
+  images:
+    needs: [prepare, checks]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: community-backend-package
+          path: .build/backend
+      - name: 准备并核对镜像输入
+        id: inputs
+        run: node scripts/release/prepare-community-images.mjs --release
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: 构建候选镜像
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ steps.inputs.outputs.directory }}/${{ matrix.directory }}
+          file: ${{ steps.inputs.outputs.directory }}/${{ matrix.directory }}/${{ matrix.file }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          load: true
+          provenance: false
+          tags: ${{ matrix.image }}:build-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: |
+            APPLICATION_VERSION=${{ needs.prepare.outputs.version }}
+            SOURCE_REVISION=${{ needs.prepare.outputs.commit }}
+            APPLICATION_EDITION=community
+          labels: |
+            org.opencontainers.image.source=https://github.com/Stonewuu/agenteam
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+            org.opencontainers.image.revision=${{ needs.prepare.outputs.commit }}
+            com.stonewu.agenteam.edition=community
+          cache-from: type=gha,scope=community-${{ matrix.kind }}
+          cache-to: type=gha,mode=max,scope=community-${{ matrix.kind }}
+      - name: 检查实际镜像并推送候选
+        env:
+          IMAGE_KIND: ${{ matrix.kind }}
+          IMAGE_REFERENCE: ${{ matrix.image }}:build-${{ github.run_id }}-${{ github.run_attempt }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_COMMIT: ${{ needs.prepare.outputs.commit }}
+        run: |
+          node scripts/release/verify-community-image.mjs
+          docker push "$IMAGE_REFERENCE"
+          node scripts/release/community-release.mjs record
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: image-result-${{ matrix.kind }}
+          path: .runtime/release/${{ matrix.kind }}.json
+          include-hidden-files: true
+          overwrite: true
+          retention-days: 7
+
+  publish:
+    needs: [prepare, images]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: community-release-plan
+          path: .runtime/release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: image-result-*
+          path: .runtime/release/images
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: 发布固定版本、社区清单与 latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/community-release.mjs publish

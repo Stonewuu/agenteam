@@ -30,7 +30,7 @@ class EditionDatabasePreflightConfigurationTest {
                 .run(application -> {
                     assertThat(application).hasFailed();
                     assertThat(attempted).isFalse();
-                    assertThat(application.getStartupFailure()).hasStackTraceContaining("没有社区版部署记录");
+                    assertThat(application.getStartupFailure()).hasStackTraceContaining("没有兼容的部署记录");
                 });
             runner(access.getDataSource(), ProductEdition.COMMUNITY)
                 .withPropertyValues("spring.flyway.enabled=false")

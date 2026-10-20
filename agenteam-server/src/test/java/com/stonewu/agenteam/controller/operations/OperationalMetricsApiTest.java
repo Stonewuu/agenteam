@@ -13,6 +13,8 @@ import com.stonewu.agenteam.mapper.usage.QuotaSqlMapper;
 import com.stonewu.agenteam.model.background.entity.BackgroundJobRow;
 import com.stonewu.agenteam.model.usage.entity.QuotaBucketRow;
 import com.stonewu.agenteam.service.operations.OperationalMetrics;
+import com.stonewu.agenteam.service.execution.ExecutionEventPublisher;
+import com.stonewu.agenteam.service.execution.LiveEventDelivery;
 import com.stonewu.agenteam.service.operations.OperationalQueryService;
 import com.stonewu.agenteam.service.usage.QuotaReconciliationService;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
@@ -43,7 +45,9 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.reset;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -79,6 +83,12 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
     @MockitoSpyBean
     private OperationalQueryService queries;
 
+    @MockitoSpyBean
+    private LiveEventDelivery liveDelivery;
+
+    @Autowired
+    private ExecutionEventPublisher pendingEvents;
+
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
@@ -91,7 +101,7 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
 
     @AfterEach
     void resetReadFailure() {
-        reset(queries);
+        reset(queries, liveDelivery);
     }
 
     private void managementPortOnlyExposesHealthAndMetricsWithoutBusinessDetails() throws Exception {
@@ -125,6 +135,8 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
     @Test
     void queueAndUnpublishedEventsFollowActualStateAndFailedCollectionDoesNotRetainOldNumbers() throws Exception {
         managementPortOnlyExposesHealthAndMetricsWithoutBusinessDetails();
+        // 暂停提交后的异步分发，明确准备“尚未发布”状态，避免测量时事件已被后台清空。
+        doNothing().when(liveDelivery).committed(any());
         var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         databaseAccess.mapper(RunJobSqlMapper.class).update(new LambdaUpdateWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getEnterpriseId, (enterprise)).eq(BackgroundJobRow::getKind, "run").eq(BackgroundJobRow::getStatus, "queued").set(BackgroundJobRow::getAvailableAt, (Timestamp.from(Instant.now().minusSeconds(180)))));
         metrics.collect();
@@ -132,6 +144,10 @@ class OperationalMetricsApiTest extends ExecutionApiTestSupport {
         assertTrue(registry.get("agenteam.background.oldest").tag("kind", "run").gauge().value() >= 179);
         assertEquals(1, registry.get("agenteam.executions").tag("status", "queued").gauge().value());
         assertTrue(registry.get("agenteam.events.pending").gauge().value() > 0);
+        reset(liveDelivery);
+        pendingEvents.publish(enterprise, accepted.path("conversationId").asText());
+        metrics.collect();
+        assertEquals(0, registry.get("agenteam.events.pending").gauge().value());
         double before = registry.get("agenteam.metrics.collection.failures").counter().count();
         double lastSuccess = registry.get("agenteam.metrics.last.success").gauge().value();
         doThrow(new IllegalStateException("模拟数据库暂时不可用")).when(queries).read();

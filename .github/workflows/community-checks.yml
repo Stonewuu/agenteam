@@ -5,6 +5,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_ref:
+        type: string
+        required: true
+      build_release:
+        type: boolean
+        default: false
 
 # 贡献检查只使用本仓库的读取权限，不读取发布凭据或签发密钥。
 permissions:
@@ -27,7 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
@@ -39,14 +51,31 @@ jobs:
       - name: 从固定源码构建对象存储测试服务
         run: docker build --tag agenteam/test-minio:2025-09-07-07c3a429 agenteam-server/src/test/resources/containers/minio
       - name: 社区后端完整测试
+        if: ${{ !inputs.build_release }}
         working-directory: agenteam-server
         run: sh ./mvnw -B --no-transfer-progress clean test
+      - name: 社区后端正式构建与完整测试
+        if: ${{ inputs.build_release }}
+        run: node scripts/release/build-community-backend.mjs --release
+      - name: 保存已测试的后端程序包
+        if: ${{ inputs.build_release }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: community-backend-package
+          path: |
+            .build/backend/build-inputs.json
+            .build/backend/artifacts/agenteam-*.jar
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
       - name: 保留后端测试报告
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: community-backend-tests
-          path: .runtime/tests/reports/
+          path: |
+            .runtime/tests/reports/
+            .build/backend/artifacts/surefire-reports/
           include-hidden-files: true
           retention-days: 7
           if-no-files-found: ignore
@@ -57,6 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -77,4 +107,4 @@ jobs:
         working-directory: agenteam-web
         run: pnpm test
       - name: 镜像输入与文件范围检查
-        run: node --test --test-concurrency=4 scripts/release/community-backend.test.mjs scripts/release/image-inputs.test.mjs scripts/release/mysql-compose.test.mjs
+        run: node --test --test-concurrency=4 scripts/release/community-backend.test.mjs scripts/release/image-inputs.test.mjs scripts/release/mysql-compose.test.mjs scripts/release/community-publication.test.mjs scripts/release/community-registry.test.mjs

@@ -1,5 +1,5 @@
 import {execFileSync} from "node:child_process";
-import {mkdirSync, mkdtempSync, readFileSync} from "node:fs";
+import {appendFileSync, mkdirSync, mkdtempSync, readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {parseArgs} from "node:util";
@@ -27,4 +27,7 @@ const manifest = createImageInputs({community, frontend: resolve(community, "age
   targets: communityTargets(version), sourceCommit: commit, communityCommit: commit, release: values.release,
   thirdPartyDocuments: values["third-party-documents"], backendBuildSha256: verified?.recordSha256});
 verifyImageInputs(output, manifest);
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(process.env.GITHUB_OUTPUT, `directory=${output}\n`);
+}
 console.log(`社区五类镜像的构建输入已准备：${output}`);
