@@ -203,6 +203,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
         try (var session = delivery.open(fixture.run(), fixture.lease(), List.of())) {
             session.publish(List.of(ExecutionChange.replace(block)), List.of(block));
             session.drain();
+            assertEquals("进程中断前已输出的内容", displayed(snapshot(fixture), fixture));
         }
         assertEquals("", saved(fixture));
         databaseAccess.mapper(RunJobSqlMapper.class).update(new LambdaUpdateWrapper<BackgroundJobRow>()
@@ -345,6 +346,8 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
         assertEquals(accepted.path("runId").asText(), lease.runId());
         var run = lifecycle.start(lease).orElseThrow();
         assertTrue(conversations.find(enterprise, admin, run.conversationId(), false).orElseThrow().liveEvents());
+        // 先完成初始事件分发，后续用例再验证已经可见的输出。
+        delivery.recover(run);
         return new Fixture(run, lease);
     }
 
