@@ -8,7 +8,7 @@ import java.time.Duration;
 /** 模型无输出等待和输入预算独立于整项任务的业务时限。 */
 @Component
 public record ModelRequestLimits(Duration idleTimeout, long maximumInputBytes) {
-    public ModelRequestLimits(@Value("${execution.model.idle-timeout:PT5M}") Duration idleTimeout,
+    public ModelRequestLimits(@Value("${execution.model.idle-timeout:PT15M}") Duration idleTimeout,
                               @Value("${execution.model.maximum-input-bytes:0}") long maximumInputBytes) {
         if (idleTimeout == null || idleTimeout.isZero() || idleTimeout.isNegative() || maximumInputBytes < 0) {
             throw new IllegalArgumentException("模型等待时限必须为正数，输入预算不能为负数。");
@@ -21,11 +21,10 @@ public record ModelRequestLimits(Duration idleTimeout, long maximumInputBytes) {
     }
 
     public static ModelRequestLimits defaults() {
-        return new ModelRequestLimits(Duration.ofMinutes(5), 0);
+        return new ModelRequestLimits(Duration.ofMinutes(15), 0);
     }
 
     public Duration timeout(Duration requested) {
-        return requested == null || requested.isZero() || requested.isNegative() || requested.compareTo(idleTimeout) > 0
-            ? idleTimeout : requested;
+        return requested == null || requested.isZero() || requested.isNegative() ? idleTimeout : requested;
     }
 }

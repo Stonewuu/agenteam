@@ -39,7 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * 使用虚拟时间推进真实模型协议适配器，检查五分钟默认等待不会覆盖助手配置。
+ * 使用虚拟时间推进真实模型协议适配器，检查明确时限和未配置时的等待保护。
  */
 class AgentModelFactoryTest {
     @ParameterizedTest
@@ -63,6 +63,23 @@ class AgentModelFactoryTest {
                     .anyMatch(block -> block instanceof TextBlock text && text.getText().equals("大文件已生成。")))
                 .expectComplete().verify(Duration.ofSeconds(5));
             verify(transports.constructed().getFirst()).close();
+        }
+    }
+
+    @Test
+    void anUnlimitedTaskStillEndsASilentModelRequestAtTheDefaultIdleLimit() {
+        var cancelled = new AtomicBoolean();
+        try (var transports = mockConstruction(OkHttpTransport.class, (transport, context) -> {
+            when(transport.stream(any())).thenReturn(Flux.<String>never().doOnCancel(() -> cancelled.set(true)));
+        })) {
+            var model = factory().create("enterprise", "model");
+            StepVerifier.withVirtualTime(() -> model.stream(List.of(new UserMessage("没有业务时限的任务")), List.of(),
+                        GenerateOptions.builder().executionConfig(ExecutionConfig.builder().timeout(null).build()).build())
+                    .contextWrite(context -> context.put(ModelCallContext.class, callContext())))
+                .expectSubscription().expectNoEvent(Duration.ofMinutes(14)).thenAwait(Duration.ofMinutes(2))
+                .expectErrorMatches(failure -> failure.getMessage().contains("timeout")).verify(Duration.ofSeconds(5));
+            verify(transports.constructed().getFirst()).close();
+            assertTrue(cancelled.get());
         }
     }
 
