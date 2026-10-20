@@ -68,7 +68,6 @@ abstract class ChatApiTestSupport extends ExecutionApiTestSupport {
 
     @BeforeEach
     void fixture() {
-        configuration.setEnabled(true);
         externalChat = "oc_" + UUID.randomUUID();
         var app = new EnterpriseIntegrationRow();
         app.setId(UUID.randomUUID().toString());

@@ -60,7 +60,7 @@ public class ChatManagementApiService {
     public ChatServiceStatus status(String enterprise, HttpServletRequest request) {
         var actor = actor(enterprise, request);
         policy.require(actor, enterprise, system(request), "integration.view", false);
-        return new ChatServiceStatus(!configuration.isEnabled() || !configuration.isWorkerEnabled());
+        return new ChatServiceStatus(!configuration.isWorkerEnabled());
     }
 
     public PageResponse<ChatTestMemberService.Choice> testMembers(String enterprise, String botId, String query, String cursor, Integer limit, HttpServletRequest request) {

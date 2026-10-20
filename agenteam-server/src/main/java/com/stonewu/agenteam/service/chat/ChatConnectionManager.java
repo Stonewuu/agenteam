@@ -80,7 +80,7 @@ public class ChatConnectionManager {
                 stop(slot, false);
             }
         }
-        if (!configuration.isEnabled() || !configuration.isWorkerEnabled()) {
+        if (!configuration.isWorkerEnabled()) {
             return;
         }
         try {

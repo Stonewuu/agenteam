@@ -35,7 +35,6 @@ class ChatGroupActivationTest extends CollaborationApiTestSupport {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         ENV.properties(registry);
-        registry.add("chat.enabled", () -> true);
 
         registry.add("chat.worker-enabled", () -> false);
     }

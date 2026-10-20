@@ -3,7 +3,6 @@ package com.stonewu.agenteam.service.chat;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
 import com.stonewu.agenteam.mapper.chat.ChatConversationBotMapper;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
@@ -92,7 +91,8 @@ class ChatPersistenceTest extends ChatApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("chat.enabled", () -> true);
+        // 旧部署即使保留已移除的关闭配置，也不能阻断页面中启用的机器人。
+        registry.add("chat.enabled", () -> false);
 
         registry.add("chat.worker-enabled", () -> false);
     }
@@ -139,13 +139,13 @@ class ChatPersistenceTest extends ChatApiTestSupport {
     }
 
     @Test
-    void revokedConnectionAndFeatureSwitchRejectBeforeWriting() {
+    void revokedConnectionAndDisabledBotRejectBeforeWriting() {
         var event = message("reject", "reject", "user", "不应保存");
         assertThrows(ApiException.class, () -> ingress.accept(enterprise, bot.getId(), null, event));
         assertThrows(ApiException.class, () -> ingress.accept(enterprise, bot.getId(), 0L, event));
-        configuration.setEnabled(false);
+        databaseAccess.mapper(ChatBotBindingMapper.class).update(new LambdaUpdateWrapper<ChatBotBindingRow>()
+            .eq(ChatBotBindingRow::getId, bot.getId()).set(ChatBotBindingRow::getStatus, "disabled"));
         assertThrows(ApiException.class, () -> ingress.accept(enterprise, bot.getId(), 1L, event));
-        configuration.setEnabled(true);
         assertEquals(0, receiptCount());
     }
 

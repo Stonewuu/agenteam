@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
-import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
@@ -63,14 +62,13 @@ public class CollaborationTaskCreationService {
     private final CollaborationInputArtifacts inputArtifacts;
     private final ProjectMetadataService projects;
     private final ChatReplyPreferenceService replyPreferences;
-    private final ChatConfiguration chat;
 
     public CollaborationTaskCreationService(CollaborationTaskMapper tasks, CollaborationParticipantMapper participants,
             CollaborationWorkItemMapper works, EnterpriseMapper enterprises, ResourceMapper resources,
             ChatBotBindingService bots, ChatConversationService conversations, CollaborationAccessService access,
             CollaborationActionService actions, CollaborationConfiguration configuration, ChatOutboundService outbound,
             ChatPayloadCipher cipher, ResourceJson json, Clock clock, CollaborationInputArtifacts inputArtifacts,
-            ProjectMetadataService projects, ChatReplyPreferenceService replyPreferences, ChatConfiguration chat) {
+            ProjectMetadataService projects, ChatReplyPreferenceService replyPreferences) {
         this.tasks = tasks;
         this.participants = participants;
         this.works = works;
@@ -88,15 +86,14 @@ public class CollaborationTaskCreationService {
         this.inputArtifacts = inputArtifacts;
         this.projects = projects;
         this.replyPreferences = replyPreferences;
-        this.chat = chat;
     }
 
     @Transactional
     public CollaborationTaskRow create(AuthContext actor, ChatMessageRow message, ChatConversationRow group,
             String entryBot, Set<String> explicitlyRequested, JsonNode content) {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
-        if (!chat.isEnabled() || !actor.enterpriseId().equals(message.getEnterpriseId()) || !actor.userId().equals(message.getSenderUserId())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_DISABLED", "智能体协作尚未启用或身份不匹配。");
+        if (!actor.enterpriseId().equals(message.getEnterpriseId()) || !actor.userId().equals(message.getSenderUserId())) {
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_IDENTITY_MISMATCH", "任务发起人与消息所属成员不匹配。");
         }
         var existing = tasks.selectOne(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getOriginMessageId, message.getId()));

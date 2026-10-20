@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
@@ -29,16 +28,14 @@ public class ChatConnectionTransactions {
     private final ChatBotBindingMapper bots;
     private final EnterpriseIntegrationMapper apps;
     private final EnterpriseMapper enterprises;
-    private final ChatConfiguration config;
     private final ResourceJson json;
     private final Clock clock;
 
     public ChatConnectionTransactions(ChatBotBindingMapper bots, EnterpriseIntegrationMapper apps, EnterpriseMapper enterprises,
-            ChatConfiguration config, ResourceJson json, Clock clock) {
+            ResourceJson json, Clock clock) {
         this.bots = bots;
         this.apps = apps;
         this.enterprises = enterprises;
-        this.config = config;
         this.json = json;
         this.clock = clock;
     }
@@ -114,7 +111,7 @@ public class ChatConnectionTransactions {
     }
 
     private boolean enabled(ChatBotBindingRow bot, EnterpriseIntegrationRow app) {
-        return app != null && config.enabled(app.getProviderCode()) && bot.getStatus().equals("enabled")
+        return app != null && ChatPlatformRegistry.supportsProvider(app.getProviderCode()) && bot.getStatus().equals("enabled")
             && app.getStatus().equals("enabled") && bot.getTransport().equals("websocket");
     }
 

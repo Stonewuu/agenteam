@@ -36,7 +36,7 @@ public class ChatSendWorker {
 
     @Scheduled(scheduler = "chatBackgroundScheduler", fixedDelayString = "${chat.send-poll-interval-ms:1000}")
     public void poll() {
-        if (!configuration.isEnabled() || !configuration.isWorkerEnabled()) {
+        if (!configuration.isWorkerEnabled()) {
             return;
         }
         try {

@@ -79,7 +79,6 @@ class CollaborationHandoffTest extends CollaborationToolTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("chat.enabled", () -> true);
 
         registry.add("chat.worker-enabled", () -> false);
     }

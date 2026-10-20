@@ -17,9 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
-import com.stonewu.agenteam.service.http.ApiException;
-import org.springframework.http.HttpStatus;
 
 /** 数据库领取岗位工作；等待依赖、额度或同岗位执行时不创建替代会话。 */
 @Service
@@ -32,11 +29,10 @@ public class CollaborationDispatchService {
     private final CollaborationContextService contexts;
     private final RunSubmissionService submissions;
     private final Clock clock;
-    private final ChatConfiguration chat;
 
     public CollaborationDispatchService(CollaborationWorkItemMapper works, CollaborationTaskMapper tasks, EnterpriseMapper enterprises,
             CollaborationAccessService access, CollaborationDependencyService dependencies, CollaborationContextService contexts,
-            RunSubmissionService submissions, Clock clock, ChatConfiguration chat) {
+            RunSubmissionService submissions, Clock clock) {
         this.works = works;
         this.tasks = tasks;
         this.enterprises = enterprises;
@@ -45,14 +41,10 @@ public class CollaborationDispatchService {
         this.contexts = contexts;
         this.submissions = submissions;
         this.clock = clock;
-        this.chat = chat;
     }
 
     @Transactional
     public Optional<CollaborationWorkLease> claim(String owner) {
-        if (!chat.isEnabled()) {
-            return Optional.empty();
-        }
         var now = clock.instant();
         var candidates = works.selectPage(new Page<CollaborationWorkItemRow>(1, 1, false),
             new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getStatus, "ready")
@@ -75,9 +67,6 @@ public class CollaborationDispatchService {
 
     @Transactional
     public RunAccepted submit(CollaborationWorkLease lease) {
-        if (!chat.isEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_DISABLED", "协作已关闭，不能开始新的岗位执行。");
-        }
         enterprises.lockEnterprise(lease.enterpriseId()).orElseThrow();
         var work = owned(lease);
         if (work == null) {

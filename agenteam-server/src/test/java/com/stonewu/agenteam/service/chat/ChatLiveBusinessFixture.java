@@ -84,9 +84,8 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
         registry.add("execution.worker.enabled", () -> true);
         registry.add("execution.events.worker-enabled", () -> true);
         registry.add("execution.events.live-enabled", () -> true);
-        registry.add("chat.enabled", () -> false);
 
-        registry.add("chat.worker-enabled", () -> true);
+        registry.add("chat.worker-enabled", () -> false);
 
         registry.add("chat.public-base-url", () -> "http://127.0.0.2:3016");
         registry.add("agenteam.web.public-base-url", () -> "http://localhost:3016");
@@ -148,7 +147,7 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
             "username", initiator.username(), "hrBot", hr.getId(), "financeBot", finance.getId(),
             "conversation", group.getId(), "modelName", input.path("model").path("model").asText());
         Files.writeString(DIRECTORY.resolve("session.json"), json.writeValueAsString(session), StandardCharsets.UTF_8);
-        chat.setEnabled(true);
+        chat.setWorkerEnabled(true);
 
         connections.poll();
         long deadline = System.nanoTime() + 5_400_000_000_000L;
@@ -277,7 +276,6 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
     @AfterAll
     void closeRealConnections() throws Exception {
         if (chat != null) {
-            chat.setEnabled(false);
             chat.setWorkerEnabled(false);
         }
         if (connections != null) {

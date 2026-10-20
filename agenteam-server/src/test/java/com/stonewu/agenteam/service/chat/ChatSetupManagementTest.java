@@ -29,7 +29,6 @@ class ChatSetupManagementTest extends ChatApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("chat.enabled", () -> true);
 
         registry.add("chat.worker-enabled", () -> false);
     }
@@ -40,18 +39,16 @@ class ChatSetupManagementTest extends ChatApiTestSupport {
     }
 
     @Test
-    void runtimeStatusReportsEmergencyPauseWithoutChangingBotConfiguration() throws Exception {
-        var defaults = new ChatConfiguration();
-        assertTrue(defaults.enabled("feishu"));
-        assertTrue(defaults.enabled("wecom_aibot"));
-        assertFalse(defaults.enabled("unknown"));
+    void runtimeStatusReportsWorkerAvailabilityWithoutChangingBotConfiguration() throws Exception {
+        assertTrue(ChatPlatformRegistry.supportsProvider("feishu"));
+        assertTrue(ChatPlatformRegistry.supportsProvider("wecom_aibot"));
+        assertFalse(ChatPlatformRegistry.supportsProvider("unknown"));
         String path = "/api/v1/enterprises/" + enterprise + "/chat/status";
         mvc.perform(get(path)).andExpect(status().isUnauthorized());
-        configuration.setEnabled(false);
+        assertTrue(new ChatConfiguration().isWorkerEnabled());
         mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk())
             .andExpect(jsonPath("$.data.paused").value(true));
         assertEquals("enabled", bots.require(enterprise, bot.getId()).getStatus());
-        configuration.setEnabled(true);
         try {
             configuration.setWorkerEnabled(true);
             mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk())

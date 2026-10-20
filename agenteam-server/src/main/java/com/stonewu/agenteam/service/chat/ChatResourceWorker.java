@@ -27,7 +27,7 @@ public class ChatResourceWorker {
 
     @Scheduled(scheduler = "chatBackgroundScheduler", fixedDelayString = "${chat.resource-poll-interval-ms:2000}")
     public void poll() {
-        if (!configuration.isEnabled() || !configuration.isWorkerEnabled()) {
+        if (!configuration.isWorkerEnabled()) {
             return;
         }
         try {

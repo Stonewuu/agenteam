@@ -152,8 +152,7 @@ logging:
       amazon:
         awssdk: "WARN"
 chat:
-  # 岗位机器人按页面配置启停；部署总开关仅用于紧急暂停聊天，个人通知不受影响。
-  enabled: "${AGENTEAM_CHAT_ENABLED:true}"
+  # 岗位机器人按页面配置启停。
   worker-enabled: "${AGENTEAM_CHAT_WORKER_ENABLED:true}"
   public-base-url: "${AGENTEAM_CHAT_PUBLIC_BASE_URL:${AGENTEAM_PUBLIC_ORIGIN:http://localhost:3000}}"
 network:

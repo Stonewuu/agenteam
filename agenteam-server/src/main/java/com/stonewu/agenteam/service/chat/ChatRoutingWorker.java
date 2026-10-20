@@ -22,7 +22,7 @@ public class ChatRoutingWorker {
 
     @Scheduled(fixedDelayString = "${chat.routing-poll-interval-ms:2000}")
     public void poll() {
-        if (!chat.isEnabled() || !chat.isWorkerEnabled()) {
+        if (!chat.isWorkerEnabled()) {
             return;
         }
         for (var message : routing.pending()) {

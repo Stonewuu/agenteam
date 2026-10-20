@@ -42,9 +42,6 @@ public class CollaborationWorker {
         }
         try {
             recover();
-            if (!chat.isEnabled()) {
-                return;
-            }
             for (int i = 0; i < Math.min(50, chat.getBatchSize()); i++) {
                 if (!dispatchOnce()) {
                     break;

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -18,6 +19,10 @@ public class ChatPlatformRegistry {
     public ChatPlatformRegistry(List<ChatPlatformAdapter> adapters, List<ChatEventNormalizer> normalizers) {
         this.adapters = adapters.stream().collect(Collectors.toUnmodifiableMap(ChatPlatformAdapter::providerCode, Function.identity()));
         this.normalizers = normalizers.stream().collect(Collectors.toUnmodifiableMap(ChatEventNormalizer::providerCode, Function.identity()));
+    }
+
+    public static boolean supportsProvider(String code) {
+        return Set.of("feishu", "wecom_aibot").contains(code);
     }
 
     public ChatPlatformAdapter adapter(String code) {

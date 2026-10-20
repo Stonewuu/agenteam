@@ -7,7 +7,6 @@ import com.github.yulichang.toolkit.JoinWrappers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
-import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundAttemptMapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
@@ -43,7 +42,6 @@ public class ChatSendTransactions {
     private final CollaborationAccessService access;
     private final ChatPlatformRegistry platforms;
     private final ChatPayloadCipher cipher;
-    private final ChatConfiguration configuration;
     private final Clock clock;
     private final ChatConnectionRegistry connections;
     private final ChatCapabilityService capabilities;
@@ -54,7 +52,7 @@ public class ChatSendTransactions {
     public ChatSendTransactions(ChatOutboundMessageMapper messages, ChatOutboundAttemptMapper attempts,
             CollaborationParticipantMapper participants, EnterpriseMapper enterprises, ChatBotBindingService bots,
             ChatConversationService conversations, CollaborationAccessService access, ChatPlatformRegistry platforms,
-            ChatPayloadCipher cipher, ChatConfiguration configuration, Clock clock, ChatConnectionRegistry connections,
+            ChatPayloadCipher cipher, Clock clock, ChatConnectionRegistry connections,
             ChatCapabilityService capabilities, ChatFileSendService files, ResourceJson json, ChatReplyDeliveryPolicy replyPolicy) {
         this.messages = messages;
         this.attempts = attempts;
@@ -65,7 +63,6 @@ public class ChatSendTransactions {
         this.access = access;
         this.platforms = platforms;
         this.cipher = cipher;
-        this.configuration = configuration;
         this.clock = clock;
         this.connections = connections;
         this.capabilities = capabilities;
@@ -293,7 +290,7 @@ public class ChatSendTransactions {
         var group = conversations.require(row.getEnterpriseId(), row.getConversationId());
         var member = conversations.member(row.getEnterpriseId(), row.getConversationId(), row.getBotBindingId());
         var payload = cipher.decrypt(row.getEnterpriseId(), "outbound", row.getId(), row.getPayloadEncrypted());
-        if (!configuration.enabled(app.providerCode()) || !bot.getStatus().equals("enabled") || !group.getStatus().equals("enabled")
+        if (!ChatPlatformRegistry.supportsProvider(app.providerCode()) || !bot.getStatus().equals("enabled") || !group.getStatus().equals("enabled")
             || member == null || !member.getMembershipStatus().equals("present") || !Boolean.TRUE.equals(member.getSendEnabled())
             || !member.getExternalChatId().equals(payload.path("receiveId").asText())
             || app.credentialRevision() != payload.path("credentialRevision").asLong()) {

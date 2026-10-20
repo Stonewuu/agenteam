@@ -24,7 +24,7 @@ public class ChatNormalizationWorker {
 
     @Scheduled(fixedDelayString = "${chat.poll-interval-ms:5000}")
     public void poll() {
-        if (!configuration.isEnabled() || !configuration.isWorkerEnabled()) {
+        if (!configuration.isWorkerEnabled()) {
             return;
         }
         for (int index = 0; index < Math.min(50, configuration.getBatchSize()); index++) {

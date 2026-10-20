@@ -2,7 +2,6 @@ package com.stonewu.agenteam.service.chat;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
 import com.stonewu.agenteam.mapper.chat.ChatInboundReceiptMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -28,7 +27,6 @@ public class ChatIngressService {
     private final EnterpriseMapper enterprises;
     private final ChatMessageIdentity identities;
     private final ChatPayloadCipher cipher;
-    private final ChatConfiguration configuration;
     private final Clock clock;
     private final ChatPairingService pairing;
     private final ChatOutboundService outbound;
@@ -37,7 +35,7 @@ public class ChatIngressService {
 
     public ChatIngressService(ChatBotBindingService bots, ChatPlatformRegistry platforms, ChatInboundReceiptMapper receipts,
                                ChatConversationMapper conversations, ChatConversationService discovery, EnterpriseMapper enterprises, ChatMessageIdentity identities,
-                               ChatPayloadCipher cipher, ChatConfiguration configuration, Clock clock, ChatPairingService pairing,
+                               ChatPayloadCipher cipher, Clock clock, ChatPairingService pairing,
                                ChatOutboundService outbound, ChatCapabilityService capabilities, ChatGroupActivationService activation) {
         this.bots = bots;
         this.platforms = platforms;
@@ -47,7 +45,6 @@ public class ChatIngressService {
         this.enterprises = enterprises;
         this.identities = identities;
         this.cipher = cipher;
-        this.configuration = configuration;
         this.clock = clock;
         this.pairing = pairing;
         this.outbound = outbound;
@@ -72,7 +69,7 @@ public class ChatIngressService {
         enterprises.lockEnterprise(enterprise).orElseThrow();
         var bot = bots.require(enterprise, botId);
         var app = bots.application(bot);
-        if (!configuration.enabled(app.providerCode()) || !bot.getStatus().equals("enabled")) {
+        if (!ChatPlatformRegistry.supportsProvider(app.providerCode()) || !bot.getStatus().equals("enabled")) {
             throw new ApiException(HttpStatus.CONFLICT, "CHAT_DISABLED", "机器人消息接收已关闭。");
         }
         if (bot.getTransport().equals("websocket") && connectionLease == null) {

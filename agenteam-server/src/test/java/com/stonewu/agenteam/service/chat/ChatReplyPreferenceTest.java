@@ -36,7 +36,6 @@ class ChatReplyPreferenceTest extends CollaborationApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("chat.enabled", () -> true);
 
         registry.add("chat.worker-enabled", () -> false);
     }
