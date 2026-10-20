@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {completedManifest, imageKinds, isNewerVersion, publicationPlan, publishCommunityImages} from "./community-publication.mjs";
+import {completedManifest, hasNewerCompletedVersion, imageKinds, isNewerVersion, publicationPlan, publishCommunityImages} from "./community-publication.mjs";
 
 function fixture() {
   const parameters = {source: {version: "1.2.3", commit: "a".repeat(40), dirty: false},
@@ -112,4 +112,20 @@ test("较旧版本仍发布固定版本，但不能回退 latest；版本按数�
   assert.equal(value.writes.length, 5);
   assert.equal(isNewerVersion("0.10.0", "0.9.9"), true);
   assert.equal(isNewerVersion("1.2.3", "1.2.3"), false);
+});
+
+test("更高版本尚未构建完成时不阻断当前版本，完整发布后阻止旧版本回退", async () => {
+  const releases = [{tag_name: "v1.2.4", draft: false, prerelease: false, assets: []}];
+  assert.equal(await hasNewerCompletedVersion("1.2.3", releases,
+    async () => assert.fail("没有发布清单时不应读取")), false);
+  releases[0].assets.push({name: "release-batch.json"});
+  const value = fixture();
+  const document = completedManifest(value.plan, value.records);
+  document.version = "1.2.4";
+  for (const image of Object.values(document.community.images)) {
+    image.image = image.image.replace(":1.2.3", ":1.2.4");
+  }
+  assert.equal(await hasNewerCompletedVersion("1.2.3", releases, async () => document), true);
+  document.status = "incomplete";
+  await assert.rejects(hasNewerCompletedVersion("1.2.3", releases, async () => document), /无法确认/);
 });

@@ -3,7 +3,7 @@ import {appendFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync} fro
 import {resolve} from "node:path";
 import {isDeepStrictEqual} from "node:util";
 import {readCommunitySource} from "./community-backend.mjs";
-import {imageKinds, isNewerVersion, publicationPlan, publishCommunityImages} from "./community-publication.mjs";
+import {hasNewerCompletedVersion, imageKinds, publicationPlan, publishCommunityImages} from "./community-publication.mjs";
 import {publicImageDigest} from "./community-registry.mjs";
 
 const output = resolve(".runtime/release");
@@ -68,8 +68,8 @@ if (command === "plan") {
     .filter((name) => name.endsWith(".json"))
     .map((name) => JSON.parse(readFileSync(resolve(output, "images", name), "utf8")));
   const getRelease = () => github(releasePath(plan.version));
-  const readManifest = async () => {
-    const matches = getRelease().assets.filter((asset) => asset.name === "release-batch.json");
+  const readReleaseManifest = async (release) => {
+    const matches = release.assets.filter((asset) => asset.name === "release-batch.json");
     if (matches.length > 1) {
       throw new Error("正式发布存在重复清单。");
     }
@@ -82,6 +82,7 @@ if (command === "plan") {
     }
     return await response.json();
   };
+  const readManifest = () => readReleaseManifest(getRelease());
   const adapter = {
     inspect: publicImageDigest,
     async verifySource() {
@@ -120,9 +121,7 @@ if (command === "plan") {
     async isNewest(version) {
       const pages = JSON.parse(execute("gh", ["api", "--paginate", "--slurp",
         "repos/Stonewuu/agenteam/releases?per_page=100"]));
-      return !pages.flat().some((release) => !release.draft && !release.prerelease
-        && /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(release.tag_name)
-        && isNewerVersion(release.tag_name.slice(1), version));
+      return !await hasNewerCompletedVersion(version, pages.flat(), readReleaseManifest);
     },
   };
   const result = await publishCommunityImages(plan, records, adapter);

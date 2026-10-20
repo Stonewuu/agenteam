@@ -51,6 +51,28 @@ export function isNewerVersion(left, right) {
   return false;
 }
 
+/** 新 Release 还在排队构建时，不能阻断当前已完成版本的 latest 更新。 */
+export async function hasNewerCompletedVersion(version, releases, readManifest) {
+  for (const release of releases) {
+    const candidate = release.tag_name?.replace(/^v/, "");
+    if (release.draft || release.prerelease || !versionPattern.test(candidate ?? "")
+      || !isNewerVersion(candidate, version) || !release.assets?.some((asset) => asset.name === "release-batch.json")) {
+      continue;
+    }
+    const document = await readManifest(release);
+    const targets = communityTargets(candidate);
+    if (document?.formatVersion !== 1 || document.status !== "complete" || document.version !== candidate
+      || document.community?.repository !== "Stonewuu/agenteam"
+      || !isDeepStrictEqual(Object.keys(document.community.images ?? {}).sort(), [...imageKinds].sort())
+      || imageKinds.some((kind) => document.community.images[kind].image !== targets[kind]
+        || !digestPattern.test(document.community.images[kind].digest ?? ""))) {
+      throw new Error("更高版本的发布清单无法确认，停止更新 latest。");
+    }
+    return true;
+  }
+  return false;
+}
+
 /** 固定版本全部确认后才保存清单，最后更新最新标签；已有不同内容绝不覆盖。 */
 export async function publishCommunityImages(plan, records, adapter) {
   if (!plan.publish) {

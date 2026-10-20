@@ -2,7 +2,7 @@
 
 AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。从 Docker Hub 获取项目镜像，即可在自己的服务器上部署工作空间。
 
-项目在正式 Release（版本发布页面）发布后自动构建镜像，成功后提供对应版本和 `latest`（最新正式版标签）。维护者配置见[自动镜像发布说明](../development/image-publication.md)。
+项目在正式 Release（版本发布页面）发布后自动构建镜像，成功后提供对应版本和 `latest`（最新正式版标签）。维护者配置见[自动镜像发布说明](https://github.com/Stonewuu/agenteam/blob/main/docs/development/image-publication.md)。
 
 本文使用 0.4.1 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
 
