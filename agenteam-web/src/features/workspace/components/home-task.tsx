@@ -188,7 +188,7 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
                                                   aria-label={uiText("任务内容")} rows={4} maxLength={20000}
                                                   value={draft} disabled={busy || noEmployees}
                                                   onPaste={(event) => pasteUpload(event, files.add, !busy && Boolean(employee?.attachmentsEnabled))}
-                                                  placeholder={employee || noEmployees ? uiText("描述你想完成的工作，剩下的我们一起推进…") : uiText("选择一位数字员工，开始新的任务")}
+                                                  placeholder={employee || noEmployees ? uiText("描述任务目标、需要处理的内容和预期结果…") : uiText("选择一位数字员工，开始新的任务")}
                                                   onChange={(event) => {
                                                     setDraft(event.target.value);
                                                     if ((event.nativeEvent as InputEvent).isComposing) {

@@ -38,7 +38,7 @@ public class DataQueryValidation {
         }
         int limit = input.limit() == null ? 50 : input.limit(), offset = input.offset() == null ? 0 : input.offset();
         if (limit < 1 || limit > 200 || offset < 0 || offset > 100000) {
-            throw ApiException.invalidField("limit", "每次最多返回二百行，读取位置不能超过十万行。");
+            throw ApiException.invalidField("limit", "每次最多返回 200 行，最多可跳过前 100000 行。");
         }
         if (input.filters() == null || input.filters().size() > 20 || input.sort() == null || input.sort().size() > 3) {
             throw ApiException.invalidField("filters", "最多使用二十个筛选条件和三个排序字段。");

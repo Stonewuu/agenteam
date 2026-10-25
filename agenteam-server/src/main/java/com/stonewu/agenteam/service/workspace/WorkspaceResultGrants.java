@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * 子任务只继承明确传入的文件引用；自己新编造的工具参数不会授予文件访问资格。
+ * 子任务只能访问明确传入的文件；模型在工具参数中填写其他文件路径，不会获得这些文件的访问权限。
  */
 public final class WorkspaceResultGrants {
     private static final Pattern REFERENCES = Pattern.compile("(?:tool-results|inputs)/([A-Za-z0-9_-]{1,100})/");

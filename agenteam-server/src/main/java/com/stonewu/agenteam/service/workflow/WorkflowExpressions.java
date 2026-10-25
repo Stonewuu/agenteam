@@ -215,7 +215,7 @@ public class WorkflowExpressions {
     }
 
     private static ApiException tooLarge() {
-        return failure("WORKFLOW_OUTPUT_TOO_LARGE", "节点结果超过 1,048,576 字节，请减少返回内容或使用附件。");
+        return failure("WORKFLOW_OUTPUT_TOO_LARGE", "节点结果超过 1 MiB，请减少返回内容或使用附件。");
     }
 
     private static final class Budget {

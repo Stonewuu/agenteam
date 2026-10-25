@@ -314,11 +314,11 @@ public class RunApprovalService {
 
     private static ApiException changed() {
         return new ApiException(HttpStatus.CONFLICT, "APPROVAL_PARAMETERS_CHANGED",
-            "确认内容与固定操作不一致，请重新读取后核对。");
+            "待确认的内容与实际操作不一致，请重新加载并核对。");
     }
 
     private static ApiException resolved() {
         return new ApiException(HttpStatus.CONFLICT, "APPROVAL_ALREADY_RESOLVED",
-            "本次操作确认已处理或失效，不能改变决定。");
+            "本次操作已确认或确认已失效，无法更改决定。");
     }
 }

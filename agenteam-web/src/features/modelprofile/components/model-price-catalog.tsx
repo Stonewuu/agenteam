@@ -132,7 +132,7 @@ function CatalogPriceSummary({value}: {value: CatalogPrice}) {
     <dl className={styles.catalogRates}>{priceMeters.filter((meter) => meter.value !== "cache_write").map((meter) =>
       <div key={meter.value}><dt>{t(meter.label)}</dt><dd>{rates.find((rate) => rate.meter === meter.value)?.pricePerMillion ?? t("未提供")}</dd></div>)}</dl>
     <p className={styles.hint}>{t("USD / 每百万 Token")}
-      {value.configuration.rules.length > 1 && ` · ${t("另有 {0} 个上下文档位", [value.configuration.rules.length - 1])}`}</p>
+      {value.configuration.rules.length > 1 && ` · ${t("另有 {0} 个按输入长度划分的价格区间", [value.configuration.rules.length - 1])}`}</p>
   </div>;
 }
 

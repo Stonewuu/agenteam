@@ -67,7 +67,7 @@ public class ResourceJson {
         }
         try {
             if (json.writeValueAsBytes(value).length > 256 * 1024) {
-                throw ApiException.invalidField("config", "配置内容不能超过 262144 字节。");
+                throw ApiException.invalidField("config", "配置内容不能超过 256 KiB。");
             }
         } catch (JsonProcessingException exception) {
             throw ApiException.invalidField("config", "配置内容无法读取。");

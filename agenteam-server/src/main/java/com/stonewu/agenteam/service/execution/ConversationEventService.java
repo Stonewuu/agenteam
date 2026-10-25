@@ -91,7 +91,7 @@ public class ConversationEventService {
     }
 
     private ApiException invalidAfter() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "事件编号格式不正确，请重新打开对话。");
+        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "暂时无法继续读取对话，请重新打开对话。");
     }
 
     private record Batch(List<ServerSentEvent<Object>> events, boolean complete) {

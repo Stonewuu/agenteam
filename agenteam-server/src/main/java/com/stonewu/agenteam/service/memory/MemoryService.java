@@ -94,7 +94,7 @@ public class MemoryService {
             memories.insert(value);
         } catch (DuplicateKeyException existing) {
             throw new ApiException(HttpStatus.CONFLICT, "MEMORY_TOPIC_EXISTS",
-                "这个主题已经保存过偏好，请编辑已有内容。");
+                "此主题已有偏好，请编辑已保存的内容。");
         }
         return view(value);
     }
@@ -107,7 +107,7 @@ public class MemoryService {
             throw ApiException.invalidField("memoryKey", "编辑时不能更换偏好主题，请创建另一条偏好。");
         }
         if (input.sourceMessageId() != null) {
-            throw ApiException.invalidField("sourceMessageId", "编辑时不提交或修改原来源消息。");
+            throw ApiException.invalidField("sourceMessageId", "编辑偏好时不能更改来源消息。");
         }
         String content = validation.content(input.content());
         var now = clock.instant();

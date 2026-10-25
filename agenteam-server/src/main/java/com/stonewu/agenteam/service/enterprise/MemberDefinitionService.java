@@ -111,7 +111,7 @@ public class MemberDefinitionService {
         String status = EnterpriseValidation.status(value, null);
         roles.validateExistingRoleAuthority(actor, before.roleIds());
         if (status.equals("active") && users.findById(id).filter(user -> user.status().equals("active")).isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_DISABLED", "成员的账号已停用，不能在此恢复。");
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_DISABLED", "成员的账号已停用，请联系系统管理员恢复账号。");
         }
         if (!members.updateMember(actor.enterpriseId(), id, before.displayName(), status, revision, clock.instant())) {
             throw ApiException.versionConflict(revision);

@@ -8,15 +8,15 @@ export const usagePurposes: Record<string, string> = {
 };
 
 export const priceReasons: Record<string, string> = {
-  PRICE_NOT_CONFIGURED: "本次请求发生时尚未配置价格。",
-  PRICE_CALENDAR_EXPIRED: "价格日历已超过覆盖日期，需要补充日期配置。",
-  SERVICE_TIER_NOT_REPORTED: "提供方未确认实际服务档位，暂时无法选价。",
-  CONTEXT_NOT_REPORTED: "未返回完整输入量，暂时无法确定上下文档位。",
+  PRICE_NOT_CONFIGURED: "本次调用时尚未配置价格。",
+  PRICE_CALENDAR_EXPIRED: "本次调用日期不在价格日历范围内，请补充日期配置。",
+  SERVICE_TIER_NOT_REPORTED: "提供方未返回实际服务档位，暂时无法确定适用价格。",
+  CONTEXT_NOT_REPORTED: "提供方未返回完整输入用量，暂时无法确定适用的价格区间。",
   PRICE_RULE_NOT_FOUND: "没有匹配本次时间、输入量和服务档位的价格规则。",
-  PRICE_RATE_NOT_CONFIGURED: "部分计量项尚未配置单价。",
+  PRICE_RATE_NOT_CONFIGURED: "部分用量项目尚未设置单价。",
   USAGE_INCOMPLETE: "提供方未返回完整用量，金额仅包含已确认的部分。",
-  INVALID_USAGE: "提供方返回的用量存在不一致，暂时无法计算金额。",
-  UNSUPPORTED_METER: "本次调用还包含文本价目未覆盖的计费项。",
+  INVALID_USAGE: "提供方返回的各项用量不一致，暂时无法计算费用。",
+  UNSUPPORTED_METER: "本次调用包含文本价格规则未覆盖的用量，暂时无法完整计费。",
 };
 
 export function tokenCount(value: string | null | undefined, locale: string): string | null {

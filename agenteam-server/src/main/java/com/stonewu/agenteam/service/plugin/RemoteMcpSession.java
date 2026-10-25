@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * 使用框架会话关联请求；工具结构按完整 JSON 对象读取，保留所有验证约束。
@@ -33,7 +34,7 @@ public final class RemoteMcpSession implements AutoCloseable {
         deadline = System.nanoTime() + timeout.toNanos();
         transport = new RestrictedMcpTransport(http, json, endpoint, transportType, credentials, timeout,
             responseBytes);
-        session = new McpClientSession(timeout, transport, Map.of(), Map.of());
+        session = new McpClientSession(timeout, transport, Map.of(), Map.of(), Function.identity());
         if (control != null) {
             control.track(this);
         }

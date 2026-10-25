@@ -52,7 +52,7 @@ export function ActivityTrend({enterprise, refresh}: { enterprise: string; refre
     <header className={styles.header}>
       <div className={styles.heading}><span className={styles.headingIcon} data-icon-surface><IconChartBar size={20}
                                                                                          variant="Bulk"/></span>
-        <div><h2>{uiText("活动足迹")}</h2><p>{uiText("每一天，留下一点进展")}</p></div>
+        <div><h2>{uiText("活动足迹")}</h2><p>{uiText("查看每天的对话、定时任务、待办和雇佣记录")}</p></div>
       </div>
       <div className={styles.headerActions}><span>{uiText("过去一年")}</span><Button type="button"
                                                                                      className="icon-button"
@@ -121,7 +121,7 @@ function ActivityCalendar({data}: { data: ActivityTrendData }) {
   return <>
     <div className={styles.summary}>
       <strong>{total.toLocaleString(uiText.formatLocale)}<span>{uiText("次活动")}</span></strong>
-      <p>{total ? uiText("与数字员工协作，也把日常工作一步步推进。") : uiText("从一次对话或一项待办开始，记录你的工作日常。")}</p>
+      <p>{total ? uiText("查看任务进展，继续与数字员工对话。") : uiText("开始对话或创建待办后，可在这里查看活动记录。")}</p>
     </div>
     <p id={helpId}
        className="sr-only">{uiText("每个格子代表一天，颜色越深活动越多。点击查看当天次数。方向键选择日期，Home 跳到第一天，End 跳到最近一天。")}</p>

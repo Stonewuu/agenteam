@@ -77,7 +77,7 @@ public final class CompactionSafetyMiddleware implements MiddlewareBase {
                 String message = failure.getMessage();
                 if (message != null && overflow(message)) {
                     return new ApiException(HttpStatus.BAD_GATEWAY, "EXECUTION_CONTEXT_LIMIT",
-                        "本次输入仍超过模型的上下文限制，已保留对话内容，请缩小输入后重试。", failure);
+                        "本次输入仍超过模型可处理的长度。对话内容已保留，请缩短输入后重试。", failure);
                 }
                 return failure;
             });

@@ -156,7 +156,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
                     }
                     if (tree == null || !tree.isObject()) {
                         throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                            "请求内容必须是完整的表单对象。");
+                            "提交内容格式不正确，请重新打开表单后提交。");
                     }
                     request.setAttribute(JSON_ATTRIBUTE, tree);
                 }

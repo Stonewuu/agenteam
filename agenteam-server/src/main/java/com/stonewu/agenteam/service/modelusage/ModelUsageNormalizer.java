@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 原生接口的输入和思考口径不同，计量在框架转换丢失字段之前完成。
+ * 不同模型接口对输入和思考用量的统计方式不同，先读取原始字段，再交给框架转换，避免遗漏用量。
  */
 public final class ModelUsageNormalizer {
     public ModelTokenUsage normalize(String protocol, String usageFormat, JsonNode source,

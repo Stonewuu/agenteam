@@ -1,21 +1,19 @@
 package com.stonewu.agenteam.service.file;
 
 import com.stonewu.agenteam.support.TestOutputPaths;
+import com.stonewu.agenteam.support.ReusableOfficeSandbox;
 import org.junit.jupiter.api.Tag;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
-import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
@@ -29,28 +27,25 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 真实容器验证三类办公文档、公式重算、中文渲染和附件解析。
+ * 共用真实办公容器验证三类文档、公式重算、中文渲染和附件解析。
+ * 生产沙箱的独立执行和导出方式由 DockerWorkspaceRunnerTest 验证。
  */
 @Tag("external-process")
 class OfficeSandboxIntegrationTest {
-    @TempDir
-    Path directory;
+    private final Path directory = TestOutputPaths.path("office-integration", UUID.randomUUID().toString());
+    private ReusableOfficeSandbox runner;
 
     @AfterEach
-    void cleanIncompleteContainers() throws Exception {
-        try (var paths = Files.find(directory, Integer.MAX_VALUE,
-            (path, attributes) -> attributes.isRegularFile() && path.getFileName().toString().equals("sandbox.pending"))) {
-            for (Path pending : paths.toList()) {
-                new DockerWorkspaceCommands().removeForWorkspace(
-                    Utf8Text.revision("workspace", pending.getParent().toAbsolutePath().normalize().toString()));
-            }
+    void closeOfficeContainer() {
+        if (runner != null) {
+            runner.close();
         }
     }
 
     @Test
-    void createsReadsRecalculatesRendersAndKeepsFilesAcrossContainers() throws Exception {
+    void createsReadsRecalculatesRendersAndParsesFilesUsingOneContainer() throws Exception {
         var settings = new WorkspaceSettings(directory.toString(), "agenteam/sandbox-office:local", true, 128, 20, 2000, 512, 1, 128, 180, "none");
-        var runner = new DockerWorkspaceRunner(settings, new DockerWorkspaceCommands(), new SandboxRuntimeSettings(64, 1, "", ""));
+        runner = new ReusableOfficeSandbox(settings.image());
         Path source = directory.resolve("source");
         for (String area : List.of("inputs", "tool-results", "work", "outputs")) {
             Files.createDirectories(source.resolve(area));
@@ -68,6 +63,8 @@ class OfficeSandboxIntegrationTest {
         }
         Files.createDirectories(first.resolve("inputs"));
         Files.createDirectories(first.resolve("tool-results"));
+        String containerId = runner.containerId();
+        assertNotNull(containerId);
         Path second = directory.resolve("second");
         String command = "agenteam-office recalculate /workspace/outputs/sample.xlsx --output /workspace/outputs/calculated.xlsx\n"
             + "agenteam-office render /workspace/outputs/sample.docx --output-dir /workspace/outputs/preview/docx\n"
@@ -108,6 +105,14 @@ class OfficeSandboxIntegrationTest {
         }
         var invalid = new ByteArrayInputStream("不是办公文件".getBytes());
         assertThrows(ApiException.class, () -> parser.render(invalid, "docx", directory.resolve("invalid.pdf"), () -> true));
+        Path empty = Files.createDirectory(directory.resolve("empty"));
+        try (var control = new ToolCallControl(() -> { })) {
+            var fresh = runner.execute(empty, directory.resolve("fresh"), directory, "fresh-workspace",
+                "test ! -e /workspace/outputs/sample.docx && test ! -e /workspace/inputs/source.docx", ".",
+                Duration.ofSeconds(15), control);
+            assertEquals(0, fresh.exitCode(), "重新准备工作目录后不能保留上次调用的文档");
+        }
+        assertEquals(containerId, runner.containerId(), "文档创建、转换和解析应共用同一个测试容器");
         Path evidence = TestOutputPaths.path("office-runtime-evidence").toAbsolutePath();
         Files.createDirectories(evidence);
         for (String kind : List.of("docx", "xlsx", "pptx")) {

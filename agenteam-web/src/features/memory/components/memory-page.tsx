@@ -32,8 +32,8 @@ function Memories({user, context}: { user: IdentityUser; context: EnterpriseCont
   const enterpriseId = context.enterprise.id;
   const [query, setQuery] = useState("");
   const list = useApiPage<MemoryAgent>(organizationPath(enterpriseId, `/memories/agents?query=${encodeURIComponent(query)}`));
-  return <PlatformShell user={user} context={context} area="user" title={uiText("已保存的偏好")}>
-    <PageHeader title={uiText("已保存的偏好")} description={uiText("查看和管理为员工保存的工作偏好。")}
+  return <PlatformShell user={user} context={context} area="user" title={uiText("个人偏好记忆")}>
+    <PageHeader title={uiText("个人偏好记忆")} description={uiText("查看和管理为员工保存的工作偏好。")}
                 actions={<><Link className={ui.button} href="/settings?tab=memory">{uiText("个人设置")}</Link></>}/>
     {!user.preferences.memoryEnabled && <p className={ui.notice}>{uiText("记忆已关闭。你仍可管理已经保存的偏好。")}</p>}
     <div className={styles.toolbar}><SearchInput aria-label={uiText("搜索员工名称")}

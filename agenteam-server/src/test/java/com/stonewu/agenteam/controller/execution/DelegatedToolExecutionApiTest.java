@@ -4,7 +4,7 @@ import com.stonewu.agenteam.support.TestOutputPaths;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
-import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
+import com.stonewu.agenteam.support.execution.ModelToolApiTestSupport;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,18 +13,14 @@ import com.stonewu.agenteam.mapper.tool.ToolCallSqlMapper;
 import com.stonewu.agenteam.model.file.entity.FileObjectRow;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRow;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
-import com.sun.net.httpserver.HttpExchange;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -37,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 长篇子任务返回必须可继续调用和读取，父子消息结构保持原样。
  */
 @Import(SharedEnterpriseTestEdition.class)
-class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
+class DelegatedToolExecutionApiTest extends ModelToolApiTestSupport {
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
 
     @DynamicPropertySource
@@ -127,41 +123,5 @@ class DelegatedToolExecutionApiTest extends ExecutionApiTestSupport {
         var complete = data(mvc.perform(get(contentUrl).cookie(cookie)).andExpect(status().isOk()).andReturn());
         assertTrue(complete.path("content").asText().contains(smallBody));
         mvc.perform(get(contentUrl)).andExpect(status().isUnauthorized());
-    }
-
-    private JsonNode submit(String question) throws Exception {
-        allowModelCalls = true;
-        return data(write(base() + "/conversations", Map.of("agentId", agent, "input", input(question)), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-    }
-
-    private void finish(JsonNode accepted) {
-        var lease = lifecycle.claim("source-tools-test").orElseThrow();
-        var run = lifecycle.start(lease).orElseThrow();
-        assertEquals(accepted.path("runId").asText(), run.id());
-        try (var task = adapter.create(run, lease)) {
-            task.completion().block(Duration.ofSeconds(25));
-            task.saveCheckpoint();
-            lifecycle.finish(lease, "completed", null, null);
-        }
-    }
-
-    private JsonNode snapshot(JsonNode accepted) throws Exception {
-        return data(mvc.perform(get(base() + "/conversations/" + accepted.path("conversationId").asText()).cookie(cookie)).andExpect(status().isOk()).andReturn());
-    }
-
-    private Map<String, Object> tool(int index, String id, String name, Object arguments) throws IOException {
-        return Map.of("index", index, "id", id, "type", "function", "function", Map.of("name", name, "arguments", json.writeValueAsString(arguments)));
-    }
-
-    private void toolCalls(HttpExchange exchange, List<Map<String, Object>> calls) throws IOException {
-        frame(exchange, Map.of("tool_calls", calls), "tool_calls");
-    }
-
-    private void frame(HttpExchange exchange, Map<String, Object> delta, String finish) throws IOException {
-        String chunk = json.writeValueAsString(Map.of("id", "source-stream", "object", "chat.completion.chunk", "created", 1, "model", "test-model", "choices", List.of(Map.of("index", 0, "delta", delta, "finish_reason", finish))));
-        exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
-        exchange.sendResponseHeaders(200, 0);
-        exchange.getResponseBody().write(("data: " + chunk + "\n\ndata: [DONE]\n\n").getBytes(StandardCharsets.UTF_8));
-        exchange.close();
     }
 }

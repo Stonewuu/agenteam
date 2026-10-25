@@ -74,7 +74,7 @@ public class WorkflowToolNodeExecutor {
                 if (approval.isPresent() && !approval.get().status().equals("approved")) {
                     if (!approval.get().status().equals("rejected")) {
                         throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_ALREADY_RESOLVED",
-                            "当前操作确认尚不能用于执行。");
+                            "此操作尚未完成确认，暂时无法执行。");
                     }
                     attempt.emit("TOOL_RESULT_END", "DENIED");
                     throw new ApiException(HttpStatus.CONFLICT, "TOOL_USER_REJECTED", "用户已拒绝本次操作，未发送请求。");

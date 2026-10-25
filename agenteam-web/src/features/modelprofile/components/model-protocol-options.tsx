@@ -45,7 +45,7 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, disable
             value={value.reasoningMode} disabled={disabled}
             onChange={(event) => onChange({...value, reasoningMode: event.target.value as ModelProtocolOptions["reasoningMode"]})}>
             <option value="budget">{t("按 Token 预算")}</option>
-            <option value={protocol === "anthropic" ? "adaptive" : "level"}>{protocol === "anthropic" ? t("自适应思考") : t("原生思考等级")}</option>
+            <option value={protocol === "anthropic" ? "adaptive" : "level"}>{protocol === "anthropic" ? t("自适应思考") : t("按思考强度设置")}</option>
           </Select></Field>
           <div className={styles.lengthColumns}>{efforts.map((effort) => value.reasoningMode === "budget" ?
             <Field key={effort} label={t("{0}：思考预算", [t(reasoningEffortLabels[effort])])}

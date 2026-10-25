@@ -93,7 +93,7 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
             }
             if (!response.isSuccessful()) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_REQUEST_REJECTED",
-                    "目标网站拒绝了本次读取。可尝试沙盒浏览器或其他公开来源；需要登录或验证时请先取得访问资格。");
+                    "目标网站拒绝了本次读取。可尝试沙盒浏览器或其他公开来源；需要登录或验证时，请先确认已有访问权限。");
             }
             String mediaType = response.header("Content-Type", "").split(";", 2)[0].trim();
             if (!mediaType.startsWith("text/") && !mediaType.equals("application/json") && !mediaType.equals("application/xhtml+xml")) {

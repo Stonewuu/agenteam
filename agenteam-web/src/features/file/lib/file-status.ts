@@ -26,7 +26,7 @@ export function fileFailureText(file: Pick<FileReference, "status" | "errorCode"
   }
   switch (file.errorCode) {
     case "FILE_NO_TEXT":
-      return "文件没有可读取的文字，请上传带文本层的资料。";
+      return "文件中没有可读取的文字，请上传可以选中并复制文字的文档。";
     case "FILE_ENCRYPTED":
       return "文件已加密，请先导出不需要密码的副本。";
     case "FILE_ACTIVE_CONTENT":

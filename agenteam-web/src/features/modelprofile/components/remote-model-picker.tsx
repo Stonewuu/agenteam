@@ -52,7 +52,7 @@ export function RemoteModelPicker({enterpriseId, providerId, value, disabled, er
       <div className={styles.remoteStatus}>
       <span
         role="status">{remote.loading ? uiText("正在获取远程模型…") : remote.error ? uiText("暂时无法获取模型列表，仍可手动填写。")
-        : remote.data?.length ? uiText("可从 {0} 个远程模型中选择", [remote.data.length]) : uiText("提供方未返回模型，可手动填写。")}</span>
+        : remote.data?.length ? uiText("可选择 {0} 个提供方返回的模型", [remote.data.length]) : uiText("提供方未返回模型，可手动填写。")}</span>
         <Button type="button" aria-label={uiText("刷新远程模型")} disabled={remote.loading || !providerId}
                 onClick={remote.retry}><IconRefresh size={14}/></Button>
       </div>

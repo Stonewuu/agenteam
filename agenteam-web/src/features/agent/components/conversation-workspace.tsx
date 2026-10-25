@@ -267,7 +267,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
                                                                                              userId={user.id}
                                                                                              path={organizationPath(enterprise, `/conversations/${encodeURIComponent(workspace.detail.id)}/export`)}
                                                                                              title={uiText("导出对话")}
-                                                                                             description={uiText("将已保存的对话内容保存为表格文件。")}/></Dialog>}
+                                                                                             description={uiText("将已保存的对话导出为表格文件。")}/></Dialog>}
     {memorySource &&
       <MemoryEditor enterpriseId={enterprise} agentId={memorySource.agentId} initial={null} source={memorySource.source}
                     onClose={() => setMemorySource(null)} onReload={() => {

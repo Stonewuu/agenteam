@@ -39,7 +39,7 @@ public class DataResourcePolicy {
         data(record);
         policy.editable(record);
         if (!record.status().equals("active")) {
-            throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", "数据源已停用，请先恢复使用。");
+            throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", "数据源已停用，请先启用。");
         }
         return record;
     }

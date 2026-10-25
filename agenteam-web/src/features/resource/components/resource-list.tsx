@@ -72,11 +72,11 @@ export function ResourceList({enterpriseId, kind, permissions}: {
   }
   return <>
     <PageHeader title={type.label} description={({
-      agent: uiText("把工作经验变成可持续使用的能力。"),
+      agent: uiText("设置智能体的职责、技能和工具。"),
       skill: uiText("把常用方法整理为可重复使用的技能。"),
       plugin: uiText("连接工作中需要的工具与服务。"),
-      workflow: uiText("将多个工作步骤编排为可执行的流程。"),
-      knowledge: uiText("集中整理资料，让每个回答有据可依。"),
+      workflow: uiText("连接工作步骤，设置执行顺序和分支。"),
+      knowledge: uiText("整理团队资料，供智能体检索和引用。"),
       data: uiText("连接业务数据，为任务提供所需的信息。")
     })[kind]} actions={<>
       {kind === "workflow" && canCreate && <WorkflowAssistantButton enterprise={enterpriseId} permissions={permissions}/>}

@@ -89,7 +89,7 @@ public class ConversationModelService {
         }
         if (conversation.activeRunId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
-                "请等待当前回复结束，或先停止任务，再切换模型或思考等级。");
+                "请等待当前回复结束，或先停止任务，再切换模型或思考强度。");
         }
         configurations.normal(actor, conversation.agentId(), conversation.agentVersionId(), selection);
         if (!selection.equals(conversation.modelSelection())) {

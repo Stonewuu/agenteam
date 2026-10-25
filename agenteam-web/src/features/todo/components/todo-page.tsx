@@ -83,7 +83,7 @@ function TodoList({user, context}: { user: IdentityUser; context: EnterpriseCont
   };
   return <PlatformShell user={user} context={context} area="user" title={uiText("待办")}>
     <div className={styles.page}>
-      <PageHeader title={uiText("把事情，一件件做好")} description={uiText("安排自己的工作，也和团队保持步调一致。")}
+      <PageHeader title={uiText("我的待办")} description={uiText("查看待办、安排负责人并跟进处理进度。")}
                   actions={<>{context.permissions.includes("todo.manage") &&
                     <Button className={ui.primary} onClick={() => setEditor("create")}><IconPlus
                       size={17}/>{uiText("创建待办")}</Button>}</>}/>

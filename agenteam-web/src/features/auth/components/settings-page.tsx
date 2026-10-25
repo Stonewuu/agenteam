@@ -103,7 +103,7 @@ export function SettingsPage() {
     return () => controller.abort();
   }, [router, refresh]);
   return <>
-    <PageHeader title={uiText("个人设置")} description={uiText("按你的习惯，安排自己的工作空间。")}
+    <PageHeader title={uiText("个人设置")} description={uiText("管理账号资料、界面外观和通知偏好。")}
                 icon={<IconUser size={26} variant="Bulk"/>} actions={<>{user && !user.enterprises.length &&
       <div className={ui.actions}><Link className={ui.button}
                                         href="/no-enterprise">{uiText("返回")}</Link>{EnterpriseCreateDialog && user.capabilities.includes("enterprise.create") &&

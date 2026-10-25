@@ -77,7 +77,16 @@ public final class InvitationHttpTestEnvironment implements AutoCloseable {
 
     @Override
     public void close() throws SQLException {
-        mailbox.stop();
-        database.close();
+        if (!TestClassResourceCleanup.deferClose(this::closeResources)) {
+            closeResources();
+        }
+    }
+
+    private void closeResources() throws SQLException {
+        try {
+            mailbox.stop();
+        } finally {
+            database.close();
+        }
     }
 }

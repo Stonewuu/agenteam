@@ -32,16 +32,16 @@ export function AuthFrame({children, back = false, className = ""}: {
                 aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? <IconPlayerPlay size={17}/> :
           <IconPlayerPause size={17}/>}</Button></div>
       <div className="auth-story-content">
-        <div className="auth-story-kicker">{uiText("为想法，留出更多可能")}</div>
-        <h2>{uiText("让好想法，")}<br/><span>{uiText("成为做好的工作。")}</span></h2>
-        <p>{uiText("认识你的数字员工，沉淀团队的方法。")}<br/>{uiText("从一个想法开始，一起把工作向前推进。")}</p>
+        <div className="auth-story-kicker">{uiText("与你的数字员工一起工作")}</div>
+        <h2>{uiText("描述任务，")}<br/><span>{uiText("让数字员工协助完成。")}</span></h2>
+        <p>{uiText("为数字员工配置工作所需的技能和工具。")}<br/>{uiText("通过对话交代任务，查看进展和结果。")}</p>
         <div className="auth-features"><span><IconRobot size={20}
                                                         variant="Bulk"/>{uiText("数字员工")}</span><span><IconBook2
           size={20} variant="Bulk"/>{uiText("团队知识")}</span><span><IconSchema size={20}
                                                                                  variant="Bulk"/>{uiText("工作流")}</span>
         </div>
       </div>
-      <div className="auth-story-bottom"><span>{uiText("把精力，留给更重要的事。")}</span><span>AgenTeam</span></div>
+      <div className="auth-story-bottom"><span>{uiText("集中管理对话、资料和工作流。")}</span><span>AgenTeam</span></div>
     </section>
     <section className="auth-form-side">
       <div className="auth-topbar">{back ?

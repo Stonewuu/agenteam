@@ -70,7 +70,7 @@ public class ExecutionNotificationService {
             return;
         }
         enqueue(run, "run:" + run.id() + ":access-revoked", "permission", "任务已不能继续执行",
-            "所需的访问资格已变化，任务已请求停止。请查看当前仍可访问的任务记录。");
+            "任务所需的访问权限已变化，系统已请求停止任务。你仍可查看有权限访问的任务记录。");
     }
 
     private void enqueue(RunRecord run, String event, String category, String title, String body) {

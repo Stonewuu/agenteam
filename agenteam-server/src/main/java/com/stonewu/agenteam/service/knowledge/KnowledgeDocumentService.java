@@ -57,7 +57,7 @@ public class KnowledgeDocumentService {
         if (mutation) {
             resources.editable(record);
             if (!record.status().equals("active")) {
-                throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", "知识库已停用，请先恢复使用。");
+                throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", "知识库已停用，请先启用。");
             }
         }
     }
@@ -82,7 +82,7 @@ public class KnowledgeDocumentService {
             }
             if (documents.hasDocument(actor.enterpriseId(), resource, file.id())) {
                 throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_ALREADY_ADDED",
-                    "这份文件已经加入知识库，请使用重新处理。");
+                    "这份文件已在知识库中，请选择“重新处理”。");
             }
             String document = UUID.randomUUID().toString();
             documents.create(document, file, clock.instant());
@@ -177,7 +177,7 @@ public class KnowledgeDocumentService {
     private void requireProcessable(KnowledgeDocumentRecord doc) {
         if (doc.pendingGeneration() > 0) {
             throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_PROCESSING",
-                "资料已经在等待或进行处理，请等待本次处理结束。");
+                "资料正在排队或处理中，请等待处理完成。");
         }
         if (doc.lastGeneration() == Integer.MAX_VALUE) {
             throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_GENERATION_LIMIT",

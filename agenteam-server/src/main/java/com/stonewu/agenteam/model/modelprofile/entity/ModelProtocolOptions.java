@@ -19,7 +19,7 @@ public record ModelProtocolOptions(
         @Min(value = 0, message = "思考预算不能为负数。") @Max(value = 1000000, message = "思考预算超出允许范围。") Integer> thinkingBudgets,
     @Size(max = 7, message = "思考等级数量超出允许范围。")
     Map<@Pattern(regexp = ReasoningEffort.PATTERN, message = "请选择支持的思考等级。") String,
-        @Pattern(regexp = "(?:minimal|low|medium|high|max)", message = "请选择支持的原生思考等级。") String> thinkingLevels,
+        @Pattern(regexp = "(?:minimal|low|medium|high|max)", message = "请选择支持的按思考强度设置。") String> thinkingLevels,
     @Min(value = 0, message = "缓存有效期不能为负数。") @Max(value = 3600, message = "缓存有效期超出允许范围。") Integer cacheTtlSeconds,
     @Pattern(regexp = "(?:standard|deepseek)", message = "请选择支持的用量格式。") String usageFormat,
     @Size(max = 4, message = "用量字段数量超出允许范围。") @UniqueElements(message = "用量字段不能重复。")

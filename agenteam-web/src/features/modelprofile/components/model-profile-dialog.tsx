@@ -201,7 +201,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
           <h3 className={formStyles.sectionHeading}>{uiText("模型长度")}</h3>
           <p className={ui.description}>{uiText("Token（模型计量文本的单位）：1K = 1,000，1M = 1,000,000。")}</p>
           {selected && (selected.maxContextTokens === null || selected.maxOutputTokens === null) &&
-            <p className={ui.description}>{uiText("提供方未公布完整长度，请按模型说明补全。")}</p>}
+            <p className={ui.description}>{uiText("提供方未返回完整的长度限制，请根据模型说明补充。")}</p>}
           <Fieldset className={styles.fields} disabled={action.busy}>
             <div className={formStyles.lengthColumns}>
               <TokenLengthInput label={uiText("上下文长度")} name="capabilities.maxContextTokens" value={contextLength}

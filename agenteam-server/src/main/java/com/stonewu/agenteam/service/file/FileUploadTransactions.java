@@ -48,7 +48,7 @@ public class FileUploadTransactions {
     public FileRecord claim(AuthContext actor, String id, String lease) {
         var file = access.uploadOwner(actor, id, true);
         if (!file.status().equals("pending")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_ALREADY_UPLOADED", "文件内容已经保存，请继续完成检查。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_ALREADY_UPLOADED", "文件已上传，无需重复上传。请查看文件状态。");
         }
         if (file.uploadExpiresAt() == null || !file.uploadExpiresAt().isAfter(clock.instant())) {
             throw new ApiException(HttpStatus.GONE, "UPLOAD_EXPIRED", "上传地址已过期，请重新选择文件。");

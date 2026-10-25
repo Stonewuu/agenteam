@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 输入资料在提交时固定正文，执行时再次校验原文件及知识引用的访问资格。
+ * 提交任务时保存输入资料正文，执行前再次检查用户能否访问原文件和引用的知识库资料。
  */
 @Service
 public class ExecutionSourceService {

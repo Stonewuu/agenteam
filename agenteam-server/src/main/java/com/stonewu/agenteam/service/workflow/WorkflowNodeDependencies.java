@@ -50,7 +50,7 @@ public class WorkflowNodeDependencies {
                     .filter(tool -> tool.enabled() && (key.equals(tool.entryId()) || key.equals(tool.id())
                         || !PluginConfigurationMapper.modern(plugin.version().config()) && !settings.hasNonNull(
                         "toolId") && key.equals(tool.definition().name()))).count() != 1) {
-                    throw ApiException.invalidField(field + ".toolId", "所选插件版本没有提供这个可用工具，请重新选择。");
+                    throw ApiException.invalidField(field + ".toolId", "所选插件版本不提供此工具，请重新选择工具。");
                 }
             }
         }

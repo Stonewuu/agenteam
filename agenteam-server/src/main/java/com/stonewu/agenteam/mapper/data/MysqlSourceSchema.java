@@ -83,6 +83,6 @@ public class MysqlSourceSchema {
 
     private ApiException unavailable() {
         return new ApiException(HttpStatus.NOT_FOUND, "DATA_SOURCE_TABLE_UNAVAILABLE",
-            "所选库表或视图不存在，或当前账号没有读取资格。");
+            "所选数据表或视图不存在，或连接账号没有读取权限。");
     }
 }

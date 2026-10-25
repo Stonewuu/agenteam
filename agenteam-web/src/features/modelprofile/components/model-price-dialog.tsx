@@ -42,7 +42,7 @@ export function ModelPriceDialog({enterpriseId, model, onClose, onChanged}: {
     <div className={styles.stack}>
       <ModelPriceCatalog enterpriseId={enterpriseId} model={model} onSaved={saved}/>
       <div className={styles.toolbar}><div className={styles.ruleCopy}><strong>{t("价格版本")}</strong>
-        <p>{current.data ? t("当前生效：版本 {0} · {1}", [current.data.versionNo, current.data.currency]) :
+        <p>{current.data ? t("当前价格：版本 {0} · {1}", [current.data.versionNo, current.data.currency]) :
           current.loading ? t("正在读取当前价格…") : current.error ? t("当前价格暂时无法读取") : t("尚未发布价格")}</p></div>
         <Button className={ui.primary} onClick={() => setCreating(true)}><IconPlus size={17}/>{t("新建草稿")}</Button></div>
       {current.data && !versions.data?.some((value) => value.id === current.data?.id) && <Button className={ui.button}

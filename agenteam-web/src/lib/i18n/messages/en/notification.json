@@ -47,6 +47,7 @@
   "请打开任务查看本次执行结果。": "Open the task to view the results.",
   "请打开任务查看具体操作并决定是否继续。": "Open the task to review the action and decide whether to continue.",
   "任务已不能继续执行": "Task can no longer continue",
+  "任务所需的访问权限已变化，系统已请求停止任务。你仍可查看有权限访问的任务记录。": "The required access permissions have changed, and the system has requested that the task stop. You can still view task records you have access to.",
   "所需的访问资格已变化，任务已请求停止。请查看当前仍可访问的任务记录。": "Required access has changed and the task has been asked to stop. View the task records you can still access.",
   "雇佣申请已批准": "Hire request approved",
   "雇佣申请已拒绝": "Hire request declined",

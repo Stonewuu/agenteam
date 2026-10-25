@@ -54,7 +54,7 @@ export function PriceRuleDialog({initial, baseRates, unit, onClose, onSave}: {
         onClick={() => setRule({...rule, rates: structuredClone(baseRates)})}>{t("复制基础单价")}</Button>}>
         <PriceRateFields rates={rule.rates} onChange={(rates) => setRule({...rule, rates})}/>
       </DetailSection>
-      <DetailSection title={t("星期与时段")} icon={<IconClock size={20}/>} description={t("未添加时段时适用于每天全天。跨午夜的结束时间按次日计算。")}
+      <DetailSection title={t("星期与时段")} icon={<IconClock size={20}/>} description={t("未设置时段时，价格全天适用。结束时间早于开始时间时，表示在次日结束。")}
         action={<Button className={ui.button} type="button" onClick={() => setRule({...rule, times: [...rule.times, {weekday: 1, startMinute: 540, endMinute: 1080}]})}>
           <IconPlus size={16}/>{t("添加时段")}</Button>}>
         {rule.times.map((time, index) => <div className={styles.timeRow} key={index}>

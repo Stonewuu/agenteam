@@ -66,7 +66,7 @@ public class InvitationPolicy {
             var team = enterprises.findTeam(enterpriseId, id)
                 .orElseThrow(() -> ApiException.invalidField("teamIds", "所选团队不存在或不属于当前企业。"));
             if (!team.status().equals("active")) {
-                throw ApiException.invalidField("teamIds", "所选团队已停用，请调整后重试。");
+                throw ApiException.invalidField("teamIds", "所选团队已停用，请选择其他团队。");
             }
             if (checkCapacity && !existing.contains(id) && memberships.count(enterpriseId, id) >= 500) {
                 throw new ApiException(HttpStatus.CONFLICT, "TEAM_MEMBER_LIMIT", "所选团队人数已满，请联系邀请人调整。");

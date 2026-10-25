@@ -5,7 +5,7 @@ import com.stonewu.agenteam.support.InProcessDocumentParsing;
 
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
-import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
+import com.stonewu.agenteam.support.execution.ModelToolApiTestSupport;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,7 +27,6 @@ import com.stonewu.agenteam.service.network.RestrictedHttpClient;
 import com.stonewu.agenteam.support.FileScanTestServer;
 import com.stonewu.agenteam.support.HttpsDataTestServer;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
-import com.sun.net.httpserver.HttpExchange;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,10 +39,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -60,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 真实文件、数据库、模型流和 AgentScope 父子工具调用共同验证资料读取与引用。
  */
 @Import({SharedEnterpriseTestEdition.class, SourceToolExecutionApiTest.HttpsConfiguration.class, InProcessDocumentParsing.class})
-class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
+class SourceToolExecutionApiTest extends ModelToolApiTestSupport {
 
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
 
@@ -399,41 +396,5 @@ class SourceToolExecutionApiTest extends ExecutionApiTestSupport {
 
     private Map<String, Object> query(Data source, List<String> fields) {
         return Map.of("collectionId", source.collection().path("id").asText(), "generation", 1, "fields", fields, "filters", List.of(), "sort", List.of());
-    }
-
-    private JsonNode submit(String question) throws Exception {
-        allowModelCalls = true;
-        return data(write(base() + "/conversations", Map.of("agentId", agent, "input", input(question)), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-    }
-
-    private void finish(JsonNode accepted) {
-        var lease = lifecycle.claim("source-tools-test").orElseThrow();
-        var run = lifecycle.start(lease).orElseThrow();
-        assertEquals(accepted.path("runId").asText(), run.id());
-        try (var task = adapter.create(run, lease)) {
-            task.completion().block(Duration.ofSeconds(25));
-            task.saveCheckpoint();
-            lifecycle.finish(lease, "completed", null, null);
-        }
-    }
-
-    private JsonNode snapshot(JsonNode accepted) throws Exception {
-        return data(mvc.perform(get(base() + "/conversations/" + accepted.path("conversationId").asText()).cookie(cookie)).andExpect(status().isOk()).andReturn());
-    }
-
-    private Map<String, Object> tool(int index, String id, String name, Object arguments) throws IOException {
-        return Map.of("index", index, "id", id, "type", "function", "function", Map.of("name", name, "arguments", json.writeValueAsString(arguments)));
-    }
-
-    private void toolCalls(HttpExchange exchange, List<Map<String, Object>> calls) throws IOException {
-        frame(exchange, Map.of("tool_calls", calls), "tool_calls");
-    }
-
-    private void frame(HttpExchange exchange, Map<String, Object> delta, String finish) throws IOException {
-        String chunk = json.writeValueAsString(Map.of("id", "source-stream", "object", "chat.completion.chunk", "created", 1, "model", "test-model", "choices", List.of(Map.of("index", 0, "delta", delta, "finish_reason", finish))));
-        exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
-        exchange.sendResponseHeaders(200, 0);
-        exchange.getResponseBody().write(("data: " + chunk + "\n\ndata: [DONE]\n\n").getBytes(StandardCharsets.UTF_8));
-        exchange.close();
     }
 }

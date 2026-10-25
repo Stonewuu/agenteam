@@ -78,7 +78,7 @@ public class ConversationManagementService {
                 throw ApiException.invalidField("approvalPolicy", "请选择有效的工具审批策略。");
             }
             if (!row.mode().equals("normal") || !row.status().equals("active")) {
-                throw ApiException.invalidField("approvalPolicy", "只能修改可继续对话的工具审批策略。");
+                throw ApiException.invalidField("approvalPolicy", "此对话无法继续，不能修改工具审批策略。");
             }
             if (row.activeRunId() != null) {
                 throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",

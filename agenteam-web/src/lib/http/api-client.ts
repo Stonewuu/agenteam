@@ -138,7 +138,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
       if (options.signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) {
         throw error;
       }
-      const failure = error instanceof ApiError ? error : new ApiError(0, "NETWORK_ERROR", "暂时无法连接。请重试确认本次操作结果。", {}, {}, undefined, error);
+      const failure = error instanceof ApiError ? error : new ApiError(0, "NETWORK_ERROR", "暂时无法连接服务，请检查网络。如果刚提交过操作，请先确认是否已完成。", {}, {}, undefined, error);
       reportRequestFailure(failure, method, path);
       if (error instanceof ApiError && error.code === "CSRF_INVALID" && attempt === 0) {
         // 服务端在业务处理之前拒绝，取得当前会话令牌后仅重试这一份原始请求。
@@ -173,14 +173,14 @@ export async function parseApiResponse<T>(response: Response): Promise<T> {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw error;
     }
-    throw new ApiError(response.status, "INVALID_RESPONSE", "服务暂时无法返回结果，请稍后重试。", {}, {}, response.headers.get("X-Request-Id") ?? undefined, error);
+    throw new ApiError(response.status, "INVALID_RESPONSE", "暂时无法读取结果，请稍后重试。如果刚提交过操作，请先确认是否已完成。", {}, {}, response.headers.get("X-Request-Id") ?? undefined, error);
   }
   if (!response.ok) {
     const error = body.error;
     throw new ApiError(response.status, error?.code ?? "REQUEST_FAILED", error?.message ?? "操作暂时无法完成，请稍后重试。", error?.fieldErrors, error?.details, error?.requestId ?? response.headers.get("X-Request-Id") ?? undefined);
   }
   if (!Object.prototype.hasOwnProperty.call(body, "data")) {
-    throw new ApiError(502, "INVALID_RESPONSE", "服务暂时无法返回结果，请重试确认本次操作。");
+    throw new ApiError(502, "INVALID_RESPONSE", "暂时无法读取结果，请稍后重试。如果刚提交过操作，请先确认是否已完成。");
   }
   return body.data as T;
 }
@@ -201,7 +201,7 @@ async function withTimeout<T>(external: AbortSignal | undefined, operation: (sig
     return await operation(controller.signal);
   } catch (error) {
     if (timedOut) {
-      throw new ApiError(0, "REQUEST_TIMEOUT", "请求等待时间较长，请重试确认本次操作结果。", {}, {}, undefined, error);
+      throw new ApiError(0, "REQUEST_TIMEOUT", "等待服务响应超时。如果刚提交过操作，请先确认是否已完成，再决定是否重试。", {}, {}, undefined, error);
     }
     throw error;
   } finally {

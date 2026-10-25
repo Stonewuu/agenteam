@@ -117,7 +117,7 @@ public class DockerUserTerminalRuntime implements UserTerminalRuntime, AutoClose
                 return;
             }
             if (input.sequence() != state.sequence + 1) {
-                throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_INPUT_CONFLICT", "终端已在其他窗口操作，请重新连接。");
+                throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_INPUT_CONFLICT", "其他窗口已连接此终端，请重新连接后操作。");
             }
             if (Utf8Text.size(state.pendingInput + data) > 65536) {
                 throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TERMINAL_INPUT_BUSY", "终端正在处理输入，请稍后再试。");

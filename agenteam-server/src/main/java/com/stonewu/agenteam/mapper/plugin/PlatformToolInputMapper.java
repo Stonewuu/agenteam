@@ -55,7 +55,7 @@ public class PlatformToolInputMapper {
                 return value;
             }
         } catch (NumberFormatException ignored) { /* 下方返回统一字段提示。 */ }
-        throw ApiException.invalidField("revision", "请先读取记录，使用有效的当前修改版本。");
+        throw ApiException.invalidField("revision", "请重新加载当前记录后再修改。");
     }
 
     public String text(JsonNode args, String key) {

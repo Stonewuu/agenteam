@@ -10,7 +10,8 @@
     <revision>1.0.0</revision>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jackson.version>2.21.5</jackson.version>
+    <jackson.version>2.21.7</jackson.version>
+    <agenteam.test.reports>${project.basedir}/../../../../.runtime/tests/reports/json-tools-plugin</agenteam.test.reports>
   </properties>
   <dependencies>
     <dependency>
@@ -41,6 +42,9 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.3</version>
+        <configuration>
+          <reportsDirectory>${agenteam.test.reports}</reportsDirectory>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version>

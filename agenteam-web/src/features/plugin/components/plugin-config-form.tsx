@@ -74,7 +74,7 @@ export function PluginConfigForm({enterpriseId, value, onChange, permissions, er
     <NumberField label={uiText("工具等待上限（秒）")} name="config.timeoutSeconds" value={value.timeoutSeconds} min={1}
                  max={120} errors={errors} onChange={(timeoutSeconds) => onChange({...value, timeoutSeconds})}/>
     {switching && <Dialog title={uiText("切换工具来源？")} onClose={() => setSwitching(null)}><p
-      className={ui.description}>{uiText("当前工具选择和连接信息将清空。")}</p><DialogActions className={ui.footer}>
+      className={ui.description}>{uiText("将清空已选工具和连接信息。")}</p><DialogActions className={ui.footer}>
       <DialogCancel className={ui.button}>{uiText("取消")}</DialogCancel><DialogAction className={ui.primary}
                                                                                        onAction={(close) => close(() => applyType(switching))}>{uiText("切换来源")}</DialogAction></DialogActions></Dialog>}
   </Section>;

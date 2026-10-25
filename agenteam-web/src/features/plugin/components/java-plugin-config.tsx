@@ -159,7 +159,7 @@ export function JavaPluginConfig({enterpriseId, value, onChange, readOnly, permi
         {pending.action === "install" && <><p>{t("作者")}：{pending.plugin.author}</p>
           <div className={styles.tools}>{pending.plugin.tools.map((tool) => <p key={tool.name}>{tool.annotations.title ?? tool.name}：{tool.description}</p>)}</div>
           {pending.plugin.currentInstallationId && <p>{t("安装后旧版本立即失效，正在进行的旧插件调用将停止。已有配置需要重新选择版本。")}</p>}</>}
-        {pending.action === "uninstall" && <p>{t("卸载后将停止此版本的调用。引用它的配置会保留提示，后续运行不再使用此插件。")}</p>}
+        {pending.action === "uninstall" && <p>{t("卸载后将停止此版本的调用。已引用此版本的配置会提示插件不可用，需要重新选择插件。")}</p>}
         {pending.action === "select" && <p>{t("选择后请填写配置并勾选需要的工具，保存并发布后生效。")}</p>}
         {error && <p role="alert" className={ui.error}>{error}</p>}
       </div>

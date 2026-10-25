@@ -17,8 +17,8 @@ import type {ToolApprovalPolicy} from "../types/execution";
 import styles from "./conversation-approval-policy.module.css";
 
 const policies: { value: ToolApprovalPolicy; label: string; description: string; icon: typeof IconShield }[] = [
-  {value: "default", label: "默认", description: "只读免确认，其余操作需确认。", icon: IconShield},
-  {value: "auto_approve", label: "自动批准", description: "普通读写免确认，其余需确认。", icon: IconShieldCheck},
+  {value: "default", label: "默认", description: "只读操作直接执行，其他操作需你确认。", icon: IconShield},
+  {value: "auto_approve", label: "自动批准", description: "读取和普通写入直接执行，其他操作需你确认。", icon: IconShieldCheck},
   {value: "full_access", label: "完全访问", description: "所有工具直接执行，无需确认。", icon: IconUnlock},
 ];
 

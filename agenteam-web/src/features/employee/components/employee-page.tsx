@@ -90,7 +90,7 @@ function EmployeeContent({user, context}: { user: IdentityUser; context: Enterpr
   };
   return <PlatformShell user={user} context={context} area="user" title={uiText("数字员工")}>
     <div className={styles.page}>
-      <PageHeader title={uiText("找到合拍的数字员工")} description={uiText("各有所长，随时一起把工作向前推进。")}
+      <PageHeader title={uiText("数字员工")} description={uiText("查看员工的职责和能力，选择适合当前工作的员工。")}
                   inlineActions actions={<Button className="icon-button" aria-label={uiText("刷新员工")}
                                                  onClick={changed}><IconRefresh size={18}/></Button>}/>
       <div className={styles.tabs}><Tabs value={tab} onChange={(value) => update("tab", value)}

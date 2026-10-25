@@ -80,7 +80,7 @@ export function WorkflowPreview({enterprise, resource, draft, disabled}: {
               {preview.active && <Button className={ui.button} type="button"
                                          disabled={preview.stopping || preview.run?.status === "cancelling"}
                                          onClick={() => void preview.stop()}>{preview.stopping ? uiText("正在停止…") : uiText("停止")}</Button>}
-              <p className={ui.description}>{uiText("使用当前编辑内容，每次测试使用一次执行次数。")}</p></div>
+              <p className={ui.description}>{uiText("使用当前草稿进行测试，每次计入 1 次执行用量。")}</p></div>
           </form>
           {preview.error && <p className={ui.error} role="alert">{localizeUiMessage(preview.error ?? "", uiText)}</p>}
           {preview.accepted && <>

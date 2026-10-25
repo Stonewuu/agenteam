@@ -29,12 +29,12 @@ public final class RequestPreconditions {
         String value = request.getHeader("Idempotency-Key");
         if (value == null || value.isBlank() || value.length() < 16 || value.length() > 100
             || value.chars().anyMatch(character -> character < 32 || character > 126)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "缺少有效的请求编号，请重新提交操作。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "本次提交信息不完整，请重新提交。");
         }
         return value;
     }
 
     private static ApiException invalidVersion() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "修改版本格式不正确，请重新读取内容。");
+        return new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "无法确认正在编辑的内容版本，请重新加载后再修改。");
     }
 }

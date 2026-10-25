@@ -235,7 +235,7 @@ public class DocumentParserProcess {
     public static ApiException failure(String code) {
         String actual = code == null ? "FILE_TYPE_INVALID" : code;
         String message = switch (actual) {
-            case "FILE_NO_TEXT" -> "文件没有可读取的文字，请上传带文本层的资料。";
+            case "FILE_NO_TEXT" -> "文件中没有可读取的文字，请上传可以选中并复制文字的文档。";
             case "FILE_ENCRYPTED" -> "文件已加密，请先导出不需要密码的副本。";
             case "FILE_ACTIVE_CONTENT" -> "文件包含宏或嵌入对象，请导出普通文字文档。";
             case "FILE_EXPANDED_TOO_LARGE" -> "文件展开后的内容超过处理限制，请拆分后上传。";

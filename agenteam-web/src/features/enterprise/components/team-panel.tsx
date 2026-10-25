@@ -48,7 +48,7 @@ export function TeamPanel({enterpriseId, userId, displayName, permissions, query
   const canChooseMembers = permissions.includes("enterprise.members.view");
   const changed = () => setRefresh((value) => value + 1);
   return <>
-    <PageHeader title={uiText("协作，从团队开始")} description={uiText("组织成员，共享工作范围，让各自的职责更清楚。")}
+    <PageHeader title={uiText("团队")} description={uiText("管理团队成员、负责人和团队资料。")}
                 actions={<>{canManage && <Button className={styles.primary} onClick={() => setEditing(null)}><IconPlus
                   size={17}/>{uiText("创建团队")}</Button>}</>}/>
     <div className={`${styles.toolbar} ${styles.teamToolbar}`}>

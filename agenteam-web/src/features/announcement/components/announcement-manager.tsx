@@ -156,7 +156,7 @@ function AnnouncementEditor({endpoint, initial, levels, readOnly, onClose, onSav
       }
       const text = richTextPreview({content, contentFormat});
       const message = !text.replace(/[\s\u200b\ufeff]/g, "") ? uiText("请填写公告正文。")
-        : text.length > 20000 ? uiText("正文最多20000个字符。") : content.length > 200000 ? uiText("正文排版过多，请精简后重试。") : "";
+        : text.length > 20000 ? uiText("正文最多20000个字符。") : content.length > 200000 ? uiText("正文格式过于复杂，请减少排版样式后重试。") : "";
       if (message) {
         setContentError(message);
         document.getElementById(editorId)?.focus();

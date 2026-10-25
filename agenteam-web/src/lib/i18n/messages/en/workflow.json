@@ -15,7 +15,7 @@
   "交给智能体的内容": "Content for the agent",
   "人工确认": "Human approval",
   "任一条件成立": "Any condition matches",
-  "使用当前编辑内容，每次测试使用一次执行次数。": "Test the current draft. Each test uses one run from your allowance.",
+  "使用当前草稿进行测试，每次计入 1 次执行用量。": "Test the current draft. Each test counts as one run toward your allowance.",
   "保存草稿后检查": "Save the draft before checking",
   "保留节点": "Keep node",
   "停止整个流程": "Stop workflow",

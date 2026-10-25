@@ -32,7 +32,7 @@ public class WorkflowToolSelectionMapper {
                     var matches = tools.list(actor.enterpriseId(), settings.path("pluginVersionId").asText()).stream()
                         .filter(tool -> tool.definition().name().equals(name)).toList();
                     if (matches.size() != 1) {
-                        throw ApiException.invalidField("config.nodes", "工具名称无法唯一对应当前版本，请重新选择工具。");
+                        throw ApiException.invalidField("config.nodes", "无法在当前版本中确定要使用的工具，请重新选择工具。");
                     }
                     var tool = matches.getFirst();
                     settings.put("toolId", tool.entryId() == null ? tool.id() : tool.entryId());

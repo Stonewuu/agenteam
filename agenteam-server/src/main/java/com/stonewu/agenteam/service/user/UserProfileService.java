@@ -130,7 +130,7 @@ public class UserProfileService {
         Instant now = clock.instant();
         if (!users.replacePassword(user.id(), user.passwordHash(), user.sessionVersion(),
             encoder.encode(request.newPassword()), now)) {
-            throw new ApiException(HttpStatus.CONFLICT, "VERSION_CONFLICT", "账户信息已变化，请重新登录后重试。");
+            throw new ApiException(HttpStatus.CONFLICT, "VERSION_CONFLICT", "账号信息已变化，请重新登录后重试。");
         }
         users.invalidateUnusedTokens(user.id(), now);
         audit.record(null, user, "user.password.change", "user", user.id(), "修改密码并撤销旧登录会话", Map.of());

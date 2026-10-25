@@ -66,7 +66,7 @@ public class AgentModelSelectionService {
     public static void validateReasoning(ModelCapabilities capabilities, String effort) {
         if (effort != null && !capabilities.reasoningEfforts().contains(effort)) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "MODEL_REASONING_UNSUPPORTED",
-                "当前模型不支持所选思考等级，请重新选择。");
+                "当前模型不支持所选思考强度，请重新选择。");
         }
     }
 }

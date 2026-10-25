@@ -57,7 +57,7 @@ public class AnnouncementContent {
 
     private ObjectNode node(JsonNode source, String parent, int depth, Budget budget) {
         if (source == null || !source.isObject() || depth > 16 || ++budget.nodes > 5000) {
-            throw invalid("正文排版过多，请精简后重试。");
+            throw invalid("正文格式过于复杂，请减少排版样式后重试。");
         }
         String type = source.path("type").asText();
         boolean allowed = switch (parent) {

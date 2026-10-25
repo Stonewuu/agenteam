@@ -33,7 +33,7 @@ public class ScheduleRuleMapper {
         try {
             time = LocalTime.parse(input.localTime());
         } catch (DateTimeException invalid) {
-            throw ApiException.invalidField("localTime", "请选择精确到分钟的执行时间。");
+            throw ApiException.invalidField("localTime", "请选择执行时间，精确到分钟。");
         }
         var zone = ZoneId.of(AccountInputValidation.timezone(input.timezone()));
         try {

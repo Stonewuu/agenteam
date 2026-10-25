@@ -61,7 +61,7 @@ export function EnterpriseProfilePanel({enterpriseId, canManage, context}: {
       icon: IconChartBar
     },
   ];
-  return <><PageHeader title={uiText("让团队协作，更有章法")} description={uiText("了解企业信息、成员与资源使用情况。")}
+  return <><PageHeader title={uiText("企业概览")} description={uiText("了解企业信息、成员与资源使用情况。")}
                        actions={<>{canManage && <Button className={styles.secondary} disabled={!query.data}
                                                         onClick={() => setEditing(true)}><IconPencil
                          size={16}/>{uiText("编辑企业资料")}</Button>}</>}/>

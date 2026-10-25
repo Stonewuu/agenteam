@@ -44,7 +44,7 @@ export function MembersOverview({enterpriseId, userId, permissions, query, onQue
   const tab = tabs.some((item) => item.value === requested) ? requested : "members";
   const changed = () => setRefresh((value) => value + 1);
   const common = {enterpriseId, permissions, query, onQuery};
-  return <><PageHeader title={uiText("成员与邀请")} description={uiText("让合适的人加入团队，分配清楚的工作角色。")}
+  return <><PageHeader title={uiText("成员与邀请")} description={uiText("邀请成员加入企业，管理成员的角色和所属团队。")}
                        actions={<>{canCreate && <><Button className={ui.button}
                                                           onClick={() => setCreating(true)}>{uiText("创建用户")}</Button><Button
                          className={ui.primary} onClick={() => setInviting(true)}><IconPlus

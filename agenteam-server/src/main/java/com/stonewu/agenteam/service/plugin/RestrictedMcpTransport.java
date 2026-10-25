@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.network.OutboundAddressPolicy;
 import com.stonewu.agenteam.service.network.RestrictedHttpClient;
+import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.json.TypeRef;
 import io.modelcontextprotocol.spec.McpClientTransport;
@@ -38,7 +39,7 @@ public final class RestrictedMcpTransport implements McpClientTransport {
     private final boolean legacy;
     private final ObjectMapper json;
     private final ObjectMapper incoming;
-    private final McpJsonMapper protocolJson = McpJsonMapper.getDefault();
+    private final McpJsonMapper protocolJson = McpJsonDefaults.getMapper();
     private final McpEventReader.Budget responseBudget;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final CompletableFuture<String> legacyEndpoint = new CompletableFuture<>();
@@ -294,7 +295,8 @@ public final class RestrictedMcpTransport implements McpClientTransport {
 
     @Override
     public <T> T unmarshalFrom(Object data, TypeRef<T> typeRef) {
-        return protocolJson.convertValue(data, typeRef);
+        // 协议开发包使用 Jackson 3，工具正文仍按应用的 Jackson 2 类型转换。
+        return json.convertValue(data, json.getTypeFactory().constructType(typeRef.getType()));
     }
 
     @Override

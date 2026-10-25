@@ -17,7 +17,7 @@ public final class AgentContextBudget {
         int maximum = input.model().getContextWindowSize();
         if (maximum <= 0) {
             throw new ApiException(HttpStatus.CONFLICT, "MODEL_PROFILE_UNAVAILABLE",
-                "当前模型没有可确认的上下文上限，请联系维护者。");
+                "当前模型未设置有效的上下文长度上限，请联系管理员检查模型配置。");
         }
         if (estimatedTokens(input) > maximum) {
             throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_CONTEXT_LIMIT",

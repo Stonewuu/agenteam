@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 来源沿用本人会话读取资格；允许转交待办，不转交原会话。
+ * 读取待办来源时检查用户对原对话的访问权限；转交待办不会同时转交原对话的访问权限。
  */
 @Service
 public class TodoSourceService {

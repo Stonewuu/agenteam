@@ -125,7 +125,7 @@ function VersionAction({enterpriseId, resource, version, operation, onClose, onL
       });
     }}>
       <p
-        className={ui.description}>{operation === "revoke" ? uiText("此版本将不能继续使用。发布正文和已有记录保留。") : uiText("此操作会替换当前草稿，包括尚未保存的修改。当前发布版本保持不变。")}</p>
+        className={ui.description}>{operation === "revoke" ? uiText("此版本将不能继续使用，已发布的内容和历史记录会保留。") : uiText("此操作会替换当前草稿，包括尚未保存的修改。当前发布版本保持不变。")}</p>
       {operation === "revoke" &&
         <TextField label={uiText("撤销原因")} name="reason" value={reason} onChange={setReason} maximum={500} multiline
                    required errors={action.fieldErrors}/>}

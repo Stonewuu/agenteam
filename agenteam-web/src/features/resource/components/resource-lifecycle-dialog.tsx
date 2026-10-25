@@ -46,7 +46,7 @@ export function ResourceLifecycleDialog({enterpriseId, resource, operation, onCl
     <div className={ui.form}>
       <p className={ui.description}>{description}</p>
       {previewRequired &&
-        <QueryState {...preview} hasData={Boolean(impact)} empty={uiText("暂时无法读取影响，请重新加载。")}>{impact &&
+        <QueryState {...preview} hasData={Boolean(impact)} empty={uiText("暂时无法查看受影响的内容，请重新加载。")}>{impact &&
           <div className={ui.form}>
             {isAgent && impact.activeHireCount > 0 && <p>{uiText("有效雇佣：")}{impact.activeHireCount}</p>}
             {impact.visibleDependencies.length > 0 && <div>

@@ -39,7 +39,7 @@ public class AgentConfigurationValidator implements ResourceConfigValidator {
         InputValidation.read(config, AgentConfigurationInput.class, "config");
         validateSubagents(config);
         if (config.has("temperature") && !config.path("temperature").isNumber()) {
-            throw ApiException.invalidField("config.temperature", "温度必须填写数值，未配置时请移除该字段。");
+            throw ApiException.invalidField("config.temperature", "回复变化程度需填写数值；未配置时请移除此项。");
         }
         for (var topic : config.path("memoryFields")) {
             if (!memories.topic(topic.asText(), "config.memoryFields").equals(topic.asText())) {
@@ -51,11 +51,11 @@ public class AgentConfigurationValidator implements ResourceConfigValidator {
         }
         if (config.path("agentType").asText().equals("workflow")) {
             if (config.hasNonNull("reasoningEffort")) {
-                throw ApiException.invalidField("config.reasoningEffort", "流程型员工不单独设置思考等级。");
+                throw ApiException.invalidField("config.reasoningEffort", "流程型员工的思考强度需在工作流中设置。");
             }
             if (!config.path("modelProfileId").isNull() || config.has("temperature")) {
                 throw ApiException.invalidField("config.modelProfileId",
-                    "流程型员工不单独配置模型和温度，请确认清除这些设置。");
+                    "流程型员工使用工作流中的模型和回复变化程度，请确认清除员工的单独设置。");
             }
             var entry = config.path("entryWorkflowVersionId");
             if (entry.isTextual() && !contains(config.path("workflowVersionIds"), entry.asText())) {

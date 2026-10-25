@@ -63,9 +63,9 @@ function ScheduleList({user, context, initialAgent}: {
     setUseInitial(false);
     requestAnimationFrame(() => createTrigger.current?.focus({preventScroll: true}));
   };
-  return <PlatformShell user={user} context={context} area="user" title={uiText("我的计划")}>
+  return <PlatformShell user={user} context={context} area="user" title={uiText("定时任务")}>
     <div className={styles.page}>
-      <PageHeader title={uiText("我的计划")} description={uiText("按时执行任务或发送通知。")}
+      <PageHeader title={uiText("定时任务")} description={uiText("按时执行任务或发送通知。")}
                   actions={<>{canCreate && <Button ref={createTrigger} className={ui.primary} onClick={() => {
                     setUseInitial(false);
                     setCreating(true);

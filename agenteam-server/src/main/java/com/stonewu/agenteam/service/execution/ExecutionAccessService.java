@@ -38,7 +38,7 @@ public class ExecutionAccessService {
 
     public AuthContext actor(RunRecord run) {
         var user = users.findById(run.userId()).filter(value -> value.status().equals("active"))
-            .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前账号已不能继续执行任务。"));
+            .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前账号无法继续执行任务，请联系企业管理员。"));
         var actor = new AuthContext(user, run.enterpriseId(),
             Set.copyOf(permissions.listPermissionCodes(user.id(), run.enterpriseId())));
         if (collaboration.applies(run)) {

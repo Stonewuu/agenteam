@@ -107,7 +107,7 @@ public class IdempotentRequestService {
     private ApiOperationResult replayed(StoredApiRequest existing, String bodyHash) {
         if (!existing.requestHash().equals(bodyHash)) {
             throw new ApiException(HttpStatus.CONFLICT, "REQUEST_KEY_CONFLICT",
-                "本次请求编号已用于不同内容，请重新发起操作。");
+                "本次提交的内容与上次不同，请重新发起操作。");
         }
         if (!existing.status().equals("completed")) {
             throw inProgress();

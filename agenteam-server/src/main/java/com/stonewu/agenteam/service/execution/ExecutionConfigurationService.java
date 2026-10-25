@@ -177,7 +177,7 @@ public class ExecutionConfigurationService {
             URI uri = URI.create(link);
             if (!Set.of("https", "http")
                 .contains(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null) {
-                throw ApiException.invalidField("links", "参考链接需要使用普通或加密网页地址，且不能包含账号信息。");
+                throw ApiException.invalidField("links", "参考链接需以 http:// 或 https:// 开头，且不能包含账号信息。");
             }
         }
         return new MessageInput(value.text(), value.attachmentIds(),

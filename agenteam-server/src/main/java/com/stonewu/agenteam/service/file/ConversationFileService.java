@@ -159,7 +159,7 @@ public class ConversationFileService {
             var file = opened.file();
             if (!Set.of("text", "markdown").contains(file.previewKind())) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_NOT_TEXT",
-                    "此文件不能按文本预览，请使用对应的预览方式或下载查看。");
+                    "此文件不支持文本预览，请切换预览方式或下载查看。");
             }
             if (file.sizeBytes() > MAXIMUM_TEXT_BYTES) {
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_PREVIEW_TOO_LARGE",
@@ -176,7 +176,7 @@ public class ConversationFileService {
                         .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
                     if (text.indexOf('\0') >= 0) {
                         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_NOT_TEXT",
-                            "此文件包含非文本内容，请下载后查看。");
+                            "此文件包含无法作为文本显示的内容，请下载后查看。");
                     }
                     return new TextFileDocument(file.path(), Utf8Text.revision(file.path(), text), text);
                 } catch (IOException failure) {

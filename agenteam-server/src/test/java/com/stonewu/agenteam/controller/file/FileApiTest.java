@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.http.HttpMethod;
 
@@ -56,7 +57,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 真实文件、数据库和扫描协议共同验证上传、读取资格与清理。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "server.address=127.0.0.1")
-@AutoConfigureMockMvc
+// 下载响应头由异步任务写入，避免自动打印在完成前遍历；完成后的正文和响应头仍逐项断言。
+@AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import({SharedEnterpriseTestEdition.class, InProcessDocumentParsing.class})
 class FileApiTest extends FileApiTestSupport {

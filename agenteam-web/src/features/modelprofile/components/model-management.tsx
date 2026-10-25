@@ -62,7 +62,7 @@ export function ModelManagement({enterpriseId, canManage}: { enterpriseId: strin
     setRefresh((value) => value + 1);
   };
   return <div className={styles.sections}><PageHeader title={uiText("模型配置")}
-                                                      description={canManage ? uiText("连接模型服务，为数字员工选择合适的能力。") : uiText("查看已配置的模型服务和模型。")}
+                                                      description={canManage ? uiText("配置模型服务，设置数字员工可使用的模型。") : uiText("查看已配置的模型服务和模型。")}
                                                       inlineActions actions={<><Button className="icon-button"
                                                                                        aria-label={uiText("刷新模型配置")}
                                                                                        onClick={() => setRefresh((value) => value + 1)}><IconRefresh

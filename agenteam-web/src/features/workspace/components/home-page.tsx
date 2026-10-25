@@ -62,9 +62,9 @@ function HomeContent({user, context}: { user: IdentityUser; context: EnterpriseC
   }).format(new Date());
   return <PlatformShell user={user} context={context} area="user" title={uiText("工作台")}>
     <div className={styles.home}>
-      <PageHeader title={uiText("今天，从哪件事开始？")} size="hero"
+      <PageHeader title={uiText("工作台")} size="hero"
                   eyebrow={uiText("你好，{0}", [context.member.displayName])}
-                  description={uiText("让数字员工成为你的好帮手，把精力留给更重要的事。")}
+                  description={uiText("选择数字员工，描述任务并查看执行结果。")}
                   actions={<span className={styles.date}><IconCalendar size={15}/>{date}</span>}/>
       <QueryState {...result} hasData={Boolean(result.data)} empty={uiText("暂时没有可展示的内容。")}
                   contentLayout="flow"
@@ -107,7 +107,7 @@ function HomeContent({user, context}: { user: IdentityUser; context: EnterpriseC
                                                                                                   canManage={allowed("todo.manage")}/>) :
                   <div className={styles.compactEmpty}><span className={styles.emptyIcon} data-icon-surface><IconInbox size={25}
                                                                                                      variant="Bulk"/></span>
-                    <div><h3>{uiText("暂时没有待处理事项")}</h3><p>{uiText("留一点从容，开始下一件事。")}</p><Link
+                    <div><h3>{uiText("暂时没有待处理事项")}</h3><p>{uiText("可以到“我的待办”查看全部事项或创建待办。")}</p><Link
                       className="text-button" href={`${root}/todos`}>{uiText("查看我的待办")}<IconArrowRight size={14}/></Link>
                     </div>
                   </div>}

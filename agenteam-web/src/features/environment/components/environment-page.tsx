@@ -98,7 +98,7 @@ function EnvironmentContent({enterpriseId}: {enterpriseId: string}) {
 
   return <div className={styles.page} onPointerDown={model.activity} onKeyDown={model.activity} onWheel={model.activity}>
     <PageHeader title={t("我的环境")} icon={<IconDeviceDesktop size={28} variant="Bulk"/>}
-      description={t("运行命令、浏览文件，在同一个工作环境中完成。")} inlineMetadata
+      description={t("在当前工作环境中运行命令、查看和下载文件。")} inlineMetadata
       metadata={state && <DetailStatus tone={state.status === "running" ? "success" : "neutral"}>{t(state.status === "running" ? "运行中" : state.status === "stopping" ? "正在停止" : "已停止")}</DetailStatus>}
       actions={<>
         <Button className={ui.button} disabled={pending} onClick={() => {

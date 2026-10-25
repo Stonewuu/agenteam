@@ -1,3 +1,9 @@
 allowBuilds:
   sharp: false
   unrs-resolver: false
+
+# 数学和图表插件仍引用旧版本范围，统一使用包含安全修复的渲染库。
+overrides:
+  "katex@<0.18.2": 0.18.2
+  # 部分文件匹配工具固定了旧补丁版本，升级后保持同一主要版本。
+  "brace-expansion@>=5.0.0 <5.0.12": 5.0.12

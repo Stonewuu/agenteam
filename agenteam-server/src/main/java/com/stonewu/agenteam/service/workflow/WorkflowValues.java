@@ -31,7 +31,7 @@ public class WorkflowValues {
             byte[] bytes = json.writeValueAsBytes(value);
             if (bytes.length > WorkflowExpressions.MAX_VALUE_BYTES) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "WORKFLOW_OUTPUT_TOO_LARGE", "节点结果超过 1,048,576 字节，请减少返回内容或使用附件。");
+                    "WORKFLOW_OUTPUT_TOO_LARGE", "节点结果超过 1 MiB，请减少返回内容或使用附件。");
             }
             return new String(bytes, StandardCharsets.UTF_8);
         } catch (ApiException known) {

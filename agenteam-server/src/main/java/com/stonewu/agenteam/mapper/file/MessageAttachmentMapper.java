@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 /**
- * 消息附件关联真实消息，文件列表与读取资格使用类型化关联查询。
+ * 通过消息与附件的关联关系查询文件列表，并检查用户能否读取附件。
  */
 @Repository
 public class MessageAttachmentMapper {

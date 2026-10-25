@@ -40,7 +40,7 @@ public class ModelProtocolValidation {
                     if ((!effort.equals("none") && level == null) || (protocol.equals("gemini") && effort.equals("none"))
                         || (protocol.equals("anthropic") && "minimal".equals(level))
                         || (protocol.equals("gemini") && "max".equals(level))) {
-                        throw invalid("thinkingLevels", "请为每个等级填写当前接口支持的原生思考等级。");
+                        throw invalid("thinkingLevels", "请为每个等级填写当前接口支持的按思考强度设置。");
                     }
                 }
             }

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Stonewuu/agenteam/releases/tag/v0.4.0"><img src="https://img.shields.io/badge/version-0.4.0-AD6547?style=flat-square" alt="AgenTeam 0.4.0" /></a>
+  <a href="https://github.com/Stonewuu/agenteam/releases/tag/v0.4.1"><img src="https://img.shields.io/badge/version-0.4.1-AD6547?style=flat-square" alt="AgenTeam 0.4.1" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-596B57?style=flat-square" alt="Apache-2.0 license" /></a>
   <a href="docs/deployment/images.md"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="Deploy with Docker Compose" /></a>
 </p>
@@ -21,7 +21,7 @@
 
 **AgenTeam is an open-source, self-hosted multi-agent collaboration platform that brings AI employees into your team's everyday work.**
 
-Combine models, knowledge, skills, and tools into AI employees. Run conversational tasks, work with files, coordinate to-dos, and connect your team through WeCom and Feishu. Organize work by project so you can return to its conversations, context, and results.
+Configure models, knowledge bases, skills and tools for AI employees, then assign tasks through conversation, work with files and manage to-dos. Organize conversations and files by project to reuse results in later tasks. You can also receive work notifications through WeCom and Feishu.
 
 <a id="features"></a>
 
@@ -40,7 +40,7 @@ Combine models, knowledge, skills, and tools into AI employees. Run conversation
 
 ### Workspace
 
-Create a project, choose an AI employee, and start a task. Conversations, project files, and to-dos stay together so work is easy to resume.
+Choose an AI employee and start a task from the workspace. Create projects to organize conversations and files, reopen a conversation to continue working, and use to-dos to track follow-up work.
 
 <a href="media/readme/screenshots/en/workspace.jpg"><img src="media/readme/screenshots/en/workspace.jpg" width="100%" alt="AgenTeam workspace with projects, AI employees, and to-dos" /></a>
 

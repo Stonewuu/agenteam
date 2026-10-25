@@ -131,7 +131,7 @@ public class ToolResultDocumentService {
     }
 
     /**
-     * 调用者必须先通过日志详情范围校验并记录审计，不授予通用附件访问资格。
+     * 调用者必须先检查用户能否查看该日志详情，并记录审计日志；本方法不会授予其他附件的访问权限。
      */
     public JsonNode resultAfterLogAuthorization(AuthContext actor, ToolCallRecord call) {
         return loadResult(actor, call, null, true);
