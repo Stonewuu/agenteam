@@ -32,7 +32,11 @@ class DockerWorkspaceRunnerTest {
     private final DockerWorkspaceCommands docker = new DockerWorkspaceCommands();
 
     private WorkspaceSettings settings() {
-        return new WorkspaceSettings(directory.toString(), "python:3.13-slim", true, 16, 1, 50, 256, 1, 32, 15, "none");
+        return settings(15);
+    }
+
+    private WorkspaceSettings settings(int timeoutSeconds) {
+        return new WorkspaceSettings(directory.toString(), "python:3.13-slim", true, 16, 1, 50, 256, 1, 32, timeoutSeconds, "none");
     }
 
     private Path source() throws Exception {
@@ -123,11 +127,24 @@ class DockerWorkspaceRunnerTest {
 
     @Test
     void timedOutCommandPreservesActualOutputAndTerminatesTheContainer() throws Exception {
-        var runner = new DockerWorkspaceRunner(settings(), docker);
+        var commandExecutions = new AtomicInteger();
+        var commandTimeout = new DockerWorkspaceCommands() {
+            @Override
+            public Result run(List<String> arguments, Duration timeout, ToolCallControl control) {
+                if (arguments.size() >= 2 && arguments.getFirst().equals("exec")
+                    && arguments.getLast().equals("sh /agenteam-command/launch.sh")) {
+                    commandExecutions.incrementAndGet();
+                    // 只缩短被测命令的期限，容器准备和结果回收继续使用外层有界时间。
+                    return super.run(arguments, Duration.ofSeconds(5), control);
+                }
+                return super.run(arguments, timeout, control);
+            }
+        };
+        var runner = new DockerWorkspaceRunner(settings(60), commandTimeout);
         try (var control = new ToolCallControl(() -> {
         })) {
-            // 总期限还包含容器准备和输出回收；必须让命令真正开始后再验证超时结果。
-            var result = runner.execute(source(), directory.resolve("result"), directory, "timeout", "printf '超时前输出'; sleep 30", "work", Duration.ofSeconds(12), control);
+            var result = runner.execute(source(), directory.resolve("result"), directory, "timeout", "printf '超时前输出'; sleep 30", "work", Duration.ofSeconds(60), control);
+            assertEquals(1, commandExecutions.get(), "必须进入真实命令执行阶段后再验证超时结果");
             assertEquals(124, result.exitCode());
             assertTrue(result.timedOut());
             assertEquals("超时前输出", Files.readString(directory.resolve("result").resolve(result.stdoutPath())));

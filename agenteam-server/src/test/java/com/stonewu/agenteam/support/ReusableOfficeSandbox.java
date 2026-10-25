@@ -6,7 +6,6 @@ import com.github.dockerjava.api.model.MountType;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.SandboxExecutor;
-import com.stonewu.agenteam.service.workspace.WorkspaceStore;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -73,11 +72,10 @@ public final class ReusableOfficeSandbox implements SandboxExecutor, AutoCloseab
         }
         try {
             control.requireActive();
-            // 保留挂载目录本身，只清理本辅助类创建的目录中的文件。
-            try (var entries = Files.list(workspace)) {
-                for (Path entry : entries.toList()) {
-                    WorkspaceStore.deleteTree(workspace, entry);
-                }
+            if (container.getContainerId() != null) {
+                // 输出由容器用户创建，Linux 宿主机未必能删除其中的文件；由同一用户清理并保留挂载目录。
+                docker.require(List.of("exec", container.getContainerId(), "find", "/workspace", "-mindepth", "1",
+                    "-maxdepth", "1", "-exec", "rm", "-rf", "--", "{}", "+"), timeout, control);
             }
             copy(source, workspace, true);
             Files.createDirectories(workspace.resolve("work"));
