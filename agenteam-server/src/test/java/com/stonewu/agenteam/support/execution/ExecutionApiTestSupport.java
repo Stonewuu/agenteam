@@ -6,12 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
+import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceDraftTableMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
 import com.stonewu.agenteam.mapper.test.usage.QuotaBucketFixtureMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
+import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.resource.entity.ResourceDraftRow;
 import com.stonewu.agenteam.model.resource.entity.ResourceRow;
@@ -20,6 +22,7 @@ import com.stonewu.agenteam.service.enterprise.EnterpriseProvisioningService;
 import com.stonewu.agenteam.service.execution.ExecutionMessageWriter;
 import com.stonewu.agenteam.service.execution.ConversationSnapshotService;
 import com.stonewu.agenteam.service.execution.ExecutionTaskFactory;
+import com.stonewu.agenteam.service.execution.PreviewRetentionService;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.support.*;
 import com.sun.net.httpserver.HttpExchange;
@@ -240,6 +243,16 @@ public abstract class ExecutionApiTestSupport {
             Thread.sleep(20);
         }
         fail("未在限定时间内保存预期执行结果");
+    }
+
+    protected void cleanExpiredPreviews(PreviewRetentionService retention, String... conversations) throws Exception {
+        // 实时通知可能暂时占用会话，清理会留到下一轮；等待指定预览实际删除，不依赖固定调用次数。
+        await(() -> {
+            retention.clean();
+            return databaseAccess.mapper(ConversationSqlMapper.class).selectCount(
+                new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getEnterpriseId, enterprise)
+                    .in(AgentConversationRow::getId, List.of(conversations))) == 0;
+        });
     }
 
     protected Map<String, Object> body() {

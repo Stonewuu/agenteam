@@ -192,8 +192,7 @@ class WorkflowPreviewApiTest extends ExecutionApiTestSupport {
         });
         assertEquals(conversation, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(TodoTableMapper.class).selectList(new LambdaQueryWrapper<TodoItemRow>().select(TodoItemRow::getSourceConversationId).eq(TodoItemRow::getId, (todo.id()))).stream().map(fixtureRecord -> fixtureRecord.getSourceConversationId()).toList()));
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(ConversationSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)))));
-        retention.clean();
-        retention.clean();
+        cleanExpiredPreviews(retention, conversation, queuedConversation);
         var kept = todoQueries.get(actor(admin), todo.id());
         assertEquals(todo.description(), kept.description());
         assertEquals(todo.revision(), kept.revision());

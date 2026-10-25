@@ -217,8 +217,7 @@ class PluginToolExecutionApiTest extends ExecutionApiTestSupport {
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>()
             .eq(AgentConversationRow::getId, conversation)
             .set(AgentConversationRow::getCreatedAt, Timestamp.from(Instant.now().minusSeconds(8 * 86400))));
-        previewRetention.clean();
-        previewRetention.clean();
+        cleanExpiredPreviews(previewRetention, conversation);
         assertEquals(0, count("tool_call"));
         assertEquals(0, count("run_checkpoint"));
         assertEquals(0, count("agent_run"));

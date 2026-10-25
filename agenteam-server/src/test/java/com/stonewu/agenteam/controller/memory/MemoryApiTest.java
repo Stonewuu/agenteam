@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageSqlMapper;
+import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.RunSqlMapper;
 import com.stonewu.agenteam.mapper.memory.MemorySqlMapper;
 import com.stonewu.agenteam.mapper.test.http.ApiRequestFixtureMapper;
@@ -50,6 +51,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -72,6 +74,9 @@ class MemoryApiTest extends ExecutionApiTestSupport {
 
     @Autowired
     private PreviewRetentionService previews;
+
+    @Autowired
+    private LiveEventCache liveEvents;
 
     @Autowired
     private ResourceGrantService grants;
@@ -188,7 +193,19 @@ class MemoryApiTest extends ExecutionApiTestSupport {
         assertThrows(ResponseStatusException.class, () -> memories.create(member, agent, source));
         lifecycle.stopForUser(enterprise, admin);
         databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getCreatedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
-        previews.clean();
+        var owner = new AtomicReference<String>();
+        await(() -> {
+            owner.set(liveEvents.claim(enterprise, conversation));
+            return owner.get() != null;
+        });
+        try {
+            previews.clean();
+            assertEquals(message, databaseAccess.mapper(MemorySqlMapper.class)
+                .selectById(saved.path("id").asText()).getSourceMessageId(), "实时内容正在使用时应保留来源引用");
+        } finally {
+            liveEvents.release(enterprise, conversation, owner.get());
+        }
+        cleanExpiredPreviews(previews, conversation);
         assertNull(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(MemorySqlMapper.class).selectList(new LambdaQueryWrapper<AgentMemoryRow>().select(AgentMemoryRow::getSourceMessageId).eq(AgentMemoryRow::getId, (saved.path("id").asText()))).stream().map(fixtureRecord -> fixtureRecord.getSourceMessageId()).toList()));
         assertEquals(source.content(), memories.get(actor(admin), agent, saved.path("id").asText()).content());
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentMessageRow>().eq(AgentMessageRow::getId, (message)))));

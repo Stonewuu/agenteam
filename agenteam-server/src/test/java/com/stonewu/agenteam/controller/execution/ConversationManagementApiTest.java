@@ -251,8 +251,7 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         mvc.perform(get(path(conversation)).cookie(cookie)).andExpect(status().isNotFound());
         mvc.perform(get(path(conversation) + "/events").cookie(cookie)).andExpect(status().isNotFound());
         mvc.perform(get(base() + "/runs/" + id).cookie(cookie)).andExpect(status().isNotFound());
-        previewRetention.clean();
-        previewRetention.clean();
+        cleanExpiredPreviews(previewRetention, conversation);
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getId, (id)))));
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectCount(new LambdaQueryWrapper<AgentMessageRow>().eq(AgentMessageRow::getConversationId, (conversation)))));
         assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getRunId, (id)))));
