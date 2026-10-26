@@ -167,6 +167,7 @@ class ChannelProviderProtocolTest {
         assertTrue(authorization.getQuery().contains("code_challenge_method=S256"));
         assertFalse(authorization.toString().contains("client_secret"));
         assertFalse(authorization.toString().contains("offline_access"));
+        assertFalse(authorization.toString().contains("scope="), "成员身份授权不得追加应用管理权限");
     }
 
     @Test

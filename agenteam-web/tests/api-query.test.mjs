@@ -10,9 +10,13 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 
 // 执行实际查询函数，控制请求返回顺序和等待时间，不访问业务接口。
-function queryPage() {
+function queryPage({polling = false, interval = 2500} = {}) {
   const states = [], effects = [], pendingEffects = [], requests = [];
   const timers = new Map();
+  const listeners = new Map();
+  const document = {visibilityState: "visible", addEventListener: (type, callback) => listeners.set(type, callback),
+    removeEventListener: type => listeners.delete(type)};
+  const navigator = {onLine: true};
   let stateIndex = 0, effectIndex = 0, timerId = 0, currentPath;
   const react = {
     useRef(initial) {
@@ -52,8 +56,10 @@ function queryPage() {
   const exports = {};
   vm.runInNewContext(compiled, {
     exports, require: (name) => name === "react" ? react : client,
-    AbortController, URLSearchParams,
+    AbortController, URLSearchParams, document, navigator,
     window: {
+      addEventListener: document.addEventListener,
+      removeEventListener: document.removeEventListener,
       setTimeout(callback) {
         timers.set(++timerId, callback);
         return timerId;
@@ -67,14 +73,26 @@ function queryPage() {
     currentPath = path;
     stateIndex = 0;
     effectIndex = 0;
-    const result = exports.useApiPage(path);
+    const result = polling ? exports.useApiQuery(path, 0, 0, false, {refreshInterval: interval}) : exports.useApiPage(path);
     for (const effect of pendingEffects.splice(0)) {
       effect();
     }
     return result;
   }
   return {
-    requests, render,
+    requests, render, document, navigator,
+    accessError(status) {
+      return Object.assign(new client.ApiError("无权读取"), {status});
+    },
+    notify(event) {
+      listeners.get(event)?.();
+    },
+    unmount() {
+      for (const effect of effects) {
+        effect.cleanup?.();
+      }
+    },
+    timers,
     startRequests() {
       const callbacks = [...timers.values()];
       timers.clear();
@@ -84,14 +102,12 @@ function queryPage() {
     },
     async resolve(index, data) {
       requests[index].resolve(data);
-      await Promise.resolve();
-      await Promise.resolve();
+      await new Promise(resolve => setImmediate(resolve));
       return render();
     },
     async reject(index, error) {
       requests[index].reject(error);
-      await Promise.resolve();
-      await Promise.resolve();
+      await new Promise(resolve => setImmediate(resolve));
       return render();
     },
   };
@@ -168,4 +184,79 @@ test("新范围加载失败时显示本次错误，不恢复其他范围的数�
   assert.equal(failed.data, null);
   assert.equal(failed.loading, false);
   assert.equal(failed.error, "暂时无法读取团队待办");
+});
+
+test("后台轮询保留现有数据，不触发前台加载提示，慢请求不会重叠", async () => {
+  const query = queryPage({polling: true});
+  assert.equal(query.render(mine).loading, true);
+  query.startRequests();
+  await query.resolve(0, firstPage);
+  query.startRequests();
+  const polling = query.render();
+  assert.equal(polling.data, firstPage);
+  assert.equal(polling.loading, false);
+  assert.equal(polling.fetching, true);
+  query.startRequests();
+  query.notify("focus");
+  assert.equal(query.requests.length, 2);
+  assert.equal(query.requests[1].signal.aborted, false);
+  const refreshed = await query.resolve(1, {...firstPage, hasMore: false});
+  assert.equal(refreshed.fetching, false);
+  assert.equal(query.timers.size, 1);
+});
+
+test("隐藏与断网时不轮询，恢复后立即读取，卸载后清除定时器和监听", async () => {
+  const query = queryPage({polling: true});
+  query.render(mine);
+  query.startRequests();
+  await query.resolve(0, firstPage);
+  query.document.visibilityState = "hidden";
+  query.startRequests();
+  assert.equal(query.requests.length, 1);
+  query.document.visibilityState = "visible";
+  query.navigator.onLine = false;
+  query.notify("visibilitychange");
+  query.startRequests();
+  assert.equal(query.requests.length, 1);
+  query.navigator.onLine = true;
+  query.notify("online");
+  assert.equal(query.requests.length, 2);
+  query.unmount();
+  assert.equal(query.requests[1].signal.aborted, true);
+  await query.resolve(1, {items: []});
+  assert.equal(query.timers.size, 0);
+  query.notify("focus");
+  assert.equal(query.requests.length, 2);
+});
+
+test("后台失败保留已读内容和错误，失去访问权限后清空内容并停止轮询", async () => {
+  const query = queryPage({polling: true});
+  query.render(mine);
+  query.startRequests();
+  await query.resolve(0, firstPage);
+  query.startRequests();
+  const unavailable = await query.reject(1, new Error("网络暂时不可用"));
+  assert.equal(unavailable.data, firstPage);
+  assert.equal(unavailable.loading, false);
+  assert.equal(unavailable.error, "网络暂时不可用");
+  query.startRequests();
+  const rejected = await query.reject(2, query.accessError(403));
+  assert.equal(rejected.data, null);
+  assert.equal(query.timers.size, 0);
+  query.notify("focus");
+  assert.equal(query.requests.length, 3);
+});
+
+test("后台任务结束后停止定时轮询，切回页面仍可核对状态", async () => {
+  const query = queryPage({polling: true, interval: data => data?.complete ? 0 : 2500});
+  query.render(mine);
+  query.startRequests();
+  await query.resolve(0, {complete: false});
+  assert.equal(query.timers.size, 1);
+  query.startRequests();
+  await query.resolve(1, {complete: true});
+  assert.equal(query.timers.size, 0);
+  query.notify("focus");
+  assert.equal(query.requests.length, 3);
+  assert.equal(query.render().loading, false);
 });

@@ -1,0 +1,115 @@
+.indicator {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 1500;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sm);
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(5px);
+  transition:
+    opacity var(--refresh-duration) ease,
+    transform var(--refresh-duration) ease;
+}
+
+.indicator[data-phase="hidden"] {
+  visibility: hidden;
+}
+.indicator[data-phase="visible"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.spinner {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+.indicator[data-phase="visible"][data-busy="true"] .spinner {
+  animation: refresh-feedback-spin 1s linear infinite;
+}
+@keyframes refresh-feedback-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .indicator {
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: auto;
+    width: 100%;
+    max-width: none;
+    height: 3px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    background: var(--accent-soft);
+    overflow: hidden;
+    transform: none;
+  }
+
+  .indicator[data-phase="visible"] { transform: none; }
+
+  .indicator > span,
+  .spinner {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .indicator::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 36%;
+    border-radius: 999px;
+    background: var(--accent-action);
+    transform: translateX(-100%);
+  }
+
+  .indicator[data-phase="visible"][data-busy="true"]::after {
+    animation: refresh-feedback-travel 1.3s ease-in-out infinite;
+  }
+}
+
+@keyframes refresh-feedback-travel { to { transform: translateX(280%); } }
+@media (prefers-reduced-motion: reduce) {
+  .indicator {
+    transition: none;
+    transform: none;
+  }
+  .indicator[data-phase="visible"][data-busy="true"] .spinner {
+    animation: none;
+  }
+  .indicator[data-phase="visible"][data-busy="true"]::after {
+    animation: none;
+    width: 100%;
+    transform: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .indicator {
+    background: var(--surface);
+    backdrop-filter: none;
+    border-color: var(--border);
+  }
+}

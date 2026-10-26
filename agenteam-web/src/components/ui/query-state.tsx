@@ -8,6 +8,7 @@ import {Button} from "@/components/ui/button";
 import type {ReactNode} from "react";
 import {LoadingState} from "./loading-state";
 import {LoadingTransition} from "./loading-transition";
+import {useRefreshFeedback} from "./refresh-feedback";
 import {IconAlertCircle, IconChevronLeft, IconChevronRight, IconInbox, IconRefresh} from "./icons";
 import styles from "./surface.module.css";
 
@@ -37,8 +38,9 @@ export function QueryState({
   contentLayout?: "flow" | "stack";
 }) {
   const uiText = useT();
+  useRefreshFeedback(hasData && loading);
   const state = hasData ? "ready" : error ? "error" : loading ? "loading" : "empty";
-  return <LoadingTransition state={state} layout={contentLayout}
+  return <LoadingTransition state={state} layout={contentLayout} aria-busy={loading || undefined}
                             contentClassName={hasData ? contentClassName : undefined}>
     {state === "loading" ? loadingContent ??
       <LoadingState layout={loadingLayout}/> : state === "empty" && emptyContent ? emptyContent : !hasData ?
@@ -50,12 +52,11 @@ export function QueryState({
                                                                                        onClick={retry}><IconRefresh
             size={16}/>{uiText("重新加载")}</Button></>
           : loading ? <p role="status">{uiText("正在加载…")}</p> : <p>{empty}</p>}
-      </div> : <>{(loading || error) && <div className={styles.queryStatus} aria-live="polite">{loading &&
-        <p className={styles.loading}>{uiText("正在更新…")}</p>}
-        {error && <div className={styles.feedback}><p className={styles.error}
+      </div> : <>{error && <div className={styles.queryError} aria-live="polite">
+        <div className={styles.feedback}><p className={styles.error}
                                                       role="alert">{localizeUiMessage(error ?? "", uiText)}</p><Button
           className={styles.button} type="button" onClick={retry}><IconRefresh size={16}/>{uiText("重新加载")}</Button>
-        </div>}</div>}{children}</>}
+        </div></div>}{children}</>}
   </LoadingTransition>;
 }
 

@@ -4,7 +4,7 @@ export type Integration = Versioned & {
   configuration: Record<string, string | number | boolean>;
   enterpriseId: string;
   providerCode: string;
-  purpose: "enterprise" | "chat_bot";
+  purpose: "enterprise" | "chat_bot" | "app_management";
   providerName: string;
   name: string;
   externalTenantId: string | null;

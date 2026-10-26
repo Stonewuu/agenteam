@@ -30,6 +30,7 @@ import com.sun.net.httpserver.HttpServer;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.support.DataAccessUtils;
@@ -102,6 +103,9 @@ public abstract class ExecutionApiTestSupport {
 
     @Autowired
     protected MockMvc mvc;
+
+    @Value("${server.servlet.session.cookie.name:SESSION}")
+    protected String sessionCookieName;
 
     @Autowired
     protected ObjectMapper json;
@@ -189,7 +193,7 @@ public abstract class ExecutionApiTestSupport {
         refreshCsrf();
         var boot = write("/api/v1/auth/bootstrap", Map.of("setupCredential", "isolated-invitation-setup-credential", "username", "execution-submission-admin", "displayName", "执行管理员", "password", "执行提交测试所使用的独立完整口令", "enterpriseName", "执行基础企业", "email", "execution-admin@example.test", "timezone", "Asia/Shanghai"), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn();
         admin = data(boot).path("id").asText();
-        cookie = boot.getResponse().getCookie("SESSION");
+        cookie = boot.getResponse().getCookie(sessionCookieName);
         refreshCsrf();
     }
 
@@ -308,8 +312,8 @@ public abstract class ExecutionApiTestSupport {
             request.cookie(cookie);
         }
         var result = mvc.perform(request).andExpect(status().isOk()).andReturn();
-        if (result.getResponse().getCookie("SESSION") != null) {
-            cookie = result.getResponse().getCookie("SESSION");
+        if (result.getResponse().getCookie(sessionCookieName) != null) {
+            cookie = result.getResponse().getCookie(sessionCookieName);
         }
         csrf = data(result).path("token").asText();
     }

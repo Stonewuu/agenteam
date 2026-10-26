@@ -59,7 +59,7 @@ public class IntegrationQueryService {
     public PageResponse<IntegrationView> list(UserEntity actor, String enterprise, boolean system, String cursor, Integer count,
                                              String purpose, String providerCode, boolean unboundBotOnly) {
         policy.require(actor, enterprise, system, "integration.view", false);
-        if (purpose != null && !Set.of("enterprise", "chat_bot").contains(purpose)) {
+        if (purpose != null && !Set.of("enterprise", "chat_bot", "app_management").contains(purpose)) {
             throw ApiException.invalidField("purpose", "请选择企业接入或机器人接入。");
         }
         if (providerCode != null) {
@@ -120,8 +120,9 @@ public class IntegrationQueryService {
         return new IntegrationView(row.getId(), row.getEnterpriseId(), row.getProviderCode(), providers.require(row.getProviderCode()).name(),
             row.getName(), row.getExternalTenantId(), row.getExternalAppId(), row.getStatus(), Boolean.TRUE.equals(row.getBindingEnabled()),
             Boolean.TRUE.equals(row.getLoginEnabled()), Boolean.TRUE.equals(row.getMessagingEnabled()), configured,
-            "bot".equals(row.getIdentityScope()) ? "" : urls.callback(row.getId()).toString(),
-            "bot".equals(row.getIdentityScope()) || "chat_bot".equals(row.getPurpose()) ? "" : urls.login(row.getPublicLoginKey()).toString(), row.getLastCheckStatus(),
+            "bot".equals(row.getIdentityScope()) ? "" : "app_management".equals(row.getPurpose())
+                ? urls.feishuManagementCallback(row.getId()).toString() : urls.callback(row.getId()).toString(),
+            "bot".equals(row.getIdentityScope()) || !"enterprise".equals(row.getPurpose()) ? "" : urls.login(row.getPublicLoginKey()).toString(), row.getLastCheckStatus(),
             time(row.getLastCheckedAt()), row.getLastCheckErrorSummary(), Long.toString(row.getRevision()),
             time(row.getCreatedAt()), time(row.getUpdatedAt()), configuration.read(row), row.getPurpose());
     }

@@ -1,0 +1,109 @@
+.steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0 0 20px;
+  list-style: none;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.steps[data-mode="enterprise"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.step + .step::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: calc(-50% + 21px);
+  width: calc(100% - 42px);
+  height: 2px;
+  background: var(--border);
+  transition: background-color 180ms ease;
+}
+
+.marker {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.label {
+  padding-inline: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.step[data-state="current"] {
+  color: var(--accent-text);
+}
+
+.step[data-state="complete"] {
+  color: var(--mint-text);
+}
+
+.step[data-state="current"] .label,
+.step[data-state="attention"] .label {
+  font-weight: 600;
+}
+
+.step[data-state="current"] .marker {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.step[data-state="complete"] .marker,
+.step[data-state="attention"] .marker {
+  border: 0;
+  background: transparent;
+}
+
+.step[data-state="complete"]::before,
+.step[data-state="current"]::before,
+.step[data-state="attention"]::before {
+  background: var(--mint-text);
+}
+
+.step[data-state="attention"] {
+  color: var(--red-text);
+}
+
+@media (max-width: 600px) {
+  .steps {
+    padding-bottom: 16px;
+  }
+
+  .label {
+    padding-inline: 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker,
+  .step::before {
+    transition: none;
+  }
+}

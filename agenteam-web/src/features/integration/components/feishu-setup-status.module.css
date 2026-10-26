@@ -1,0 +1,93 @@
+.status {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 20px 8px 16px;
+  text-align: center;
+}
+
+.status[data-compact] {
+  padding: 0;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.status[data-kind="success"] .icon {
+  color: var(--mint-text);
+  background: var(--mint-soft);
+}
+
+.status[data-kind="error"] .icon {
+  color: var(--red-text);
+  background: var(--red-soft);
+}
+
+.status[data-kind="stopped"] .icon {
+  color: var(--secondary);
+  background: var(--surface-soft);
+}
+
+.copy {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 390px;
+}
+
+.name,
+.description,
+.hint,
+.title {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.name {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.title {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.description {
+  color: var(--secondary);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.hint {
+  max-width: 390px;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.spinning {
+  animation: feishu-processing 1.25s linear infinite;
+}
+
+@keyframes feishu-processing {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}

@@ -3,6 +3,7 @@ import type {ReactNode} from "react";
 import {NavigationGuard} from "@/features/workspace/components/navigation-guard";
 import {ThemeInitializer} from "@/features/auth/components/theme-menu";
 import {Toaster} from "@/components/ui/toast";
+import {RefreshFeedback} from "@/components/ui/refresh-feedback";
 import {LocaleProvider} from "@/lib/i18n/locale-provider";
 import {requestLocale} from "@/lib/i18n/server";
 import {createTranslator} from "@/lib/i18n/translate";
@@ -29,7 +30,7 @@ export default async function RootLayout({children}: { children: ReactNode }) {
         dangerouslySetInnerHTML={{__html: `try{var t=localStorage.getItem('agenteam:theme')||'system',d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.dataset.themePreference=t;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch{}`}}/>
     </head>
     <body><LocaleProvider
-      initialLocale={locale}><ThemeInitializer/><IdentitySwitchBoundary><NavigationGuard>{children}</NavigationGuard></IdentitySwitchBoundary><Toaster/></LocaleProvider>
+      initialLocale={locale}><ThemeInitializer/><IdentitySwitchBoundary><NavigationGuard>{children}</NavigationGuard></IdentitySwitchBoundary><Toaster/><RefreshFeedback/></LocaleProvider>
     </body>
     </html>
   );

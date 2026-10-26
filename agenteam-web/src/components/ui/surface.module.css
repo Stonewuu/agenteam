@@ -353,22 +353,8 @@
   }
 }
 
-.queryStatus {
-  position: fixed;
-  z-index: 70;
-  right: 24px;
-  bottom: 24px;
-  max-width: min(440px, calc(100vw - 48px));
-}
-
-.queryStatus > .loading {
-  margin: 0;
-  padding: 9px 15px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  box-shadow: var(--shadow);
-  font-size: 12px;
+.queryError {
+  min-width: 0;
 }
 
 .pagination {

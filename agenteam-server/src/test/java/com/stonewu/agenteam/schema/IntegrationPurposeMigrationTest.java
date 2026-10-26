@@ -5,6 +5,9 @@ import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseTableMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
+import com.stonewu.agenteam.mapper.integration.FeishuSetupJobMapper;
+import com.stonewu.agenteam.mapper.integration.FeishuManagementConnectionMapper;
+import com.stonewu.agenteam.model.integration.entity.FeishuSetupJobRow;
 import com.stonewu.agenteam.mapper.user.AppUserTableMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
@@ -31,6 +34,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** 验证旧机器人分类时保留企业登录和个人通知，且重复启动不修改配置。 */
 class IntegrationPurposeMigrationTest {
+    @Test
+    void enterpriseSetupUpgradeKeepsExistingJobsAndCanRunAgain() throws Exception {
+        try (var database = new IsolatedDatabase()) {
+            var access = database.databaseAccess();
+            Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema")
+                .target("0.5.0.1").cleanDisabled(true).load().migrate();
+            String owner = user(access);
+            String enterprise = enterprise(access, owner);
+            String connection = connection(access, enterprise, owner, "feishu", false, false);
+            var row = new FeishuSetupJobRow();
+            row.setId(UUID.randomUUID().toString()); row.setEnterpriseId(enterprise); row.setOwnerUserId(owner);
+            row.setOwnerSessionVersion(1L); row.setSystemAccess(false); row.setKind("management"); row.setConnectionId(connection);
+            row.setInputJson("{\"kind\":\"management\",\"name\":\"已有管理应用\"}"); row.setStage("completed");
+            row.setNextAttemptAt(Instant.now()); row.setCreatedAt(Instant.now()); row.setUpdatedAt(Instant.now());
+            access.mapper(FeishuSetupJobMapper.class).insert(row);
+            var migration = Flyway.configure().dataSource(access.getDataSource()).locations("classpath:db/schema").cleanDisabled(true).load();
+            assertTrue(migration.migrate().migrationsExecuted > 0);
+            var restored = access.mapper(FeishuSetupJobMapper.class).selectById(row.getId());
+            assertEquals("completed", restored.getStage());
+            assertEquals(connection, restored.getConnectionId());
+            assertEquals(1L, restored.getConnectionRevision());
+            assertEquals(1L, restored.getCredentialRevision());
+            assertEquals(0, access.mapper(FeishuManagementConnectionMapper.class).selectCount(null));
+            assertEquals(0, migration.migrate().migrationsExecuted);
+            assertTrue(migration.validateWithResult().validationSuccessful);
+        }
+    }
+
     @Test
     void upgradeSeparatesDedicatedBotsWithoutDisablingExistingCompanyCapabilities() throws Exception {
         try (var database = new IsolatedDatabase()) {

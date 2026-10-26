@@ -22,6 +22,7 @@ import {ChatBotCard} from "./chat-bot-card";
 import {ChatBotChecksDialog} from "./chat-bot-checks-dialog";
 import {ChatBotConnectionDialog} from "./chat-bot-connection-dialog";
 import {ChatBotSetupGuide} from "./chat-bot-setup-guide";
+import {FeishuQuickCreateDialog} from "@/features/integration/components/feishu-quick-create-dialog";
 import {botSettings, pausedGroupSettings} from "../api/chat-bot-settings";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./chat.module.css";
@@ -41,6 +42,7 @@ export function ChatAdminPanel({enterpriseId, system = false, canManage = true, 
   const [latestGroups, setLatestGroups] = useState<Record<string, ChatGroup>>({});
   const [retry, setRetry] = useState<ChatOutbound | null>(null);
   const [createdBot, setCreatedBot] = useState(false);
+  const [quickCreate, setQuickCreate] = useState(false);
   const action = useFormAction();
   const service = useApiQuery<{paused: boolean}>(`${path}/status`, refresh);
   const bots = useApiPage<ChatBot>(`${path}/bots`, refresh, 0);
@@ -93,7 +95,13 @@ export function ChatAdminPanel({enterpriseId, system = false, canManage = true, 
         }
         changed();
       }, t("群列表已刷新。"))}><IconMessages size={16}/>{t("刷新已加入的群")}</Button>}
-      {canManage && tab === "bots" && <Button className={createdBot ? ui.button : ui.primary} onClick={() => setEditor({bot: null})}><IconRobot size={16}/>{t("添加机器人")}</Button>}</div></div>
+      {canManage && canTest && tab === "bots" && <Button className={ui.primary} onClick={() => setQuickCreate(true)}><IconRobot size={16}/>{t("快捷创建飞书机器人")}</Button>}
+      {canManage && tab === "bots" && <Button className={ui.button} onClick={() => setEditor({bot: null})}><IconRobot size={16}/>{t("手动添加机器人")}</Button>}</div></div>
+    {quickCreate && <FeishuQuickCreateDialog enterpriseId={enterpriseId} system={system} onClose={() => setQuickCreate(false)} onSaved={() => {
+      setQuickCreate(false);
+      setCreatedBot(true);
+      changed();
+    }}/>}
     <MutationFeedback action={action} onReload={changed}/>
     <AnimatedHeight preserveControlShadows>{createdBot && tab === "bots" && <Guidance title={t("下一步：把机器人加入群聊")} icon={<IconMessages size={19}/>}
       actions={<Button className={ui.primary} onClick={() => {

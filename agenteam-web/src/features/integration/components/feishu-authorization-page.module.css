@@ -1,0 +1,218 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 14% 16%, color-mix(in srgb, var(--accent-soft) 68%, transparent), transparent 48%),
+    radial-gradient(ellipse at 85% 83%, color-mix(in srgb, var(--mint-soft) 78%, transparent), transparent 48%);
+}
+
+.ambient::before {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  background:
+    radial-gradient(ellipse at 36% 38%, color-mix(in srgb, var(--accent-action) 11%, transparent), transparent 29%),
+    radial-gradient(ellipse at 68% 62%, color-mix(in srgb, var(--mint-text) 9%, transparent), transparent 30%);
+  filter: blur(48px);
+  animation: authorization-ambient 18s ease-in-out infinite alternate;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px clamp(20px, 4vw, 56px);
+}
+
+.brand,
+.preferences {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand {
+  font-size: 17px;
+}
+.brandMark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  color: var(--on-accent);
+  background: var(--accent-action);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 24%),
+    0 4px 12px color-mix(in srgb, var(--accent-action) 14%, transparent);
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 32px 24px 112px;
+}
+
+.panel {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  padding: 32px 32px 36px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 76%, var(--surface));
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 24px 72px color-mix(in srgb, var(--text) 6%, transparent),
+    0 4px 14px color-mix(in srgb, var(--text) 3%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface) 90%, transparent);
+  animation: authorization-appear 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 18%;
+  right: 18%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent-action) 24%, var(--surface)),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.context {
+  margin: 0 0 24px;
+  color: var(--secondary);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.result {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 65%, transparent);
+}
+
+.result[data-success="true"] .icon {
+  background: var(--mint-soft);
+  color: var(--mint-text);
+}
+.result[data-success="false"] .icon {
+  background: var(--red-soft);
+  color: var(--red-text);
+}
+.result[data-success="true"] .icon svg {
+  animation: authorization-confirmed 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.result h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.description {
+  margin: -8px 0 4px;
+  color: var(--secondary);
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.spinning {
+  animation: authorization-loading 1.25s linear infinite;
+}
+@keyframes authorization-loading {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes authorization-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes authorization-confirmed {
+  from {
+    opacity: 0;
+    transform: scale(0.78);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes authorization-ambient {
+  from {
+    transform: translate(-1%, -1%) scale(1);
+  }
+  to {
+    transform: translate(2%, 2%) scale(1.06);
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding: 18px 20px;
+  }
+  .main {
+    padding: 24px 20px 96px;
+  }
+  .panel {
+    padding: 28px 24px 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinning,
+  .panel,
+  .ambient::before,
+  .result[data-success="true"] .icon svg {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .panel {
+    background: var(--surface);
+    backdrop-filter: none;
+    border-color: var(--border);
+  }
+  .ambient::before {
+    display: none;
+  }
+}

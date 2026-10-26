@@ -2,8 +2,8 @@
 
 import {useEffect} from "react";
 import {Button} from "@/components/ui/button";
-import {BrandIcon} from "@/components/ui/brand-icon";
-import {IconArrowRight, IconBuilding} from "@/components/ui/icons";
+import {ChannelProviderIcon} from "./channel-provider-icon";
+import {IconArrowRight} from "@/components/ui/icons";
 import {LoadingTransition} from "@/components/ui/loading-transition";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
@@ -40,7 +40,7 @@ export function ChannelLoginOptions({disabled, onBusyChange}: {
                              const result = await startChannelLogin(option.key);
                              window.location.assign(result.authorizationUrl);
                            }, "")}>
-              {option.providerCode === "feishu" ? <BrandIcon brand="feishu" size={22}/> : <IconBuilding size={20} variant="Bulk"/>}
+              <ChannelProviderIcon providerCode={option.providerCode} size={22}/>
               <span className={styles.label}><span>{t("通过 {platform} 登录", {platform: t(option.providerName)})}</span>
                 {duplicate && <small>{option.name}</small>}</span>
               <IconArrowRight size={17}/>
