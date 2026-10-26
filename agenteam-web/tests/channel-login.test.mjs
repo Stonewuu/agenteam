@@ -19,6 +19,11 @@ function load(file, dependencies) {
   return loaded.exports;
 }
 
+const providerIcon = load("components/channel-provider-icon.tsx", {
+  "@/components/ui/brand-icon": {BrandIcon: ({brand}) => React.createElement("span", {"data-brand": brand})},
+  "@/components/ui/icons": {IconPlug: () => null},
+});
+
 function render(query, {disabled = false, busy = false} = {}) {
   const buttons = [];
   const requests = [];
@@ -29,8 +34,8 @@ function render(query, {disabled = false, busy = false} = {}) {
       buttons.push(props);
       return React.createElement("button", props);
     }},
-    "@/components/ui/icons": {IconArrowRight: () => null, IconBuilding: () => null, IconMessages: () => null},
-    "@/components/ui/brand-icon": {BrandIcon: ({brand}) => React.createElement("span", {"data-brand":brand})},
+    "@/components/ui/icons": {IconArrowRight: () => null},
+    "./channel-provider-icon": providerIcon,
     "@/components/ui/loading-transition": {LoadingTransition: ({children}) => React.createElement("div", null, children)},
     "@/features/auth/hooks/use-form-action": {useFormAction: () => ({busy, execute: operation => operation()})},
     "@/features/workspace/components/mutation-feedback": {MutationFeedback: () => null},
@@ -81,6 +86,15 @@ test("同平台多个接入显示各自名称，账号密码提交或授权期�
   for (const state of [{disabled: true}, {busy: true}]) {
     assert.ok(render(query, state).buttons.every(button => button.disabled));
   }
+});
+
+test("企业微信入口使用企业微信品牌，平台共存时各自保留对应标志", () => {
+  const wecom = {...option, key: "c".repeat(32), providerCode: "wecom", providerName: "企业微信"};
+  const result = render({data: [option, wecom], loading: false, error: ""});
+  assert.match(result.html, /通过 企业微信 登录/);
+  assert.equal((result.html.match(/data-brand="feishu"/g) ?? []).length, 1);
+  assert.equal((result.html.match(/data-brand="wecom"/g) ?? []).length, 1);
+  assert.equal(result.buttons.length, 2);
 });
 
 test("共享授权调用使用原有防伪请求客户端，保留企业微信内嵌模式", async () => {
