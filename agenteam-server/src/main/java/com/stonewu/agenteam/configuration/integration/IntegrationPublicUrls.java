@@ -31,6 +31,10 @@ public class IntegrationPublicUrls {
         return origin.resolve("login/channel/" + key);
     }
 
+    public URI feishuManagementCallback(String connection) {
+        return origin.resolve("api/v1/auth/feishu-management-callbacks/" + connection);
+    }
+
     public URI notification(String enterprise, String id) {
         return origin.resolve("enterprises/" + enterprise + "/notifications/" + id);
     }

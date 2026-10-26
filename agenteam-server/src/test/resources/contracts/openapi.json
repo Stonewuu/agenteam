@@ -53414,7 +53414,8 @@
             "type": "string",
             "enum": [
               "enterprise",
-              "chat_bot"
+              "chat_bot",
+              "app_management"
             ]
           }
         },
@@ -53577,7 +53578,8 @@
             "type": "string",
             "enum": [
               "enterprise",
-              "chat_bot"
+              "chat_bot",
+              "app_management"
             ]
           }
         },

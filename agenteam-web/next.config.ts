@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   distDir: process.env.AGENTEAM_NEXT_DIST_DIR || ".next",
   // 允许通过本机回环地址加载开发脚本、字体及热更新连接。
   allowedDevOrigins: ["127.0.0.1"],
+  // 授权回调包含一次性授权码，开发服务也不记录完整回调网址。
+  logging: {
+    incomingRequests: {
+      ignore: [/\/api\/v1\/auth\/(?:feishu-management|channel)-callbacks\//],
+    },
+  },
 };
 
 export default nextConfig;

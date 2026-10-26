@@ -1,0 +1,95 @@
+ALTER TABLE enterprise_integration
+  DROP CHECK ck_integration_purpose,
+  ADD CONSTRAINT ck_integration_purpose CHECK (purpose IN ('enterprise', 'chat_bot', 'app_management')),
+  ADD CONSTRAINT ck_integration_management_purpose CHECK (
+    purpose <> 'app_management' OR (provider_code = 'feishu' AND binding_enabled = 0 AND login_enabled = 0 AND messaging_enabled = 0)
+  );
+
+CREATE TABLE feishu_setup_job (
+  id varchar(100) NOT NULL,
+  enterprise_id varchar(100) NOT NULL,
+  owner_user_id varchar(100) NOT NULL,
+  owner_session_version bigint NOT NULL,
+  system_access boolean NOT NULL,
+  kind varchar(20) NOT NULL,
+  manager_connection_id varchar(100) DEFAULT NULL,
+  connection_id varchar(100) DEFAULT NULL,
+  bot_id varchar(100) DEFAULT NULL,
+  input_json json NOT NULL,
+  encrypted_json json DEFAULT NULL COMMENT '仅保存加密注册材料与尚未写入接入的应用凭据',
+  stage varchar(32) NOT NULL,
+  resume_stage varchar(32) DEFAULT NULL,
+  registration_expires_at datetime(3) DEFAULT NULL,
+  poll_interval int NOT NULL DEFAULT 5,
+  next_attempt_at datetime(3) NOT NULL,
+  external_version_id varchar(100) DEFAULT NULL,
+  external_version varchar(80) DEFAULT NULL,
+  error_code varchar(100) DEFAULT NULL,
+  error_summary varchar(500) DEFAULT NULL,
+  lease_owner varchar(100) DEFAULT NULL,
+  lease_until datetime(3) DEFAULT NULL,
+  revision bigint NOT NULL DEFAULT 1,
+  created_at datetime(3) NOT NULL,
+  updated_at datetime(3) NOT NULL,
+  active_owner_key varchar(140) GENERATED ALWAYS AS
+    (CASE WHEN stage IN ('completed','cancelled','expired','failed','registration_unknown') THEN NULL
+          ELSE CONCAT(owner_user_id, ':', kind) END) STORED,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_feishu_setup_active (enterprise_id, active_owner_key),
+  KEY ix_feishu_setup_work (stage, next_attempt_at, lease_until),
+  KEY ix_feishu_setup_owner (enterprise_id, owner_user_id, created_at),
+  CONSTRAINT fk_feishu_setup_enterprise FOREIGN KEY (enterprise_id) REFERENCES enterprise(id),
+  CONSTRAINT fk_feishu_setup_owner FOREIGN KEY (owner_user_id) REFERENCES app_user(id),
+  CONSTRAINT fk_feishu_setup_manager FOREIGN KEY (enterprise_id, manager_connection_id) REFERENCES enterprise_integration(enterprise_id, id),
+  CONSTRAINT fk_feishu_setup_connection FOREIGN KEY (enterprise_id, connection_id) REFERENCES enterprise_integration(enterprise_id, id),
+  CONSTRAINT ck_feishu_setup_kind CHECK (kind IN ('management','bot')),
+  CONSTRAINT ck_feishu_setup_stage CHECK (stage IN ('queued','awaiting_scan','preparing','configuring','publishing','waiting_approval','binding','completed','authorization_required','failed','cancelled','expired','registration_unknown')),
+  CONSTRAINT ck_feishu_setup_input CHECK (JSON_TYPE(input_json) = 'OBJECT'),
+  CONSTRAINT ck_feishu_setup_version CHECK (revision > 0 AND poll_interval BETWEEN 1 AND 120)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='飞书应用快捷创建进度';
+
+CREATE TABLE feishu_management_grant (
+  id varchar(100) NOT NULL,
+  enterprise_id varchar(100) NOT NULL,
+  connection_id varchar(100) NOT NULL,
+  user_id varchar(100) NOT NULL,
+  credential_revision bigint NOT NULL,
+  status varchar(24) NOT NULL,
+  encrypted_json json DEFAULT NULL,
+  scopes text NOT NULL,
+  expires_at datetime(3) DEFAULT NULL,
+  refresh_expires_at datetime(3) DEFAULT NULL,
+  refresh_lease_until datetime(3) DEFAULT NULL,
+  revision bigint NOT NULL DEFAULT 1,
+  created_at datetime(3) NOT NULL,
+  updated_at datetime(3) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_feishu_grant_user (enterprise_id, connection_id, user_id),
+  CONSTRAINT fk_feishu_grant_connection FOREIGN KEY (enterprise_id, connection_id) REFERENCES enterprise_integration(enterprise_id, id),
+  CONSTRAINT fk_feishu_grant_user FOREIGN KEY (user_id) REFERENCES app_user(id),
+  CONSTRAINT ck_feishu_grant_status CHECK (status IN ('authorized','reauthorize','revoked')),
+  CONSTRAINT ck_feishu_grant_version CHECK (revision > 0 AND credential_revision > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户授予飞书应用管理的权限';
+
+CREATE TABLE feishu_management_oauth (
+  id varchar(100) NOT NULL,
+  enterprise_id varchar(100) NOT NULL,
+  connection_id varchar(100) NOT NULL,
+  user_id varchar(100) NOT NULL,
+  user_session_version bigint NOT NULL,
+  credential_revision bigint NOT NULL,
+  system_access boolean NOT NULL,
+  state_hash char(64) NOT NULL,
+  nonce_hash char(64) NOT NULL,
+  encrypted_json json DEFAULT NULL,
+  status varchar(20) NOT NULL,
+  expires_at datetime(3) NOT NULL,
+  created_at datetime(3) NOT NULL,
+  updated_at datetime(3) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_feishu_oauth_state (state_hash),
+  KEY ix_feishu_oauth_expiry (status, expires_at),
+  CONSTRAINT fk_feishu_oauth_connection FOREIGN KEY (enterprise_id, connection_id) REFERENCES enterprise_integration(enterprise_id, id),
+  CONSTRAINT fk_feishu_oauth_user FOREIGN KEY (user_id) REFERENCES app_user(id),
+  CONSTRAINT ck_feishu_oauth_status CHECK (status IN ('pending','processing','completed','failed','expired'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='飞书应用管理的一次性用户授权';

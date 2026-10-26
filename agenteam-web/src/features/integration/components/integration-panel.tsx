@@ -4,10 +4,11 @@ import {type ReactNode, useState} from "react";
 import {PageHeader} from "@/components/ui/page-header";
 import {Tabs} from "@/components/ui/tabs";
 import {AnimatedHeight} from "@/components/ui/animated-height";
-import {IconBuilding, IconMessages, IconPlug, IconRobot} from "@/components/ui/icons";
+import {IconBuilding, IconPlug, IconRobot} from "@/components/ui/icons";
 import {ChatAdminPanel} from "@/features/chat/components/chat-admin-panel";
 import {useT} from "@/lib/i18n/locale-provider";
 import {IntegrationConnections} from "./integration-connections";
+import {ChannelProviderIcon} from "./channel-provider-icon";
 import styles from "./integration.module.css";
 
 export function IntegrationPanel({enterpriseId, system = false, canManage = true, canTest = true, canViewDeliveries = true, enterpriseSelector}: {
@@ -26,7 +27,8 @@ export function IntegrationPanel({enterpriseId, system = false, canManage = true
     <AnimatedHeight preserveControlShadows>
       {section === "enterprise" ? <div className={styles.platformContent}>
         <Tabs value={platform} onChange={setPlatform} label={t("企业平台")} variant="filter" items={[
-          {value: "feishu", label: t("飞书"), icon: IconMessages}, {value: "wecom", label: t("企业微信"), icon: IconBuilding},
+          {value: "feishu", label: t("飞书"), prefix: <ChannelProviderIcon providerCode="feishu" size={18}/>},
+          {value: "wecom", label: t("企业微信"), prefix: <ChannelProviderIcon providerCode="wecom" size={18}/>},
         ]}/>
         <IntegrationConnections key={`${enterpriseId}:${platform}`} enterpriseId={enterpriseId} system={system} canManage={canManage}
           canTest={canTest} canViewDeliveries={canViewDeliveries} providerCode={platform}/>

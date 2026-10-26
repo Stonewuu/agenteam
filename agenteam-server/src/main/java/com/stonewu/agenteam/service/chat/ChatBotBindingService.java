@@ -90,7 +90,7 @@ public class ChatBotBindingService {
         }
         policy.require(actor, enterprise, system, "integration.manage", false);
         var connection = integrations.require(enterprise, connectionId);
-        if (!Set.of("feishu", "wecom_aibot").contains(connection.getProviderCode())) {
+        if (!Set.of("feishu", "wecom_aibot").contains(connection.getProviderCode()) || "app_management".equals(connection.getPurpose())) {
             throw ApiException.invalidField("connectionId", "请选择飞书应用或企微智能机器人，普通企微自建应用不能用于群聊。");
         }
         var identity = platforms.adapter(connection.getProviderCode()).identity(integrations.application(connection));
@@ -104,7 +104,7 @@ public class ChatBotBindingService {
         if (!connection.getId().equals(prepared.connectionId()) || connection.getRevision() != prepared.connectionRevision()) {
             throw ApiException.versionConflict(connection.getRevision());
         }
-        String version = version(enterprise, input);
+        String version = resolveAgentVersion(enterprise, input);
         var row = ChatRecords.initialize(new ChatBotBindingRow(), enterprise, clock.instant());
         row.setConnectionId(connection.getId());
         row.setPlatformBotId(prepared.identity().id());
@@ -142,7 +142,7 @@ public class ChatBotBindingService {
         if (row.getRevision() != revision) {
             throw ApiException.versionConflict(row.getRevision());
         }
-        String version = version(enterprise, input);
+        String version = resolveAgentVersion(enterprise, input);
         String status = input.status() == null ? row.getStatus() : input.status();
         if (!Set.of("draft", "enabled", "disabled").contains(status)) {
             throw ApiException.invalidField("status", "请选择启用或停用机器人。");
@@ -271,7 +271,7 @@ public class ChatBotBindingService {
             && value.path("credentialRevision").asLong(-1) == connection.getCredentialRevision();
     }
 
-    private String version(String enterprise, ChatBotWriteRequest input) {
+    public String resolveAgentVersion(String enterprise, ChatBotWriteRequest input) {
         if (!Set.of("pinned", "latest_on_new_task").contains(input.versionPolicy() == null ? "" : input.versionPolicy())) {
             throw ApiException.invalidField("versionPolicy", "请选择固定版本或新任务使用最新版本。");
         }

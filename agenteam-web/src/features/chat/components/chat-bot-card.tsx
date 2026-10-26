@@ -5,6 +5,7 @@ import {DetailStatus} from "@/components/ui/detail-section";
 import {IconDots, IconPencil, IconPlayerPause, IconPlayerPlay, IconPlug, IconRefresh, IconRobot, IconShield} from "@/components/ui/icons";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/shadcn/dropdown-menu";
 import {useT} from "@/lib/i18n/locale-provider";
+import {ChannelProviderIcon} from "@/features/integration/components/channel-provider-icon";
 import type {ChatBot} from "../types/chat";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./chat.module.css";
@@ -16,7 +17,7 @@ export function ChatBotCard({bot, canManage, busy, onEdit, onConnection, onCheck
   const t = useT();
   const enabled = bot.status === "enabled" && bot.chatEnabled;
   return <article className={styles.card}>
-    <div className={styles.heading}><div className={styles.botIdentity}><span className={styles.botIcon} data-icon-surface><IconRobot size={22} variant="Bulk"/></span>
+    <div className={styles.heading}><div className={styles.botIdentity}><span className={styles.botIcon} data-icon-surface><ChannelProviderIcon providerCode={bot.providerCode} size={24}/></span>
       <div><h3>{bot.roleName}</h3><p>{t(bot.providerCode === "feishu" ? "飞书" : "企微智能机器人")}{bot.roleDescription ? ` · ${bot.roleDescription}` : ""}</p></div></div>
       <DetailStatus tone={enabled ? "success" : bot.status === "disabled" ? "neutral" : "warning"}>{t(enabled ? "已启用" : bot.status === "disabled" ? "已停用" : "待启用")}</DetailStatus>
     </div>

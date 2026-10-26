@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelHttpResponse;
 import okhttp3.HttpUrl;
+import okhttp3.FormBody;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 渠道请求不自动重试和跳转；日志只保留路径与接入编号，避免地址参数中的凭证泄漏。
@@ -55,6 +57,14 @@ public class IntegrationHttpClient {
         var content = RequestBody.create(body.toString(), MediaType.get("application/json; charset=utf-8"));
         return execute(connection, new Request.Builder().url(address.toString()).patch(content), null, bearer,
             new ChannelRequestDiagnostics(Map.of(), body, bearer, json));
+    }
+
+    public ChannelHttpResponse postForm(String connection, URI address, Map<String, String> fields, Set<String> expectedErrors) {
+        var form = new FormBody.Builder();
+        fields.forEach(form::add);
+        var diagnostics = new ChannelRequestDiagnostics(fields, json.valueToTree(fields), null, json);
+        diagnostics.expectedErrors(expectedErrors);
+        return execute(connection, new Request.Builder().url(address.toString()), form.build(), null, diagnostics);
     }
 
     public static URI withQuery(URI address, Map<String, String> query) {

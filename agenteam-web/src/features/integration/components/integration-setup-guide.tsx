@@ -8,6 +8,7 @@ import {DetailSection} from "@/components/ui/detail-section";
 import {IconBell, IconBook2, IconBuilding, IconExternalLink, IconKey, IconPlug, IconShield} from "@/components/ui/icons";
 import {Tabs} from "@/components/ui/tabs";
 import {useT} from "@/lib/i18n/locale-provider";
+import {ChannelProviderIcon} from "./channel-provider-icon";
 import type {Integration} from "../types/integration";
 import {IntegrationAddressField} from "./integration-address-field";
 import ui from "@/components/ui/surface.module.css";
@@ -45,7 +46,8 @@ function SetupGuideDialog({providerCode, connection, defaultTopic, onClose}: {
     onClose={onClose} className={styles.dialog}>
     <div className={styles.guide}>
       {!providerCode && <Tabs value={provider} onChange={setProvider} label={t("接入平台")}
-        items={[{value: "feishu", label: t("飞书")}, {value: "wecom", label: t("企业微信")}]}/>}
+        items={[{value: "feishu", label: t("飞书"), prefix: <ChannelProviderIcon providerCode="feishu" size={18}/>},
+          {value: "wecom", label: t("企业微信"), prefix: <ChannelProviderIcon providerCode="wecom" size={18}/>}]}/>}
       <Tabs value={topic} onChange={setTopic} label={t("配置指南内容")} variant="filter" items={[
         {value: "parameters", label: t("参数填写"), icon: IconKey},
         {value: "addresses", label: t("地址与通知"), icon: IconPlug},

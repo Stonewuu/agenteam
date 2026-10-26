@@ -25,13 +25,14 @@ final class ChannelRequestDiagnostics {
     private static final String HIDDEN = "[已隐藏]";
     private static final Pattern CREDENTIAL = Pattern.compile(
         "(?i)([\"']?(?:access_token|refresh_token|tenant_access_token|app_access_token|user_access_token|"
-            + "corpsecret|app_secret|client_secret|secret|password|authorization|code_verifier|code)[\"']?\\s*[:=]\\s*)"
+            + "corpsecret|app_secret|client_secret|secret|password|authorization|device_code|user_code|code_verifier|code)[\"']?\\s*[:=]\\s*)"
             + "(?:\"[^\"]*\"|'[^']*'|[^\\s,;&}]+)");
     private static final Pattern BEARER = Pattern.compile("(?i)Bearer\\s+[A-Za-z0-9._~+/=-]+");
     private static final Pattern URL_QUERY = Pattern.compile("((?:https?|wss?)://[^\\s?\"'<>]+)\\?[^\\s\"'<>]*");
     private static final Set<String> RECIPIENT_ERRORS = Set.of("invaliduser", "invalidparty", "invalidtag", "unlicenseduser");
     private final List<String> privateValues = new ArrayList<>();
     private String privateFileContent;
+    private Set<String> expectedErrors = Set.of();
 
     ChannelRequestDiagnostics(Map<String, String> parameters, JsonNode body, String bearer, ObjectMapper json) {
         parameters.values().forEach(this::remember);
@@ -41,6 +42,10 @@ final class ChannelRequestDiagnostics {
 
     void fileContent(String value) {
         privateFileContent = value;
+    }
+
+    void expectedErrors(Set<String> errors) {
+        expectedErrors = Set.copyOf(errors);
     }
 
     static Throwable networkCause(Throwable source) {
@@ -55,6 +60,9 @@ final class ChannelRequestDiagnostics {
         }
         // 返回中的令牌同样不能通过平台错误文本流入日志。
         rememberResponseCredentials(body);
+        if (body.path("error").isTextual() && expectedErrors.contains(body.path("error").asText())) {
+            return;
+        }
         JsonNode code = body.has("errcode") ? body.path("errcode") : body.path("code");
         var rejected = new ArrayList<String>();
         for (String field : RECIPIENT_ERRORS) {
@@ -191,7 +199,7 @@ final class ChannelRequestDiagnostics {
     private void rememberResponseCredentials(JsonNode body) {
         if (body.isObject()) {
             body.properties().forEach(entry -> {
-                if (entry.getKey().matches("(?i).*(?:token|secret|password|code_verifier).*")) {
+                if (entry.getKey().matches("(?i).*(?:token|secret|password|code_verifier|device_code|user_code|verification_uri).*")) {
                     remember(entry.getValue().asText(null));
                 } else {
                     rememberResponseCredentials(entry.getValue());

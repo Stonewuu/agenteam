@@ -17,6 +17,7 @@ import {useApiPage} from "@/lib/http/use-api-query";
 import {useT} from "@/lib/i18n/locale-provider";
 import {integrationPath, type Integration} from "../types/integration";
 import {IntegrationEditor} from "./integration-editor";
+import {FeishuQuickCreateDialog} from "./feishu-quick-create-dialog";
 import {IntegrationSetupGuide} from "./integration-setup-guide";
 import {IntegrationTestMessageDialog} from "./integration-test-message-dialog";
 import {ChannelDeliveryPanel} from "@/features/notification/components/channel-delivery-panel";
@@ -33,6 +34,7 @@ export function IntegrationConnections({enterpriseId, system = false, canManage 
   const path = integrationPath(enterpriseId, system);
   const [refresh, setRefresh] = useState(0);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [quickCreate, setQuickCreate] = useState(false);
   const [details, setDetails] = useState<Integration | null>(null);
   const [deleting, setDeleting] = useState<Integration | null>(null);
   const [testing, setTesting] = useState<Integration | null>(null);
@@ -57,9 +59,11 @@ export function IntegrationConnections({enterpriseId, system = false, canManage 
     <div className={styles.connectionToolbar}>
       {purpose === "chat_bot" ? <ChatBotSetupGuide/> : <IntegrationSetupGuide providerCode={providerCode}/>}
       <div className={ui.actions}><Button className={ui.button} disabled={list.loading} onClick={changed}><IconRefresh size={16}/>{t("刷新")}</Button>
-        {canManage && purpose === "enterprise" && <Button className={ui.primary} disabled={list.loading || Boolean(list.error)}
+        {canManage && canTest && purpose === "enterprise" && providerCode === "feishu" && <Button className={ui.primary}
+          onClick={() => setQuickCreate(true)}><IconPlug size={16}/>{t("快捷配置企业接入")}</Button>}
+        {canManage && purpose === "enterprise" && <Button className={providerCode === "feishu" && canTest ? ui.button : ui.primary} disabled={list.loading || Boolean(list.error)}
           onClick={() => setEditor(configured ? {mode: "edit", value: configured} : {mode: "create", value: null})}>
-          {configured ? <IconPencil size={16}/> : <IconPlug size={16}/>}{t(configured ? "编辑企业接入" : "配置企业接入")}</Button>}
+          {configured ? <IconPencil size={16}/> : <IconPlug size={16}/>}{t(configured ? "编辑企业接入" : providerCode === "feishu" ? "手动配置" : "配置企业接入")}</Button>}
       </div>
     </div>
     {enterpriseSelector && <div className={styles.enterpriseToolbar}>{enterpriseSelector}</div>}
@@ -99,6 +103,14 @@ export function IntegrationConnections({enterpriseId, system = false, canManage 
       </div>
     </QueryState>
     <Pagination {...list} hasMore={list.data?.hasMore}/>
+    {quickCreate && <FeishuQuickCreateDialog enterpriseId={enterpriseId} system={system} mode="enterprise"
+      onClose={() => {
+        setQuickCreate(false);
+        changed();
+      }} onSaved={() => {
+        setQuickCreate(false);
+        changed();
+      }}/>}
     {testing && <IntegrationTestMessageDialog path={path} value={testing} onClose={() => setTesting(null)} onSent={(deliveryId) => {
       setHistory({value: testing, deliveryId});
       setTesting(null);

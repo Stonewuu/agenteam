@@ -59,7 +59,9 @@ public class IntegrationManagementService {
         policy.require(actor, enterprise, system, "integration.manage", true);
         var provider = providers.require(input.providerCode());
         String purpose = input.purpose() == null ? (input.providerCode().equals("wecom_aibot") ? "chat_bot" : "enterprise") : input.purpose();
-        if (!Set.of("enterprise", "chat_bot").contains(purpose)
+        if (!Set.of("enterprise", "chat_bot", "app_management").contains(purpose)
+            || purpose.equals("app_management") && (!input.providerCode().equals("feishu")
+                || Boolean.TRUE.equals(input.bindingEnabled()) || Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))
             || purpose.equals("chat_bot") && !Set.of("feishu", "wecom_aibot").contains(input.providerCode())
             || purpose.equals("enterprise") && input.providerCode().equals("wecom_aibot")) {
             throw ApiException.invalidField("purpose", "请选择平台支持的企业接入或机器人接入。");
@@ -109,6 +111,10 @@ public class IntegrationManagementService {
     public IntegrationView update(UserEntity actor, String enterprise, boolean system, String id,
                                    long revision, IntegrationUpdateRequest input) {
         var row = current(actor, enterprise, system, id, revision, "integration.manage");
+        if ("app_management".equals(row.getPurpose()) && (Boolean.TRUE.equals(input.bindingEnabled())
+            || Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
+            throw ApiException.invalidField("bindingEnabled", "应用管理接入不用于成员绑定、登录或个人通知。");
+        }
         if ("chat_bot".equals(row.getPurpose()) && (Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
             throw ApiException.invalidField("loginEnabled", "机器人接入不用于企业登录或个人通知，请在企业接入中配置这些功能。");
         }
@@ -152,6 +158,25 @@ public class IntegrationManagementService {
         audit.record(enterprise, actor, "integration.rotate_secret", "integration", id, "更换应用密钥并等待重新校验", Map.of());
         cancellations.cancel(enterprise, id, null, null, null);
         return queries.view(queries.require(enterprise, id));
+    }
+
+    /** 仅由快捷接入在飞书发布和权限核验完成后调用，旧管理应用保留原凭据与个人授权。 */
+    public void configureFeishuEnterprise(UserEntity actor, String enterprise, boolean system, String id, long revision,
+                                         Boolean bindingEnabled, Boolean loginEnabled, Boolean messagingEnabled) {
+        var row = current(actor, enterprise, system, id, revision, "integration.manage");
+        if (!"feishu".equals(row.getProviderCode()) || !Set.of("enterprise", "app_management").contains(row.getPurpose())) {
+            throw ApiException.invalidField("connectionId", "请选择飞书企业接入或已有管理应用。");
+        }
+        boolean binding = bindingEnabled == null ? "app_management".equals(row.getPurpose()) || Boolean.TRUE.equals(row.getBindingEnabled()) : bindingEnabled;
+        boolean login = loginEnabled == null ? "app_management".equals(row.getPurpose()) || Boolean.TRUE.equals(row.getLoginEnabled()) : loginEnabled;
+        boolean messaging = messagingEnabled == null ? "app_management".equals(row.getPurpose()) || Boolean.TRUE.equals(row.getMessagingEnabled()) : messagingEnabled;
+        save(row, changes(row, actor).set(EnterpriseIntegrationRow::getPurpose, "enterprise")
+            .set(EnterpriseIntegrationRow::getBindingEnabled, binding).set(EnterpriseIntegrationRow::getLoginEnabled, login)
+            .set(EnterpriseIntegrationRow::getMessagingEnabled, messaging));
+        if (!messaging) {
+            cancellations.cancel(enterprise, id, null, null, null);
+        }
+        audit.record(enterprise, actor, "integration.enterprise_setup", "integration", id, "完成飞书企业快捷配置", Map.of());
     }
 
     public IntegrationView status(UserEntity actor, String enterprise, boolean system, String id, long revision, String status) {

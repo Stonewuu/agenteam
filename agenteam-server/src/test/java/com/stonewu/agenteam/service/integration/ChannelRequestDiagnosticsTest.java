@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -156,6 +157,23 @@ class ChannelRequestDiagnosticsTest {
         return events.list.stream().map(event -> event.getFormattedMessage()
             + (event.getThrowableProxy() == null ? "" : ThrowableProxyUtil.asString(event.getThrowableProxy())))
             .collect(Collectors.joining("\n"));
+    }
+
+    @Test
+    void registrationPendingIsQuietAndFailureNeverEchoesRegistrationMaterials() {
+        server.raw(400, "{\"error\":\"authorization_pending\"}", Map.of());
+        http.postForm("registration-test", server.origin().resolve("/oauth/v1/app/registration"),
+            Map.of("device_code", "private-device"), Set.of("authorization_pending"));
+        assertTrue(events.list.isEmpty());
+        server.raw(400, json.createObjectNode().put("code", 40001).put("msg",
+            "invalid request private-device private-secret https://open.feishu.cn/page?user_code=private-code")
+            .put("client_secret", "private-secret").put("verification_uri_complete", "https://open.feishu.cn/page?user_code=private-code").toString(), Map.of());
+        http.postForm("registration-test", server.origin().resolve("/oauth/v1/app/registration"),
+            Map.of("device_code", "private-device"), Set.of());
+        assertTrue(logs().contains("invalid request"));
+        assertFalse(logs().contains("private-device"));
+        assertFalse(logs().contains("private-secret"));
+        assertFalse(logs().contains("private-code"));
     }
 
     @Test
