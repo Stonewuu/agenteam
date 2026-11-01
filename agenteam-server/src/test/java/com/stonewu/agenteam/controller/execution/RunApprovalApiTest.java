@@ -28,6 +28,8 @@ import com.stonewu.agenteam.model.user.entity.UserPreferenceRow;
 import com.stonewu.agenteam.service.execution.RunWorker;
 import com.stonewu.agenteam.support.EnterpriseTestData;
 import com.stonewu.agenteam.support.RunProcessTestFixture;
+import com.stonewu.agenteam.support.TestOutputPaths;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.util.LinkedCaseInsensitiveMap;
@@ -53,6 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 使用原生确认事件和新的工作进程验证批准、拒绝、过期及外部请求数量。
  */
 @Import(SharedEnterpriseTestEdition.class)
+@Tag("external-process")
 class RunApprovalApiTest extends RunApprovalApiTestSupport {
 
     @Test
@@ -68,7 +71,7 @@ class RunApprovalApiTest extends RunApprovalApiTestSupport {
             while (first.isAlive() && !state(run).equals("waiting_approval") && System.nanoTime() < deadline) {
                 Thread.sleep(100);
             }
-            assertEquals("waiting_approval", state(run), "独立进程没有保存确认，详见 target/approval-before-restart.log");
+            assertEquals("waiting_approval", state(run), "独立进程没有保存确认，日志：" + TestOutputPaths.path("approval-before-restart.log"));
             assertEquals(0, writes.get());
             first.destroyForcibly();
             assertTrue(first.waitFor(10, TimeUnit.SECONDS));

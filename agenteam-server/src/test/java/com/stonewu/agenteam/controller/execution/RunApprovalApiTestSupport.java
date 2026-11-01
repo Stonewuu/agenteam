@@ -53,9 +53,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 abstract class RunApprovalApiTestSupport extends ExecutionApiTestSupport {
 
-    static final protected InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
+    static protected InvitationHttpTestEnvironment ENVIRONMENT;
 
-    static final protected PluginTestServer REMOTE = new PluginTestServer();
+    static protected PluginTestServer REMOTE;
 
     final protected AtomicInteger writes = new AtomicInteger();
 
@@ -82,6 +82,9 @@ abstract class RunApprovalApiTestSupport extends ExecutionApiTestSupport {
 
     @DynamicPropertySource
     static protected void dependencies(DynamicPropertyRegistry registry) {
+        // 每个具体测试类重新创建资源，不能使用同一进程内上一测试类已经关闭的数据库和服务。
+        ENVIRONMENT = new InvitationHttpTestEnvironment();
+        REMOTE = new PluginTestServer();
         ENVIRONMENT.properties(registry);
         registry.add("network.allowed-private-origins", REMOTE::origin);
         registry.add("execution.workspace-root", () -> TestOutputPaths.path("p04-approval-workspace").toString());

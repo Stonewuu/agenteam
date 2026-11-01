@@ -21,6 +21,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
 import org.springframework.test.util.ReflectionTestUtils;
+import reactor.core.scheduler.Schedulers;
 
 import java.lang.management.ManagementFactory;
 import java.util.Map;
@@ -62,6 +63,8 @@ public final class TestClassResourceCleanup implements AfterAllCallback, TestExe
     }
 
     static void clearFrameworkReferences() throws Exception {
+        // 共享线程会继承旧应用的类加载器；应用停止后重建线程池，避免下一类读取已关闭应用的资源。
+        Schedulers.shutdownNow();
         // 两个表缓存均持有完整配置，公开的 remove 方法只删除其中一个缓存。
         clearMap(GlobalConfigUtils.class, "GLOBAL_CONFIG");
         clearMap(TableInfoHelper.class, "TABLE_INFO_CACHE");

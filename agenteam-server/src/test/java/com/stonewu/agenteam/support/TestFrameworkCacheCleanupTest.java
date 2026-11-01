@@ -18,7 +18,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +29,28 @@ import static org.mockito.Mockito.*;
 
 /** 验证上一测试类的配置和监视对象释放后，下一类能够使用自己的配置重建映射。 */
 class TestFrameworkCacheCleanupTest {
+    @Test
+    void classCleanupRecreatesWorkerThreadsWithoutThePreviousApplicationClassLoader() throws Exception {
+        ClassLoader current = Thread.currentThread().getContextClassLoader();
+        ClassLoader previousApplication = new ClassLoader(current) { };
+        Schedulers.shutdownNow();
+        try {
+            Thread.currentThread().setContextClassLoader(previousApplication);
+            var previousScheduler = Schedulers.boundedElastic();
+            assertSame(previousApplication, Mono.fromCallable(() -> Thread.currentThread().getContextClassLoader())
+                .subscribeOn(previousScheduler).block(Duration.ofSeconds(5)));
+            Thread.currentThread().setContextClassLoader(current);
+            TestClassResourceCleanup.clearFrameworkReferences();
+            var nextScheduler = Schedulers.boundedElastic();
+            assertNotSame(previousScheduler, nextScheduler);
+            assertSame(current, Mono.fromCallable(() -> Thread.currentThread().getContextClassLoader())
+                .subscribeOn(nextScheduler).block(Duration.ofSeconds(5)));
+        } finally {
+            Thread.currentThread().setContextClassLoader(current);
+            Schedulers.shutdownNow();
+        }
+    }
+
     @Test
     void classCleanupReleasesOldApplicationReferencesAndRebuildsMappingsForTheNextClass() throws Exception {
         var configuration = new MybatisConfiguration();
