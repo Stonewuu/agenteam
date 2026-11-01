@@ -41,7 +41,7 @@ export type ToolCall = {
   runId: string | null;
   actor: { id: string; displayName: string };
   toolName: string;
-  status: "prepared" | "waiting_approval" | "running" | "succeeded" | "failed" | "cancelled" | "unknown";
+  status: "prepared" | "waiting_approval" | "waiting_input" | "running" | "succeeded" | "failed" | "cancelled" | "unknown";
   operationClass: "read" | "write" | "destructive" | "unknown";
   durationMs: number | null;
   errorSummary: string | null;

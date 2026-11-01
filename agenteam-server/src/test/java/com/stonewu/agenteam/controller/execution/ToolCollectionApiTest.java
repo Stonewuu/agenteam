@@ -254,7 +254,7 @@ class ToolCollectionApiTest extends ExecutionApiTestSupport {
     }
 
     private int pluginToolCount(JsonNode request) {
-        var workspace = Set.of("read_file", "grep_files", "list_files", "write_file", "edit_file", "execute", "export_file");
+        var workspace = Set.of("read_file", "grep_files", "list_files", "write_file", "edit_file", "execute", "export_file", "ask_user");
         int count = 0;
         for (var tool : request.path("tools")) {
             if (!workspace.contains(tool.at("/function/name").asText())) {

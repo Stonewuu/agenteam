@@ -89,7 +89,7 @@ public class WorkflowExecutionEngine {
             var candidates = new LinkedHashSet<>(ready.nodes());
             if (restored) {
                 for (String id : workflow.graph().order()) {
-                    if (Set.of("running", "waiting_approval").contains(workflow.node(id).status())) {
+                    if (Set.of("running", "waiting_approval", "waiting_input").contains(workflow.node(id).status())) {
                         candidates.add(id);
                     }
                 }
@@ -127,7 +127,7 @@ public class WorkflowExecutionEngine {
                 context.start(identity, workflow, node, input);
             } else {
                 input = values.read(workflow.node(node.id()).input());
-                if (workflow.node(node.id()).status().equals("waiting_approval")) {
+                if (Set.of("waiting_approval", "waiting_input").contains(workflow.node(node.id()).status())) {
                     context.resume(identity, workflow, node);
                 }
             }

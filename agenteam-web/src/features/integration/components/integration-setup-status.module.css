@@ -11,6 +11,7 @@
 }
 
 .icon {
+  position: relative;
   display: grid;
   place-items: center;
   width: 64px;
@@ -18,6 +19,17 @@
   border-radius: 50%;
   color: var(--accent-text);
   background: var(--accent-soft);
+}
+
+.status[data-kind="waiting"] .icon::after {
+  position: absolute;
+  inset: -5px;
+  border: 2px solid transparent;
+  border-top-color: var(--accent-text);
+  border-right-color: color-mix(in srgb, var(--accent-text) 35%, transparent);
+  border-radius: 50%;
+  content: "";
+  animation: integration-processing 1.25s linear infinite;
 }
 
 .status[data-kind="success"] .icon {
@@ -77,17 +89,18 @@
 }
 
 .spinning {
-  animation: feishu-processing 1.25s linear infinite;
+  animation: integration-processing 1.25s linear infinite;
 }
 
-@keyframes feishu-processing {
+@keyframes integration-processing {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinning {
+  .spinning,
+  .status[data-kind="waiting"] .icon::after {
     animation: none;
   }
 }

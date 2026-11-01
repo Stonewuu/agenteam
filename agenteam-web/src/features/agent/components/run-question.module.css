@@ -1,0 +1,81 @@
+.card {
+  container-type: inline-size;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 20px;
+  padding: 24px;
+  background: linear-gradient(125deg, color-mix(in srgb, var(--accent-soft) 30%, var(--surface)), var(--surface) 48%);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--text) 3%, transparent);
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+.form { display: grid; gap: 0; min-width: 0; }
+.card:focus-visible { outline: 2px solid var(--input-border-focus); outline-offset: 4px; }
+.header { display: flex; gap: 13px; align-items: flex-start; margin-bottom: 22px; }
+.headerIcon {
+  display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px;
+  color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
+  border-radius: 13px; background: var(--accent-soft); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 55%, transparent);
+}
+.heading { display: grid; gap: 7px; min-width: 0; }
+.eyebrow { color: var(--accent-text); font-size: 11px; line-height: 1.5; font-weight: 500; }
+.question { margin: 0; font-size: 18px; line-height: 1.55; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.choices { gap: 10px; }
+.optionGrid { display: grid; gap: 10px; min-width: 0; }
+.option {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 12px;
+  min-width: 0; min-height: 64px; align-items: start; padding: 15px 16px;
+  border: 1px solid var(--border); border-radius: 13px; background: var(--surface);
+  cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms var(--motion-ease);
+}
+.option:hover { background: color-mix(in srgb, var(--accent-soft) 15%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); transform: translateY(-1px); }
+.option[data-selected] { background: color-mix(in srgb, var(--accent-soft) 54%, var(--surface)); border-color: var(--accent-action); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-action) 12%, transparent); }
+.option:has([role="radio"]:focus-visible), .customChoice:has([role="radio"]:focus-visible) { outline: 2px solid var(--input-border-focus); outline-offset: 3px; }
+.radio { margin-top: 3px; }
+.optionCopy { display: grid; gap: 6px; min-width: 0; }
+.optionTitle { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; color: var(--text); font-size: 14px; line-height: 1.5; font-weight: 550; overflow-wrap: anywhere; }
+.recommended { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; flex-shrink: 0; border-radius: 6px; color: var(--accent-text); background: var(--accent-soft); font-size: 10px; font-weight: 500; line-height: 1.5; }
+.description { font-size: 12px; line-height: 1.7; color: var(--secondary); overflow-wrap: anywhere; white-space: pre-wrap; }
+.customChoice { display: flex; align-items: center; min-height: 46px; gap: 12px; padding: 10px 16px; border: 1px solid transparent; border-radius: 12px; font-size: 13px; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease; }
+.customChoice .radio { margin-top: 0; }
+.customChoice > svg { margin-left: auto; color: var(--muted); flex-shrink: 0; }
+.customChoice:hover { background: var(--surface-soft); }
+.customChoice[data-selected] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent-action) 42%, var(--border)); }
+.customHint { color: var(--muted); font-size: 11px; }
+.inputArea { display: grid; gap: 9px; padding-top: 12px; padding-bottom: 3px; }
+.inputLabel { font-size: 12px; color: var(--secondary); }
+.textarea { min-height: 100px; max-height: 280px; resize: vertical; field-sizing: fixed; border-radius: 12px; background: var(--surface); padding: 12px 14px; font-size: 13px; line-height: 1.7; }
+.footer { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--border-light); }
+.footerHint { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.noteButton { display: inline-flex; gap: 6px; align-items: center; min-height: 36px; padding: 6px 8px; margin-left: -8px; color: var(--secondary); font-size: 12px; border-radius: 8px; }
+.noteButton:hover { color: var(--accent-text); background: var(--accent-soft); }
+.submit { margin-left: auto; min-height: 40px; padding-inline: 19px; font-size: 12px; }
+.spinner { animation: questionSpin 900ms linear infinite; }
+.card[data-state="answered"], .card[data-state="cancelled"], .card[data-state="expired"] { padding: 17px 20px; border-color: var(--border); background: var(--surface); box-shadow: none; }
+.result { display: flex; align-items: flex-start; gap: 11px; min-width: 0; border-radius: 8px; }
+.result:focus-visible { outline: 2px solid var(--input-border-focus); outline-offset: 4px; }
+.resultIcon { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 10px; color: var(--secondary); background: var(--surface-soft); }
+.card[data-state="answered"] .resultIcon { color: var(--mint-text); background: var(--mint-soft); }
+.resultCopy { display: grid; min-width: 0; gap: 5px; }
+.resultStatus { color: var(--secondary); font-size: 10px; line-height: 1.5; }
+.card[data-state="answered"] .resultStatus { color: var(--mint-text); }
+.resultQuestion { margin: 0; color: var(--secondary); font-size: 12px; font-weight: 400; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+.answer { margin: 0; color: var(--text); font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.composerTransition { min-height: 0; flex: 0 1 auto; }
+.composerStates { min-height: 0; max-height: calc(55dvh - 24px); }
+.composerFull { display: flex; flex-direction: column; min-height: 0; }
+.composerFull[hidden] { display: none; }
+.composerFull > * { min-height: 0; }
+.waitingBar { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1px solid var(--hero-border); border-radius: 17px; background: var(--glass-background); backdrop-filter: var(--glass-backdrop-filter); box-shadow: var(--hero-shadow); }
+.waitingBar > svg { flex-shrink: 0; color: var(--accent-text); }
+.waitingCopy { min-width: 0; flex: 1; font-size: 12px; color: var(--secondary); }
+.waitingActions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.locate { display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; min-height: 36px; font-size: 12px; color: var(--accent-text); border-radius: 9px; }
+.locate:hover { background: var(--accent-soft); }
+.stop { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--secondary); background: var(--surface-soft); }
+.stop:hover { color: var(--red-text); background: var(--red-soft); }
+@container (min-width: 560px) { .optionGrid[data-paired] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (max-width: 400px) { .header { gap: 10px; } .headerIcon { width: 34px; height: 34px; border-radius: 11px; } .question { font-size: 16px; } .customHint { display: none; } .footerHint { max-width: 120px; } }
+@media (max-width: 600px) { .card { padding: 18px; border-radius: 17px; } .header { margin-bottom: 18px; } .option { padding: 13px; gap: 10px; } .waitingBar { gap: 8px; padding: 10px 12px; } .waitingCopy { font-size: 11px; } .locate { min-height: 40px; padding-inline: 7px; } .stop { min-height: 40px; width: 40px; } }
+@keyframes questionSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .option, .customChoice, .card { transition: none; } .option:hover { transform: none; } .spinner { animation: none; } }

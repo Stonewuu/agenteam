@@ -24,6 +24,10 @@ import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.tool.ToolCallTransactions;
 import com.stonewu.agenteam.service.tool.ToolExecutionService;
 import com.stonewu.agenteam.service.workspace.WorkspaceInputs;
+import com.stonewu.agenteam.service.agent.AgentImageInputService;
+import com.stonewu.agenteam.service.agent.AgentInputService;
+import io.agentscope.core.message.ImageBlock;
+import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import io.agentscope.core.message.ToolUseBlock;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
@@ -55,10 +59,13 @@ import java.io.IOException;
 import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.List;
+import java.util.Base64;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /** 模拟真实 HTTP 下载，再经过原文件扫描解析链路，最后进入岗位执行资料。 */
 @Import({ChatResourceTest.Platform.class, InProcessDocumentParsing.class})
@@ -82,6 +89,8 @@ class ChatResourceTest extends CollaborationApiTestSupport {
     @Autowired private ToolCallTransactions toolTransactions;
     @Autowired private ToolExecutionService toolExecution;
     @Autowired private RunStepMapper runSteps;
+    @Autowired private AgentImageInputService imageInputs;
+    @Autowired private AgentInputService agentInputs;
 
     @TestConfiguration
     static class Platform {
@@ -220,8 +229,8 @@ class ChatResourceTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void unsupportedImageDoesNotDownloadOrStartAModel() {
-        var message = receiveResource("image", "image.png");
+    void unsupportedAudioDoesNotDownloadOrStartAModel() {
+        var message = receiveResource("audio", "record.mp3");
         routing.route(enterprise, message.getId());
         assertTrue(downloader.runOnce());
         assertEquals("unsupported", savedResource().getStatus());
@@ -230,6 +239,34 @@ class ChatResourceTest extends CollaborationApiTestSupport {
         routing.route(enterprise, message.getId());
         assertEquals("failed", messages().selectById(message.getId()).getRoutingStatus());
         assertEquals(0, taskCount());
+    }
+
+    @Test
+    void imageIsInspectedAndReachesTheModelInputWithoutDocumentFallbackText() throws Exception {
+        var message = receiveResource("image", "image");
+        routing.route(enterprise, message.getId());
+        byte[] png = Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a0U8AAAAASUVORK5CYII=");
+        PLATFORM.reply("feishu.token");
+        PLATFORM.binary(200, png, Map.of("Content-Type", "image/png"));
+        assertTrue(downloader.runOnce());
+        var resource = savedResource();
+        assertTrue(inspections.runNext());
+        resources.inspected(enterprise, resource.getId());
+        assertEquals("ready", savedResource().getStatus());
+        routing.route(enterprise, message.getId());
+        var accepted = dispatch.submit(dispatch.claim("image-dispatch").orElseThrow());
+        var run = runs.find(enterprise, accepted.runId(), false).orElseThrow();
+        assertFalse(run.executionConfig().path("sourceContext").asText().contains("此附件未提取到文字"));
+        var original = agentInputs.message(run);
+        var delivered = imageInputs.prepare(run, List.of(original));
+        assertEquals(original.getTextContent(), delivered.getFirst().getTextContent());
+        assertTrue(delivered.getFirst().getContent().stream().anyMatch(ImageBlock.class::isInstance));
+        assertFalse(original.getContent().stream().anyMatch(ImageBlock.class::isInstance));
+        var otherUser = mock(RunRecord.class);
+        when(otherUser.enterpriseId()).thenReturn(enterprise);
+        when(otherUser.userId()).thenReturn(admin);
+        when(otherUser.conversationId()).thenReturn(run.conversationId());
+        assertFalse(imageInputs.prepare(otherUser, List.of(original)).getFirst().getContent().stream().anyMatch(ImageBlock.class::isInstance));
     }
 
     @Test

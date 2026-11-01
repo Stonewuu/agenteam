@@ -24,7 +24,8 @@ public final class CollaborationInstructions {
             本任务的岗位共用项目工作目录；交接中写明文件相对路径，接收岗位可用文件工具直接读取，不必重新生成或复制。
             工作文件可能被其他岗位后续修改，正式交付仍引用已发布的固定成果版本；并行工作使用不同文件名，避免互相覆盖。
             内部修改必须填写当前 expectedInputRevision。要求变化时先读取新要求，不能用旧结果直接结束总任务。
-            collab_wait、collab_ask_user、collab_handoff、collab_submit_result、collab_complete_task 成功后结束本轮回答，不再调用修改工具。
+            需要用户补充信息时使用 ask_user，可提供推荐选项，用户也可以自行输入。收到工具返回的回答后继续当前任务；它不代替业务操作审批。
+            collab_wait、collab_handoff、collab_submit_result、collab_complete_task 成功后结束本轮回答，不再调用修改工具。
             等待依赖由服务端恢复，不要在模型中轮询或同步等待其他岗位。
             当本轮标记为 planningOnly（只核对分工）时，先替换不再符合新要求的旧工作，再等待依赖，不能执行业务写入。
             最终交付权属于具体工作，不是同一岗位下任意工作；普通协助岗位只能提交自己的成果。

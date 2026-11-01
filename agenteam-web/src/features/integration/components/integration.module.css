@@ -202,6 +202,7 @@
 }
 
 .settings {
+  container: channel-settings / inline-size;
   max-width: 960px;
   display: grid;
   gap: 24px;
@@ -288,6 +289,51 @@
   border-top: 1px solid var(--border-light);
   padding-block: 12px;
   justify-content: flex-end;
+}
+
+.bindingCard[data-unbound] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+}
+
+.bindingCard[data-unbound] .bindingHeader {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.bindingCard[data-unbound] .bindingFooter {
+  flex-shrink: 0;
+  border-top: 0;
+  padding: 0;
+}
+
+@container channel-settings (max-width: 680px) {
+  .bindingCard[data-unbound] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: 18px;
+  }
+
+  .bindingCard[data-unbound] .bindingHeader {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+
+  .bindingCard[data-unbound] .bindingFooter {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .bindingCard[data-unbound] .bindingFooter > button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
 }
 
 .preferenceGrid {

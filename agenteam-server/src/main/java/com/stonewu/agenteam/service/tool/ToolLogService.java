@@ -93,7 +93,7 @@ public class ToolLogService {
             throw ApiException.invalidField("actorUserId", "请选择有效的发起成员。");
         }
         String status = option(query.status(), "status",
-            Set.of("prepared", "waiting_approval", "running", "succeeded", "failed", "cancelled", "unknown"));
+            Set.of("prepared", "waiting_approval", "waiting_input", "running", "succeeded", "failed", "cancelled", "unknown"));
         String source = option(query.source(), "source",
             Set.of("interactive", "preview", "scheduled", "manual_schedule"));
         return new ToolLogQuery(ranges.normalize(query.from(), "from"), ranges.normalize(query.to(), "to"), owner,

@@ -49,7 +49,7 @@ public final class MockChannelServer implements AutoCloseable {
         }
     }
 
-    private record Reply(int status, String body, Map<String, String> headers, boolean disconnect) {
+    private record Reply(int status, byte[] body, Map<String, String> headers, boolean disconnect) {
     }
 
     private final BlockingQueue<Reply> replies = new LinkedBlockingQueue<>();
@@ -74,7 +74,7 @@ public final class MockChannelServer implements AutoCloseable {
                 }
                 exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
                 reply.headers().forEach((key, value) -> exchange.getResponseHeaders().set(key, value));
-                byte[] body = reply.body().getBytes(StandardCharsets.UTF_8);
+                byte[] body = reply.body();
                 exchange.sendResponseHeaders(reply.status(), body.length);
                 exchange.getResponseBody().write(body);
             }
@@ -106,11 +106,15 @@ public final class MockChannelServer implements AutoCloseable {
     }
 
     public void raw(int status, String body, Map<String, String> headers) {
-        replies.add(new Reply(status, body, headers, false));
+        replies.add(new Reply(status, body.getBytes(StandardCharsets.UTF_8), headers, false));
+    }
+
+    public void binary(int status, byte[] body, Map<String, String> headers) {
+        replies.add(new Reply(status, body.clone(), headers, false));
     }
 
     public void disconnect() {
-        replies.add(new Reply(200, "", Map.of(), true));
+        replies.add(new Reply(200, new byte[0], Map.of(), true));
     }
 
     public void reset() {

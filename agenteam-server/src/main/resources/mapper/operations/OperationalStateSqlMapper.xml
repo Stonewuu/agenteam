@@ -11,7 +11,7 @@
   </select>
   <select timeout="10" id="readAgentRun"
           resultType="com.stonewu.agenteam.model.operations.entity.OperationalStateQueryRow">
-    SELECT status, COUNT(*) AS total FROM agent_run WHERE status IN ('queued', 'running', 'waiting_approval',
+    SELECT status, COUNT(*) AS total FROM agent_run WHERE status IN ('queued', 'running', 'waiting_approval','waiting_input',
     'cancelling') GROUP BY status
   </select>
   <select timeout="10" id="readAgentEvent"

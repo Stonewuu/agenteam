@@ -10,6 +10,8 @@ import com.stonewu.agenteam.service.workspace.WorkspaceInputs;
 import io.agentscope.core.message.UserMessage;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+
 /**
  * 所有执行入口沿用同一份用户正文、资料和明确选择的技能，不在流程接入时丢弃原对话输入。
  */
@@ -36,10 +38,16 @@ public class AgentInputService {
         }
         var attachments = messages.find(run.enterpriseId(), run.conversationId(), run.inputMessageId()).orElseThrow()
             .attachments();
-        if (!attachments.isEmpty()) {
-            content += "\n\n输入文件路径：\n" + String.join("\n", attachments.stream()
-                .map(file -> WorkspaceInputs.inputPath(file.get("id").toString(), file.get("name").toString()))
-                .toList());
+        var inputPaths = new LinkedHashMap<String, String>();
+        attachments.forEach(file -> inputPaths.put(file.get("id").toString(), file.get("name").toString()));
+        run.executionConfig().path("inputSourceFiles").forEach(file -> {
+            if (file.path("id").isTextual() && file.path("name").isTextual()) {
+                inputPaths.putIfAbsent(file.path("id").asText(), file.path("name").asText());
+            }
+        });
+        if (!inputPaths.isEmpty()) {
+            content += "\n\n输入文件路径：\n" + String.join("\n", inputPaths.entrySet().stream()
+                .map(file -> WorkspaceInputs.inputPath(file.getKey(), file.getValue())).toList());
         }
         content = prompts.append(content, skills.selected(run.executionConfig()));
         return UserMessage.builder().id(run.inputMessageId()).textContent(content).build();

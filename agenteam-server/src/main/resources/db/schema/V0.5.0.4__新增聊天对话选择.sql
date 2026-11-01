@@ -1,0 +1,22 @@
+CREATE TABLE chat_session_selection (
+  id varchar(100) NOT NULL,
+  enterprise_id varchar(100) NOT NULL,
+  conversation_id varchar(100) NOT NULL,
+  user_id varchar(100) NOT NULL,
+  bot_binding_id varchar(100) NOT NULL,
+  task_id varchar(100) DEFAULT NULL,
+  selection_no bigint NOT NULL,
+  revision bigint NOT NULL DEFAULT 1,
+  selected_at datetime(3) NOT NULL,
+  created_at datetime(3) NOT NULL,
+  updated_at datetime(3) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_chat_session_selection (enterprise_id, conversation_id, user_id, bot_binding_id, selection_no),
+  KEY ix_chat_session_time (enterprise_id, conversation_id, user_id, bot_binding_id, selected_at),
+  CONSTRAINT fk_chat_session_enterprise FOREIGN KEY (enterprise_id) REFERENCES enterprise(id),
+  CONSTRAINT fk_chat_session_user FOREIGN KEY (user_id) REFERENCES app_user(id),
+  CONSTRAINT fk_chat_session_conversation FOREIGN KEY (enterprise_id, conversation_id) REFERENCES chat_conversation(enterprise_id, id),
+  CONSTRAINT fk_chat_session_bot FOREIGN KEY (enterprise_id, bot_binding_id) REFERENCES chat_bot_binding(enterprise_id, id),
+  CONSTRAINT fk_chat_session_task FOREIGN KEY (enterprise_id, task_id) REFERENCES collaboration_task(enterprise_id, id),
+  CONSTRAINT ck_chat_session_number CHECK (selection_no > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='成员在各机器人会话中选择的对话';

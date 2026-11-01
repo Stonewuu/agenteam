@@ -38,7 +38,13 @@
     ".next-workflow-config/types/**/*.ts",
     ".next-workflow-config/dev/types/**/*.ts",
     ".next-workflow-verify/types/**/*.ts",
-    ".next-workflow-verify/dev/types/**/*.ts"
+    ".next-workflow-verify/dev/types/**/*.ts",
+    ".next-feishu-unified/types/**/*.ts",
+    ".next-feishu-unified/dev/types/**/*.ts",
+    ".next-feishu-options/types/**/*.ts",
+    ".next-feishu-options/dev/types/**/*.ts",
+    ".next-wecom-quick/types/**/*.ts",
+    ".next-wecom-quick/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

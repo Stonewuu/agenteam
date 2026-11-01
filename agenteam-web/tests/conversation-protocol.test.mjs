@@ -139,6 +139,27 @@ function liveEvent(position, type, payload, databaseVersion = "10") {
   return value;
 }
 
+test("用户提问实时出现，刷新后保留选项，回答事件更新原问题", () => {
+  const tool = {...block("tool", "tool", null, 1), status: "waiting_input"};
+  const question = {...block("question", "question", "tool", 2), status: "waiting_input", question: {
+    id: "question-id", runId: "run", question: "需要哪种报告？", options: [{id: "option_0", label: "摘要", description: "先给结论", recommended: true}],
+    status: "pending", answer: null, selectedOptionId: null, revision: "1", expiresAt: "2026-10-31T12:00:00Z",
+  }};
+  let state = apply(fromSnapshot(liveSnapshot("100", [tool])), liveEvent("101", "block.updated", {messageId: "output", block: question}, "11"));
+  state = apply(state, liveEvent("102", "run.waiting_input", {...state.snapshot.activeRun, status: "waiting_input", lastSequence: "12"}, "12"));
+  assert.equal(state.snapshot.activeRun.status, "waiting_input");
+  let display = displayMessages(fromSnapshot(state.snapshot))[0].blocks[0].blocks[0];
+  assert.equal(display.kind, "question");
+  assert.equal(display.question.options[0].recommended, true);
+  assert.equal(display.question.selectedOptionId, null);
+  const answered = {...question, revision: "2", status: "completed", question: {...question.question, revision: "2", status: "answered", answer: "我想先看数据"}};
+  state = apply(state, liveEvent("103", "block.updated", {messageId: "output", block: answered}, "13"));
+  display = displayMessages(state)[0].blocks[0].blocks[0];
+  assert.equal(display.question.answer, "我想先看数据");
+  assert.equal(display.question.status, "answered");
+  assert.equal(state.snapshot.messages[0].blocks.length, 2);
+});
+
 test("第二版刷新快照先恢复累计全文，再精确追加增量且不推进数据库版本", () => {
   const text = { ...block("text"), revision: "70", text: "已经输出的正文" };
   const initial = fromSnapshot(liveSnapshot("100", [text]));

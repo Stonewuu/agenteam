@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { IconKey, IconExternalLink } from "@/components/ui/icons";
 import { useT } from "@/lib/i18n/locale-provider";
 import ui from "@/components/ui/surface.module.css";
-import styles from "./feishu-quick-create.module.css";
+import styles from "./integration-quick-create.module.css";
 
 export function FeishuManagementAuthorization({
   name,

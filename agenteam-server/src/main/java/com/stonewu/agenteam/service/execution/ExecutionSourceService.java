@@ -14,6 +14,7 @@ import com.stonewu.agenteam.model.file.entity.AttachmentText;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import com.stonewu.agenteam.model.knowledge.response.CitationView;
 import com.stonewu.agenteam.service.file.FileAccessService;
+import com.stonewu.agenteam.service.file.ImageFileContent;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.knowledge.KnowledgeReferenceService;
 import com.stonewu.agenteam.service.collaboration.CollaborationSourceAccess;
@@ -52,7 +53,11 @@ public class ExecutionSourceService {
     }
 
     public List<ContentBlock> freeze(AuthContext actor, ObjectNode fixed, MessageInput input) {
-        if (!input.attachmentIds().isEmpty() && !fixed.path("config").path("attachmentsEnabled").asBoolean()) {
+        var shared = collaboration.files(actor, fixed).stream()
+            .collect(Collectors.toMap(FileRecord::id, value -> value, (first, duplicate) -> first, LinkedHashMap::new));
+        var sourceIds = new LinkedHashSet<>(input.attachmentIds());
+        sourceIds.addAll(shared.keySet());
+        if (!sourceIds.isEmpty() && !fixed.path("config").path("attachmentsEnabled").asBoolean()) {
             throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENTS_DISABLED",
                 "这个员工暂不接收附件，请移除附件后再发送。");
         }
@@ -60,8 +65,7 @@ public class ExecutionSourceService {
         int remaining = 50000;
         StringBuilder content = new StringBuilder();
         var selected = fixed.putArray("inputSourceFiles");
-        var shared = collaboration.files(actor, fixed).stream().collect(Collectors.toMap(value -> value.id(), value -> value));
-        for (String id : input.attachmentIds()) {
+        for (String id : sourceIds) {
             var file = shared.containsKey(id) ? shared.get(id) : access.uploadOwner(actor, id, true);
             if (!shared.containsKey(id) && !file.purpose().equals("attachment")) {
                 throw FileAccessService.unavailable();
@@ -73,13 +77,16 @@ public class ExecutionSourceService {
             if (file.sizeBytes() > 20L * 1024 * 1024 || bytes > 50L * 1024 * 1024) {
                 throw ApiException.invalidField("attachmentIds", "单个附件不能超过二十 MiB，全部附件不能超过五十 MiB。");
             }
+            selected.addObject().put("id", file.id()).put("sha256", file.sha256()).put("name", file.originalName());
+            if (ImageFileContent.supports(file.mediaType())) {
+                continue;
+            }
             var text = texts.find(file).orElseGet(() -> {
                 if (shared.containsKey(id) || file.mediaType().equals("application/pdf") && "FILE_NO_TEXT".equals(file.errorCode())) {
                     return new AttachmentText("", false);
                 }
                 throw notReady();
             });
-            selected.addObject().put("id", file.id()).put("sha256", file.sha256());
             String part = take(text.text(), remaining);
             remaining -= part.codePointCount(0, part.length());
             content.append("\n\n附件：").append(file.originalName()).append('\n').append(part);

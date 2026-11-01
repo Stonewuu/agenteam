@@ -1,4 +1,4 @@
-package com.stonewu.agenteam.service.integration.feishu;
+package com.stonewu.agenteam.service.integration;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -14,7 +14,7 @@ import javax.imageio.ImageIO;
 
 /** 二维码在服务端生成，链接不会发送给第三方图片服务。 */
 @Component
-public class FeishuQrCode {
+public class IntegrationQrCode {
     public byte[] render(String value) {
         try {
             var matrix = new QRCodeWriter().encode(value, BarcodeFormat.QR_CODE, 520, 520,
@@ -29,7 +29,7 @@ public class FeishuQrCode {
             ImageIO.write(image, "png", output);
             return output.toByteArray();
         } catch (WriterException | IOException failure) {
-            throw new IllegalStateException("飞书创建二维码无法生成", failure);
+            throw new IllegalStateException("创建二维码无法生成", failure);
         }
     }
 }

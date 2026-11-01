@@ -13,6 +13,7 @@ public class IntegrationEndpoints {
     private final URI wecom;
     private final URI feishu;
     private final URI feishuAccounts;
+    private final URI wecomWork;
 
     @Autowired
     public IntegrationEndpoints() {
@@ -21,13 +22,22 @@ public class IntegrationEndpoints {
     }
 
     public IntegrationEndpoints(URI wecom, URI feishu, URI feishuAccounts) {
+        this(wecom, feishu, feishuAccounts, URI.create("https://work.weixin.qq.com"));
+    }
+
+    public IntegrationEndpoints(URI wecom, URI feishu, URI feishuAccounts, URI wecomWork) {
         this.wecom = wecom;
         this.feishu = feishu;
         this.feishuAccounts = feishuAccounts;
+        this.wecomWork = wecomWork;
     }
 
     public URI wecom(String path) {
         return wecom.resolve(path);
+    }
+
+    public URI wecomWork(String path) {
+        return wecomWork.resolve(path);
     }
 
     public URI feishu(String path) {

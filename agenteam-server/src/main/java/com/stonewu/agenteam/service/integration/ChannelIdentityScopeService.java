@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** 飞书只在平台已核验的同一企业内共用用户身份；其他平台保留各自认证范围。 */
+/** 企业账号只在同一群策企业、同一平台企业和已核验的接入之间共用。 */
 @Service
 public class ChannelIdentityScopeService {
     private final EnterpriseIntegrationMapper connections;
@@ -26,7 +26,7 @@ public class ChannelIdentityScopeService {
     }
 
     public boolean shared(EnterpriseIntegrationRow connection) {
-        return connection != null && "feishu".equals(connection.getProviderCode())
+        return connection != null && ("feishu".equals(connection.getProviderCode()) || "wecom".equals(connection.getProviderCode()))
             && connection.getIdentityVerifiedAt() != null && connection.getExternalTenantId() != null
             && !connection.getExternalTenantId().isBlank();
     }
@@ -37,7 +37,7 @@ public class ChannelIdentityScopeService {
         }
         return connections.selectList(new LambdaQueryWrapper<EnterpriseIntegrationRow>()
             .select(EnterpriseIntegrationRow::getId).eq(EnterpriseIntegrationRow::getEnterpriseId, connection.getEnterpriseId())
-            .eq(EnterpriseIntegrationRow::getProviderCode, "feishu")
+            .eq(EnterpriseIntegrationRow::getProviderCode, connection.getProviderCode())
             .eq(EnterpriseIntegrationRow::getExternalTenantId, connection.getExternalTenantId())
             .isNotNull(EnterpriseIntegrationRow::getIdentityVerifiedAt)
             .eq(enabledOnly, EnterpriseIntegrationRow::getStatus, "enabled")
@@ -45,19 +45,24 @@ public class ChannelIdentityScopeService {
     }
 
     public List<UserChannelBindingRow> related(EnterpriseIntegrationRow connection, UserChannelBindingRow row) {
-        if (!shared(connection) || row.getExternalUnionId() == null || row.getExternalUnionId().isBlank()) {
+        String identity = identityKey(connection, row);
+        if (!shared(connection) || identity == null || identity.isBlank()) {
             return List.of(row);
         }
         return bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getEnterpriseId, row.getEnterpriseId()).eq(UserChannelBindingRow::getUserId, row.getUserId())
             .in(UserChannelBindingRow::getConnectionId, connectionIds(connection, false))
-            .eq(UserChannelBindingRow::getExternalUnionId, row.getExternalUnionId()).ne(UserChannelBindingRow::getStatus, "revoked"));
+            .eq("feishu".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalUnionId, identity)
+            .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectType, "wecom_userid")
+            .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectId, identity)
+            .ne(UserChannelBindingRow::getStatus, "revoked")).stream()
+            .filter(value -> identity.equals(identityKey(connection, value))).toList();
     }
 
     public List<EnterpriseIntegrationRow> choices(List<EnterpriseIntegrationRow> choices, Map<String, UserChannelBindingRow> current) {
         var groups = new LinkedHashMap<String, List<EnterpriseIntegrationRow>>();
         for (var connection : choices) {
-            String scope = shared(connection) ? "feishu:" + connection.getExternalTenantId() : connection.getId();
+            String scope = shared(connection) ? connection.getProviderCode() + ":" + connection.getExternalTenantId() : connection.getId();
             groups.computeIfAbsent(scope, ignored -> new ArrayList<>()).add(connection);
         }
         var result = new ArrayList<EnterpriseIntegrationRow>();
@@ -73,8 +78,8 @@ public class ChannelIdentityScopeService {
             var accounts = new LinkedHashMap<String, EnterpriseIntegrationRow>();
             for (var connection : bound) {
                 var row = current.get(connection.getId());
-                String key = shared(connection) && row.getExternalUnionId() != null && !row.getExternalUnionId().isBlank()
-                    ? row.getExternalUnionId() : connection.getId();
+                String identity = identityKey(connection, row);
+                String key = shared(connection) && identity != null && !identity.isBlank() ? identity : connection.getId();
                 accounts.putIfAbsent(key, connection);
             }
             result.addAll(accounts.values());
@@ -89,7 +94,14 @@ public class ChannelIdentityScopeService {
         return bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getEnterpriseId, connection.getEnterpriseId())
             .in(UserChannelBindingRow::getConnectionId, connectionIds(connection, false))
-            .eq(UserChannelBindingRow::getExternalUnionId, unionId).ne(UserChannelBindingRow::getStatus, "revoked"))
-            .stream().anyMatch(row -> !Objects.equals(row.getUserId(), userId));
+            .eq("feishu".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalUnionId, unionId)
+            .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectType, "wecom_userid")
+            .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectId, unionId)
+            .ne(UserChannelBindingRow::getStatus, "revoked"))
+            .stream().filter(row -> unionId.equals(identityKey(connection, row))).anyMatch(row -> !Objects.equals(row.getUserId(), userId));
+    }
+
+    private String identityKey(EnterpriseIntegrationRow connection, UserChannelBindingRow row) {
+        return "wecom".equals(connection.getProviderCode()) ? row.getExternalSubjectId() : row.getExternalUnionId();
     }
 }

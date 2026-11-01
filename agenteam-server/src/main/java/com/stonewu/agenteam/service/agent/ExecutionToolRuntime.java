@@ -11,6 +11,7 @@ import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
 import com.stonewu.agenteam.model.tool.entity.ToolInvocationIdentity;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
+import com.stonewu.agenteam.service.execution.UserQuestionTool;
 import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.*;
@@ -155,7 +156,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
     }
 
     public void childTools(String id, Map<String, ExecutionToolBinding> configured) {
-        var reads = configured.entrySet().stream().filter(entry -> entry.getValue().readOnly())
+        var reads = configured.entrySet().stream().filter(entry -> entry.getValue().readOnly() && !UserQuestionTool.handles(entry.getValue()))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         childBindings.put(id, reads);
         allBindings.putAll(reads);
@@ -215,7 +216,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                 var binding = agentBindings.getOrDefault(agent, Map.of()).get(use.getName());
                 if (binding != null) {
                     var call = transactions.prepare(lease, binding, session, parentCall, use);
-                    if (session.equals(run.conversationId())) {
+                    if (session.equals(run.conversationId()) || UserQuestionTool.handles(binding)) {
                         preparedTopLevelCalls.put(binding.alias() + ":" + json.hash(json.tree(use.getInput())), call);
                     }
                     if (call.status().equals("failed") && Set.of("TOOL_ARGUMENTS_INVALID", "TOOL_RESULT_UNKNOWN")
@@ -297,6 +298,10 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                 if (invalidArguments.contains(binding.alias() + ":" + json.hash(json.tree(input)))) {
                     // 调用已保存为参数错误，只读取该错误结果，不发送操作或申请写入确认。
                     return PermissionDecision.allow("本次调用只返回已经保存的参数校验错误。");
+                }
+                if (UserQuestionTool.handles(binding)) {
+                    return transactions.questionAnswered(preparedTopLevelCalls.get(binding.alias() + ":" + json.hash(json.tree(input))))
+                        ? PermissionDecision.allow("用户已回答当前问题。") : PermissionDecision.ask("等待用户回答当前问题。");
                 }
                 if (transactions.rejected(run, binding, json.tree(input))) {
                     return PermissionDecision.deny("用户已拒绝本次操作，不能对相同参数再次请求确认。");

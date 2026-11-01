@@ -41,9 +41,10 @@ public class WorkflowEventMapper {
         boolean errors = workflow.nodes().values().stream().anyMatch(node -> node.status().equals("failed"));
         String status = workflow.status();
         if (status.equals("running") && workflow.nodes().values().stream()
-            .anyMatch(node -> node.status().equals("waiting_approval"))
+            .anyMatch(node -> Set.of("waiting_approval", "waiting_input").contains(node.status()))
             && workflow.nodes().values().stream().noneMatch(node -> node.status().equals("running"))) {
-            status = "waiting_approval";
+            status = workflow.nodes().values().stream().anyMatch(node -> "waiting_input".equals(node.status()))
+                ? "waiting_input" : "waiting_approval";
         }
         String summary = workflow.errorMessage() != null ? workflow.errorMessage() : errors ? "部分步骤未完成，请查看对应步骤。" : null;
         var details = new WorkflowStepDetails(identity.id(), identity.resourceId(), identity.versionId(), null, null);
@@ -88,7 +89,7 @@ public class WorkflowEventMapper {
                 continue;
             }
             descendants.add(step.id());
-            if (!Set.of("pending", "running", "waiting_approval").contains(step.status())) {
+            if (!Set.of("pending", "running", "waiting_approval", "waiting_input").contains(step.status())) {
                 continue;
             }
             var next = new RunStepView(step.id(), step.parentStepId(), step.attemptId(), step.kind(), step.title(),

@@ -36,6 +36,7 @@ import {payloadTextPart} from "../lib/tool-payload-format";
 const states: Record<ToolCall["status"], string> = {
   prepared: "已准备",
   waiting_approval: "等待确认",
+  waiting_input: "等待回答",
   running: "正在调用",
   succeeded: "已完成",
   failed: "调用失败",

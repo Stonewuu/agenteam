@@ -8,14 +8,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
-import com.stonewu.agenteam.mapper.integration.ChannelOauthSessionMapper;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
 import com.stonewu.agenteam.model.chat.entity.ChatInboundReceiptRow;
 import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.model.chat.request.ChatCheckRequest;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
-import com.stonewu.agenteam.model.integration.entity.ChannelOauthSessionRow;
 import com.stonewu.agenteam.model.integration.entity.UserChannelBindingRow;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult.Outcome;
@@ -191,49 +189,29 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
     }
 
     @Test
-    void realHttpPairingCodeIsPrivateOneTimeAndNeverRetainedInEvent() throws Exception {
+    void botScopedPairingEndpointIsRejectedBeforeIssuingACode() throws Exception {
         wecom();
-        String code = pairingCode();
-        var groupEvent = wecomMessage("group-code", code, false);
-        ingress.accept(enterprise, bot.getId(), 1L, groupEvent);
+        rejectBotPairingCode();
         assertEquals(0, activeBindings());
-        var event = wecomMessage("private-code", code, true);
-        String receiptId = ingress.accept(enterprise, bot.getId(), 1L, event);
-        assertEquals(1, activeBindings());
-        assertEquals(receiptId, ingress.accept(enterprise, bot.getId(), 1L, event));
-        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("replay-code", code, true));
-        assertEquals(1, activeBindings());
-        var receipt = receipts().selectById(receiptId);
-        assertNotNull(receipt.getPayloadPurgedAt());
-        assertFalse(cipher.decrypt(enterprise, "receipt", receiptId, receipt.getPayloadEncrypted()).toString().contains(code));
-        var saved = databaseAccess.mapper(UserChannelBindingMapper.class).selectOne(new LambdaQueryWrapper<UserChannelBindingRow>()
-            .eq(UserChannelBindingRow::getEnterpriseId, enterprise).eq(UserChannelBindingRow::getStatus, "active"));
-        assertEquals("wecom_aibot_userid", saved.getExternalSubjectType());
-        assertTrue(saved.getChatEnabled());
-        assertFalse(saved.getExternalLoginEnabled());
         assertEquals(0, taskCount());
     }
 
     @Test
-    void failedAndExpiredPairingCodesCannotBindAnAccount() throws Exception {
+    void oldBotScopedCommandsCannotBindAndTheirSecretsAreRemoved() {
         wecom();
-        String code = pairingCode();
-        String wrong = code.substring(0, code.indexOf('.') + 1) + "incorrect";
-        for (int index = 0; index < 5; index++) {
-            ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("wrong-" + index, wrong, true));
-        }
-        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("sixth-correct", code, true));
+        String code = UUID.randomUUID() + ".obsolete-test-code";
+        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("group-code", code, false));
+        normalizeAll();
+        var event = wecomMessage("private-code", code, true);
+        String receiptId = ingress.accept(enterprise, bot.getId(), 1L, event);
+        normalizeAll();
+        assertEquals(receiptId, ingress.accept(enterprise, bot.getId(), 1L, event));
+        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("replay-code", code, true));
+        normalizeAll();
         assertEquals(0, activeBindings());
-        var flow = databaseAccess.mapper(ChannelOauthSessionMapper.class).selectById(code.substring(0, code.indexOf('.')));
-        assertEquals("failed", flow.getStatus());
-        assertEquals(5, flow.getPairingAttempts());
-        String expiredCode = pairingCode();
-        databaseAccess.mapper(ChannelOauthSessionMapper.class).update(new LambdaUpdateWrapper<ChannelOauthSessionRow>()
-            .eq(ChannelOauthSessionRow::getId, expiredCode.substring(0, code.indexOf('.')))
-            .set(ChannelOauthSessionRow::getCreatedAt, Instant.now().minusSeconds(600))
-            .set(ChannelOauthSessionRow::getExpiresAt, Instant.now().minusSeconds(1)));
-        ingress.accept(enterprise, bot.getId(), 1L, wecomMessage("expired-private-code", expiredCode, true));
-        assertEquals(0, activeBindings());
+        var receipt = receipts().selectById(receiptId);
+        assertNotNull(receipt.getPayloadPurgedAt());
+        assertFalse(cipher.decrypt(enterprise, "receipt", receiptId, receipt.getPayloadEncrypted()).toString().contains(code));
         assertEquals(0, taskCount());
     }
 
@@ -269,7 +247,7 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
         return event;
     }
 
-    private String pairingCode() throws Exception {
+    private void rejectBotPairingCode() throws Exception {
         var initial = mvc.perform(get("/api/v1/auth/csrf")).andExpect(status().isOk()).andReturn();
         var login = mvc.perform(post("/api/v1/auth/login").cookie(initial.getResponse().getCookie("SESSION"))
             .header("X-CSRF-Token", data(initial).path("token").asText()).header("Idempotency-Key", UUID.randomUUID().toString())
@@ -277,9 +255,9 @@ class ChatConnectionLifecycleTest extends CollaborationApiTestSupport {
             .andExpect(status().isOk()).andReturn();
         Cookie cookie = login.getResponse().getCookie("SESSION");
         var token = data(mvc.perform(get("/api/v1/auth/csrf").cookie(cookie)).andExpect(status().isOk()).andReturn()).path("token").asText();
-        return data(mvc.perform(post(base() + "/chat/bindings/pairing").cookie(cookie).header("X-CSRF-Token", token)
+        mvc.perform(post(base() + "/chat/bindings/pairing").cookie(cookie).header("X-CSRF-Token", token)
             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("connectionId", bot.getConnectionId()))))
-            .andExpect(status().isOk()).andReturn()).path("code").asText();
+            .andExpect(status().isConflict());
     }
 
     private long activeBindings() {

@@ -14,6 +14,7 @@
     "../src/features/agent/state/conversation-protocol.ts",
     "../src/features/agent/lib/conversation-display.ts",
     "../src/features/agent/lib/conversation-reading.ts",
-    "../src/features/agent/lib/conversation-metadata.ts"
+    "../src/features/agent/lib/conversation-metadata.ts",
+    "../src/features/agent/lib/question-answer.ts"
   ]
 }

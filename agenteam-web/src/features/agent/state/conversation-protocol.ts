@@ -46,14 +46,27 @@ export function validateBlocks(blocks: ContentBlock[]) {
       || sequence(block.revision) === BigInt(0) || !(block.parentBlockId === null || typeof block.parentBlockId === "string")) {
       throw new SnapshotRequired();
     }
-    if (!["text", "thinking", "execution_summary", "tool", "subagent", "workflow", "citation", "attachment", "approval"].includes(block.type as string)
-      || !["pending", "running", "waiting_approval", "completed", "failed", "cancelled", "skipped"].includes(block.status as string)) {
+    if (!["text", "thinking", "execution_summary", "tool", "subagent", "workflow", "citation", "attachment", "approval", "question"].includes(block.type as string)
+      || !["pending", "running", "waiting_approval", "waiting_input", "completed", "failed", "cancelled", "skipped"].includes(block.status as string)) {
       throw new SnapshotRequired();
     }
     if (block.type === "tool") {
       const tool = record(block.tool);
       if (![tool.toolCallId, tool.name, tool.input, tool.result].every((item) => typeof item === "string")
         || !(tool.sourceKind === null || tool.sourceKind === "knowledge" || tool.sourceKind === "data")) {
+        throw new SnapshotRequired();
+      }
+    }
+    if (block.type === "question") {
+      const question = record(block.question);
+      if (![question.id, question.runId, question.question, question.expiresAt].every((entry) => typeof entry === "string" && entry.length > 0)
+        || !["pending", "answered", "cancelled", "expired"].includes(question.status as string)
+        || sequence(question.revision) === BigInt(0) || !Array.isArray(question.options) || question.options.length > 4
+        || !question.options.every((value) => {
+          const option = record(value);
+          return typeof option.id === "string" && typeof option.label === "string" && typeof option.recommended === "boolean"
+            && (typeof option.description === "string" || option.description === null);
+        })) {
         throw new SnapshotRequired();
       }
     }
@@ -88,7 +101,7 @@ export function validateRunStep(step: RunStep) {
     || !(value.parentStepId === null || typeof value.parentStepId === "string") || value.parentStepId === value.id
     || !Number.isSafeInteger(value.displayOrder) || (value.displayOrder as number) < 0
     || !(value.publicSummary === null || typeof value.publicSummary === "string")
-    || !["pending", "running", "waiting_approval", "completed", "failed", "cancelled", "skipped"].includes(value.status as string)) {
+    || !["pending", "running", "waiting_approval", "waiting_input", "completed", "failed", "cancelled", "skipped"].includes(value.status as string)) {
     throw new SnapshotRequired();
   }
 }

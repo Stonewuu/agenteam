@@ -102,7 +102,7 @@ export function toolStatusLabel(block: Extract<DisplayBlock, { kind: "tool" }>, 
     return "正在准备执行任务";
   }
   const labels: Record<BlockStatus, string> = {
-    pending: "等待执行", running: "执行中", waiting_approval: "等待确认", completed: "已完成",
+    pending: "等待执行", running: "执行中", waiting_approval: "等待确认", waiting_input: "等待回答", completed: "已完成",
     failed: "执行失败", cancelled: "已停止", skipped: "已跳过",
   };
   return labels[status];
@@ -121,6 +121,7 @@ export function approvalDisplayText(approval: RunApproval, insideTool = false) {
 
 export function pendingToolConfirmationIds(blocks: DisplayBlock[], approvals: ReadonlyMap<string, RunApproval>): string[] {
   return blocks.flatMap((block) => [
+    ...(block.kind === "question" && block.question.status === "pending" ? [block.question.id] : []),
     ...(block.kind === "tool" ? block.blocks.filter((child) => child.kind === "approval"
       && (approvals.get(child.approvalId)?.status ?? (child.status === "waiting_approval" ? "pending" : "resolved")) === "pending")
       .flatMap((child) => child.kind === "approval" ? [child.approvalId] : []) : []),
@@ -130,7 +131,7 @@ export function pendingToolConfirmationIds(blocks: DisplayBlock[], approvals: Re
 
 export function groupBlockStatus(blocks: DisplayBlock[], approvals?: ReadonlyMap<string, RunApproval>): BlockStatus {
   const statuses = blocks.flatMap((block) => block.kind === "tool" ? [toolBlockStatus(block, approvals)] : "status" in block ? [block.status] : []);
-  for (const status of ["waiting_approval", "running", "pending", "failed", "cancelled"] as const) {
+  for (const status of ["waiting_input", "waiting_approval", "running", "pending", "failed", "cancelled"] as const) {
     if (statuses.includes(status)) {
       return status;
     }
@@ -147,6 +148,9 @@ function displayBlocks(message: ConversationMessage, state: ConversationState) {
 
   function convert(block: ContentBlock): DisplayBlock {
     const common = {id: block.id, order: block.displayOrder, stepId: block.stepId, blocks: children(block.id)};
+    if (block.type === "question" && block.question) {
+      return {...common, kind: "question", question: block.question, status: block.status};
+    }
     if (block.type === "text" || block.type === "thinking") {
       return {
         ...common, kind: block.type, content: block.text, status: block.status,

@@ -37,11 +37,13 @@ public class ChatCardInteractionTransactions {
     private final ChatPayloadCipher cipher;
     private final ResourceJson json;
     private final Clock clock;
+    private final ChatQuestionReplyService questions;
 
     public ChatCardInteractionTransactions(ChatBotBindingService bots, ChatConversationService conversations,
             ChatIdentityService identities, ChatOutboundMessageMapper messages, ChatInboundReceiptMapper receipts,
             EnterpriseMapper enterprises, CollaborationAccessService access, CollaborationReplyModeService modes,
-            ChatOutboundService outbound, ChatCapabilityService capabilities, ChatPayloadCipher cipher, ResourceJson json, Clock clock) {
+            ChatOutboundService outbound, ChatCapabilityService capabilities, ChatPayloadCipher cipher, ResourceJson json, Clock clock,
+            ChatQuestionReplyService questions) {
         this.bots = bots;
         this.conversations = conversations;
         this.identities = identities;
@@ -55,11 +57,20 @@ public class ChatCardInteractionTransactions {
         this.cipher = cipher;
         this.json = json;
         this.clock = clock;
+        this.questions = questions;
     }
 
     @Transactional(timeout = 2)
     public JsonNode accept(String enterprise, String botId, Long lease, long credentialRevision, long bindingRevision, JsonNode envelope) {
+        return accept(enterprise, botId, lease, credentialRevision, bindingRevision, envelope, new ChatCallbackTiming(clock));
+    }
+
+    @Transactional(timeout = 2)
+    public JsonNode accept(String enterprise, String botId, Long lease, long credentialRevision, long bindingRevision, JsonNode envelope,
+            ChatCallbackTiming timing) {
+        timing.enter("等待企业锁");
         enterprises.lockEnterprise(enterprise).orElseThrow();
+        timing.enter("核对身份和消息");
         var bot = bots.require(enterprise, botId);
         var app = bots.application(bot);
         if (!"enabled".equals(bot.getStatus()) || !"feishu".equals(app.providerCode()) || bot.getRevision() != bindingRevision
@@ -76,15 +87,17 @@ public class ChatCardInteractionTransactions {
         var previous = receipts.selectOne(new LambdaQueryWrapper<ChatInboundReceiptRow>().eq(ChatInboundReceiptRow::getEnterpriseId, enterprise)
             .eq(ChatInboundReceiptRow::getBotBindingId, botId).eq(ChatInboundReceiptRow::getReceiptKey, key));
         if (previous != null) {
-            return previous.getPayloadPurgedAt() != null ? toast("info", "此操作已处理，请重新打开设置。")
+            var response = previous.getPayloadPurgedAt() != null ? toast("info", "此操作已处理，请重新打开设置。")
                 : cipher.decrypt(enterprise, "receipt", previous.getId(), previous.getPayloadEncrypted()).path("response");
+            timing.enter("提交事务");
+            return response;
         }
         var event = envelope.path("event");
         var context = event.path("context");
         var source = messages.selectOne(new LambdaQueryWrapper<ChatOutboundMessageRow>()
             .eq(ChatOutboundMessageRow::getEnterpriseId, enterprise).eq(ChatOutboundMessageRow::getBotBindingId, botId)
             .eq(ChatOutboundMessageRow::getPlatformMessageId, context.path("open_message_id").asText())
-            .eq(ChatOutboundMessageRow::getStatus, "sent").in(ChatOutboundMessageRow::getKind, "accepted", "reply_settings", "card_probe"));
+            .eq(ChatOutboundMessageRow::getStatus, "sent").in(ChatOutboundMessageRow::getKind, "accepted", "reply_settings", "card_probe", "user_question_card"));
         if (source == null) {
             throw unavailable();
         }
@@ -101,8 +114,14 @@ public class ChatCardInteractionTransactions {
                 new ApiException(HttpStatus.FORBIDDEN, "CHANNEL_BINDING_REQUIRED", "请先在群策绑定当前飞书账号并开启机器人聊天。"));
         var actor = identities.actor(enterprise, binding.getUserId(), binding.getId());
         String action = event.path("action").path("value").path("action").asText();
+        timing.enter("保存业务结果");
         JsonNode response;
-        if ("reply_mode_probe".equals(action) && "card_probe".equals(source.getKind()) && original.path("replyCardProbe").asBoolean()
+        if ("user_question_card".equals(source.getKind()) && source.getRenderedPayloadEncrypted() != null) {
+            var payload = cipher.decrypt(enterprise, "outbound-rendered", source.getId(), source.getRenderedPayloadEncrypted());
+            var answer = questions.card(actor, source, payload, action, event.path("action").path("form_value").path("answer").asText(null));
+            response = answer == null ? toast("info", "direct".equals(group.getConversationKind()) ? "请输入这个问题的回答。" : "请 @ 我输入这个问题的回答。")
+                : toast("success", "已收到你的回答。");
+        } else if ("reply_mode_probe".equals(action) && "card_probe".equals(source.getKind()) && original.path("replyCardProbe").asBoolean()
                 && source.getCreatedAt().plusSeconds(600).isAfter(clock.instant())) {
             capabilities.evidence(bot, "cardInteraction", Map.of("status", "passed", "checkedAt", clock.instant().toString(), "outboundId", source.getId()));
             response = toast("success", "卡片按钮已可以使用。");
@@ -134,6 +153,7 @@ public class ChatCardInteractionTransactions {
                 default -> throw unavailable();
             };
         }
+        timing.enter("保存操作记录");
         var receipt = ChatRecords.initialize(new ChatInboundReceiptRow(), enterprise, clock.instant());
         receipt.setBotBindingId(botId);
         receipt.setConnectionRevision(credentialRevision);
@@ -143,11 +163,12 @@ public class ChatCardInteractionTransactions {
         receipt.setEventType("card.action.trigger");
         receipt.setPlatformMessageId(context.path("open_message_id").asText());
         receipt.setStatus("ignored");
-        receipt.setReceivedAt(clock.instant());
+        receipt.setReceivedAt(timing.receivedAt());
         receipt.setAttemptCount(0);
         receipt.setLeaseVersion(0L);
         receipt.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", receipt.getId(), Map.of("response", response)));
         receipts.insert(receipt);
+        timing.enter("提交事务");
         return response;
     }
 

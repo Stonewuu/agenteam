@@ -1,6 +1,7 @@
-import type {BlockStatus, Citation, ConversationMessage, FileReference, RunStep} from "./execution";
+import type {BlockStatus, Citation, ConversationMessage, FileReference, RunStep, RunQuestion} from "./execution";
 
 export type DisplayBlock = (
+  | {kind: "question"; id: string; question: RunQuestion; status: BlockStatus; order: number}
   | { kind: "text"; id: string; content: string; status: BlockStatus; order: number; animate: boolean }
   | { kind: "thinking"; id: string; content: string; status: BlockStatus; order: number; animate: boolean }
   | {

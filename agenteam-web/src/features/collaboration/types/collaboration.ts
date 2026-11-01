@@ -1,3 +1,5 @@
+import type {RunQuestion} from "@/features/agent/types/execution";
+
 export type CollaborationTask = {
   id: string; shortCode: string; title: string; conversationId: string; status: string; revision: number; inputRevision: number;
   outputVisibility: "summary_link" | "chat_full"; createdAt: string; updatedAt: string; deadlineAt: string; finishedAt: string | null; errorCode: string | null;
@@ -11,6 +13,7 @@ export type CollaborationDetail = {
   roles: {id: string; botId: string; name: string; description: string; explicitlyRequested: boolean; availability: string; conversationId: string | null}[];
   works: {id: string; roleId: string; purpose: string; status: string; required: boolean; inputRevision: number; runRound: number; activeRunId: string | null; errorCode: string | null; replacementWorkId: string | null}[];
   artifacts: CollaborationArtifact[];
+  runQuestions?: RunQuestion[];
   questions: {id: string; workId: string; inputRevision: number; text: string; options: string[]; createdAt: string}[];
   deliveries: {id: string; botId: string; kind: string; status: string; errorCode: string | null; createdAt: string}[];
 };

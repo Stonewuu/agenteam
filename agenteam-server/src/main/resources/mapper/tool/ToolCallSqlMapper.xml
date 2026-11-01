@@ -57,7 +57,7 @@
     error_code = #{code}, error_summary = #{error},
     finished_at = #{now}, duration_ms = IF(#{status} = 'unknown', NULL, IF(started_at IS NULL, 0, GREATEST(0,
     TIMESTAMPDIFF(MICROSECOND, started_at, #{now}) DIV 1000))), updated_at = #{now}
-    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status IN ('prepared','waiting_approval','running') AND
+    WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status IN ('prepared','waiting_approval','waiting_input','running') AND
     lease_version = #{leaseVersion}
   </update>
 </mapper>

@@ -4,47 +4,31 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
-import com.stonewu.agenteam.mapper.collaboration.CollaborationContextMapper;
-import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
-import com.stonewu.agenteam.mapper.execution.RunSqlMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageRow;
-import com.stonewu.agenteam.model.collaboration.entity.CollaborationContextRow;
-import com.stonewu.agenteam.model.collaboration.entity.CollaborationRunLinkRow;
-import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
 import com.stonewu.agenteam.model.execution.response.MessageView;
 import com.stonewu.agenteam.service.chat.ChatCommandText;
-import com.stonewu.agenteam.service.chat.ChatPayloadCipher;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** 根据每轮已保存的真实用户要求显示正文，不按关键字删除用户内容，也不修改模型执行记录。 */
 @Service
 public class CollaborationMessageDisplayService {
-    private final RunSqlMapper runs;
-    private final CollaborationRunLinkMapper links;
-    private final CollaborationContextMapper contexts;
+    private final CollaborationMessageSources sources;
     private final ChatMessageMapper messages;
-    private final ChatPayloadCipher cipher;
     private final ResourceJson json;
 
-    public CollaborationMessageDisplayService(RunSqlMapper runs, CollaborationRunLinkMapper links, CollaborationContextMapper contexts,
-                                             ChatMessageMapper messages, ChatPayloadCipher cipher, ResourceJson json) {
-        this.runs = runs;
-        this.links = links;
-        this.contexts = contexts;
+    public CollaborationMessageDisplayService(CollaborationMessageSources sources, ChatMessageMapper messages, ResourceJson json) {
+        this.sources = sources;
         this.messages = messages;
-        this.cipher = cipher;
         this.json = json;
     }
 
@@ -53,44 +37,17 @@ public class CollaborationMessageDisplayService {
         if (userMessages.isEmpty()) {
             return values;
         }
-        var inputByRun = runs.selectList(new LambdaQueryWrapper<AgentRunRow>()
-            .select(AgentRunRow::getId, AgentRunRow::getInputMessageId).eq(AgentRunRow::getEnterpriseId, actor.enterpriseId())
-            .eq(AgentRunRow::getUserId, actor.userId()).eq(AgentRunRow::getConversationId, conversation)
-            .in(AgentRunRow::getInputMessageId, userMessages)).stream().collect(Collectors.toMap(AgentRunRow::getId, AgentRunRow::getInputMessageId));
-        if (inputByRun.isEmpty()) {
-            return values;
-        }
-        var linked = links.selectList(new LambdaQueryWrapper<CollaborationRunLinkRow>()
-            .eq(CollaborationRunLinkRow::getEnterpriseId, actor.enterpriseId()).in(CollaborationRunLinkRow::getRunId, inputByRun.keySet()));
-        if (linked.isEmpty()) {
-            return values;
-        }
-        var frozen = contexts.selectList(new LambdaQueryWrapper<CollaborationContextRow>()
-            .eq(CollaborationContextRow::getEnterpriseId, actor.enterpriseId())
-            .in(CollaborationContextRow::getId, linked.stream().map(CollaborationRunLinkRow::getContextId).toList()))
-            .stream().collect(Collectors.toMap(CollaborationContextRow::getId, Function.identity()));
-        var requirements = new HashMap<String, JsonNode>();
-        for (var link : linked) {
-            var context = frozen.get(link.getContextId());
-            if (context == null || !context.getTaskId().equals(link.getTaskId()) || !context.getWorkId().equals(link.getWorkId())) {
-                continue;
-            }
-            var body = cipher.decrypt(actor.enterpriseId(), "context", context.getId(), context.getContentEncrypted()).at("/task/requirements");
-            if (!body.isObject() || !body.path("text").isTextual()) {
-                continue;
-            }
-            requirements.put(inputByRun.get(link.getRunId()), body);
-        }
-        var mentions = knownMentions(actor, requirements.values());
+        var origins = sources.forMessages(actor.enterpriseId(), actor.userId(), conversation, userMessages);
+        var mentions = knownMentions(actor, origins.values().stream().map(CollaborationMessageSources.Source::requirements).toList());
         return values.stream().map(value -> {
-            var body = requirements.get(value.id());
-            if (body == null) {
+            var source = origins.get(value.id());
+            if (source == null) {
                 return value;
             }
-            String text = renderLatestInput(body, mentions);
+            String text = renderLatestInput(source.requirements(), mentions);
             var blocks = value.blocks().stream().map(block -> replaceBody(block, value.content(), text)).toList();
             return new MessageView(value.id(), value.runId(), value.attemptNo(), value.role(), text, value.status(), blocks,
-                value.attachments(), value.feedback(), value.createdAt(), value.updatedAt());
+                source.filter(value.attachments()), value.feedback(), value.createdAt(), value.updatedAt());
         }).toList();
     }
 
@@ -126,9 +83,7 @@ public class CollaborationMessageDisplayService {
 
     /** 本轮气泡只显示本次输入；完整要求保留在固定上下文中供智能体读取。 */
     public static String renderLatestInput(JsonNode requirements, Map<String, JsonNode> mentions) {
-        var additions = requirements.path("additionalRequirements");
-        var current = additions.isArray() && !additions.isEmpty() ? additions.get(additions.size() - 1) : requirements;
-        return displayInput(current, mentions);
+        return displayInput(CollaborationMessageSources.latestInput(requirements), mentions);
     }
 
     private static String displayInput(JsonNode input, Map<String, JsonNode> mentions) {

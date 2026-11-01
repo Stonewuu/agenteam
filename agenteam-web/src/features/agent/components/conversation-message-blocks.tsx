@@ -15,6 +15,7 @@ import styles from "./assistant-message.module.css";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {RunApprovalCard} from "./run-approval-card";
+import {RunQuestionCard} from "./run-question-card";
 import {
   ConversationFileAttachment,
   ConversationFileImage,
@@ -50,6 +51,7 @@ export const blockStatus: Record<BlockStatus, string> = {
   pending: "等待执行",
   running: "处理中",
   waiting_approval: "等待确认",
+  waiting_input: "等待回答",
   completed: "已完成",
   failed: "未完成",
   cancelled: "已停止",
@@ -164,6 +166,12 @@ function RenderBlock({block, context, grouped = false}: {
   const nested = children.length > 0 ?
     <div className={executionStyles.children}><RenderBlocks blocks={children} context={context}/></div> : null;
   const summary = block.step?.publicSummary;
+  if (block.kind === "question") {
+    return <RunQuestionCard enterprise={context.enterprise} question={block.question} onChanged={context.onChanged}/>;
+  }
+  if (block.kind === "tool" && block.blocks.some((child) => child.kind === "question")) {
+    return <RenderBlocks blocks={children} context={context}/>;
+  }
   const note = summary && (!("summary" in block) || summary !== block.summary) && (!("content" in block) || summary !== block.content) ?
     <div className={executionStyles.stepSummary}><ConversationMarkdown content={summary}/></div> : null;
   if (block.kind === "step") {

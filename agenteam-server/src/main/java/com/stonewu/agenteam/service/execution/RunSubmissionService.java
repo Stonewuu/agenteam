@@ -250,7 +250,8 @@ public class RunSubmissionService {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONVERSATION_CHANGED", "岗位会话的项目、版本或执行策略已被修改。");
         }
         // 内容来自已经校验长度与摘要的服务端上下文，作为用户资料传入，不提升为系统指令。
-        var attachments = collaborationSources.files(actor, selected.snapshot()).stream().map(FileRecord::id).toList();
+        var allowedFiles = collaborationSources.files(actor, selected.snapshot()).stream().map(FileRecord::id).toList();
+        var attachments = collaboration.attachmentIds(preparedRole).stream().filter(allowedFiles::contains).toList();
         var input = new MessageInput(collaboration.displayText(preparedRole), attachments, List.of(), List.of(), List.of());
         var accepted = submit(actor, conversation, selected, input, null);
         collaboration.saved(preparedRole, lease, accepted);

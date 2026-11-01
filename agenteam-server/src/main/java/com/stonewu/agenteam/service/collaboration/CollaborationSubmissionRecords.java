@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.util.Optional;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,11 +51,12 @@ public class CollaborationSubmissionRecords {
     private final ChatPayloadCipher cipher;
     private final ResourceJson json;
     private final Clock clock;
+    private final CollaborationMessageSources messageSources;
 
     public CollaborationSubmissionRecords(CollaborationWorkItemMapper works, CollaborationContextMapper contexts,
             CollaborationParticipantMapper participants, CollaborationRunLinkMapper links, CollaborationTaskMapper tasks,
             ConversationSqlMapper conversations, RunMapper runs, CollaborationAccessService access,
-            ProjectMetadataService projects, ChatPayloadCipher cipher, ResourceJson json, Clock clock) {
+            ProjectMetadataService projects, ChatPayloadCipher cipher, ResourceJson json, Clock clock, CollaborationMessageSources messageSources) {
         this.works = works;
         this.contexts = contexts;
         this.participants = participants;
@@ -67,6 +69,7 @@ public class CollaborationSubmissionRecords {
         this.cipher = cipher;
         this.json = json;
         this.clock = clock;
+        this.messageSources = messageSources;
     }
 
     public Optional<RunAccepted> replay(AuthContext actor, CollaborationWorkLease lease, int round) {
@@ -189,6 +192,11 @@ public class CollaborationSubmissionRecords {
 
     public String displayText(Prepared prepared) {
         return CollaborationMessageDisplayService.renderLatestInput(json.read(prepared.text()).at("/task/requirements"), Map.of());
+    }
+
+    public List<String> attachmentIds(Prepared prepared) {
+        return messageSources.forInput(prepared.task().getEnterpriseId(), prepared.task().getInitiatorUserId(),
+            prepared.task().getId(), json.read(prepared.text()).at("/task/requirements"));
     }
 
     public String approvalPolicy(Prepared prepared) {

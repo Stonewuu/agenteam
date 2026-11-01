@@ -17,6 +17,9 @@ import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageRow;
 import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
+import org.springframework.context.ApplicationEventPublisher;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -25,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,10 +47,11 @@ public class ChatOutboundService {
     private final ObjectMapper mapper;
     private final Clock clock;
     private final ChatPlatformRegistry platforms;
+    private final ApplicationEventPublisher events;
 
     public ChatOutboundService(ChatOutboundMessageMapper messages, CollaborationTaskMapper tasks, EnterpriseMapper enterprises,
             ChatConversationService conversations, ChatBotBindingMapper bots, EnterpriseIntegrationMapper integrations, ChatPayloadCipher cipher,
-            ResourceJson json, ObjectMapper mapper, Clock clock, ChatMessageMapper incoming, ChatPlatformRegistry platforms) {
+            ResourceJson json, ObjectMapper mapper, Clock clock, ChatMessageMapper incoming, ChatPlatformRegistry platforms, ApplicationEventPublisher events) {
         this.messages = messages;
         this.incoming = incoming;
         this.tasks = tasks;
@@ -59,12 +64,18 @@ public class ChatOutboundService {
         this.mapper = mapper;
         this.clock = clock;
         this.platforms = platforms;
+        this.events = events;
     }
 
     @Transactional
     public void progress(String enterprise, String conversation, String botId, String taskId,
             String actionId, String key, String kind, String text, String replyTo) {
-        if ("accepted".equals(kind) || !"direct".equals(conversations.require(enterprise, conversation).getConversationKind())) {
+        var group = conversations.require(enterprise, conversation);
+        // 企微直接发送回答；会话选择按需提供，不重复发送接收和开始提示。
+        if ("wecom_aibot".equals(group.getPlatformCode()) && List.of("accepted", "input_added", "started").contains(kind)) {
+            return;
+        }
+        if ("accepted".equals(kind) || !"direct".equals(group.getConversationKind())) {
             text(enterprise, conversation, botId, taskId, actionId, key, kind, text, replyTo);
         }
     }
@@ -157,19 +168,24 @@ public class ChatOutboundService {
     @Transactional
     public ChatOutboundMessageRow text(String enterprise, String conversation, String botId, String taskId,
             String actionId, String key, String kind, String text, String replyTo) {
+        return textParts(enterprise, conversation, botId, taskId, actionId, key, kind, text, replyTo).getFirst();
+    }
+
+    /** 返回每个分段的记录，便于给任意一段的引用回复关联原问题。 */
+    @Transactional
+    public List<ChatOutboundMessageRow> textParts(String enterprise, String conversation, String botId, String taskId,
+            String actionId, String key, String kind, String text, String replyTo) {
         enterprises.lockEnterprise(enterprise).orElseThrow();
         ChatInputValidation.size(text, 0);
         var group = conversations.require(enterprise, conversation);
         var parts = platforms.adapter(group.getPlatformCode()).splitText(text);
         String sourceHash = json.hash(json.tree(text));
-        ChatOutboundMessageRow first = null;
+        var result = new ArrayList<ChatOutboundMessageRow>();
         ChatOutboundMessageRow previous = null;
         for (int index = 0; index < parts.size(); index++) {
             var row = textPart(enterprise, conversation, botId, taskId, actionId, index == 0 ? key : key + ":part:" + index,
                 kind, parts.get(index), replyTo, sourceHash, index);
-            if (first == null) {
-                first = row;
-            }
+            result.add(row);
             if (previous != null && row.getDependsOnOutboundId() == null && row.getFirstSubmittedAt() == null) {
                 messages.update(new LambdaUpdateWrapper<ChatOutboundMessageRow>().eq(ChatOutboundMessageRow::getEnterpriseId, enterprise)
                     .eq(ChatOutboundMessageRow::getId, row.getId()).isNull(ChatOutboundMessageRow::getDependsOnOutboundId)
@@ -177,7 +193,7 @@ public class ChatOutboundService {
             }
             previous = row;
         }
-        return first;
+        return List.copyOf(result);
     }
 
     private ChatOutboundMessageRow textPart(String enterprise, String conversation, String botId, String taskId,
@@ -251,6 +267,9 @@ public class ChatOutboundService {
         row.setPayloadEncrypted(cipher.encrypt(enterprise, "outbound", row.getId(), payload));
         row.setPayloadHash(json.hash(payload));
         messages.insert(row);
+        if (allowed) {
+            events.publishEvent(new ChatWorkRequested(Stage.SEND));
+        }
         return row;
     }
 

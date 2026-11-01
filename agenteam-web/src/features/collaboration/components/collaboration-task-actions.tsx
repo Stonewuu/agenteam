@@ -15,10 +15,11 @@ import {useT} from "@/lib/i18n/locale-provider";
 import {useCollaborationAction} from "../hooks/use-collaboration-action";
 import type {CollaborationDetail} from "../types/collaboration";
 import {CollaborationQuestions} from "./collaboration-task-sections";
+import {RunQuestionCard} from "@/features/agent/components/run-question-card";
 import ui from "@/components/ui/surface.module.css";
 import styles from "./collaboration.module.css";
 
-export function CollaborationTaskActions({path, detail, onChanged}: {path: string; detail: CollaborationDetail; onChanged: () => void}) {
+export function CollaborationTaskActions({enterprise, path, detail, onChanged}: {enterprise: string; path: string; detail: CollaborationDetail; onChanged: () => void}) {
   const t = useT();
   const action = useCollaborationAction();
   const [text, setText] = useState("");
@@ -27,14 +28,15 @@ export function CollaborationTaskActions({path, detail, onChanged}: {path: strin
   const [cancelRevision, setCancelRevision] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const open = editing || detail.task.status === "waiting_input";
+  const hasRunQuestions = Boolean(detail.runQuestions?.length);
+  const open = editing || detail.task.status === "waiting_input" && !hasRunQuestions;
   const pending = ["active", "waiting_input", "waiting_approval", "blocked"].includes(detail.task.status);
   const completed = detail.task.status === "completed";
   if (!pending && !completed) {
     return null;
   }
-  const answering = detail.task.status === "waiting_input";
-  return <>{!completed && <CollaborationQuestions detail={detail} selected={selectedAnswers} busy={action.busy} onSelect={(questionId, option) => {
+  const answering = detail.task.status === "waiting_input" && !hasRunQuestions;
+  return <>{detail.runQuestions?.map((question) => <RunQuestionCard key={question.id} enterprise={enterprise} question={question} onChanged={onChanged}/>)}{!completed && <CollaborationQuestions detail={detail} selected={selectedAnswers} busy={action.busy} onSelect={(questionId, option) => {
     setRevision((value) => value ?? detail.task.revision);
     const previous = selectedAnswers[questionId];
     setText((current) => {

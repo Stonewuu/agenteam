@@ -130,18 +130,20 @@ class ChatProtocolTest {
     @Test
     void wecomAttachmentPaddingUsesThirtyTwoByteBlocks() throws Exception {
         byte[] source = "真实考勤文件的测试内容".getBytes(StandardCharsets.UTF_8);
-        byte[] secret = new byte[32];
-        Arrays.fill(secret, (byte) 17);
+        String rawKey = "0123456789abcdef0123456789abcdef";
+        byte[] secret = rawKey.getBytes(StandardCharsets.UTF_8);
         int padding = 32 - source.length % 32;
         byte[] plain = Arrays.copyOf(source, source.length + padding);
         Arrays.fill(plain, source.length, plain.length, (byte) padding);
         var cipher = Cipher.getInstance("AES/CBC/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(secret, "AES"), new IvParameterSpec(Arrays.copyOf(secret, 16)));
         byte[] encrypted = cipher.doFinal(plain);
+        assertArrayEquals(source, WecomResourceDownloader.decrypt(encrypted, rawKey));
         assertArrayEquals(source, WecomResourceDownloader.decrypt(encrypted, Base64.getEncoder().encodeToString(secret)));
         plain[plain.length - 1] = 0;
         byte[] invalid = cipher.doFinal(plain);
         assertThrows(IllegalArgumentException.class, () -> WecomResourceDownloader.decrypt(invalid, Base64.getEncoder().encodeToString(secret)));
+        assertThrows(IllegalArgumentException.class, () -> WecomResourceDownloader.decrypt(invalid, rawKey));
     }
 
     @Test

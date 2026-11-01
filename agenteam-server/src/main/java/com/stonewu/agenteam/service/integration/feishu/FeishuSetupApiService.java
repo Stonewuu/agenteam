@@ -12,6 +12,7 @@ import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.http.IdempotentRequestService;
 import com.stonewu.agenteam.service.http.InputValidation;
 import com.stonewu.agenteam.service.integration.IntegrationManagementPolicy;
+import com.stonewu.agenteam.service.integration.IntegrationQrCode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,11 +37,11 @@ public class FeishuSetupApiService {
     private final FeishuSetupStore store;
     private final FeishuManagementGrantStore grants;
     private final FeishuManagementAuthorizationService authorization;
-    private final FeishuQrCode qr;
+    private final IntegrationQrCode qr;
     private final FeishuManagementConnections managementConnections;
 
     public FeishuSetupApiService(AuthContextService identity, IntegrationManagementPolicy policy, IdempotentRequestService requests,
-            FeishuSetupStore store, FeishuManagementGrantStore grants, FeishuManagementAuthorizationService authorization, FeishuQrCode qr,
+            FeishuSetupStore store, FeishuManagementGrantStore grants, FeishuManagementAuthorizationService authorization, IntegrationQrCode qr,
             FeishuManagementConnections managementConnections) {
         this.identity = identity;
         this.policy = policy;

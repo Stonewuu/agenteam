@@ -22,6 +22,7 @@ import com.stonewu.agenteam.model.user.entity.UserLanguage;
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
 import com.stonewu.agenteam.service.execution.RunCheckpointService;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
+import com.stonewu.agenteam.service.execution.UserQuestionTool;
 import com.stonewu.agenteam.service.memory.MemoryPromptService;
 import com.stonewu.agenteam.service.project.ConversationProjectService;
 import com.stonewu.agenteam.service.project.ProjectMetadataService;
@@ -143,8 +144,9 @@ class AgentExecutionFactoryTest {
             "user", "后续任务", "completed", List.of(), List.of(), null, now.toString(), now.toString())));
         var factory = new AgentExecutionFactory(models, paths, encryption, json, lifecycle, savedRuns, messages, checkpoints,
             new ExecutionToolCatalog(mock(PluginToolMapper.class), new SourceToolDefinitions(new ResourceJson(json)), new WorkspaceToolDefinitions(new ResourceJson(json),
-                new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions, mock(JavaPluginRegistry.class)), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
-            new ProjectPromptService(mock(ProjectMetadataService.class), mock(ConversationProjectService.class), json), languages);
+                new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions, mock(JavaPluginRegistry.class), mock(UserQuestionTool.class)), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
+            new ProjectPromptService(mock(ProjectMetadataService.class), mock(ConversationProjectService.class), json), languages,
+            mock(AgentImageInputService.class));
         try (var execution = factory.create(run, lease)) {
             assertEquals(parentSteps == 0 ? Integer.MAX_VALUE : parentSteps, execution.agent().getDelegate().getMaxIters());
             assertEquals(Duration.ofSeconds(parentSeconds), execution.timeout());

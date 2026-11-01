@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.mapper.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -146,6 +147,14 @@ public class ToolCallMapper {
 
     public void waiting(ToolCallRecord call, Instant now) {
         statements.waitingToolCall(timestamp(now), call.enterpriseId(), call.id());
+    }
+
+    public void waitingInput(ToolCallRecord call, Instant now) {
+        if (statements.update(new LambdaUpdateWrapper<ToolCallRow>().eq(ToolCallRow::getEnterpriseId, call.enterpriseId())
+            .eq(ToolCallRow::getId, call.id()).in(ToolCallRow::getStatus, "prepared", "waiting_input")
+            .set(ToolCallRow::getStatus, "waiting_input").set(ToolCallRow::getUpdatedAt, now)) != 1) {
+            throw new IllegalStateException("本次问题已经不能等待回答");
+        }
     }
 
     public void retryRead(ToolCallRecord call, long lease, Instant now) {

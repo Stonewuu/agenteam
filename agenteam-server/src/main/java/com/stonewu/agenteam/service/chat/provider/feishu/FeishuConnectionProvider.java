@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import com.stonewu.agenteam.service.chat.ChatCardInteractionService;
+import com.stonewu.agenteam.service.chat.ChatCallbackTiming;
 
 /** 官方帧和事件分派复用开发包，连接生命周期由群策管理。 */
 @Component
@@ -149,8 +150,12 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
                 long started = System.nanoTime();
                 int code = 200;
                 byte[] response = null;
+                boolean card = type.equals("card");
+                String eventId = "无有效事件编号";
                 try {
                     var event = json.readTree(payload);
+                    card = card || ChatCardInteractionService.isCard(event);
+                    eventId = ChatCallbackTiming.eventId(event.path("header").path("event_id").asText());
                     String eventType = event.path("header").path("event_type").asText();
                     if (eventType.isBlank() || eventType.length() > 191) {
                         throw new IllegalArgumentException("飞书事件类型无效");
@@ -171,7 +176,12 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
                     LOG.warn("飞书事件未完成持久保存，接入={}", connectionId,
                         ChatSocket.safe("CHAT_EVENT_RETRY", "等待平台重新投递消息。", failure));
                 }
-                socket.binary(FeishuFrameCodec.acknowledge(frame, code, (System.nanoTime() - started) / 1_000_000, response));
+                long handled = System.nanoTime();
+                socket.binary(FeishuFrameCodec.acknowledge(frame, code, (handled - started) / 1_000_000, response));
+                if (card) {
+                    LOG.info("飞书卡片响应已写回连接，接入={}，事件={}，处理={}ms，写回={}ms，状态={}",
+                        connectionId, eventId, (handled - started) / 1_000_000, (System.nanoTime() - handled) / 1_000_000, code);
+                }
             } catch (Exception failure) {
                 throw ChatSocket.safe("CHAT_FRAME_INVALID", "飞书长连接帧处理失败。", failure);
             }

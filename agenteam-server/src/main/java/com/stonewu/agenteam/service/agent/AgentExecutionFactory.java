@@ -83,6 +83,7 @@ public class AgentExecutionFactory {
     private final MemoryPromptService memories;
     private final ProjectPromptService projects;
     private final UserLanguageService languages;
+    private final AgentImageInputService imageInputs;
 
     public AgentExecutionFactory(AgentModelFactory models, ExecutionPaths paths, PayloadEncryption encryption,
                                  ObjectMapper json,
@@ -92,7 +93,7 @@ public class AgentExecutionFactory {
                                  ToolExecutionService toolExecution,
                                  ToolCallMapper callRecords, ResourceJson resourceJson, MemoryPromptService memories,
                                  ProjectPromptService projects,
-                                 UserLanguageService languages) {
+                                 UserLanguageService languages, AgentImageInputService imageInputs) {
         this.models = models;
         this.paths = paths;
         this.encryption = encryption;
@@ -109,6 +110,7 @@ public class AgentExecutionFactory {
         this.memories = memories;
         this.projects = projects;
         this.languages = languages;
+        this.imageInputs = imageInputs;
     }
 
     public Execution create(RunRecord run, JobLease lease) {
@@ -165,7 +167,8 @@ public class AgentExecutionFactory {
         List<HarnessAgent> children = new CopyOnWriteArrayList<>();
         String projectInstructions = projects.instructions(run);
         String languageInstruction = languages.instruction(run.userId());
-        var builder = builder(workspace, new ReadableToolModel(model, runtimeTools::modelToolNames), states, guard,
+        var builder = builder(workspace, new ReadableToolModel(model, runtimeTools::modelToolNames,
+            messages -> imageInputs.prepare(run, messages)), states, guard,
             config, timeout, run.id(), callContext).name(name)
             .sysPrompt(instructions(config) + memories.instructions(run, agentId, config)
                 + (model.supportsTools() ? WorkspaceToolDefinitions.GUIDANCE : "") + projectInstructions + languageInstruction
@@ -190,7 +193,8 @@ public class AgentExecutionFactory {
                 .inheritParentPermissions(true).mode(Mode.SUBAGENT).build();
             // 框架会按运行上下文重建管理器，必须在构造时注册工厂，不能事后只替换默认管理器。
             builder.subagent(declaration).subagentFactory(definition.id(), declaration.getDescription(), ignored -> {
-                var child = builder(workspace, new ReadableToolModel(childModel, runtimeTools::modelToolNames), states,
+                var child = builder(workspace, new ReadableToolModel(childModel, runtimeTools::modelToolNames,
+                    messages -> imageInputs.prepare(run, messages)), states,
                     guard, childConfig, childTimeout, run.id(), callContext.forChild(selected.resourceId()))
                     .name(definition.name()).maxIters(steps)
                     .disableSubagents()

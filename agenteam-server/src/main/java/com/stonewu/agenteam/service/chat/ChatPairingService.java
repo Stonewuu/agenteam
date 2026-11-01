@@ -14,7 +14,9 @@ import com.stonewu.agenteam.service.auth.AuthContextService;
 import com.stonewu.agenteam.service.auth.LocalAuthenticationService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.integration.ChannelAuthorizationSecrets;
-import com.stonewu.agenteam.service.integration.IntegrationQueryService;
+import com.stonewu.agenteam.service.integration.ChannelIdentityScopeService;
+import com.stonewu.agenteam.service.integration.wecom.WecomEnterpriseConnections;
+import com.stonewu.agenteam.service.integration.wecom.WecomMemberAliases;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,33 +26,38 @@ import java.time.Clock;
 import java.util.Map;
 import java.util.UUID;
 
-/** 成员先在本地登录并确认聊天，再用一次性随机码证明机器人私聊身份。 */
+/** 成员通过本企业任意已核验机器人证明身份，绑定保存到企业接入，同企业机器人共同使用。 */
 @Service
 public class ChatPairingService {
     private final ChannelOauthSessionMapper flows;
     private final UserChannelBindingMapper bindings;
     private final EnterpriseMapper enterprises;
-    private final IntegrationQueryService integrations;
     private final AuthContextService auth;
     private final LocalAuthenticationService local;
     private final ChatIdentityService identities;
     private final ChannelAuthorizationSecrets secrets;
     private final AuditEventService audit;
     private final Clock clock;
+    private final WecomEnterpriseConnections wecomEnterprises;
+    private final WecomMemberAliases wecomMembers;
+    private final ChannelIdentityScopeService scopes;
 
     public ChatPairingService(ChannelOauthSessionMapper flows, UserChannelBindingMapper bindings, EnterpriseMapper enterprises,
-            IntegrationQueryService integrations, AuthContextService auth, LocalAuthenticationService local,
-            ChatIdentityService identities, ChannelAuthorizationSecrets secrets, AuditEventService audit, Clock clock) {
+            AuthContextService auth, LocalAuthenticationService local,
+            ChatIdentityService identities, ChannelAuthorizationSecrets secrets, AuditEventService audit, Clock clock,
+            WecomEnterpriseConnections wecomEnterprises, WecomMemberAliases wecomMembers, ChannelIdentityScopeService scopes) {
         this.flows = flows;
         this.bindings = bindings;
         this.enterprises = enterprises;
-        this.integrations = integrations;
         this.auth = auth;
         this.local = local;
         this.identities = identities;
         this.secrets = secrets;
         this.audit = audit;
         this.clock = clock;
+        this.wecomEnterprises = wecomEnterprises;
+        this.wecomMembers = wecomMembers;
+        this.scopes = scopes;
     }
 
     @Transactional
@@ -59,9 +66,8 @@ public class ChatPairingService {
         var user = local.requireRecent(session);
         enterprises.lockEnterprise(enterprise).orElseThrow();
         identities.actor(enterprise, actor.userId());
-        var app = integrations.require(enterprise, connection);
-        if (!user.id().equals(actor.userId()) || !app.getProviderCode().equals("wecom_aibot")
-            || !app.getStatus().equals("enabled") || app.getIdentityVerifiedAt() == null) {
+        var app = wecomEnterprises.require(enterprise, connection);
+        if (!user.id().equals(actor.userId()) || !Boolean.TRUE.equals(app.getBindingEnabled())) {
             throw ChatPlatformRegistry.unavailable();
         }
         if (flows.selectCount(new LambdaQueryWrapper<ChannelOauthSessionRow>().eq(ChannelOauthSessionRow::getEnterpriseId, enterprise)
@@ -91,12 +97,13 @@ public class ChatPairingService {
         flow.setCreatedAt(clock.instant());
         flow.setUpdatedAt(clock.instant());
         flows.insert(flow);
-        audit.record(enterprise, user, "chat.pairing_create", "integration", connection, "申请企微智能机器人私聊配对", Map.of());
-        return Map.of("code", code, "expiresAt", flow.getExpiresAt().toString(), "command", "绑定 " + code);
+        audit.record(enterprise, user, "chat.pairing_create", "integration", connection, "申请企业微信账号绑定", Map.of());
+        return Map.of("code", code, "expiresAt", flow.getExpiresAt().toString(), "command", "绑定企业 " + code);
     }
 
     public boolean command(IntegrationApplication app, NormalizedChatEvent event) {
-        return app.providerCode().equals("wecom_aibot") && event.humanMessage() && event.text().strip().startsWith("绑定 ");
+        return app.providerCode().equals("wecom_aibot") && event.humanMessage()
+            && (event.text().strip().startsWith("绑定企业 ") || event.text().strip().startsWith("绑定 "));
     }
 
     @Transactional
@@ -105,18 +112,30 @@ public class ChatPairingService {
         if (!event.chatKind().equals("direct")) {
             return "请在机器人私聊中完成账号配对；群聊中不会建立绑定。";
         }
-        String code = event.text().strip().substring(3).strip();
+        if (!event.text().strip().startsWith("绑定企业 ")) {
+            return "请在群策的企业账号绑定页面重新获取绑定指令，企业账号只需绑定一次。";
+        }
+        var verified = wecomEnterprises.verified(application.enterpriseId(), application.id());
+        var member = wecomMembers.find(application.enterpriseId(), application.id(), event.subjectType(), event.senderId());
+        if (verified.isEmpty() || member.isEmpty()) {
+            return "暂时无法确认此机器人的企业或成员身份，请联系管理员检查企业接入。";
+        }
+        var app = verified.get().enterprise();
+        if (!Boolean.TRUE.equals(app.getBindingEnabled())) {
+            return "企业暂未开放账号绑定，请联系管理员。";
+        }
+        String subject = member.get().subjectId();
+        String code = event.text().strip().substring("绑定企业 ".length()).strip();
         String[] parts = code.split("\\.", -1);
         if (parts.length != 2 || !parts[0].matches("[a-f0-9-]{36}") || parts[1].length() > 128) {
             return rejected();
         }
         var flow = flows.selectOne(new LambdaQueryWrapper<ChannelOauthSessionRow>()
             .eq(ChannelOauthSessionRow::getEnterpriseId, application.enterpriseId()).eq(ChannelOauthSessionRow::getId, parts[0])
-            .eq(ChannelOauthSessionRow::getConnectionId, application.id()).eq(ChannelOauthSessionRow::getPurpose, "chat_pairing"));
+            .eq(ChannelOauthSessionRow::getConnectionId, app.getId()).eq(ChannelOauthSessionRow::getPurpose, "chat_pairing"));
         if (flow == null || !flow.getStatus().equals("pending") || !flow.getExpiresAt().isAfter(clock.instant())) {
             return rejected();
         }
-        var app = integrations.require(application.enterpriseId(), application.id());
         if (!secrets.matches(code, flow.getStateHash())) {
             int attempts = Math.min(5, flow.getPairingAttempts() + 1);
             flows.update(update(flow).set(ChannelOauthSessionRow::getPairingAttempts, attempts)
@@ -133,9 +152,9 @@ public class ChatPairingService {
             return rejected();
         }
         boolean conflict = bindings.exists(new LambdaQueryWrapper<UserChannelBindingRow>()
-            .eq(UserChannelBindingRow::getEnterpriseId, application.enterpriseId()).eq(UserChannelBindingRow::getConnectionId, application.id())
+            .eq(UserChannelBindingRow::getEnterpriseId, application.enterpriseId()).in(UserChannelBindingRow::getConnectionId, scopes.connectionIds(app, false))
             .ne(UserChannelBindingRow::getStatus, "revoked").and(value -> value.eq(UserChannelBindingRow::getUserId, actor.userId())
-                .or().eq(UserChannelBindingRow::getExternalSubjectId, event.senderId())));
+                .or().eq(UserChannelBindingRow::getExternalSubjectId, subject)));
         if (conflict) {
             flows.update(update(flow).set(ChannelOauthSessionRow::getStatus, "failed"));
             return "群策账号或此企微身份已有绑定，请先在群策处理原绑定后重新配对。";
@@ -143,10 +162,10 @@ public class ChatPairingService {
         var row = new UserChannelBindingRow();
         row.setId(UUID.randomUUID().toString());
         row.setEnterpriseId(application.enterpriseId());
-        row.setConnectionId(application.id());
+        row.setConnectionId(app.getId());
         row.setUserId(actor.userId());
-        row.setExternalSubjectType("wecom_aibot_userid");
-        row.setExternalSubjectId(event.senderId());
+        row.setExternalSubjectType("wecom_userid");
+        row.setExternalSubjectId(subject);
         row.setStatus("active");
         row.setReceiveEnabled(false);
         row.setChatEnabled(true);
@@ -160,8 +179,8 @@ public class ChatPairingService {
             .set(ChannelOauthSessionRow::getConsumedAt, clock.instant()).set(ChannelOauthSessionRow::getResultCode, "CHAT_BOUND")) != 1) {
             throw new IllegalStateException("聊天配对码消费失败");
         }
-        audit.record(application.enterpriseId(), actor.user(), "chat.paired", "channel_binding", row.getId(), "成员在企微私聊完成聊天配对", Map.of("connectionId", application.id()));
-        return "群策账号绑定成功，已开启此机器人的聊天。";
+        audit.record(application.enterpriseId(), actor.user(), "chat.paired", "channel_binding", row.getId(), "成员完成企业微信账号绑定", Map.of("connectionId", app.getId()));
+        return "企业微信账号已绑定，本企业接入群策的机器人都可使用，无需再次绑定。";
     }
 
     private LambdaUpdateWrapper<ChannelOauthSessionRow> update(ChannelOauthSessionRow flow) {
@@ -171,6 +190,6 @@ public class ChatPairingService {
     }
 
     private String rejected() {
-        return "配对码不可用，请在群策重新申请并在五分钟内发到此机器人的私聊。";
+        return "绑定指令不可用，请在群策重新获取，并在五分钟内发送到本企业已接入机器人的私聊。";
     }
 }

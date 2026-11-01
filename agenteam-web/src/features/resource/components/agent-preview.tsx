@@ -37,6 +37,7 @@ const states: Record<RunStatus, string> = {
   queued: "等待执行",
   running: "正在处理",
   waiting_approval: "等待确认",
+  waiting_input: "等待回答",
   cancelling: "正在停止",
   completed: "已完成",
   failed: "未完成",

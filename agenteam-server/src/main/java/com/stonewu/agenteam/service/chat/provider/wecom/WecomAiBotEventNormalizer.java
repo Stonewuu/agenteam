@@ -9,6 +9,7 @@ import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent.Resource;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
 import com.stonewu.agenteam.service.chat.ChatEventNormalizer;
 import com.stonewu.agenteam.service.chat.ChatInputValidation;
+import com.stonewu.agenteam.service.chat.ChatMessageText;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -51,6 +52,20 @@ public class WecomAiBotEventNormalizer implements ChatEventNormalizer {
                 case "disconnected_event" -> Kind.CONNECTION_REPLACED;
                 default -> Kind.IGNORED;
             } : Kind.IGNORED;
+            if (kind == Kind.CARD_ACTION) {
+                String sender = ChatInputValidation.required(body.path("from"), "userid");
+                String chatKind = body.path("chattype").asText(
+                    ChatInputValidation.optional(body, "chatid") == null ? "single" : "group");
+                if (!Set.of("group", "single").contains(chatKind)) {
+                    throw ApiException.invalidField("event", "企微卡片的会话类型无法识别。");
+                }
+                String chat = "group".equals(chatKind) ? ChatInputValidation.required(body, "chatid") : sender;
+                return new NormalizedChatEvent(providerCode(), eventType, kind,
+                    ChatInputValidation.required(body, "msgid"), messageId, chat, "group".equals(chatKind) ? "group" : "direct",
+                    "user", "wecom_aibot_userid", sender, "", "event", List.of(), List.of(), null, null,
+                    ChatInputValidation.time(body.path("create_time").asText(), received),
+                    body.path("event").path("template_card_event").deepCopy());
+            }
             return new NormalizedChatEvent(providerCode(), eventType, kind, requestId, messageId,
                 ChatInputValidation.optional(body, "chatid"), "direct", "unknown", "wecom_aibot_userid", null,
                 "", "event", List.of(), List.of(), null, null, received, json.createObjectNode());
@@ -70,7 +85,25 @@ public class WecomAiBotEventNormalizer implements ChatEventNormalizer {
         };
         String type = body.path("msgtype").asText("unknown");
         var resources = new ArrayList<Resource>();
-        String text = switch (type) {
+        String text = text(body, type, resources);
+        // 首期企微只开放提及单入口；不能从正文中的岗位名称推断其他被提及的机器人。
+        var mentions = chatKind.equals("group") ? List.of(new Mention(ownBotId, "", "bot")) : List.<Mention>of();
+        var metadata = json.createObjectNode().put("supported", Set.of("text", "voice", "mixed", "image", "file", "video").contains(type));
+        var quote = body.path("quote");
+        if (quote.isObject() && !quote.isEmpty()) {
+            String quotedText = text(quote, quote.path("msgtype").asText(), resources);
+            if (!quotedText.isBlank()) {
+                metadata.put("quotedText", quotedText);
+            }
+        }
+        ChatInputValidation.size(ChatMessageText.withQuote(text, metadata.path("quotedText").asText()), resources.size());
+        return new NormalizedChatEvent(providerCode(), command, Kind.MESSAGE, messageId, messageId, chat,
+            chatKind.equals("single") ? "direct" : "group", senderKind, "wecom_aibot_userid", sender, text, type,
+            mentions, resources, null, null, ChatInputValidation.time(body.path("create_time").asText(), received), metadata);
+    }
+
+    private String text(JsonNode body, String type, List<Resource> resources) {
+        return switch (type) {
             case "text" -> body.path("text").path("content").asText("");
             case "voice" -> body.path("voice").path("content").asText("");
             case "mixed" -> mixed(body.path("mixed"), resources);
@@ -80,13 +113,6 @@ public class WecomAiBotEventNormalizer implements ChatEventNormalizer {
             }
             default -> "";
         };
-        ChatInputValidation.size(text, resources.size());
-        // 首期企微只开放提及单入口；不能从正文中的岗位名称推断其他被提及的机器人。
-        var mentions = chatKind.equals("group") ? List.of(new Mention(ownBotId, "", "bot")) : List.<Mention>of();
-        var metadata = json.createObjectNode().put("supported", Set.of("text", "voice", "mixed", "image", "file", "video").contains(type));
-        return new NormalizedChatEvent(providerCode(), command, Kind.MESSAGE, messageId, messageId, chat,
-            chatKind.equals("single") ? "direct" : "group", senderKind, "wecom_aibot_userid", sender, text, type,
-            mentions, resources, null, null, ChatInputValidation.time(body.path("create_time").asText(), received), metadata);
     }
 
     private String mixed(JsonNode mixed, List<Resource> resources) {

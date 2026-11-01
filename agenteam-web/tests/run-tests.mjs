@@ -27,7 +27,7 @@ function run(args) {
 }
 
 // 每种编译输出只准备一次；只选择扩展相关用例时，无须重复准备其他用例。
-if (selected.includes("conversation-protocol.test.mjs")) {
+if (selected.some((file) => ["conversation-protocol.test.mjs", "question-answer.test.mjs"].includes(file))) {
   await run([compiler, "-p", "tests/tsconfig.conversation.json", "--pretty", "false"]);
 }
 if (selected.some((file) => ["tool-payload.test.mjs", "tool-call-details.test.mjs"].includes(file))) {

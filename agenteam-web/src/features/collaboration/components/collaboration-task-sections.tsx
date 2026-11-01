@@ -21,6 +21,7 @@ const deliveryKinds: Record<string, string> = {
   cancelled: "任务已停止", blocked: "需要处理", failed: "任务未完成", assigned: "安排岗位协作",
   waiting_dependency: "等待协作成果", work_completed: "协助工作完成",
   reply_settings: "回复方式",
+  user_question_text: "发送问题", user_question_card: "发送回答选项", question_answered: "已收到回答",
 };
 
 function artifactPreview(summary: string) {

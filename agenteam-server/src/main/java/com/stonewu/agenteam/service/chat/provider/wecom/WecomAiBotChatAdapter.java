@@ -115,13 +115,7 @@ public class WecomAiBotChatAdapter implements ChatPlatformAdapter {
     @Override
     public SendReceipt send(IntegrationApplication application, JsonNode preparedPayload, Runnable beforeSend) {
         var owned = connections.require(application);
-        var body = json.createObjectNode().put("chatid", preparedPayload.path("receiveId").asText()).put("msgtype", "markdown");
-        body.putObject("markdown").put("content", preparedPayload.path("content").path("text").asText());
-        if (preparedPayload.path("messageType").asText().equals("file")) {
-            body.remove("markdown");
-            body.put("msgtype", "file");
-            body.putObject("file").put("media_id", preparedPayload.path("content").path("media_id").asText());
-        }
+        var body = WecomMessageCards.body(preparedPayload);
         var response = owned.connection().request(preparedPayload.path("requestId").asText(), "aibot_send_msg", body, () -> {
             owned.guard().run();
             beforeSend.run();

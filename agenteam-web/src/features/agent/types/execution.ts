@@ -1,8 +1,14 @@
 import type {ModelSelection, ReasoningEffort} from "@/features/modelprofile/lib/reasoning-effort";
 
-export type RunStatus = "queued" | "running" | "waiting_approval" | "cancelling" | "completed" | "failed" | "cancelled";
+export type RunStatus = "queued" | "running" | "waiting_approval" | "waiting_input" | "cancelling" | "completed" | "failed" | "cancelled";
 export type ToolApprovalPolicy = "default" | "auto_approve" | "full_access";
-export type BlockStatus = "pending" | "running" | "waiting_approval" | "completed" | "failed" | "cancelled" | "skipped";
+export type BlockStatus = "pending" | "running" | "waiting_approval" | "waiting_input" | "completed" | "failed" | "cancelled" | "skipped";
+export type RunQuestion = {
+  id: string; runId: string; question: string;
+  options: {id: string; label: string; description: string | null; recommended: boolean}[];
+  status: "pending" | "answered" | "cancelled" | "expired";
+  answer: string | null; selectedOptionId: string | null; revision: string; expiresAt: string;
+};
 export type Run = {
   id: string;
   conversationId: string;
@@ -22,7 +28,8 @@ export type Run = {
 };
 export type ContentBlock = {
   id: string;
-  type: "text" | "thinking" | "execution_summary" | "tool" | "subagent" | "workflow" | "citation" | "attachment" | "approval";
+  type: "text" | "thinking" | "execution_summary" | "tool" | "subagent" | "workflow" | "citation" | "attachment" | "approval" | "question";
+  question?: RunQuestion | null;
   parentBlockId: string | null;
   displayOrder: number;
   revision: string;
@@ -224,6 +231,7 @@ type EventPayloads = {
   "run.started": Run;
   "run.resumed": Run;
   "run.waiting_approval": Run;
+  "run.waiting_input": Run;
   "run.cancelling": Run;
   "run.completed": Run;
   "run.failed": Run;

@@ -313,6 +313,7 @@ const fieldValues: Record<string, Record<string, string>> = {
     cancelled: "已取消",
     queued: "等待执行",
     waiting_approval: "等待确认",
+  waiting_input: "等待回答",
     skipped: "已跳过"
   },
 };

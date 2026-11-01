@@ -19,6 +19,13 @@ public final class FeishuMessageCards {
         ObjectNode card = JsonNodeFactory.instance.objectNode().put("schema", "2.0");
         card.putObject("config").put("update_multi", true);
         var elements = card.putObject("body").putArray("elements");
+        if (source.hasNonNull("userQuestion")) {
+            var header = card.putObject("header").put("template", "blue");
+            header.putObject("title").put("tag", "plain_text").put("content", "需要你的回答");
+            FeishuQuestionCard.elements(elements, source.path("userQuestion"), source.path("questionDirect").asBoolean());
+            payload.put("messageType", "interactive").set("content", card);
+            return payload;
+        }
         // 不让模型正文中的平台提及标签通知整群或其他成员。
         String markdown = source.path("content").path("text").asText().replaceAll("(?is)<at\\b[^>]*>(.*?)</at>", "@$1");
         elements.addObject().put("tag", "markdown").put("content", markdown.isBlank() ? " " : markdown);

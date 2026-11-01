@@ -12,6 +12,7 @@ import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.plugin.JavaPluginRegistry;
 import com.stonewu.agenteam.service.workspace.WorkspaceToolDefinitions;
+import com.stonewu.agenteam.service.execution.UserQuestionTool;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -27,14 +28,17 @@ public class ExecutionToolCatalog {
     private final WorkspaceToolDefinitions workspace;
     private final ResourceVersionMapper versions;
     private final JavaPluginRegistry javaPlugins;
+    private final UserQuestionTool questions;
 
     public ExecutionToolCatalog(PluginToolMapper tools, SourceToolDefinitions sources,
-                                WorkspaceToolDefinitions workspace, ResourceVersionMapper versions, JavaPluginRegistry javaPlugins) {
+                                WorkspaceToolDefinitions workspace, ResourceVersionMapper versions, JavaPluginRegistry javaPlugins,
+                                UserQuestionTool questions) {
         this.tools = tools;
         this.sources = sources;
         this.workspace = workspace;
         this.versions = versions;
         this.javaPlugins = javaPlugins;
+        this.questions = questions;
     }
 
     public Map<String, ExecutionToolBinding> list(RunRecord run) {
@@ -104,6 +108,7 @@ public class ExecutionToolCatalog {
                 "本次任务可用工具超过允许数量。");
         }
         result.putAll(workspace.list(run));
+        result.putAll(questions.list(run));
         return Map.copyOf(result);
     }
 

@@ -10,18 +10,24 @@ public record ContentBlock(String id, String type, String parentBlockId, int dis
                            String revision, String text, String status, String stepId,
                            String approvalId, Map<String, Object> file, Map<String, Object> citation, String label,
                            ToolBlockDetails tool,
-                           String agentIcon, String agentColor) {
+                           String agentIcon, String agentColor, RunQuestionView question) {
+    public ContentBlock(String id, String type, String parentBlockId, int displayOrder, String revision, String text,
+                        String status, String stepId, String approvalId, Map<String, Object> file, Map<String, Object> citation,
+                        String label, ToolBlockDetails tool, String agentIcon, String agentColor) {
+        this(id, type, parentBlockId, displayOrder, revision, text, status, stepId, approvalId, file, citation, label,
+            tool, agentIcon, agentColor, null);
+    }
     public ContentBlock(String id, String type, String parentBlockId, int displayOrder, String revision, String text,
                         String status,
                         String stepId, String approvalId, Map<String, Object> file, Map<String, Object> citation,
                         String label, ToolBlockDetails tool) {
         this(id, type, parentBlockId, displayOrder, revision, text, status, stepId, approvalId, file, citation, label,
-            tool, null, null);
+            tool, null, null, null);
     }
 
     public ContentBlock withAgentAppearance(String icon, String color) {
         return new ContentBlock(id, type, parentBlockId, displayOrder, revision, text, status, stepId, approvalId, file,
-            citation, label, tool, icon, color);
+            citation, label, tool, icon, color, question);
     }
 
     public record ToolBlockDetails(String toolCallId, String name, String sourceKind, String input, String result,
@@ -30,17 +36,17 @@ public record ContentBlock(String id, String type, String parentBlockId, int dis
 
     public ContentBlock update(String value, String nextStatus) {
         ToolBlockDetails details = tool;
-        if (details != null && Set.of("waiting_approval", "completed", "failed", "cancelled", "skipped")
+        if (details != null && Set.of("waiting_approval", "waiting_input", "completed", "failed", "cancelled", "skipped")
             .contains(nextStatus)) {
             details = new ToolBlockDetails(details.toolCallId(), details.name(), details.sourceKind(), details.input(),
                 details.result(),
-                !nextStatus.equals("waiting_approval") && Set.of("pending", "running")
+                !Set.of("waiting_approval", "waiting_input").contains(nextStatus) && Set.of("pending", "running")
                     .contains(details.callStatus()) ? nextStatus : details.callStatus(),
-                Set.of("pending", "running", "waiting_approval")
+                Set.of("pending", "running", "waiting_approval", "waiting_input")
                     .contains(details.resultStatus()) ? nextStatus : details.resultStatus());
         }
         return new ContentBlock(id, type, parentBlockId, displayOrder,
             Long.toString(Math.addExact(Long.parseLong(revision), 1)), value, nextStatus,
-            stepId, approvalId, file, citation, label, details, agentIcon, agentColor);
+            stepId, approvalId, file, citation, label, details, agentIcon, agentColor, question);
     }
 }

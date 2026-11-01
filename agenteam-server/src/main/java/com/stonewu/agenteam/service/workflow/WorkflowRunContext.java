@@ -17,6 +17,7 @@ import com.stonewu.agenteam.model.workflow.entity.WorkflowRunState.PendingCall;
 import com.stonewu.agenteam.service.agent.EncryptedAgentStateStore;
 import com.stonewu.agenteam.service.agent.FrameEventPersistence;
 import com.stonewu.agenteam.service.execution.RunApprovalService;
+import com.stonewu.agenteam.service.execution.UserQuestionTool;
 import com.stonewu.agenteam.service.execution.RunCheckpointService;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
 import com.stonewu.agenteam.service.execution.RunProgressService;
@@ -261,13 +262,15 @@ public final class WorkflowRunContext implements AutoCloseable {
     public synchronized void suspend(Identity identity, WorkflowTraversal workflow, Node node,
                                      List<ToolConfirmation> tools, WorkflowConfirmation confirmation) {
         requireActive();
-        workflow.suspend(node.id());
+        String waiting = tools.stream().flatMap(value -> value.calls().stream()).anyMatch(call -> UserQuestionTool.matches(run, call.getName()))
+            ? "waiting_input" : "waiting_approval";
+        workflow.suspend(node.id(), waiting);
         finishOwner(session(identity.id(), node.id()));
         toolConfirmations.addAll(tools);
         if (confirmation != null) {
             workflowConfirmations.add(confirmation);
         }
-        saveNode(identity, workflow, node, "waiting_approval");
+        saveNode(identity, workflow, node, waiting);
     }
 
     public synchronized void resume(Identity identity, WorkflowTraversal workflow, Node node) {

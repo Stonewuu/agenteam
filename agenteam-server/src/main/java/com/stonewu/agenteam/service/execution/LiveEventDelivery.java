@@ -145,7 +145,7 @@ public class LiveEventDelivery {
             }
             var saved = baseline.blocks().stream().collect(Collectors.toMap(ContentBlock::id, ContentBlock::revision));
             var restore = current.stream().filter(block -> !block.revision().equals(saved.get(block.id()))
-                    || List.of("pending", "running", "waiting_approval").contains(block.status()))
+                    || List.of("pending", "running", "waiting_approval", "waiting_input").contains(block.status()))
                 .map(ExecutionChange::replace).toList();
             return append(run, lease, cursor, changes(run, restore));
         } finally {

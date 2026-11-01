@@ -3,7 +3,7 @@ import type { FeishuSetupJob } from "../types/feishu-setup";
 export type FeishuSetupStatusKind = "processing" | "waiting" | "action" | "success" | "error" | "stopped";
 export type FeishuSetupStatusContent = { kind: FeishuSetupStatusKind; title: string; detail: string; hint?: string };
 
-/** 后台处理才显示加载动画；等待审批和本人操作使用各自的提示。 */
+/** 后台处理与等待审核分别展示进度，待本人操作时保留明确的操作提示。 */
 export function feishuSetupStatus(
   job: Pick<FeishuSetupJob, "kind" | "stage" | "message" | "canRetry">,
 ): FeishuSetupStatusContent {

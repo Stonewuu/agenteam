@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
 import com.stonewu.agenteam.model.integration.entity.ChannelRateLimit;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult.Outcome;
@@ -25,13 +26,16 @@ public class ChatSendWorker {
     private final ChatPlatformRegistry platforms;
     private final ChatConfiguration configuration;
     private final ChannelRateLimiter rates;
+    private final ChatWorkCoordinator work;
     private final String owner = UUID.randomUUID().toString();
 
-    public ChatSendWorker(ChatSendTransactions transactions, ChatPlatformRegistry platforms, ChatConfiguration configuration, ChannelRateLimiter rates) {
+    public ChatSendWorker(ChatSendTransactions transactions, ChatPlatformRegistry platforms, ChatConfiguration configuration, ChannelRateLimiter rates,
+            ChatWorkCoordinator work) {
         this.transactions = transactions;
         this.platforms = platforms;
         this.configuration = configuration;
         this.rates = rates;
+        this.work = work;
     }
 
     @Scheduled(scheduler = "chatBackgroundScheduler", fixedDelayString = "${chat.send-poll-interval-ms:1000}")
@@ -39,15 +43,7 @@ public class ChatSendWorker {
         if (!configuration.isWorkerEnabled()) {
             return;
         }
-        try {
-            for (int index = 0; index < Math.min(50, configuration.getBatchSize()); index++) {
-                if (!runOnce()) {
-                    break;
-                }
-            }
-        } catch (RuntimeException failure) {
-            LOG.warn("聊天发送后台工作未能完成", new ChannelProviderException("CHAT_SEND_WORKER_FAILED", "消息发送稍后重试。", failure));
-        }
+        work.wake(Stage.SEND);
     }
 
     public boolean runOnce() {

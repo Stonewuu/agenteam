@@ -72,4 +72,13 @@ public final class ModelImageMapper {
                 .metadata(message.getMetadata()).timestamp(message.getTimestamp()).usage(message.getUsage()).build();
         }).toList();
     }
+
+    public static List<Msg> withoutImages(List<Msg> messages) {
+        return withoutToolImages(messages).stream().map(message -> {
+            var content = message.getContent().stream().filter(block -> !(block instanceof ImageBlock)).toList();
+            return content.equals(message.getContent()) ? message : Msg.builderForRole(message.getRole()).id(message.getId())
+                .name(message.getName()).content(content).metadata(message.getMetadata()).timestamp(message.getTimestamp())
+                .usage(message.getUsage()).build();
+        }).toList();
+    }
 }

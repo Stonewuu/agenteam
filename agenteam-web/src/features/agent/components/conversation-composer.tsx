@@ -5,6 +5,7 @@ import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {useT} from "@/lib/i18n/locale-provider";
 
 import {Button} from "@/components/ui/button";
+import {LoadingTransition} from "@/components/ui/loading-transition";
 import {Textarea} from "@/components/ui/textarea";
 import {EmployeePickerButton} from "@/features/employee/components/employee-picker-button";
 
@@ -13,7 +14,8 @@ import {composerCommand, type ComposerSelectionContext} from "../lib/composer-se
 import {useComposerLayout} from "../hooks/use-composer-layout";
 import {useComposerInputSize} from "../hooks/use-composer-input-size";
 import type {Run} from "../types/execution";
-import {IconPlayerStop, IconSend} from "@/components/ui/icons";
+import {IconMessages, IconPlayerStop, IconSend} from "@/components/ui/icons";
+import questionStyles from "./run-question.module.css";
 import styles from "./agent-workspace.module.css";
 import controls from "./conversation-controls.module.css";
 import type {SkillOption} from "@/features/skill/types/skill";
@@ -104,10 +106,28 @@ export function ConversationComposer({
   const input = useComposerInputSize(text);
   const container = useComposerLayout();
   const isStopping = stopping || activeRun?.status === "cancelling";
+  const waitingForAnswer = activeRun?.status === "waiting_input";
   useImperativeHandle(inputRef, () => input.current!, [input]);
   return <div ref={container} className={styles.composerWrap}>
     {error && <p className={controls.composerNotice} role="alert">{localizeUiMessage(error ?? "", uiText)}</p>}
     {!activeRun && reason && <p className={controls.composerNotice}>{uiText(reason)}</p>}
+    <LoadingTransition state={waitingForAnswer ? "waiting_input" : "composer"} layout="stack"
+      className={questionStyles.composerTransition} contentClassName={questionStyles.composerStates}>
+      {waitingForAnswer && <div className={questionStyles.waitingBar}>
+        <IconMessages size={19}/><span className={questionStyles.waitingCopy}>{uiText("请先回答上方的问题")}</span>
+        <div className={questionStyles.waitingActions}><Button type="button" className={questionStyles.locate} onClick={() => {
+          const viewport = container.current?.parentElement?.querySelector<HTMLElement>("[data-conversation-viewport]");
+          const question = viewport?.querySelector<HTMLElement>('[data-question-pending="true"]');
+          if (viewport && question) {
+            // 只滚动消息区域，避免把页面标题和固定输入栏一同移出视口。
+            viewport.scrollTo({top: viewport.scrollTop + question.getBoundingClientRect().top - viewport.getBoundingClientRect().top - 24,
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+            question.focus({preventScroll: true});
+          }
+        }}>{uiText("查看问题")}</Button>{canStop && <Button type="button" className={questionStyles.stop}
+          aria-label={uiText("停止任务")} title={uiText("停止任务")} onClick={onStop} disabled={isStopping}><IconPlayerStop size={17}/></Button>}</div>
+      </div>}
+      <div className={questionStyles.composerFull} hidden={waitingForAnswer}>
     <ComposerProjectFrame state={project}><ComposerTransition part="surface">
       <form className={styles.composer} data-composer-part="surface" data-composer-location="conversation"
             onSubmit={(event) => {
@@ -192,5 +212,7 @@ export function ConversationComposer({
         </div>
       </form>
     </ComposerTransition><ConversationModelFeedback state={model}/></ComposerProjectFrame>
+      </div>
+    </LoadingTransition>
   </div>;
 }

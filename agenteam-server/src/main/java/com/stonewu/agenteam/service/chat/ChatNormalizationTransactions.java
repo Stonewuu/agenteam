@@ -19,6 +19,10 @@ import com.stonewu.agenteam.model.chat.entity.ChatReceiptLease;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent.Kind;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent.Mention;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
+import org.springframework.context.ApplicationEventPublisher;
+import com.stonewu.agenteam.service.integration.wecom.WecomMemberAliases;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,13 +50,21 @@ public class ChatNormalizationTransactions {
     private final EnterpriseMapper enterprises;
     private final Clock clock;
     private final ChatGroupActivationService activation;
+    private final ChatPairingService pairing;
+    private final ChatOutboundService outbound;
+    private final WecomMemberAliases wecomMembers;
+    private final WecomConversationCardService conversationCards;
+    private final WecomQuestionCardService questionCards;
+    private final ApplicationEventPublisher events;
 
     public ChatNormalizationTransactions(ChatInboundReceiptMapper receipts, ChatMessageMapper messages,
                                           ChatMessageResourceMapper resources, ChatBotBindingMapper botRows,
                                           ChatBotBindingService bots, ChatConversationService conversations,
                                           ChatPlatformRegistry platforms, ChatMessageIdentity identities, ChatPayloadCipher cipher,
                                           ResourceJson json, ObjectMapper mapper, EnterpriseMapper enterprises, Clock clock,
-                                          ChatMentionIdentityService mentionIdentities, ChatGroupActivationService activation) {
+                                          ChatMentionIdentityService mentionIdentities, ChatGroupActivationService activation,
+                                          ChatPairingService pairing, ChatOutboundService outbound, WecomMemberAliases wecomMembers,
+                                          WecomConversationCardService conversationCards, WecomQuestionCardService questionCards, ApplicationEventPublisher events) {
         this.receipts = receipts;
         this.messages = messages;
         this.resources = resources;
@@ -68,6 +80,12 @@ public class ChatNormalizationTransactions {
         this.enterprises = enterprises;
         this.clock = clock;
         this.activation = activation;
+        this.pairing = pairing;
+        this.outbound = outbound;
+        this.wecomMembers = wecomMembers;
+        this.conversationCards = conversationCards;
+        this.questionCards = questionCards;
+        this.events = events;
     }
 
     @Transactional
@@ -105,7 +123,13 @@ public class ChatNormalizationTransactions {
         }
         var app = bots.application(bot);
         var envelope = cipher.decrypt(lease.enterpriseId(), "receipt", receipt.getId(), receipt.getPayloadEncrypted());
-        var event = platforms.normalizer(app.providerCode()).normalize(app, bot.getPlatformBotId(), envelope, receipt.getReceivedAt());
+        var event = wecomMembers.canonicalEvent(app,
+            platforms.normalizer(app.providerCode()).normalize(app, bot.getPlatformBotId(), envelope, receipt.getReceivedAt()));
+        if (event.kind() == Kind.CARD_ACTION) {
+            boolean accepted = questionCards.accept(bot, receipt, event) || conversationCards.accept(bot, receipt, event);
+            finish(lease, "ignored", null, accepted ? null : "CHAT_CARD_UNAVAILABLE");
+            return;
+        }
         if (event.externalChatId() == null) {
             finish(lease, "ignored", null, null);
             return;
@@ -117,6 +141,23 @@ public class ChatNormalizationTransactions {
         var conversation = conversations.observe(bot, app, event.externalChatId(), null, event.chatKind(),
             event.kind() == Kind.BOT_JOINED ? "platform_event" : "verified_message", event.platformCreatedAt());
         conversation = activation.activate(bot, conversation, event);
+        if (pairing.command(app, event)) {
+            String result = pairing.consume(app, event);
+            if (event.chatKind().equals("direct")) {
+                outbound.text(lease.enterpriseId(), conversation.getId(), bot.getId(), null, null,
+                    "pairing:" + receipt.getId(), "binding", result, null);
+            }
+            int changed = receipts.update(new LambdaUpdateWrapper<ChatInboundReceiptRow>()
+                .eq(ChatInboundReceiptRow::getEnterpriseId, lease.enterpriseId()).eq(ChatInboundReceiptRow::getId, lease.receiptId())
+                .eq(ChatInboundReceiptRow::getLeaseOwner, lease.owner()).eq(ChatInboundReceiptRow::getLeaseVersion, lease.version())
+                .set(ChatInboundReceiptRow::getPayloadEncrypted, cipher.encrypt(lease.enterpriseId(), "receipt", receipt.getId(),
+                    Map.of("reason", "企业账号绑定消息不保留正文"))).set(ChatInboundReceiptRow::getPayloadPurgedAt, clock.instant()));
+            if (changed != 1) {
+                throw new IllegalStateException("企业账号绑定接收记录已变化");
+            }
+            finish(lease, "ignored", null, null);
+            return;
+        }
         if (event.kind() == Kind.BOT_LEFT || event.kind() == Kind.CHAT_UPDATED && event.metadata().path("disbanded").asBoolean()) {
             conversations.left(lease.enterpriseId(), conversation.getId(), bot.getId(), event.kind() == Kind.CHAT_UPDATED, event.platformCreatedAt());
         }
@@ -153,6 +194,7 @@ public class ChatNormalizationTransactions {
         if (message != null) {
             boolean conflict = mergeIdentity(message, bot, event, mentions);
             finish(lease, "normalized", message.getId(), conflict ? "CHAT_MESSAGE_CONTENT_CONFLICT" : null);
+            events.publishEvent(new ChatWorkRequested(Stage.ROUTE));
             return;
         }
         message = ChatRecords.initialize(new ChatMessageRow(), lease.enterpriseId(), clock.instant());
@@ -169,6 +211,9 @@ public class ChatNormalizationTransactions {
         message.setMessageType(event.messageType());
         var content = mapper.createObjectNode().put("text", ChatCommandText.display(event.text(), json.tree(mentions)))
             .put("supported", event.metadata().path("supported").asBoolean());
+        if (event.metadata().hasNonNull("quotedText")) {
+            content.put("quotedText", event.metadata().path("quotedText").asText());
+        }
         content.put("receiverBotId", bot.getId());
         content.put("resourceCount", event.resources().size());
         message.setContentEncrypted(cipher.encrypt(lease.enterpriseId(), "message", message.getId(), content));
@@ -197,6 +242,29 @@ public class ChatNormalizationTransactions {
         botRows.update(new LambdaUpdateWrapper<ChatBotBindingRow>().eq(ChatBotBindingRow::getEnterpriseId, lease.enterpriseId())
             .eq(ChatBotBindingRow::getId, bot.getId()).set(ChatBotBindingRow::getLastMessageAt, clock.instant()));
         finish(lease, "normalized", message.getId(), null);
+        events.publishEvent(new ChatWorkRequested(Stage.ROUTE));
+    }
+
+    /** 业务冲突无法通过重复执行解决；在原事务回滚后单独保存处理结果。 */
+    @Transactional
+    public void rejected(ChatReceiptLease lease, String code) {
+        enterprises.lockEnterprise(lease.enterpriseId()).orElseThrow();
+        var receipt = owned(lease);
+        if (receipt == null) {
+            return;
+        }
+        if ("template_card_event".equals(receipt.getEventType())
+                && List.of("QUESTION_ALREADY_ANSWERED", "QUESTION_UNAVAILABLE").contains(code)) {
+            var bot = bots.require(lease.enterpriseId(), receipt.getBotBindingId());
+            if ("enabled".equals(bot.getStatus())) {
+                var app = bots.application(bot);
+                var envelope = cipher.decrypt(lease.enterpriseId(), "receipt", receipt.getId(), receipt.getPayloadEncrypted());
+                var event = wecomMembers.canonicalEvent(app,
+                    platforms.normalizer(app.providerCode()).normalize(app, bot.getPlatformBotId(), envelope, receipt.getReceivedAt()));
+                questionCards.rejected(bot, receipt, event, code);
+            }
+        }
+        finish(lease, "ignored", null, code);
     }
 
     @Transactional
@@ -241,6 +309,9 @@ public class ChatNormalizationTransactions {
     private String contentHash(NormalizedChatEvent event, List<Mention> resolvedMentions) {
         var mentions = resolvedMentions.stream().map(Mention::externalId).sorted().toList();
         var files = event.resources().stream().map(resource -> List.of(resource.key() == null ? "" : resource.key(), resource.type())).toList();
+        if (event.metadata().hasNonNull("quotedText")) {
+            return json.hash(json.tree(List.of(event.messageType(), event.text(), mentions, files, event.metadata().path("quotedText").asText())));
+        }
         return json.hash(json.tree(List.of(event.messageType(), event.text(), mentions, files)));
     }
 

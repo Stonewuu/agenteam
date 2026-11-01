@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -84,8 +85,7 @@ public class ChannelBindingService {
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise)
             .and(group -> {
                 group.nested(enabled -> enabled.eq(EnterpriseIntegrationRow::getStatus, "enabled")
-                    .and(capability -> capability.eq(EnterpriseIntegrationRow::getBindingEnabled, true)
-                        .or().eq(EnterpriseIntegrationRow::getIdentityScope, "bot")));
+                    .eq(EnterpriseIntegrationRow::getBindingEnabled, true));
                 if (!current.isEmpty()) {
                     group.or().in(EnterpriseIntegrationRow::getId, current.keySet());
                 }
@@ -101,7 +101,7 @@ public class ChannelBindingService {
         return new ChannelAuthorizationReview(flow.getId(), flow.getEnterpriseId(), connection.getName(), providers.require(connection.getProviderCode()).name(),
             actor.username(), actor.displayName(), external.displayName(), external.subjectId(), flow.getConfirmationExpiresAt().toString(),
             !actor.superAdmin() && Boolean.TRUE.equals(connection.getLoginEnabled()), Boolean.TRUE.equals(connection.getMessagingEnabled()),
-            "feishu".equals(connection.getProviderCode()));
+            Set.of("feishu", "wecom").contains(connection.getProviderCode()));
     }
 
     public ChannelBindingView confirm(String id, String nonce, String confirmation,
@@ -113,7 +113,7 @@ public class ChannelBindingService {
         var external = secrets.decrypt(id, flow.getTransientEncryptedJson()).identity();
         checkIdentity(connection, external);
         enterprises.lockEnterprise(flow.getEnterpriseId()).orElseThrow();
-        if (scopes.ownedByAnotherUser(connection, external.unionId(), actor.id())) {
+        if (scopes.ownedByAnotherUser(connection, "wecom".equals(connection.getProviderCode()) ? external.subjectId() : external.unionId(), actor.id())) {
             throw new ApiException(HttpStatus.CONFLICT, "CHANNEL_BINDING_CONFLICT", "此平台账号已绑定其他群策账号，请先解除原绑定。");
         }
         if (Boolean.TRUE.equals(input.externalLoginEnabled()) && (actor.superAdmin() || !Boolean.TRUE.equals(connection.getLoginEnabled()))) {
@@ -250,10 +250,11 @@ public class ChannelBindingService {
 
     private ChannelBindingView view(EnterpriseIntegrationRow connection, UserChannelBindingRow row) {
         boolean enabled = "enabled".equals(connection.getStatus());
-        return new ChannelBindingView(row == null ? null : row.getId(), connection.getId(), scopes.shared(connection) ? "飞书账号" : connection.getName(), connection.getProviderCode(),
+        return new ChannelBindingView(row == null ? null : row.getId(), connection.getId(), scopes.shared(connection)
+            ? "wecom".equals(connection.getProviderCode()) ? "企业微信账号" : "飞书账号" : connection.getName(), connection.getProviderCode(),
             providers.require(connection.getProviderCode()).name(), row == null ? "unbound" : row.getStatus(), row == null ? null : row.getDisplayName(),
             row != null && Boolean.TRUE.equals(row.getReceiveEnabled()), row != null && Boolean.TRUE.equals(row.getExternalLoginEnabled()),
-            row == null ? null : Long.toString(row.getRevision()), enabled && (Boolean.TRUE.equals(connection.getBindingEnabled()) || "bot".equals(connection.getIdentityScope())),
+            row == null ? null : Long.toString(row.getRevision()), enabled && Boolean.TRUE.equals(connection.getBindingEnabled()),
             enabled && Boolean.TRUE.equals(connection.getLoginEnabled()), enabled && Boolean.TRUE.equals(connection.getMessagingEnabled()),
             row != null && Boolean.TRUE.equals(row.getChatEnabled()));
     }

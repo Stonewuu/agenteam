@@ -61,6 +61,110 @@ class WecomMediaProtocolTest {
     }
 
     @Test
+    void existingReplySettingsCardsKeepTheirOriginalWireFormat() {
+        var payload = json.createObjectNode().put("receiveId", "member").put("chatType", 1)
+            .put("requestId", "notice-request").put("messageType", "text")
+            .put("replySettingsUrl", "https://example.test/task?replyMode=edit")
+            .put("replyFull", true).put("replyNoticeTitle", "已收到你的消息");
+        payload.putObject("content").put("text", "处理完成后会在此回复。");
+        assertEquals(Outcome.ACCEPTED, adapter.send(application, payload, businessChecks::incrementAndGet).result().outcome());
+        var request = requests.getLast();
+        assertEquals("aibot_send_msg", request.command());
+        assertEquals("notice-request", request.id());
+        assertEquals(1, request.body().path("chat_type").asInt());
+        assertEquals("template_card", request.body().path("msgtype").asText());
+        assertEquals("直接回复内容", request.body().at("/template_card/horizontal_content_list/0/value").asText());
+        assertEquals("https://example.test/task?replyMode=edit", request.body().at("/template_card/jump_list/0/url").asText());
+        assertFalse(request.body().has("markdown"));
+        assertEquals(1, businessChecks.get());
+        assertEquals(1, leaseChecks.get());
+
+        payload.put("requestId", "conversation-card").put("conversationCardId", "outbound-card-id");
+        adapter.send(application, payload, businessChecks::incrementAndGet);
+        var card = requests.getLast().body().path("template_card");
+        assertEquals("button_interaction", card.path("card_type").asText());
+        assertEquals("outbound-card-id", card.path("task_id").asText());
+        assertEquals("conversation_new", card.at("/button_list/0/key").asText());
+        assertEquals("conversation_resume", card.at("/button_list/1/key").asText());
+
+        String answer = "## 完整答案\n" + "这是需要保留的中文长回答。".repeat(120);
+        payload.remove("replySettingsUrl");
+        payload.put("requestId", "answer-request");
+        payload.putObject("content").put("text", answer);
+        adapter.send(application, payload, businessChecks::incrementAndGet);
+        assertEquals(answer, requests.getLast().body().at("/markdown/content").asText());
+        assertFalse(requests.getLast().body().has("template_card"));
+    }
+
+    @Test
+    void alreadySubmittedAnswerCardsKeepTheirWireFormat() {
+        String answer = "完整答案\n" + "这是应保留的长回答。".repeat(150) + "\n最后一段🙂";
+        var payload = json.createObjectNode().put("receiveId", "group").put("chatType", 2)
+            .put("requestId", "answer-card").put("messageType", "text").put("replyFull", true)
+            .put("conversationCardId", "answer-outbound").put("replyResultUrl", "https://example.test/task")
+            .put("replyNoticeTitle", "回复");
+        payload.putObject("content").put("text", answer);
+        assertEquals(Outcome.ACCEPTED, adapter.send(application, payload, businessChecks::incrementAndGet).result().outcome());
+        var body = requests.getLast().body();
+        assertEquals("template_card", body.path("msgtype").asText());
+        var card = body.path("template_card");
+        assertEquals(answer, card.path("sub_title_text").asText());
+        assertEquals("answer-outbound", card.path("task_id").asText());
+        assertEquals("新会话", card.at("/button_list/0/text").asText());
+        assertEquals("继续该会话", card.at("/button_list/1/text").asText());
+        assertEquals("conversation_new", card.at("/button_list/0/key").asText());
+        assertEquals("conversation_resume", card.at("/button_list/1/key").asText());
+        assertEquals("https://example.test/task", card.at("/card_action/url").asText());
+        assertFalse(card.has("horizontal_content_list"));
+        assertFalse(card.has("jump_list"));
+        assertFalse(body.has("markdown"));
+    }
+
+    @Test
+    void historyCardContainsOnlyLabelsAndScopedChoiceKeysWithAtMostSixButtons() {
+        var payload = json.createObjectNode().put("receiveId", "group").put("chatType", 2)
+            .put("requestId", "history-menu").put("messageType", "text").put("conversationCardId", "menu-outbound")
+            .put("historyUserId", "private-member").put("historyPage", 2).put("historyHasNext", true);
+        payload.putObject("content").put("text", "请选择要继续的会话。");
+        var choices = payload.putArray("historyChoices");
+        for (int index = 0; index < 4; index++) {
+            choices.addObject().put("key", "history_choose_" + index).put("taskId", "private-task-" + index)
+                .put("label", "会话" + index + " · 5分钟前");
+        }
+        assertEquals(Outcome.ACCEPTED, adapter.send(application, payload, businessChecks::incrementAndGet).result().outcome());
+        var body = requests.getLast().body();
+        var card = body.path("template_card");
+        assertEquals("button_interaction", card.path("card_type").asText());
+        assertEquals("menu-outbound", card.path("task_id").asText());
+        assertEquals(6, card.path("button_list").size());
+        assertEquals("history_previous", card.at("/button_list/4/key").asText());
+        assertEquals("history_next", card.at("/button_list/5/key").asText());
+        assertFalse(body.toString().contains("private-member"));
+        assertFalse(body.toString().contains("private-task"));
+    }
+
+    @Test
+    void historyTitlesAreInTheBodyAndButtonsStayShort() {
+        var payload = json.createObjectNode().put("receiveId", "group").put("messageType", "text")
+            .put("requestId", "history-list").put("conversationCardId", "menu")
+            .put("historyListLayout", true).put("historyPage", 2).put("historyHasNext", true);
+        payload.putObject("content").put("text", "请选择要继续的会话。");
+        var choices = payload.putArray("historyChoices");
+        for (int index = 0; index < 3; index++) {
+            choices.addObject().put("key", "history_choose_" + index).put("taskId", "task-" + index)
+                .put("title", "请详细介绍这一项工作需要哪些具体能力" + index).put("label", "继续 " + (index + 1));
+        }
+        adapter.send(application, payload, businessChecks::incrementAndGet);
+        var card = requests.getLast().body().path("template_card");
+        assertEquals(3, card.path("sub_title_text").asText().lines().count());
+        for (int index = 0; index < 3; index++) {
+            assertTrue(card.path("sub_title_text").asText().contains(choices.get(index).path("title").asText()));
+            assertEquals("继续 " + (index + 1), card.path("button_list").get(index).path("text").asText());
+        }
+        assertEquals(5, card.path("button_list").size());
+    }
+
+    @Test
     void uploadUsesZeroBasedChunksAndReconstructsEveryByteWithTheDeclaredDigest() throws Exception {
         byte[] content = new byte[524288 + 137];
         for (int index = 0; index < content.length; index++) {

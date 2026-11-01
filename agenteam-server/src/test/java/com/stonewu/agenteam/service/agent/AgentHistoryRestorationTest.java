@@ -160,7 +160,7 @@ class AgentHistoryRestorationTest {
         when(toolExecution.resultSettings()).thenReturn(new ToolResultSettings(32, 64, 2, 8, 200, 2, 20));
         var factory = new AgentExecutionFactory(models, paths, encryption, json, lifecycle, runs,
             messages, checkpoints, mock(ExecutionToolCatalog.class), mock(ToolCallTransactions.class), toolExecution,
-            mock(ToolCallMapper.class), new ResourceJson(json), memories, projects, languages);
+            mock(ToolCallMapper.class), new ResourceJson(json), memories, projects, languages, mock(AgentImageInputService.class));
         var source = factory.store(previous);
         source.save("user", "conversation", "agent_state", AgentState.builder().userId("user").sessionId("conversation")
             .context(context).toolContext(ToolContextState.builder().build()).build());

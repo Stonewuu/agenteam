@@ -39,9 +39,14 @@ public class WorkspaceInputs {
     }
 
     public Set<String> supplied(RunRecord run, String session, Set<String> shared) {
-        return new LinkedHashSet<>(attachments.forConversation(run.enterpriseId(), run.userId(), run.conversationId(),
+        var result = new LinkedHashSet<>(attachments.forConversation(run.enterpriseId(), run.userId(), run.conversationId(),
                 settings.maximumFiles() + 1).stream()
             .filter(id -> session.equals(run.conversationId()) || shared.contains(id)).toList());
+        if (session.equals(run.conversationId())) {
+            // 岗位授权的工作资料不必伪装成本轮用户上传，也应能在当前工作区读取。
+            run.executionConfig().path("inputSourceFiles").forEach(file -> result.add(file.path("id").asText()));
+        }
+        return result;
     }
 
     public void copyFiles(AuthContext actor, Set<String> ids, WorkspaceFilesystem target, ToolCallControl control) {

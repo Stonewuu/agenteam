@@ -5,7 +5,7 @@ import type {BlockStatus} from "../types/execution";
 
 /** 结束后保留两秒；手动操作、重新执行或新的确认请求都会取消旧计时。 */
 export function useExecutionDisclosure(status: BlockStatus, pendingIds: string[] = [], defaultOpen = true) {
-  const phase = status === "waiting_approval" || pendingIds.length > 0 ? "confirmation"
+  const phase = status === "waiting_approval" || status === "waiting_input" || pendingIds.length > 0 ? "confirmation"
     : ["completed", "failed", "cancelled", "skipped"].includes(status) ? "finished" : "active";
   const [state, setState] = useState({
     phase, pendingIds,

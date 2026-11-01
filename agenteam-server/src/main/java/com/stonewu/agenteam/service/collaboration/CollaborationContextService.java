@@ -17,6 +17,7 @@ import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantR
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
 import com.stonewu.agenteam.service.chat.ChatPayloadCipher;
+import com.stonewu.agenteam.service.chat.ChatMessageText;
 import com.stonewu.agenteam.service.chat.ChatRecords;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -128,7 +129,7 @@ public class CollaborationContextService {
             .eq(ChatMessageRow::getTaskId, task.getId()).eq(ChatMessageRow::getSenderUserId, task.getInitiatorUserId())
             .orderByDesc(ChatMessageRow::getPlatformCreatedAt, ChatMessageRow::getId))) {
             var content = cipher.decrypt(task.getEnterpriseId(), "message", message.getId(), message.getContentEncrypted());
-            var item = mapper.createObjectNode().put("messageId", message.getId()).put("text", content.path("text").asText())
+            var item = mapper.createObjectNode().put("messageId", message.getId()).put("text", ChatMessageText.withQuote(content))
                 .put("createdAt", message.getPlatformCreatedAt().toString());
             if (selected.size() >= configuration.getMaxContextMessages() || characters(root) + characters(item) + 200 > configuration.getMaxContextCharacters()) {
                 omitted++;

@@ -132,7 +132,7 @@ public class FileInspectionWorker {
             if (file.purpose().equals("skill_import")) {
                 validation.read(file, storage);
             }
-            var text = file.purpose().equals("attachment") ? attachments.parse(file, guard)
+            var text = ImageFileContent.supports(file.mediaType()) ? null : file.purpose().equals("attachment") ? attachments.parse(file, guard)
                 : file.purpose().equals("collaboration_artifact") ? collaboration.parse(file, guard) : null;
             var csv = file.purpose().equals("data_import") ? csvFiles.parse(lease, file, guard) : null;
             if (guard.getAsBoolean()) {

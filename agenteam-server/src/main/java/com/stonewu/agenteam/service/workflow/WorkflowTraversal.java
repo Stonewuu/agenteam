@@ -111,12 +111,19 @@ public final class WorkflowTraversal {
     }
 
     public synchronized boolean suspend(String id) {
+        return suspend(id, "waiting_approval");
+    }
+
+    public synchronized boolean suspend(String id, String waiting) {
+        if (!Set.of("waiting_input", "waiting_approval").contains(waiting)) {
+            throw new IllegalArgumentException("节点等待状态无效");
+        }
         if (!active(id) || !nodes.get(id).status().equals("running")) {
             return false;
         }
         var before = nodes.get(id);
         nodes.put(id,
-            new NodeProgress("waiting_approval", before.input(), null, null, before.attempts(), before.startedAt(),
+            new NodeProgress(waiting, before.input(), null, null, before.attempts(), before.startedAt(),
                 null,
                 before.elapsed(clock.millis()), null, null, null, null));
         return true;
@@ -124,7 +131,7 @@ public final class WorkflowTraversal {
 
     public synchronized void resume(String id) {
         var before = nodes.get(id);
-        if (!status.equals("running") || !before.status().equals("waiting_approval")) {
+        if (!status.equals("running") || !Set.of("waiting_approval", "waiting_input").contains(before.status())) {
             throw new IllegalStateException("当前节点没有等待确认");
         }
         nodes.put(id,
@@ -187,7 +194,7 @@ public final class WorkflowTraversal {
 
     public synchronized boolean waiting() {
         return status.equals("running") && nodes.values().stream()
-            .anyMatch(node -> node.status().equals("waiting_approval"));
+            .anyMatch(node -> Set.of("waiting_approval", "waiting_input").contains(node.status()));
     }
 
     public WorkflowGraph graph() {
@@ -210,7 +217,7 @@ public final class WorkflowTraversal {
     }
 
     private boolean active(String id) {
-        return status.equals("running") && nodes.containsKey(id) && Set.of("running", "waiting_approval")
+        return status.equals("running") && nodes.containsKey(id) && Set.of("running", "waiting_approval", "waiting_input")
             .contains(nodes.get(id).status());
     }
 

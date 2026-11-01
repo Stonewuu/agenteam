@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
@@ -17,6 +18,7 @@ import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageRow;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageResourceRow;
 import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
+import com.stonewu.agenteam.model.chat.entity.ChatSessionSelectionRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.service.collaboration.CollaborationAccessService;
 import com.stonewu.agenteam.service.collaboration.CollaborationInputService;
@@ -58,6 +60,9 @@ public class ChatRoutingService {
     private final ChatReplyAttachmentService replyAttachments;
     private final ChatGroupActivationService activation;
     private final ChatReplyCommandService replyCommands;
+    private final ChatSessionSelectionService sessions;
+    private final WecomConversationHistoryService history;
+    private final ChatQuestionReplyService questions;
 
     public ChatRoutingService(ChatMessageMapper messages, ChatMessageResourceMapper resources, ChatBotBindingMapper botRows,
             ChatConversationMapper groupRows, ChatOutboundMessageMapper outgoing, CollaborationTaskMapper tasks,
@@ -65,7 +70,8 @@ public class ChatRoutingService {
             ChatIdentityService identities, ChatPayloadCipher cipher, ResourceJson json, ChatTaskReferenceService references,
             CollaborationAccessService access, CollaborationTaskCreationService creation, CollaborationInputService inputs,
             ChatOutboundService outbound, Clock clock,
-            ChatReplyAttachmentService replyAttachments, ChatGroupActivationService activation, ChatReplyCommandService replyCommands) {
+            ChatReplyAttachmentService replyAttachments, ChatGroupActivationService activation, ChatReplyCommandService replyCommands,
+            ChatSessionSelectionService sessions, WecomConversationHistoryService history, ChatQuestionReplyService questions) {
         this.messages = messages;
         this.resources = resources;
         this.botRows = botRows;
@@ -87,6 +93,9 @@ public class ChatRoutingService {
         this.replyAttachments = replyAttachments;
         this.activation = activation;
         this.replyCommands = replyCommands;
+        this.sessions = sessions;
+        this.history = history;
+        this.questions = questions;
     }
 
     public List<ChatMessageRow> pending() {
@@ -145,8 +154,11 @@ public class ChatRoutingService {
             requested.add(bot.getId());
         }
         String text = content.path("text").asText();
-        boolean newTask = ChatCommandText.newTask(text, json.read(message.getMentionsJson()));
-        var reference = newTask ? Optional.<String>empty() : references.resolve(message, text);
+        var conversationCommand = "wecom_aibot".equals(group.getPlatformCode())
+            ? WecomConversationCommands.parse(text, json.read(message.getMentionsJson()), bot.getPlatformBotId(), bot.getRoleName())
+            : new WecomConversationCommands.Parsed(false, false, text);
+        boolean newTask = conversationCommand.newConversation() || ChatCommandText.newTask(text, json.read(message.getMentionsJson()));
+        var reference = newTask || conversationCommand.history() ? Optional.<String>empty() : references.resolve(message, text);
         if (requested.isEmpty() && reference.isEmpty() && !group.getTriggerMode().equals("default_entry")) {
             status(message, "ignored", null);
             return;
@@ -201,7 +213,16 @@ public class ChatRoutingService {
         }
         var actor = identities.actor(enterprise, binding.get().getUserId(), binding.get().getId());
         String explicitTask = reference.orElse(null);
-        if (direct && reference.isEmpty() && !newTask) {
+        boolean usesSelections = "wecom_aibot".equals(group.getPlatformCode());
+        ChatSessionSelectionRow selection = null;
+        if (usesSelections && reference.isEmpty()) {
+            selection = sessions.forMessage(actor, group.getId(), entry, message.getReceivedAt(), newTask, message.getId());
+            reference = Optional.ofNullable(selection.getTaskId());
+        }
+        if (!usesSelections && reference.isEmpty() && !newTask) {
+            reference = questions.pendingTask(actor, group.getId(), entry, message.getReceivedAt());
+        }
+        if (!usesSelections && direct && reference.isEmpty() && !newTask) {
             var ongoing = tasks.selectPage(new Page<CollaborationTaskRow>(1, 2, false), new LambdaQueryWrapper<CollaborationTaskRow>()
                 .eq(CollaborationTaskRow::getEnterpriseId, enterprise).eq(CollaborationTaskRow::getConversationId, group.getId())
                 .eq(CollaborationTaskRow::getInitiatorUserId, actor.userId()).in(CollaborationTaskRow::getStatus, "active", "waiting_input", "waiting_approval", "blocked")).getRecords();
@@ -228,6 +249,22 @@ public class ChatRoutingService {
                 .set(ChatConversationRow::getDirectBindingId, binding.get().getId()));
         }
         status(message, message.getRoutingStatus(), null);
+        if (conversationCommand.history()) {
+            history.show(actor, group, principal, message.getId(), 1, message.getReceivedAt());
+            status(message, "routed", null);
+            return;
+        }
+        if (conversationCommand.newConversation()) {
+            if (conversationCommand.input().isBlank() && content.path("quotedText").asText().isBlank()
+                    && !resources.exists(new LambdaQueryWrapper<ChatMessageResourceRow>().eq(ChatMessageResourceRow::getEnterpriseId, enterprise)
+                        .eq(ChatMessageResourceRow::getMessageId, message.getId()))) {
+                notice(message, group, entry, "conversation_selected", "已开启新会话，" + (direct ? "请" : "请 @ 我") + "发送问题。");
+                status(message, "routed", null);
+                return;
+            }
+            content = ((ObjectNode) content.deepCopy()).put("text", conversationCommand.input());
+            text = conversationCommand.input();
+        }
         var command = replyCommands.handle(actor, group, entry, message, text, json.read(message.getMentionsJson()), explicitTask, reference.orElse(null));
         if (command != null) {
             status(message, "routed", command.taskId());
@@ -254,8 +291,22 @@ public class ChatRoutingService {
         }
         if (reference.isPresent()) {
             var task = access.owned(actor, reference.get());
-            String supplement = text.isBlank() && !files.isEmpty() ? "原发起人补充了附件，请按原任务要求读取附件。" : text;
+            String answer = ChatCommandText.withoutLeadingMentions(text, json.read(message.getMentionsJson()));
+            if (usesSelections && mentions.contains(bot.getPlatformBotId())) {
+                answer = WecomConversationCommands.withoutOwnMention(answer, bot.getRoleName());
+            }
+            if (files.isEmpty() && !answer.isBlank() && questions.answerText(actor, task.getId(), bot.getId(), message, answer)) {
+                status(message, "routed", task.getId());
+                return;
+            }
+            String supplement = ChatMessageText.withQuote(content);
+            if (supplement.isBlank() && !files.isEmpty()) {
+                supplement = "原发起人补充了附件，请按原任务要求读取附件。";
+            }
             inputs.append(actor, task.getId(), task.getRevision(), "message:" + id, supplement, id);
+            if (usesSelections && selection == null) {
+                sessions.select(actor, group.getId(), entry, task.getId(), message.getReceivedAt());
+            }
             replyAttachments.attach(actor, access.require(enterprise, task.getId()), attached);
             status(message, "routed", task.getId());
             return;
@@ -269,12 +320,15 @@ public class ChatRoutingService {
         long active = tasks.selectCount(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, enterprise)
             .eq(CollaborationTaskRow::getConversationId, group.getId()).eq(CollaborationTaskRow::getInitiatorUserId, actor.userId())
             .in(CollaborationTaskRow::getStatus, "active", "waiting_input", "waiting_approval", "blocked"));
-        if (active > 1 && !newTask) {
+        if (!usesSelections && active > 1 && !newTask) {
             status(message, "awaiting_clarification", null);
             notice(message, group, bot.getId(), "task_required", "你在此会话有多项任务。请回复具体任务消息；另起任务时请以“新任务”开头。");
             return;
         }
         var task = creation.create(actor, message, group, entry, requested, content);
+        if (selection != null) {
+            sessions.bind(selection, task);
+        }
         replyAttachments.attach(actor, task, attached);
         status(message, "routed", task.getId());
     }
@@ -293,6 +347,10 @@ public class ChatRoutingService {
         var member = conversations.member(enterprise, group.getId(), bot.getId());
         if (group.getStatus().equals("enabled") && member != null && Boolean.TRUE.equals(member.getSendEnabled()) && bot.getStatus().equals("enabled")) {
             String text = switch (code) {
+                case "QUESTION_SELECTION_REQUIRED" -> "wecom_aibot".equals(group.getPlatformCode())
+                    ? ("group".equals(group.getConversationKind()) ? "请先点要回答的问题卡片中的“自己输入”，再 @ 我发送回答。" : "请先点要回答的问题卡片中的“自己输入”，再发送回答。")
+                    : "请回复要回答的问题消息，或先点击该问题的“自己输入”；群聊中请同时 @ 我。";
+                case "QUESTION_UNAVAILABLE" -> "这个问题已结束，请继续当前对话。";
                 case "COLLABORATION_TASK_UNAVAILABLE" -> "这项任务不能由当前账号补充，请 @ 岗位另起任务。";
                 case "COLLABORATION_TASK_CLOSED" -> "这项任务已结束或正在取消，请另起任务。";
                 case "AGENT_CHAT_APPROVAL_REQUIRED" -> "这位员工需要审批后才能使用，请在群策「数字员工」提交申请，审批通过后再发送任务。";

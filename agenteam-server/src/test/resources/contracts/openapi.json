@@ -57267,7 +57267,10 @@
                 "type": "object",
                 "properties": {
                   "joinNodeId": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "minLength": 1,
                     "maxLength": 64
                   }
@@ -57331,7 +57334,10 @@
                 "type": "object",
                 "properties": {
                   "parallelNodeId": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "minLength": 1,
                     "maxLength": 64
                   }
@@ -61055,6 +61061,7 @@
               "queued",
               "running",
               "waiting_approval",
+              "waiting_input",
               "cancelling",
               "completed",
               "failed",
@@ -61198,6 +61205,7 @@
               "queued",
               "running",
               "waiting_approval",
+              "waiting_input",
               "completed",
               "failed",
               "cancelled"
@@ -61313,6 +61321,7 @@
               "pending",
               "running",
               "waiting_approval",
+              "waiting_input",
               "completed",
               "failed",
               "cancelled",
@@ -61352,7 +61361,8 @@
               "workflow",
               "citation",
               "attachment",
-              "approval"
+              "approval",
+              "question"
             ]
           },
           "parentBlockId": {
@@ -61391,6 +61401,7 @@
               "pending",
               "running",
               "waiting_approval",
+              "waiting_input",
               "completed",
               "failed",
               "cancelled",
@@ -61476,6 +61487,16 @@
               "null"
             ],
             "maxLength": 20
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunQuestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -62096,6 +62117,7 @@
               "pending",
               "running",
               "waiting_approval",
+              "waiting_input",
               "completed",
               "failed",
               "cancelled",
@@ -63242,6 +63264,7 @@
               "queued",
               "running",
               "waiting_approval",
+              "waiting_input",
               "completed",
               "failed",
               "cancelled",
@@ -64073,6 +64096,7 @@
             "enum": [
               "prepared",
               "waiting_approval",
+              "waiting_input",
               "running",
               "succeeded",
               "failed",
@@ -64259,6 +64283,7 @@
                 "enum": [
                   "prepared",
                   "waiting_approval",
+                  "waiting_input",
                   "running",
                   "succeeded",
                   "failed",
@@ -64743,7 +64768,9 @@
           },
           "toolOutputRoots": {
             "type": "object",
-            "additionalProperties": {"type": "string"}
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "tools": {
             "type": "array",
@@ -66364,7 +66391,10 @@
                 "type": "object",
                 "properties": {
                   "joinNodeId": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "minLength": 1,
                     "maxLength": 64
                   }
@@ -66428,7 +66458,10 @@
                 "type": "object",
                 "properties": {
                   "parallelNodeId": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "minLength": 1,
                     "maxLength": 64
                   }
@@ -70321,6 +70354,90 @@
           "conversation",
           "titlePending"
         ]
+      },
+      "RunQuestion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "runId",
+          "question",
+          "options",
+          "status",
+          "revision",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/QuestionOption"
+            }
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "answered",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "answer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "selectedOptionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        }
+      },
+      "QuestionOption": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "description",
+          "recommended"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recommended": {
+            "type": "boolean"
+          }
+        }
       }
     }
   },

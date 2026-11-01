@@ -1,6 +1,7 @@
 .steps {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   margin: 0;
   padding: 0 0 20px;
   list-style: none;
@@ -16,10 +17,6 @@
   min-width: 0;
   color: var(--secondary);
   text-align: center;
-}
-
-.steps[data-mode="enterprise"] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .step + .step::before {

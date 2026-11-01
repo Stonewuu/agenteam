@@ -12,6 +12,9 @@ import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskViewMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
+import com.stonewu.agenteam.mapper.execution.RunQuestionMapper;
+import com.stonewu.agenteam.model.execution.entity.RunQuestionRow;
+import com.stonewu.agenteam.service.execution.RunQuestionContent;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageResourceRow;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageRow;
@@ -27,6 +30,7 @@ import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.model.http.response.PageResponse;
 import com.stonewu.agenteam.service.chat.ChatIdentityService;
 import com.stonewu.agenteam.service.chat.ChatPayloadCipher;
+import com.stonewu.agenteam.service.chat.ChatMessageText;
 import com.stonewu.agenteam.service.chat.ChatConversationService;
 import com.stonewu.agenteam.service.chat.ChatReplyPolicy;
 import com.stonewu.agenteam.service.http.ListPagination;
@@ -57,13 +61,15 @@ public class CollaborationQueryService {
     private final ListPagination pagination;
     private final ChatConversationService conversations;
     private final CollaborationMessageDisplayService display;
+    private final RunQuestionMapper runQuestions;
+    private final RunQuestionContent questionContent;
 
     public CollaborationQueryService(CollaborationTaskListService taskList, CollaborationParticipantMapper participants,
             CollaborationWorkItemMapper works, CollaborationArtifactMapper artifactRows, CollaborationActionMapper actions,
             ChatMessageMapper messages, ChatMessageResourceMapper resources, ChatOutboundMessageMapper outgoing,
             CollaborationAccessService access, ChatIdentityService identities, CollaborationArtifactService artifacts,
             ChatPayloadCipher cipher, ResourceJson json, ListPagination pagination, ChatConversationService conversations,
-            CollaborationMessageDisplayService display) {
+            CollaborationMessageDisplayService display, RunQuestionMapper runQuestions, RunQuestionContent questionContent) {
         this.taskList = taskList;
         this.participants = participants;
         this.works = works;
@@ -80,6 +86,8 @@ public class CollaborationQueryService {
         this.pagination = pagination;
         this.conversations = conversations;
         this.display = display;
+        this.runQuestions = runQuestions;
+        this.questionContent = questionContent;
     }
 
     public PageResponse<CollaborationTaskSummary> list(AuthContext actor, String conversation, String status, String cursor, Integer requested) {
@@ -112,7 +120,11 @@ public class CollaborationQueryService {
         var requirements = display.requirements(actor, List.of(requirements(task))).getFirst();
         return new CollaborationTaskDetail(summary(task, requirements), json.object(requirements),
             task.getOwnerWorkId(), task.getOwnerParticipantId(), roles, work, results, questions, deliveries,
-            ChatReplyPolicy.allowsFullResult(task, conversations.require(actor.enterpriseId(), task.getConversationId())));
+            ChatReplyPolicy.allowsFullResult(task, conversations.require(actor.enterpriseId(), task.getConversationId())),
+            runQuestions.selectList(new LambdaQueryWrapper<RunQuestionRow>()
+                .eq(RunQuestionRow::getEnterpriseId, actor.enterpriseId()).eq(RunQuestionRow::getUserId, actor.userId())
+                .eq(RunQuestionRow::getTaskId, id).eq(RunQuestionRow::getStatus, "pending")
+                .orderByAsc(RunQuestionRow::getCreatedAt, RunQuestionRow::getId)).stream().map(questionContent::view).toList());
     }
 
     public PageResponse<Map<String, Object>> messages(AuthContext actor, String task, String cursor, Integer requested) {
@@ -133,7 +145,7 @@ public class CollaborationQueryService {
             .eq(ChatMessageResourceRow::getEnterpriseId, actor.enterpriseId()).in(ChatMessageResourceRow::getMessageId, ids));
         var grouped = files.stream().collect(Collectors.groupingBy(ChatMessageResourceRow::getMessageId));
         var mapped = page.items().stream().map(message -> json.tree(Map.of("id", message.getId(), "type", message.getMessageType(), "text",
-            cipher.decrypt(actor.enterpriseId(), "message", message.getId(), message.getContentEncrypted()).path("text").asText(),
+            ChatMessageText.withQuote(cipher.decrypt(actor.enterpriseId(), "message", message.getId(), message.getContentEncrypted())),
             "createdAt", time(message.getPlatformCreatedAt()), "attachments", grouped.getOrDefault(message.getId(), List.of()).stream().map(file ->
                 Map.of("id", file.getId(), "fileId", file.getFileId() == null ? "" : file.getFileId(), "status", file.getStatus(), "sizeBytes", file.getSizeBytes())).toList()))).toList();
         return new PageResponse<>(mapped.stream().map(json::object).toList(), page.nextCursor(), page.hasMore());

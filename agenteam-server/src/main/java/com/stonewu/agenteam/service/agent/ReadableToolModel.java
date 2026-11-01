@@ -12,6 +12,7 @@ import reactor.core.publisher.Flux;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * 模型看到原工具名称，返回调用在进入执行框架前恢复为对应的内部编号。
@@ -19,10 +20,16 @@ import java.util.function.Supplier;
 public final class ReadableToolModel implements ConfiguredModel {
     private final ConfiguredModel delegate;
     private final Supplier<Map<String, String>> names;
+    private final Function<List<Msg>, List<Msg>> imageInputs;
 
     public ReadableToolModel(ConfiguredModel delegate, Supplier<Map<String, String>> names) {
+        this(delegate, names, Function.identity());
+    }
+
+    public ReadableToolModel(ConfiguredModel delegate, Supplier<Map<String, String>> names, Function<List<Msg>, List<Msg>> imageInputs) {
         this.delegate = delegate;
         this.names = names;
+        this.imageInputs = imageInputs;
     }
 
     @Override
@@ -61,8 +68,7 @@ public final class ReadableToolModel implements ConfiguredModel {
             var mapper = new ModelToolNameMapper(tools, messages, names.get());
             var mapped = mapper.messages(messages);
             return delegate.stream(
-                supportsImages() ? ModelImageMapper.withImageInputs(mapped) : ModelImageMapper.withoutToolImages(
-                    mapped),
+                supportsImages() ? imageInputs.apply(ModelImageMapper.withImageInputs(mapped)) : ModelImageMapper.withoutImages(mapped),
                 mapper.tools(tools), mapper.options(options)).map(mapper::response);
         });
     }

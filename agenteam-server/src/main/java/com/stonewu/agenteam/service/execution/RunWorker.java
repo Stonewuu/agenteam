@@ -112,6 +112,9 @@ public class RunWorker implements AutoCloseable {
             for (var approval : lifecycle.expiredApprovals()) {
                 lifecycle.expireApproval(approval);
             }
+            for (var question : lifecycle.expiredQuestions()) {
+                lifecycle.expireQuestion(question);
+            }
             while (!closed.get() && active.size() < maximumConcurrent) {
                 var claimed = lifecycle.claim(owner);
                 if (claimed.isEmpty()) {

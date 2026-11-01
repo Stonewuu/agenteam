@@ -15,6 +15,9 @@ import com.stonewu.agenteam.model.chat.entity.ChatOutboundAttemptRow;
 import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.model.chat.entity.ChatSendLease;
 import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
+import org.springframework.context.ApplicationEventPublisher;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantRow;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult.Outcome;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
@@ -48,12 +51,14 @@ public class ChatSendTransactions {
     private final ChatFileSendService files;
     private final ResourceJson json;
     private final ChatReplyDeliveryPolicy replyPolicy;
+    private final ApplicationEventPublisher events;
 
     public ChatSendTransactions(ChatOutboundMessageMapper messages, ChatOutboundAttemptMapper attempts,
             CollaborationParticipantMapper participants, EnterpriseMapper enterprises, ChatBotBindingService bots,
             ChatConversationService conversations, CollaborationAccessService access, ChatPlatformRegistry platforms,
             ChatPayloadCipher cipher, Clock clock, ChatConnectionRegistry connections,
-            ChatCapabilityService capabilities, ChatFileSendService files, ResourceJson json, ChatReplyDeliveryPolicy replyPolicy) {
+            ChatCapabilityService capabilities, ChatFileSendService files, ResourceJson json, ChatReplyDeliveryPolicy replyPolicy,
+            ApplicationEventPublisher events) {
         this.messages = messages;
         this.attempts = attempts;
         this.participants = participants;
@@ -69,6 +74,7 @@ public class ChatSendTransactions {
         this.files = files;
         this.json = json;
         this.replyPolicy = replyPolicy;
+        this.events = events;
     }
 
     @Transactional
@@ -102,6 +108,7 @@ public class ChatSendTransactions {
         if (row.getStatus().equals("sending") && (row.getAttemptCount() >= 5 || !canRepeat(row, adapter.deduplicationWindow()))) {
             messages.update(update.set(ChatOutboundMessageRow::getStatus, "unknown").set(ChatOutboundMessageRow::getErrorCode, "CHAT_SEND_UNKNOWN")
                 .set(ChatOutboundMessageRow::getLeaseOwner, null).set(ChatOutboundMessageRow::getLeaseUntil, null));
+            releaseFollowing(row);
             return Optional.empty();
         }
         if (row.getDependsOnOutboundId() != null) {
@@ -117,7 +124,8 @@ public class ChatSendTransactions {
                 finished = true;
             }
             if (!finished) {
-                messages.update(update.set(ChatOutboundMessageRow::getNextAttemptAt, now.plusSeconds(5)));
+                messages.update(update.set(ChatOutboundMessageRow::getNextAttemptAt, now.plusSeconds(5))
+                    .set(ChatOutboundMessageRow::getErrorCode, "CHAT_PREDECESSOR_PENDING"));
                 return Optional.empty();
             }
         }
@@ -241,6 +249,9 @@ public class ChatSendTransactions {
             .set(ChatOutboundAttemptRow::getPlatformCode, result.providerCode()).set(ChatOutboundAttemptRow::getDiagnosticId, result.traceId())
             .set(ChatOutboundAttemptRow::getErrorSummary, result.summary()).set(ChatOutboundAttemptRow::getRetryAfterMs, wait * 1000)
             .set(ChatOutboundAttemptRow::getResponseMessageId, result.messageId())));
+        if (!retry) {
+            releaseFollowing(row);
+        }
         boolean probe = Set.of("send_probe", "file_probe").contains(row.getKind());
         if (result.outcome() == Outcome.ACCEPTED || probe && status.equals("failed")) {
             var bot = bots.require(row.getEnterpriseId(), row.getBotBindingId());
@@ -281,6 +292,21 @@ public class ChatSendTransactions {
             attempt.setPlatformCode(error);
             attempt.setErrorSummary("消息未能发送，请重试。");
             attempts.insert(attempt);
+        }
+        if (terminal || exhausted || error.equals("CHAT_SEND_UNKNOWN")) {
+            releaseFollowing(row);
+        }
+    }
+
+    private void releaseFollowing(ChatOutboundMessageRow previous) {
+        int changed = messages.update(new LambdaUpdateWrapper<ChatOutboundMessageRow>()
+            .eq(ChatOutboundMessageRow::getEnterpriseId, previous.getEnterpriseId())
+            .eq(ChatOutboundMessageRow::getDependsOnOutboundId, previous.getId())
+            .in(ChatOutboundMessageRow::getStatus, "pending", "retry_wait")
+            .eq(ChatOutboundMessageRow::getErrorCode, "CHAT_PREDECESSOR_PENDING")
+            .set(ChatOutboundMessageRow::getNextAttemptAt, null).set(ChatOutboundMessageRow::getErrorCode, null));
+        if (changed > 0) {
+            events.publishEvent(new ChatWorkRequested(Stage.SEND));
         }
     }
 

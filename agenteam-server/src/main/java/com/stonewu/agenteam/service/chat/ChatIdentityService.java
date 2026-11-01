@@ -12,6 +12,8 @@ import com.stonewu.agenteam.service.auth.AccountBehaviorService;
 import com.stonewu.agenteam.service.edition.EnterpriseEditionPolicy;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.integration.ChannelIdentityScopeService;
+import com.stonewu.agenteam.service.integration.wecom.WecomEnterpriseConnections;
+import com.stonewu.agenteam.service.integration.wecom.WecomMemberAliases;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,10 +35,13 @@ public class ChatIdentityService {
     private final EnterpriseAuthorizationService authorization;
     private final EnterpriseIntegrationMapper integrations;
     private final ChannelIdentityScopeService scopes;
+    private final WecomEnterpriseConnections wecomEnterprises;
+    private final WecomMemberAliases wecomMembers;
 
     public ChatIdentityService(UserChannelBindingMapper bindings, AuthMapper users, PermissionMapper permissions,
                                AccountBehaviorService behavior, EnterpriseEditionPolicy edition,
-                               EnterpriseAuthorizationService authorization, EnterpriseIntegrationMapper integrations, ChannelIdentityScopeService scopes) {
+                               EnterpriseAuthorizationService authorization, EnterpriseIntegrationMapper integrations, ChannelIdentityScopeService scopes,
+                               WecomEnterpriseConnections wecomEnterprises, WecomMemberAliases wecomMembers) {
         this.bindings = bindings;
         this.users = users;
         this.permissions = permissions;
@@ -45,6 +50,8 @@ public class ChatIdentityService {
         this.authorization = authorization;
         this.integrations = integrations;
         this.scopes = scopes;
+        this.wecomEnterprises = wecomEnterprises;
+        this.wecomMembers = wecomMembers;
     }
 
     public Optional<UserChannelBindingRow> find(String enterprise, String connection, String subjectType, String subject) {
@@ -59,15 +66,21 @@ public class ChatIdentityService {
         var application = integrations.selectOne(new LambdaQueryWrapper<EnterpriseIntegrationRow>()
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise).eq(EnterpriseIntegrationRow::getId, connection)
             .eq(EnterpriseIntegrationRow::getStatus, "enabled").isNotNull(EnterpriseIntegrationRow::getIdentityVerifiedAt));
+        if (application != null && "wecom_aibot".equals(application.getProviderCode())) {
+            return wecomEnterprises.verified(enterprise, connection).map(value -> scopes.connectionIds(value.enterprise(), true)).orElse(List.of());
+        }
         return application == null ? List.of() : scopes.connectionIds(application, true);
     }
 
     public LambdaQueryWrapper<UserChannelBindingRow> candidates(String enterprise, String connection) {
         var available = availableConnections(enterprise, connection);
-        return new LambdaQueryWrapper<UserChannelBindingRow>().eq(UserChannelBindingRow::getEnterpriseId, enterprise)
+        var query = new LambdaQueryWrapper<UserChannelBindingRow>().eq(UserChannelBindingRow::getEnterpriseId, enterprise)
             .in(UserChannelBindingRow::getConnectionId, available.isEmpty() ? List.of("") : available)
-            .eq(UserChannelBindingRow::getStatus, "active").eq(UserChannelBindingRow::getChatEnabled, true)
-            .and(query -> query.eq(UserChannelBindingRow::getConnectionId, connection).or()
+            .eq(UserChannelBindingRow::getStatus, "active").eq(UserChannelBindingRow::getChatEnabled, true);
+        if (wecomEnterprises.verified(enterprise, connection).isPresent()) {
+            return query.eq(UserChannelBindingRow::getExternalSubjectType, "wecom_userid");
+        }
+        return query.and(group -> group.eq(UserChannelBindingRow::getConnectionId, connection).or()
                 .isNotNull(UserChannelBindingRow::getExternalUnionId).ne(UserChannelBindingRow::getExternalUnionId, ""));
     }
 
@@ -81,6 +94,21 @@ public class ChatIdentityService {
         if (application == null) {
             return Optional.empty();
         }
+        if ("wecom_aibot".equals(application.getProviderCode())) {
+            return wecomMembers.find(enterprise, connection, subjectType, subject).flatMap(member -> {
+                var parent = integrations.selectById(member.connectionId());
+                if (parent == null || !enterprise.equals(parent.getEnterpriseId())) {
+                    return Optional.empty();
+                }
+                var matches = bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
+                    .eq(UserChannelBindingRow::getEnterpriseId, enterprise)
+                    .in(UserChannelBindingRow::getConnectionId, scopes.connectionIds(parent, true))
+                    .eq(UserChannelBindingRow::getExternalSubjectType, "wecom_userid")
+                    .eq(UserChannelBindingRow::getExternalSubjectId, member.subjectId()).eq(UserChannelBindingRow::getStatus, "active"))
+                    .stream().filter(row -> member.subjectId().equals(row.getExternalSubjectId())).toList();
+                return select(matches, member.connectionId());
+            });
+        }
         boolean shared = scopes.shared(application) && "feishu_open_id".equals(subjectType) && unionId != null && !unionId.isBlank();
         var rows = bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getEnterpriseId, enterprise).eq(UserChannelBindingRow::getStatus, "active")
@@ -91,6 +119,10 @@ public class ChatIdentityService {
                         .eq(UserChannelBindingRow::getExternalUnionId, unionId));
                 }
             }));
+        return select(rows, connection);
+    }
+
+    private Optional<UserChannelBindingRow> select(List<UserChannelBindingRow> rows, String connection) {
         if (rows.stream().map(UserChannelBindingRow::getUserId).distinct().count() > 1) {
             throw new ApiException(HttpStatus.CONFLICT, "CHANNEL_IDENTITY_CONFLICT", "此平台账号关联了不同群策账号，请在个人设置中检查原绑定。");
         }
@@ -101,6 +133,9 @@ public class ChatIdentityService {
 
     public String bindingNotice(String enterprise, String connection, String subjectType, String subject, String unionId, String platform) {
         String account = "feishu".equals(platform) ? "飞书账号" : "企业微信账号";
+        if ("wecom_aibot".equals(platform) && wecomEnterprises.verified(enterprise, connection).isEmpty()) {
+            return "机器人企业接入尚未完成，请联系管理员检查后重试。";
+        }
         if (bound(enterprise, connection, subjectType, subject, unionId).isPresent()) {
             return "你的" + account + "已绑定，但尚未允许使用智能体。请打开群策「个人设置 → 企业账号绑定」，开启「允许通过此账号使用智能体」，然后重新发送消息。";
         }

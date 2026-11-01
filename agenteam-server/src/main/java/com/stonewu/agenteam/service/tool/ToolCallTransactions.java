@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.tool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.execution.ExecutionStepIds;
 import com.stonewu.agenteam.mapper.execution.RunApprovalMapper;
+import com.stonewu.agenteam.mapper.execution.RunQuestionMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolApprovalSummaryMapper;
@@ -16,6 +17,7 @@ import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
 import com.stonewu.agenteam.service.execution.ExecutionAccessService;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
+import com.stonewu.agenteam.service.execution.UserQuestionTool;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.security.HttpCredentialService;
 import com.stonewu.agenteam.service.security.PayloadEncryption;
@@ -56,13 +58,14 @@ public class ToolCallTransactions {
     private final FileMapper files;
     private final ToolQueryPolicy queries;
     private final CollaborationToolAuthorization collaboration;
+    private final RunQuestionMapper questions;
 
     public ToolCallTransactions(ToolCallMapper calls, RunApprovalMapper approvals, ExecutionToolCatalog catalog,
                                 ExecutionAccessService access,
                                 RunLifecycleService lifecycle, PayloadEncryption encryption, ToolPayloadMapper payloads,
                                 ToolApprovalSummaryMapper summaries, ResourceJson json, Clock clock,
                                 HttpCredentialService credentials, ToolSchemaValidation schemas, FileMapper files,
-                                ToolQueryPolicy queries, CollaborationToolAuthorization collaboration) {
+                                ToolQueryPolicy queries, CollaborationToolAuthorization collaboration, RunQuestionMapper questions) {
         this.calls = calls;
         this.approvals = approvals;
         this.catalog = catalog;
@@ -78,6 +81,7 @@ public class ToolCallTransactions {
         this.files = files;
         this.queries = queries;
         this.collaboration = collaboration;
+        this.questions = questions;
     }
 
     @Transactional
@@ -93,6 +97,9 @@ public class ToolCallTransactions {
         ApiException argumentFailure = null;
         try {
             schemas.arguments(binding.definition().inputSchema(), input);
+            if (UserQuestionTool.handles(binding)) {
+                UserQuestionTool.validate(input);
+            }
         } catch (ApiException failure) {
             if (!failure.code().equals("TOOL_ARGUMENTS_INVALID")) {
                 throw failure;
@@ -175,6 +182,9 @@ public class ToolCallTransactions {
         }
         if (List.of("succeeded", "failed", "cancelled", "unknown").contains(call.status()) && call.resultEncrypted() != null) {
             return call;
+        }
+        if (UserQuestionTool.handles(binding)) {
+            throw new ApiException(HttpStatus.CONFLICT, "QUESTION_ANSWER_REQUIRED", "请先等待用户回答当前问题。");
         }
         if (!binding.readOnly() && calls.hasUncertainWrite(run, binding, call.argumentHash(), call.id())) {
             rejectUnknown(call);
@@ -307,6 +317,24 @@ public class ToolCallTransactions {
 
     public boolean internalAction(RunRecord run, ExecutionToolBinding binding, ToolCallRecord call) {
         return collaboration.isInternalAction(run, binding, call);
+    }
+
+    public boolean questionAnswered(ToolCallRecord call) {
+        return call != null && questions.forTool(call.enterpriseId(), call.id()).filter(row -> "answered".equals(row.getStatus())
+            && row.getRequestHash().equals(call.requestHash())).isPresent();
+    }
+
+    public void answerQuestion(RunRecord run, ToolCallRecord call, JsonNode answer) {
+        if (!run.id().equals(call.runId()) || !run.userId().equals(call.actorUserId()) || !call.readOnly()
+                || !UserQuestionTool.NAME.equals(call.toolName()) || !"waiting_input".equals(call.status())
+                || !questionAnswered(call)) {
+            throw new IllegalStateException("用户回答不属于当前等待的工具调用");
+        }
+        calls.finish(call, "succeeded", encryption.encrypt(answer, resultBinding(call)),
+            payloads.redact(answer, List.of(), List.of()), null, null, clock.instant());
+        if (!"succeeded".equals(calls.find(call.enterpriseId(), call.id(), false).orElseThrow().status())) {
+            throw new IllegalStateException("未能保存当前问题的回答");
+        }
     }
 
     private void requireApproval(RunRecord run, ExecutionToolBinding binding, ToolCallRecord call) {

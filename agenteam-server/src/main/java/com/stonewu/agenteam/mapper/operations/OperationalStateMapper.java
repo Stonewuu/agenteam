@@ -23,7 +23,7 @@ import java.util.List;
 public class OperationalStateMapper {
     public static final List<String> JOB_KINDS = List.of("run", "document_parse", "file_scan", "mail", "notification",
         "event_publish", "export", "cleanup");
-    public static final List<String> ACTIVE_RUN_STATES = List.of("queued", "running", "waiting_approval", "cancelling");
+    public static final List<String> ACTIVE_RUN_STATES = List.of("queued", "running", "waiting_approval", "waiting_input", "cancelling");
     private final OperationalStateSqlMapper statements;
     private final FileSqlMapper files;
     private final KnowledgeDocumentSqlMapper documents;

@@ -130,6 +130,7 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
     case "run.started":
     case "run.resumed":
     case "run.waiting_approval":
+    case "run.waiting_input":
     case "run.cancelling":
     case "run.completed":
     case "run.failed":
@@ -137,7 +138,7 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
       const run = event.payload;
       if (run.id !== event.runId || run.conversationId !== event.conversationId
         || run.lastSequence !== (event.protocolVersion === 2 ? event.databaseVersion : event.sequence)
-        || !["queued", "running", "waiting_approval", "cancelling", ...terminal].includes(run.status)) {
+        || !["queued", "running", "waiting_approval", "waiting_input", "cancelling", ...terminal].includes(run.status)) {
         throw new SnapshotRequired();
       }
       const ended = terminal.has(run.status);

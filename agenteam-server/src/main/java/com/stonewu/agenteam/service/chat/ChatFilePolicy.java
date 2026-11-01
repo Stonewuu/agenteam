@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
 import com.stonewu.agenteam.service.file.FileUploadPolicy;
+import com.stonewu.agenteam.service.file.ImageFileContent;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -15,6 +16,9 @@ public final class ChatFilePolicy {
             throw unsupported();
         }
         String extension = FileUploadPolicy.extension(name);
+        if (ImageFileContent.mediaType(name) != null) {
+            return ImageFileContent.mediaType(name);
+        }
         return switch (extension) {
             case "csv" -> "text/csv";
             case "json" -> "application/json";

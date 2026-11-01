@@ -5,7 +5,7 @@ import {loadSource, createTranslator} from "./i18n-test-runtime.mjs";
 const {feishuSetupStatus} = loadSource("features/integration/lib/feishu-setup-status");
 const job = (stage, kind = "bot", message = "当前步骤未完成，请稍后重试。") => ({stage, kind, message, canRetry: true});
 
-test("只有后台正在处理的阶段显示加载动画，并说明等待方式", () => {
+test("后台处理阶段显示对应进度，并说明可以暂时关闭窗口", () => {
   for (const stage of ["queued", "preparing", "configuring", "publishing", "binding"]) {
     const state = feishuSetupStatus(job(stage));
     assert.equal(state.kind, "processing");
@@ -16,7 +16,7 @@ test("只有后台正在处理的阶段显示加载动画，并说明等待方�
   }
 });
 
-test("等待审核和等待本人确认各有说明，不会显示后台处理动画", () => {
+test("等待审核和等待本人确认保留各自的状态与说明", () => {
   assert.equal(feishuSetupStatus(job("awaiting_scan")).kind, "action");
   const approval = feishuSetupStatus(job("waiting_approval"));
   assert.equal(approval.kind, "waiting");

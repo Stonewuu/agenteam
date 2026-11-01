@@ -8,6 +8,11 @@ import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
+import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
+import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
+import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
+import com.stonewu.agenteam.model.security.entity.EncryptedPayload;
+import com.stonewu.agenteam.model.execution.response.ContentBlock;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
@@ -29,12 +34,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
@@ -50,6 +58,8 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
     @Autowired private ChatIdentityService identities;
     @Autowired private ExecutionAccessService executionAccess;
     @Autowired private RunMapper runs;
+    @Autowired private ExecutionMessageMapper executionMessages;
+    @MockitoSpyBean private ToolCallMapper toolCalls;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
@@ -125,6 +135,47 @@ class CollaborationControlTest extends CollaborationApiTestSupport {
         assertEquals("TOOL_RESULT_UNKNOWN", onlyTask().getErrorCode());
         assertTrue(dispatch.claim("after-unknown-cancel").isEmpty());
         assertEquals(1, onlyTask().getRunCount());
+    }
+
+    @Test
+    void completedAnswerIsDeliveredAfterUnknownToolResultWasReturnedToTheModel() {
+        startTask();
+        var accepted = dispatch.submit(dispatch.claim("completed-with-tool-error").orElseThrow());
+        var lease = lifecycle.claim("completed-with-tool-error").orElseThrow();
+        var run = lifecycle.start(lease).orElseThrow();
+        unknownToolResult(run.id());
+        String answer = "命令结果尚未确认，排序代码已创建，其余说明如下。";
+        var block = new ContentBlock(UUID.randomUUID().toString(), "text", null, 1, "1", answer, "completed",
+            null, null, null, null, null, null);
+        executionMessages.save(enterprise, run.outputMessageId(), answer,
+            List.of(block), "completed", run.lastSequence(), Instant.now());
+        lifecycle.finish(lease, "completed", null, null);
+        worker.recover();
+        assertEquals("completed", runs.find(enterprise, accepted.runId(), false).orElseThrow().status());
+        assertEquals("completed", onlyTask().getStatus(), () -> onlyTask().getErrorCode());
+        assertNull(onlyTask().getErrorCode());
+    }
+
+    @Test
+    void stepLimitReasonSurvivesAnEarlierUnknownToolResult() {
+        startTask();
+        var accepted = dispatch.submit(dispatch.claim("limited-with-tool-error").orElseThrow());
+        var lease = lifecycle.claim("limited-with-tool-error").orElseThrow();
+        var run = lifecycle.start(lease).orElseThrow();
+        unknownToolResult(run.id());
+        lifecycle.finish(lease, "failed", "EXECUTION_STEP_LIMIT", "本次任务已达到允许的步骤上限。");
+        var failed = runs.find(enterprise, accepted.runId(), false).orElseThrow();
+        assertEquals("TOOL_RESULT_UNKNOWN", failed.errorCode());
+        assertTrue(failed.errorMessage().contains("步骤上限"));
+        assertTrue(failed.errorMessage().contains("不要重复提交"));
+    }
+
+    private void unknownToolResult(String run) {
+        var call = mock(ToolCallRecord.class);
+        when(call.status()).thenReturn("unknown");
+        when(call.readOnly()).thenReturn(false);
+        when(call.resultEncrypted()).thenReturn(new EncryptedPayload("test", "test", "test"));
+        doReturn(List.of(call)).when(toolCalls).forRun(enterprise, run);
     }
 
     @Test

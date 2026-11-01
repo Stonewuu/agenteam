@@ -6,6 +6,7 @@ import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
 import com.stonewu.agenteam.service.chat.ChatFilePolicy;
 import com.stonewu.agenteam.service.chat.ChatPlatformAdapter.Downloaded;
 import com.stonewu.agenteam.service.file.FileContentStorage;
+import com.stonewu.agenteam.service.file.ImageFileContent;
 import com.stonewu.agenteam.service.http.ApiException;
 import okhttp3.Dns;
 import okhttp3.HttpUrl;
@@ -20,6 +21,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Base64;
@@ -70,14 +72,16 @@ public class WecomResourceDownloader {
             if (disposition.length() > 2048) {
                 throw new IllegalArgumentException("平台文件名字段过长");
             }
-            String name = ContentDisposition.parse(disposition).getFilename();
-            ChatFilePolicy.mediaType(name, "file");
+            boolean image = "image".equals(material.path("resourceType").asText());
+            String name = image ? null : ContentDisposition.parse(disposition).getFilename();
+            if (!image) ChatFilePolicy.mediaType(name, "file");
             byte[] content = response.body().byteStream().readNBytes(LIMIT + 33);
             if (content.length > LIMIT + 32) {
                 throw new ChannelProviderException("CHAT_RESOURCE_TOO_LARGE", "平台附件超过二十 MiB。");
             }
             String key = material.path("aeskey").asText();
             byte[] plain = key.isEmpty() ? content : decrypt(content, key);
+            if (image) name = ImageFileContent.name(ImageFileContent.detect(plain));
             return new Downloaded(storage.write(app.enterpriseId(), new ByteArrayInputStream(plain), LIMIT), name);
         } catch (Exception failure) {
             diagnostics.failure(app.id(), request, null, null, failure, true);
@@ -92,7 +96,9 @@ public class WecomResourceDownloader {
     }
 
     public static byte[] decrypt(byte[] encrypted, String encodedKey) throws Exception {
-        byte[] key = Base64.getDecoder().decode(encodedKey);
+        // 长连接回调直接提供32字节密钥；同时兼容此前保存的Base64形式。
+        byte[] direct = encodedKey.getBytes(StandardCharsets.UTF_8);
+        byte[] key = direct.length == 32 ? direct : Base64.getDecoder().decode(encodedKey);
         if (key.length != 32 || encrypted.length == 0 || encrypted.length % 16 != 0) {
             throw new IllegalArgumentException("企微附件密钥或加密内容无效");
         }

@@ -35,6 +35,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 沿用框架暂停和继续语义，只把用户决定及执行资格交给持久事务处理。
@@ -62,6 +63,9 @@ public class RunApprovalService {
     private final Clock clock;
     private final RunStepMapper steps;
     private final ExecutionNotificationService notifications;
+    private final RunQuestionService questions;
+    private final RunQuestionMapper questionRows;
+    private final RunInteractionContinuation continuation;
 
     public RunApprovalService(RunApprovalMapper approvals, ToolCallMapper calls, RunMapper runs, RunJobMapper jobs,
                               RunActivityMapper activity,
@@ -72,7 +76,8 @@ public class RunApprovalService {
                               ApprovalConversationWriter messages, ConversationQueryService conversations,
                               EnterpriseAuthorizationService authorization, AuditEventService audit, Clock clock,
                               RunStepMapper steps,
-                              ScheduleRunStateService scheduleStates, ExecutionNotificationService notifications) {
+                              ScheduleRunStateService scheduleStates, ExecutionNotificationService notifications,
+                              RunQuestionService questions, RunQuestionMapper questionRows, RunInteractionContinuation continuation) {
         this.approvals = approvals;
         this.calls = calls;
         this.runs = runs;
@@ -94,6 +99,9 @@ public class RunApprovalService {
         this.steps = steps;
         this.scheduleStates = scheduleStates;
         this.notifications = notifications;
+        this.questions = questions;
+        this.questionRows = questionRows;
+        this.continuation = continuation;
     }
 
     @Transactional
@@ -119,13 +127,17 @@ public class RunApprovalService {
         for (var confirmation : confirmations) {
             for (var use : confirmation.calls()) {
                 var binding = tools.get(use.getName());
-                if (binding == null || binding.readOnly()) {
+                if (binding == null || binding.readOnly() && !UserQuestionTool.handles(binding)) {
                     throw new IllegalStateException("待确认工具不属于本次固定能力");
                 }
                 var call = calls.framework(run, confirmation.sessionId(), use.getId()).orElseThrow();
                 if (!call.argumentHash().equals(payloads.argumentHash(json.tree(use.getInput()))) || !binding.matches(
                     call)) {
                     throw changed();
+                }
+                if (UserQuestionTool.handles(binding)) {
+                    questions.park(run, call);
+                    continue;
                 }
                 var approval = approvals.forTool(call)
                     .orElseGet(() -> approvals.create(call, toolTransactions.summary(binding, call), clock.instant()));
@@ -153,10 +165,11 @@ public class RunApprovalService {
             events.append(run, "approval.created", approval.view(), clock.instant());
             notifications.waiting(run, approval.id());
         }
-        activity.pause(run, "waiting_approval", clock.instant());
+        String waiting = questionRows.pending(run.enterpriseId(), run.id()) ? "waiting_input" : "waiting_approval";
+        activity.pause(run, waiting, clock.instant());
         jobs.park(lease, clock.instant());
         scheduleStates.changed(runs.find(run.enterpriseId(), run.id(), false).orElseThrow());
-        events.append(run, "run.waiting_approval",
+        events.append(run, "run." + waiting,
             RunView.from(runs.find(run.enterpriseId(), run.id(), false).orElseThrow(), false), clock.instant());
     }
 
@@ -204,7 +217,7 @@ public class RunApprovalService {
         if (!approval.expiresAt().isAfter(clock.instant())) {
             throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_EXPIRED", "本次操作确认已过期，未发送请求。");
         }
-        if (!run.status().equals("waiting_approval") || run.cancelRequestedAt() != null) {
+        if (!Set.of("waiting_approval", "waiting_input").contains(run.status()) || run.cancelRequestedAt() != null) {
             throw resolved();
         }
         access.actor(run);
@@ -233,14 +246,7 @@ public class RunApprovalService {
         audit.record(actor.enterpriseId(), actor.user(), "run.approval." + input.decision(), "run_approval", saved.id(),
             outcome.equals("approved") ? "同意本次确认内容" : "拒绝本次确认内容",
             Map.of("runId", run.id(), "stepId", approval.stepId()));
-        var all = approvals.forRun(run.enterpriseId(), run.id());
-        if (all.stream().noneMatch(value -> value.status().equals("pending"))) {
-            activity.queue(run, clock.instant());
-            jobs.resume(run.enterpriseId(), run.id(), clock.instant());
-            scheduleStates.changed(runs.find(run.enterpriseId(), run.id(), false).orElseThrow());
-            events.append(run, "run.resumed",
-                RunView.from(runs.find(run.enterpriseId(), run.id(), false).orElseThrow(), false), clock.instant());
-        }
+        continuation.resumeWhenReady(run);
         return saved.view();
     }
 
@@ -262,6 +268,13 @@ public class RunApprovalService {
             for (var block : message.getContent()) {
                 if (block instanceof ToolUseBlock use && use.getState() == ToolCallState.ASKING) {
                     var call = calls.framework(run, session, use.getId()).orElseThrow();
+                    if (UserQuestionTool.NAME.equals(call.toolName()) && call.readOnly()) {
+                        if (!questions.answered(call)) {
+                            throw resolved();
+                        }
+                        decisions.add(new ConfirmResult(true, toolTransactions.originalCall(call)));
+                        continue;
+                    }
                     var approval = approvals.forTool(call).orElseThrow();
                     if (!List.of("approved", "rejected").contains(approval.status()) || !approval.requestHash()
                         .equals(call.requestHash())) {

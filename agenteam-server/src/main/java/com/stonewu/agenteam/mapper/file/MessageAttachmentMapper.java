@@ -103,6 +103,22 @@ public class MessageAttachmentMapper {
             .getRecords().stream().map(MessageAttachmentRow::getFileId).toList();
     }
 
+    public Map<String, List<Map<String, Object>>> forConversationMessages(String enterprise, String user, String conversation, List<String> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        var query = JoinWrappers.lambda(MessageAttachmentRow.class).select(MessageAttachmentRow::getMessageId).distinct()
+            .innerJoin(AgentMessageRow.class, on -> on.eq(AgentMessageRow::getEnterpriseId, MessageAttachmentRow::getEnterpriseId)
+                .eq(AgentMessageRow::getId, MessageAttachmentRow::getMessageId))
+            .innerJoin(AgentConversationRow.class, on -> on.eq(AgentConversationRow::getEnterpriseId, AgentMessageRow::getEnterpriseId)
+                .eq(AgentConversationRow::getId, AgentMessageRow::getConversationId))
+            .eq(MessageAttachmentRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getUserId, user)
+            .eq(AgentConversationRow::getId, conversation).ne(AgentConversationRow::getStatus, "deleted")
+            .eq(AgentMessageRow::getRole, "user").in(MessageAttachmentRow::getMessageId, ids);
+        var scoped = statements.selectJoinList(MessageAttachmentRow.class, query).stream().map(MessageAttachmentRow::getMessageId).toList();
+        return forMessages(enterprise, scoped);
+    }
+
     public void removeConversation(String enterprise, String conversation, Instant now) {
         var ids = statements.selectJoinList(MessageAttachmentRow.class, JoinWrappers.lambda(MessageAttachmentRow.class)
                 .select(MessageAttachmentRow::getFileId).distinct()

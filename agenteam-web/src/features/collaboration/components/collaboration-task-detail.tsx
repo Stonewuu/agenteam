@@ -53,7 +53,7 @@ export function CollaborationTaskDetail({enterpriseId, taskId, openReplyMode}: {
           ? <p className={styles.notice}>{t(collaborationErrors[detail.task.errorCode])}</p> : null}
         <div className={styles.layout}>
           <div className={styles.main}>
-            <CollaborationTaskActions path={path} detail={detail} onChanged={changed}/>
+            <CollaborationTaskActions enterprise={enterpriseId} path={path} detail={detail} onChanged={changed}/>
             {detail.roles.filter((role) => role.conversationId).map((role) => <CollaborationFiles key={role.id} enterpriseId={enterpriseId}
               conversationId={role.conversationId!} roleName={role.name} refreshKey={`${detail.task.revision}:${refresh.version}`}/>)}
             {detail.task.status === "completed" && <CollaborationArtifacts artifacts={detail.artifacts} onOpen={setArtifact}/>}

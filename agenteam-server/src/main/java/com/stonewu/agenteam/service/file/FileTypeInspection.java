@@ -24,6 +24,12 @@ public class FileTypeInspection {
     public void verify(FileRecord file) {
         String type = FileUploadPolicy.extension(file.originalName());
         try (var input = storage.open(file)) {
+            if (ImageFileContent.supports(file.mediaType())) {
+                if (!ImageFileContent.detect(input.readNBytes(12)).equals(file.mediaType())) {
+                    throw DocumentParserProcess.failure("FILE_TYPE_INVALID");
+                }
+                return;
+            }
             String signature = new String(input.readNBytes(8), StandardCharsets.ISO_8859_1);
             if (type.equals("pdf") && signature.startsWith("%PDF-")) {
                 return;

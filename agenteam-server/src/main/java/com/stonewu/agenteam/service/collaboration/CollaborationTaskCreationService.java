@@ -22,6 +22,7 @@ import com.stonewu.agenteam.service.chat.ChatBotBindingService;
 import com.stonewu.agenteam.service.chat.ChatConversationService;
 import com.stonewu.agenteam.service.chat.ChatOutboundService;
 import com.stonewu.agenteam.service.chat.ChatPayloadCipher;
+import com.stonewu.agenteam.service.chat.ChatMessageText;
 import com.stonewu.agenteam.service.chat.ChatRecords;
 import com.stonewu.agenteam.service.chat.ChatReplyPreferenceService;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -141,7 +142,7 @@ public class CollaborationTaskCreationService {
         task.setOriginUserBindingId(message.getOriginBindingId());
         task.setEntryBotId(entryBot);
         task.setShortCode("GC-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
-        task.setObjectiveEncrypted(cipher.encrypt(actor.enterpriseId(), "task-objective", task.getId(), Map.of("text", content.path("text").asText(), "messageId", message.getId())));
+        task.setObjectiveEncrypted(cipher.encrypt(actor.enterpriseId(), "task-objective", task.getId(), Map.of("text", ChatMessageText.withQuote(content), "messageId", message.getId())));
         task.setInputRevision(1L);
         task.setStatus("active");
         var replyPreference = replyPreferences.initial(actor.enterpriseId(), actor.userId(), group);

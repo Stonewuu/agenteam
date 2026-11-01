@@ -32,7 +32,7 @@ import { FeishuSetupSteps } from "./feishu-setup-steps";
 import { FeishuSetupStatus } from "./feishu-setup-status";
 import { FeishuManagementAuthorization } from "./feishu-management-authorization";
 import ui from "@/components/ui/surface.module.css";
-import styles from "./feishu-quick-create.module.css";
+import styles from "./integration-quick-create.module.css";
 
 function refreshWhileCreating(data: FeishuSetupOverview | null) {
   return data?.jobs.some(
@@ -125,7 +125,7 @@ export function FeishuQuickCreateDialog({
           description: kind === "bot" ? description : t("用于企业账号、通知与岗位机器人管理"),
           loginEnabled: kind === "enterprise" ? selectedLogin : null,
           messagingEnabled: kind === "enterprise" ? selectedMessaging : null,
-          ...(kind === "enterprise" ? {bindingEnabled: selectedBinding} : {}),
+          ...(kind === "enterprise" ? { bindingEnabled: selectedBinding } : {}),
         },
       });
       setCreated(next);
@@ -289,8 +289,14 @@ export function FeishuQuickCreateDialog({
                 {manager && (
                   <p className={styles.confirmationHint}>{t("将使用已有应用完成企业接入，无需再次创建。")}</p>
                 )}
-                <SettingRow icon={<IconPlug size={18} />} label={t("允许成员绑定账号")} description={t("成员可关联当前企业的渠道账号。")}
-                  checked={selectedBinding} disabled={action.busy} onChange={setBindingEnabled}/>
+                <SettingRow
+                  icon={<IconPlug size={18} />}
+                  label={t("允许成员绑定账号")}
+                  description={t("成员可关联当前企业的渠道账号。")}
+                  checked={selectedBinding}
+                  disabled={action.busy}
+                  onChange={setBindingEnabled}
+                />
                 <SettingRow
                   icon={<IconKey size={18} />}
                   label={t("允许已绑定成员登录")}

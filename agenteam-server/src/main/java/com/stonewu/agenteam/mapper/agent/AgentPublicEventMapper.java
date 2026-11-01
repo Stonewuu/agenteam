@@ -362,19 +362,19 @@ public final class AgentPublicEventMapper {
     private void finishChild(List<ExecutionChange> changes, String session, String parent, String status,
                              AgentEventRecord event) {
         var child = blocks.get(parent);
-        if (child == null || !List.of("pending", "running", "waiting_approval").contains(child.status())) {
+        if (child == null || !List.of("pending", "running", "waiting_approval", "waiting_input").contains(child.status())) {
             return;
         }
         replace(changes, child.update(child.text(), status));
         String agentStep = id("agent:" + session);
         for (var entry : new ArrayList<>(steps.values())) {
             if ((entry.id().equals(agentStep) || agentStep.equals(entry.parentStepId())) && List.of("pending",
-                "running", "waiting_approval").contains(entry.status())) {
+                "running", "waiting_approval", "waiting_input").contains(entry.status())) {
                 step(changes, entry.id(), entry.parentStepId(), entry.kind(), entry.title(), status, event, null);
             }
         }
         for (var block : new ArrayList<>(blocks.values())) {
-            if (parent.equals(block.parentBlockId()) && List.of("pending", "running", "waiting_approval")
+            if (parent.equals(block.parentBlockId()) && List.of("pending", "running", "waiting_approval", "waiting_input")
                 .contains(block.status())) {
                 replace(changes, block.update(block.text(), status));
             }

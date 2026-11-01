@@ -128,13 +128,13 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
     default List<Integer> activeCountAgentRun(String enterprise) {
         return List.of(Math.toIntExact(selectCount(
             new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getEnterpriseId, enterprise)
-                .in(AgentRunRow::getStatus, Arrays.asList("queued", "running", "waiting_approval", "cancelling")))));
+                .in(AgentRunRow::getStatus, Arrays.asList("queued", "running", "waiting_approval", "waiting_input", "cancelling")))));
     }
 
     default List<Integer> countUserActiveRuns(String enterprise, String user) {
         return List.of(Math.toIntExact(selectCount(
             new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getEnterpriseId, enterprise)
-                .in(AgentRunRow::getStatus, Arrays.asList("queued", "running", "waiting_approval", "cancelling"))
+                .in(AgentRunRow::getStatus, Arrays.asList("queued", "running", "waiting_approval", "waiting_input", "cancelling"))
                 .eq(AgentRunRow::getUserId, user))));
     }
 
@@ -155,7 +155,7 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
 
     default int requestCancelAgentRun(Timestamp now, String enterpriseId, String id) {
         return update(new LambdaUpdateWrapper<AgentRunRow>().eq(AgentRunRow::getEnterpriseId, enterpriseId)
-            .eq(AgentRunRow::getId, id).in(AgentRunRow::getStatus, Arrays.asList("running", "waiting_approval"))
+            .eq(AgentRunRow::getId, id).in(AgentRunRow::getStatus, Arrays.asList("running", "waiting_approval", "waiting_input"))
             .set(AgentRunRow::getStatus, "cancelling").set(AgentRunRow::getCancelRequestedAt, now)
             .set(AgentRunRow::getUpdatedAt, now));
     }

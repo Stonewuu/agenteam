@@ -38,7 +38,7 @@ public class CollaborationGeneratedResultService {
         }
         var task = access.require(link.getEnterpriseId(), link.getTaskId());
         var work = works.require(task, link.getWorkId());
-        if (!Set.of("running", "waiting_approval").contains(work.getStatus()) || !task.getInputRevision().equals(link.getInputRevision())) {
+        if (!Set.of("running", "waiting_approval", "waiting_input").contains(work.getStatus()) || !task.getInputRevision().equals(link.getInputRevision())) {
             return null;
         }
         String text = messages.find(run.enterpriseId(), run.conversationId(), run.outputMessageId()).orElseThrow().content();

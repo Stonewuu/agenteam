@@ -2,6 +2,9 @@ package com.stonewu.agenteam.service.chat;
 
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
+import com.stonewu.agenteam.service.integration.wecom.WecomMemberAliases;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
+import com.stonewu.agenteam.service.http.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,11 +18,16 @@ public class ChatNormalizationWorker {
     private static final Logger LOG = LoggerFactory.getLogger(ChatNormalizationWorker.class);
     private final ChatNormalizationTransactions transactions;
     private final ChatConfiguration configuration;
+    private final WecomMemberAliases wecomMembers;
+    private final ChatWorkCoordinator work;
     private final String worker = UUID.randomUUID().toString();
 
-    public ChatNormalizationWorker(ChatNormalizationTransactions transactions, ChatConfiguration configuration) {
+    public ChatNormalizationWorker(ChatNormalizationTransactions transactions, ChatConfiguration configuration, WecomMemberAliases wecomMembers,
+            ChatWorkCoordinator work) {
         this.transactions = transactions;
         this.configuration = configuration;
+        this.wecomMembers = wecomMembers;
+        this.work = work;
     }
 
     @Scheduled(fixedDelayString = "${chat.poll-interval-ms:5000}")
@@ -27,11 +35,7 @@ public class ChatNormalizationWorker {
         if (!configuration.isWorkerEnabled()) {
             return;
         }
-        for (int index = 0; index < Math.min(50, configuration.getBatchSize()); index++) {
-            if (!runOnce()) {
-                break;
-            }
-        }
+        work.wake(Stage.RECEIVE);
     }
 
     public boolean runOnce() {
@@ -41,8 +45,14 @@ public class ChatNormalizationWorker {
         }
         var lease = candidate.get();
         try {
+            wecomMembers.prepare(lease);
             transactions.normalize(lease);
         } catch (RuntimeException failure) {
+            if (failure instanceof ApiException api && api.getStatusCode().is4xxClientError() && api.getStatusCode().value() != 429) {
+                transactions.rejected(lease, api.code());
+                LOG.info("聊天操作已结束，不再重试，企业={}，接收记录={}，原因={}", lease.enterpriseId(), lease.receiptId(), api.code());
+                return true;
+            }
             var safe = new ChannelProviderException("CHAT_NORMALIZATION_FAILED", "聊天消息暂时无法处理。", failure);
             LOG.warn("聊天消息处理失败，企业={}，接收记录={}", lease.enterpriseId(), lease.receiptId(), safe);
             transactions.failed(lease, safe.code());

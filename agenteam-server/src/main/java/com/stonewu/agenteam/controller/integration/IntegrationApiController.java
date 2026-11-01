@@ -62,6 +62,12 @@ public class IntegrationApiController {
         return responses.operation(integrations.update(enterpriseId, connectionId, input, request), request);
     }
 
+    @PostMapping("/quick-wecom")
+    public ResponseEntity<ApiResponse<Object>> quickWecom(@PathVariable String enterpriseId,
+            @RequestBody IntegrationCreateRequest input, HttpServletRequest request) {
+        return responses.operation(integrations.quickWecom(enterpriseId, input, request), request);
+    }
+
     @PostMapping("/{connectionId}/rotate-secret")
     public ResponseEntity<ApiResponse<Object>> rotate(@PathVariable String enterpriseId, @PathVariable String connectionId,
             @RequestBody IntegrationSecretRequest input, HttpServletRequest request) {

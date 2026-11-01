@@ -8,6 +8,7 @@ import com.stonewu.agenteam.model.execution.entity.ExecutionLeaseRenewed;
 import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
+import com.stonewu.agenteam.model.execution.entity.RunQuestionRow;
 import com.stonewu.agenteam.model.execution.response.RunStepView;
 import com.stonewu.agenteam.model.execution.response.RunView;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -56,6 +57,7 @@ public class RunLifecycleService {
     private final ExecutionNotificationService notifications;
     private final ApplicationEventPublisher leaseNotifications;
     private final LivePartialOutputRecovery partialOutput;
+    private final RunQuestionLifecycle questions;
 
     public RunLifecycleService(EnterpriseMapper enterprises, ConversationMapper conversations, RunMapper runs,
                                RunJobMapper jobs,
@@ -67,7 +69,8 @@ public class RunLifecycleService {
                                ToolQueryPolicy toolQueries,
                                ScheduleRunStateService scheduleStates, ScheduleRecheckService scheduleAccess,
                                RunAttemptRetryService retries, ExecutionNotificationService notifications,
-                               ApplicationEventPublisher leaseNotifications, LivePartialOutputRecovery partialOutput) {
+                               ApplicationEventPublisher leaseNotifications, LivePartialOutputRecovery partialOutput,
+                               RunQuestionLifecycle questions) {
         this.enterprises = enterprises;
         this.conversations = conversations;
         this.runs = runs;
@@ -90,6 +93,7 @@ public class RunLifecycleService {
         this.notifications = notifications;
         this.leaseNotifications = leaseNotifications;
         this.partialOutput = partialOutput;
+        this.questions = questions;
     }
 
     @Transactional
@@ -249,10 +253,22 @@ public class RunLifecycleService {
         return approvals.expired(clock.instant());
     }
 
+    public List<RunQuestionRow> expiredQuestions() {
+        return questions.expired();
+    }
+
+    @Transactional
+    public void expireQuestion(RunQuestionRow question) {
+        var run = locked(question.getEnterpriseId(), question.getRunId());
+        if (List.of("waiting_input", "waiting_approval").contains(run.status()) && questions.expired(question)) {
+            finishLocked(run, "cancelled", "QUESTION_EXPIRED", "等待回答已结束，可以在当前对话继续提问。");
+        }
+    }
+
     @Transactional
     public void expireApproval(RunApprovalMapper.ExpiredRun candidate) {
         var run = locked(candidate.enterpriseId(), candidate.runId());
-        if (!run.status().equals("waiting_approval")) {
+        if (!List.of("waiting_approval", "waiting_input").contains(run.status())) {
             return;
         }
         if (approvals.forRun(run.enterpriseId(), run.id()).stream()
@@ -405,7 +421,7 @@ public class RunLifecycleService {
         if (run.terminal() || run.status().equals("cancelling")) {
             return;
         }
-        if (run.status().equals("queued") || run.status().equals("waiting_approval")) {
+        if (List.of("queued", "waiting_approval", "waiting_input").contains(run.status())) {
             finishLocked(run, "cancelled", null, null);
         } else {
             runs.requestCancel(run, clock.instant());
@@ -427,6 +443,8 @@ public class RunLifecycleService {
                     approvals.find(run.enterpriseId(), approval.id(), false).orElseThrow().view(), clock.instant());
             }
         }
+        questions.finish(run);
+        String stopMessage = message;
         for (var call : toolCalls.forRun(run.enterpriseId(), run.id())) {
             boolean unknown = call.status().equals("unknown") || (!call.readOnly() && call.status()
                 .equals("running") && call.submittedAt() != null);
@@ -434,18 +452,19 @@ public class RunLifecycleService {
             if (unknown && !(status.equals("completed") && call.status().equals("unknown") && call.resultEncrypted() != null)) {
                 status = "failed";
                 code = "TOOL_RESULT_UNKNOWN";
-                message = "无法确认操作结果，请先到目标系统核对。";
+                message = (stopMessage == null || stopMessage.isBlank() ? "" : stopMessage + " ")
+                    + "部分工具操作的结果尚未确认，请先核对这些操作，不要重复提交。";
                 if (!call.status().equals("unknown")) {
                     toolCalls.finish(call, "unknown", null, null, code, message, clock.instant());
                 }
-            } else if (List.of("prepared", "waiting_approval", "running").contains(call.status())) {
+            } else if (List.of("prepared", "waiting_approval", "waiting_input", "running").contains(call.status())) {
                 toolCalls.finish(call, "cancelled", null, null, "TOOL_CANCELLED", "本次调用没有完成，未继续发送。",
                     clock.instant());
             }
         }
         final String outcome = status;
         for (var step : steps.list(run.enterpriseId(), run.id())) {
-            if (!List.of("pending", "running", "waiting_approval").contains(step.status())) {
+            if (!List.of("pending", "running", "waiting_approval", "waiting_input").contains(step.status())) {
                 continue;
             }
             var finished = new RunStepView(step.id(), step.parentStepId(), step.attemptId(), step.kind(), step.title(),
@@ -457,7 +476,7 @@ public class RunLifecycleService {
         var storedOutput = messages.find(run.enterpriseId(), run.conversationId(), run.outputMessageId()).orElseThrow();
         var output = partialOutput.merge(run, storedOutput);
         var blocks = output.blocks().stream()
-            .map(block -> List.of("pending", "running", "waiting_approval").contains(block.status())
+            .map(block -> List.of("pending", "running", "waiting_approval", "waiting_input").contains(block.status())
                 ? block.update(block.text(), outcome) : block).toList();
         for (int i = 0; i < blocks.size(); i++) {
             var block = blocks.get(i);

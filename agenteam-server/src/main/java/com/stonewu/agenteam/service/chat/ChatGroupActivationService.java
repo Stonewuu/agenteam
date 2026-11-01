@@ -15,6 +15,7 @@ import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent.Kind;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.integration.wecom.WecomEnterpriseConnections;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,10 +38,11 @@ public class ChatGroupActivationService {
     private final ChatOutboundService outbound;
     private final ResourceJson json;
     private final Clock clock;
+    private final WecomEnterpriseConnections wecom;
 
     public ChatGroupActivationService(ChatConversationMapper groups, ChatConversationBotMapper members, ChatBotBindingMapper botRows,
             ChatBotBindingService bots, ChatMentionIdentityService mentions, ChatOutboundService outbound, ResourceJson json, Clock clock,
-            EnterpriseIntegrationMapper applications) {
+            EnterpriseIntegrationMapper applications, WecomEnterpriseConnections wecom) {
         this.groups = groups;
         this.members = members;
         this.botRows = botRows;
@@ -50,14 +52,20 @@ public class ChatGroupActivationService {
         this.outbound = outbound;
         this.json = json;
         this.clock = clock;
+        this.wecom = wecom;
     }
 
     public ChatConversationRow activate(ChatBotBindingRow receiver, ChatConversationRow group, NormalizedChatEvent event) {
         boolean newGroup = "discovered".equals(group.getStatus()) && group.getRevision() == 1;
-        if (!"feishu".equals(group.getPlatformCode()) || !"group".equals(group.getConversationKind())
+        boolean wecomGroup = "wecom_aibot".equals(group.getPlatformCode());
+        if (!("feishu".equals(group.getPlatformCode()) || wecomGroup) || !"group".equals(group.getConversationKind())
             || !"enabled".equals(receiver.getStatus()) || !Boolean.TRUE.equals(receiver.getChatEnabled())
             || !newGroup && !("enabled".equals(group.getStatus()) && automatic(group))
             || event.kind() != Kind.BOT_JOINED && !mentionsReceiver(receiver, event) && !(automatic(group) && event.humanMessage())) {
+            return group;
+        }
+        if (wecomGroup && (!mentionsReceiver(receiver, event)
+            || wecom.verified(group.getEnterpriseId(), receiver.getConnectionId()).isEmpty())) {
             return group;
         }
         if (!bots.currentCredentials(receiver, bots.application(receiver).credentialRevision())) {
@@ -81,6 +89,7 @@ public class ChatGroupActivationService {
         }
         var candidates = botRows.selectList(new LambdaQueryWrapper<ChatBotBindingRow>()
             .eq(ChatBotBindingRow::getEnterpriseId, group.getEnterpriseId())
+            .eq(wecomGroup, ChatBotBindingRow::getId, receiver.getId())
             .in(ChatBotBindingRow::getId, existing.stream().map(ChatConversationBotRow::getBotBindingId).toList())
             .eq(ChatBotBindingRow::getStatus, "enabled").eq(ChatBotBindingRow::getChatEnabled, true)
             .orderByAsc(ChatBotBindingRow::getCreatedAt, ChatBotBindingRow::getId));
@@ -101,7 +110,7 @@ public class ChatGroupActivationService {
         var verifiedBots = selectedBots.stream().filter(bot -> Boolean.TRUE.equals(verified.get(bot.getId()))).toList();
         boolean compatible = !verifiedBots.isEmpty() && mentions.supportsGroup(verifiedBots);
         // 已使用企业消息编号的群不能在凭据变化后退回应用范围，否则旧消息可能再次建立任务。
-        boolean multiple = "multi_bot".equals(group.getIngressMode()) || verifiedBots.size() > 1 && compatible;
+        boolean multiple = !wecomGroup && ("multi_bot".equals(group.getIngressMode()) || verifiedBots.size() > 1 && compatible);
         String entry = selected.contains(group.getIngressBotId()) ? group.getIngressBotId() : selected.getFirst();
         String mode = multiple ? "multi_bot" : "single_bot";
         if (newGroup || !automatic(group) || !mode.equals(group.getIngressMode()) || !entry.equals(group.getIngressBotId())

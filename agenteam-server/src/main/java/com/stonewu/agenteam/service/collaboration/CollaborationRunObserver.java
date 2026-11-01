@@ -120,8 +120,11 @@ public class CollaborationRunObserver {
             return;
         }
         boolean recorded = Set.of("handed_off", "completed", "waiting_dependency", "waiting_input", "ready", "blocked", "superseded").contains(work.getStatus());
+        // 旧提问工具会正常结束本轮；等待回答时被取消或失败的执行仍需关闭岗位工作。
+        recorded &= !"waiting_input".equals(work.getStatus()) || "completed".equals(run.status());
         boolean uncertain = "TOOL_RESULT_UNKNOWN".equals(run.errorCode()) || calls.forRun(enterprise, run.id()).stream()
-            .anyMatch(call -> !call.readOnly() && (call.status().equals("unknown") || call.submittedAt() != null
+            .anyMatch(call -> !call.readOnly() && (call.status().equals("unknown")
+                && !(run.status().equals("completed") && call.resultEncrypted() != null) || call.submittedAt() != null
                 && call.resultEncrypted() == null && call.status().equals("running")));
         if (uncertain && !work.getStatus().equals("handed_off")) {
             block(task, work, "TOOL_RESULT_UNKNOWN");
@@ -242,10 +245,10 @@ public class CollaborationRunObserver {
     }
 
     private void changedStatus(CollaborationTaskRow task, CollaborationWorkItemRow work, CollaborationRunLinkRow link, RunRecord run) {
-        if (run.status().equals("waiting_approval") && work.getStatus().equals("running")) {
+        if (run.status().equals("waiting_approval") && Set.of("running", "waiting_input").contains(work.getStatus())) {
             works.change(work, "waiting_approval");
             tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
-                .eq(CollaborationTaskRow::getId, task.getId()).eq(CollaborationTaskRow::getStatus, "active")
+                .eq(CollaborationTaskRow::getId, task.getId()).in(CollaborationTaskRow::getStatus, "active", "waiting_input")
                 .set(CollaborationTaskRow::getStatus, "waiting_approval").setIncrBy(CollaborationTaskRow::getRevision, 1));
             outbound.text(task.getEnterpriseId(), task.getConversationId(), task.getEntryBotId(), task.getId(), null, "approval:" + run.id(),
                 "waiting_approval", "任务 【" + task.getShortCode() + "】：有一项操作需要原发起人确认。\n" + publicLinks.task(task.getEnterpriseId(), task.getId()), null);

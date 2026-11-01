@@ -16,6 +16,8 @@ import com.stonewu.agenteam.model.chat.entity.ChatResourceLease;
 import com.stonewu.agenteam.model.file.request.FilePrepareRequest;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
 import com.stonewu.agenteam.service.file.FileContentStorage;
+import com.stonewu.agenteam.service.file.ImageFileContent;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -42,10 +44,11 @@ public class ChatResourceTransactions {
     private final BackgroundJobMapper jobs;
     private final ResourceJson json;
     private final Clock clock;
+    private final ImageFileContent imageContent;
 
     public ChatResourceTransactions(ChatMessageResourceMapper resources, ChatMessageMapper messages, ChatBotBindingService bots,
             ChatConversationService conversations, ChatIdentityService identities, ChatPayloadCipher cipher, EnterpriseMapper enterprises,
-            FileMapper files, BackgroundJobMapper jobs, ResourceJson json, Clock clock) {
+            FileMapper files, BackgroundJobMapper jobs, ResourceJson json, Clock clock, ImageFileContent imageContent) {
         this.resources = resources;
         this.messages = messages;
         this.bots = bots;
@@ -57,6 +60,7 @@ public class ChatResourceTransactions {
         this.jobs = jobs;
         this.json = json;
         this.clock = clock;
+        this.imageContent = imageContent;
     }
 
     @Transactional
@@ -112,15 +116,20 @@ public class ChatResourceTransactions {
         }
         var material = cipher.decrypt(lease.enterpriseId(), "message-resource", row.getId(), row.getFetchMaterialEncrypted());
         String name = material.path("name").asText();
-        String mediaType = app.providerCode().equals("wecom_aibot") && material.path("type").asText().equals("file")
+        boolean image = material.path("type").asText().equals("image");
+        String mediaType = image || app.providerCode().equals("wecom_aibot") && material.path("type").asText().equals("file")
             ? null : ChatFilePolicy.mediaType(name, material.path("type").asText());
-        return new Prepared(app, message.getPlatformMessageId(), message.getSenderUserId(), name, mediaType, material.path("download"));
+        ObjectNode download = material.path("download").deepCopy();
+        download.put("resourceType", material.path("type").asText());
+        return new Prepared(app, message.getPlatformMessageId(), message.getSenderUserId(), name, mediaType, download);
     }
 
     @Transactional
     public void fetched(ChatResourceLease lease, Prepared prepared, ChatPlatformAdapter.Downloaded downloaded) {
-        String media = ChatFilePolicy.mediaType(downloaded.name(), "file");
-        var resolved = new Prepared(prepared.application(), prepared.platformMessageId(), prepared.userId(), downloaded.name(), media, prepared.material());
+        boolean image = "image".equals(prepared.material().path("resourceType").asText());
+        String media = image ? imageContent.detect(lease.enterpriseId(), downloaded.content()) : ChatFilePolicy.mediaType(downloaded.name(), "file");
+        String name = image ? ImageFileContent.name(media) : downloaded.name();
+        var resolved = new Prepared(prepared.application(), prepared.platformMessageId(), prepared.userId(), name, media, prepared.material());
         downloaded(lease, resolved, downloaded.content());
     }
 

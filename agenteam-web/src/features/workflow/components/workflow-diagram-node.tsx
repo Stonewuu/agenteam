@@ -28,6 +28,7 @@ const statuses: Record<BlockStatus, string> = {
   pending: "尚未开始",
   running: "正在执行",
   waiting_approval: "等待确认",
+  waiting_input: "等待回答",
   completed: "已完成",
   failed: "未完成",
   cancelled: "已停止",

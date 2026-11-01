@@ -113,6 +113,14 @@ public class FileContentStorage {
         }
     }
 
+    public InputStream open(String enterprise, Stored stored) {
+        FileStorageKeys.require(stored.key());
+        if (!stored.key().startsWith(enterprise + "/")) {
+            throw FileStorageKeys.unavailable();
+        }
+        return objects.open(stored.key());
+    }
+
     public void delete(String key) {
         FileStorageKeys.require(key);
         objects.delete(key);

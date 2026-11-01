@@ -1,0 +1,17 @@
+.content { display: grid; gap: 20px; min-width: 0; }
+.name { margin: 0; color: var(--muted); font-size: 13px; }
+.heading { display: grid; gap: 8px; }
+.heading h3 { margin: 0; font-size: 20px; font-weight: 650; }
+.heading p { margin: 0; color: var(--muted); line-height: 1.7; }
+.command { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.command input { min-width: 0; font-size: 13px; }
+.copy { white-space: nowrap; min-width: 118px; }
+.validity { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-top: -10px; font-size: 12px; color: var(--muted); }
+.renew { white-space: nowrap; font-size: 12px; min-height: 36px; }
+.hint { margin: 0; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); line-height: 1.7; font-size: 13px; }
+.error { margin: 0; color: var(--danger); font-size: 13px; }
+@media (max-width: 520px) {
+  .command { grid-template-columns: minmax(0, 1fr); }
+  .copy { width: 100%; min-height: 44px; }
+  .renew { min-height: 44px; }
+}

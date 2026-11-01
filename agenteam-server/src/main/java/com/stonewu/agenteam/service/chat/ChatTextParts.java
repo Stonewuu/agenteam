@@ -17,9 +17,17 @@ public final class ChatTextParts {
             String character = new String(Character.toChars(point));
             int size = character.getBytes(StandardCharsets.UTF_8).length;
             if (bytes + size > 3500) {
-                parts.add(part.toString());
-                part.setLength(0);
-                bytes = 0;
+                // 优先保留完整段落；没有合适换行时仍按完整字符拆分，不丢弃任何正文。
+                int lineEnd = part.lastIndexOf("\n") + 1;
+                if (lineEnd >= part.length() / 2 && lineEnd > 0) {
+                    parts.add(part.substring(0, lineEnd));
+                    part.delete(0, lineEnd);
+                    bytes = part.toString().getBytes(StandardCharsets.UTF_8).length;
+                } else {
+                    parts.add(part.toString());
+                    part.setLength(0);
+                    bytes = 0;
+                }
             }
             part.append(character);
             bytes += size;

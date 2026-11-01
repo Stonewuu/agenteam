@@ -8,6 +8,9 @@ import com.stonewu.agenteam.model.integration.request.IntegrationStatusRequest;
 import com.stonewu.agenteam.model.integration.request.IntegrationUpdateRequest;
 import com.stonewu.agenteam.model.integration.response.IntegrationView;
 import com.stonewu.agenteam.model.integration.response.IntegrationProviderView;
+import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
+import com.stonewu.agenteam.service.integration.IntegrationCheckService.PreparedCheck;
+import com.stonewu.agenteam.service.resource.ResourceInput;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
 import com.stonewu.agenteam.service.auth.AuthContextService;
 import com.stonewu.agenteam.service.auth.ChannelSessionGuard;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -71,6 +75,45 @@ public class IntegrationApiService {
         InputValidation.request(request, IntegrationCreateRequest.class);
         return execute(enterprise, request, "integration.manage",
             actor -> ApiOperationResult.of(201, management.create(actor, enterprise, system(request), input)));
+    }
+
+    /** 首次填写企微企业应用后一次完成校验和启用，失败时不保存半份配置。 */
+    public ApiOperationResult quickWecom(String enterprise, IntegrationCreateRequest input, HttpServletRequest request) {
+        InputValidation.request(request, IntegrationCreateRequest.class);
+        requireScope(enterprise, request);
+        var actor = identity.requireUser(request.getSession(false));
+        Runnable authorize = () -> {
+            var current = identity.requireUser(request.getSession(false));
+            policy.require(current, enterprise, system(request), "integration.manage", true);
+            policy.require(current, enterprise, system(request), "integration.test", false);
+        };
+        var previous = requests.replay(request, actor, enterprise, Set.of(), authorize);
+        if (previous.isPresent()) {
+            return previous.get();
+        }
+        policy.require(actor, enterprise, system(request), "integration.manage", false);
+        policy.require(actor, enterprise, system(request), "integration.test", false);
+        if (!"wecom".equals(input.providerCode()) || input.purpose() != null && !"enterprise".equals(input.purpose())) {
+            throw ApiException.invalidField("providerCode", "请选择企业微信企业接入。");
+        }
+        var provider = providers.require("wecom");
+        String tenant = ResourceInput.text(input.externalTenantId(), "externalTenantId", 191, true);
+        String appId = ResourceInput.text(input.externalAppId(), "externalAppId", 191, true);
+        provider.validateApplicationId(appId);
+        ResourceInput.text(input.name(), "name", 80, true);
+        if (input.secret() == null || input.secret().isBlank() || input.secret().length() > 8192) {
+            throw ApiException.invalidField("secret", "请填写有效的应用密钥。");
+        }
+        provider.normalizeConfiguration(input.configuration());
+        var application = new IntegrationApplication(UUID.randomUUID().toString(), enterprise, "wecom", tenant, appId, 1);
+        var checked = provider.checkApplication(application, provider.fetchAccessToken(application, input.secret()));
+        return requests.execute(request, actor, enterprise, Set.of(), authorize, () -> {
+            var created = management.create(actor, enterprise, system(request), input);
+            var verified = management.recordCheck(actor, system(request), new PreparedCheck(enterprise, created.id(),
+                Long.parseLong(created.revision()), checked, null, null));
+            return ApiOperationResult.of(201, management.status(actor, enterprise, system(request), verified.id(),
+                Long.parseLong(verified.revision()), "enabled"));
+        });
     }
 
     public ApiOperationResult update(String enterprise, String id, IntegrationUpdateRequest input, HttpServletRequest request) {

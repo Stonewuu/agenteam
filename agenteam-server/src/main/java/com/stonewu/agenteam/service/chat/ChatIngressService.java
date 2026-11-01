@@ -8,6 +8,9 @@ import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
 import com.stonewu.agenteam.model.chat.entity.ChatInboundReceiptRow;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent.Kind;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested;
+import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
+import org.springframework.context.ApplicationEventPublisher;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,15 +31,14 @@ public class ChatIngressService {
     private final ChatMessageIdentity identities;
     private final ChatPayloadCipher cipher;
     private final Clock clock;
-    private final ChatPairingService pairing;
-    private final ChatOutboundService outbound;
     private final ChatCapabilityService capabilities;
     private final ChatGroupActivationService activation;
+    private final ApplicationEventPublisher events;
 
     public ChatIngressService(ChatBotBindingService bots, ChatPlatformRegistry platforms, ChatInboundReceiptMapper receipts,
                                ChatConversationMapper conversations, ChatConversationService discovery, EnterpriseMapper enterprises, ChatMessageIdentity identities,
-                               ChatPayloadCipher cipher, Clock clock, ChatPairingService pairing,
-                               ChatOutboundService outbound, ChatCapabilityService capabilities, ChatGroupActivationService activation) {
+                               ChatPayloadCipher cipher, Clock clock, ChatCapabilityService capabilities, ChatGroupActivationService activation,
+                               ApplicationEventPublisher events) {
         this.bots = bots;
         this.platforms = platforms;
         this.receipts = receipts;
@@ -46,10 +48,9 @@ public class ChatIngressService {
         this.identities = identities;
         this.cipher = cipher;
         this.clock = clock;
-        this.pairing = pairing;
-        this.outbound = outbound;
         this.capabilities = capabilities;
         this.activation = activation;
+        this.events = events;
     }
 
     @Transactional
@@ -91,6 +92,9 @@ public class ChatIngressService {
         var existing = receipts.selectOne(new LambdaQueryWrapper<ChatInboundReceiptRow>().eq(ChatInboundReceiptRow::getEnterpriseId, enterprise)
             .eq(ChatInboundReceiptRow::getBotBindingId, botId).eq(ChatInboundReceiptRow::getReceiptKey, receiptKey));
         if (existing != null) {
+            if ("received".equals(existing.getStatus())) {
+                events.publishEvent(new ChatWorkRequested(Stage.RECEIVE));
+            }
             return existing.getId();
         }
         var row = ChatRecords.initialize(new ChatInboundReceiptRow(), enterprise, clock.instant());
@@ -111,18 +115,6 @@ public class ChatIngressService {
             receipts.insert(row);
             return row.getId();
         }
-        if (pairing.command(app, event)) {
-            String result = pairing.consume(app, event);
-            row.setStatus("ignored");
-            row.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", row.getId(), Map.of("reason", "账号配对消息不保留正文")));
-            row.setPayloadPurgedAt(clock.instant());
-            receipts.insert(row);
-            if (event.chatKind().equals("direct")) {
-                var conversation = discovery.observe(bot, app, event.externalChatId(), null, "direct", "verified_message", event.platformCreatedAt());
-                outbound.text(enterprise, conversation.getId(), botId, null, null, "pairing:" + row.getId(), "binding", result, null);
-            }
-            return row.getId();
-        }
         boolean keep = event.kind() != Kind.MESSAGE || event.humanMessage() && "direct".equals(event.chatKind());
         if (event.humanMessage() && "group".equals(event.chatKind())) {
             String scope = app.externalTenantId() == null ? "bot:" + botId : "tenant:" + app.externalTenantId();
@@ -133,6 +125,9 @@ public class ChatIngressService {
         row.setStatus(keep ? "received" : "ignored");
         row.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", row.getId(), keep ? envelope : Map.of("reason", "不在允许的接收范围")));
         receipts.insert(row);
+        if (keep) {
+            events.publishEvent(new ChatWorkRequested(Stage.RECEIVE));
+        }
         return row.getId();
     }
 }

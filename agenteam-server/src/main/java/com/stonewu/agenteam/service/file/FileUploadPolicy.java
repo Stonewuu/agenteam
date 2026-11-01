@@ -62,14 +62,15 @@ public class FileUploadPolicy {
             case "data_import" -> extension.equals("csv") ? "text/csv" : null;
             case "knowledge" -> DOCUMENT_TYPES.get(extension);
             case "attachment" ->
-                DOCUMENT_TYPES.containsKey(extension) ? DOCUMENT_TYPES.get(extension) : OFFICE_TYPES.get(extension);
+                ImageFileContent.mediaType(name) != null ? ImageFileContent.mediaType(name)
+                    : DOCUMENT_TYPES.containsKey(extension) ? DOCUMENT_TYPES.get(extension) : OFFICE_TYPES.get(extension);
             default -> null;
         };
         if (media == null) {
             throw ApiException.invalidField("name", switch (purpose) {
                 case "skill_import" -> "请选择 JSON、Markdown 或 TXT 技能文件。";
                 case "data_import" -> "请选择 UTF-8 编码的 CSV 文件。";
-                case "attachment" -> "请选择 PDF、Word、Excel、PowerPoint 或文本文件。";
+                case "attachment" -> "请选择图片、PDF、Word、Excel、PowerPoint 或文本文件。";
                 default -> "请选择有文字内容的 PDF、DOCX、TXT 或 Markdown 文件。";
             });
         }

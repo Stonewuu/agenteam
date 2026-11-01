@@ -36,7 +36,7 @@
   </select>
   <select id="activeRunsAgentRun" resultType="Long">
     SELECT COUNT(*) FROM agent_run WHERE enterprise_id = #{enterprise} AND status IN
-    ('queued','running','waiting_approval','cancelling')
+    ('queued','running','waiting_approval','waiting_input','cancelling')
     AND (JSON_UNQUOTE(JSON_EXTRACT(execution_config_json, '$.agentId')) = #{id}
     OR JSON_UNQUOTE(JSON_EXTRACT(execution_config_json, '$.workflowId')) = #{id}
     OR JSON_CONTAINS(JSON_EXTRACT(execution_config_json, '$.dependencies'), JSON_OBJECT('resourceId', #{id})))

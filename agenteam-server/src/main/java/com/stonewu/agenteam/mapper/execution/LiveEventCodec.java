@@ -54,7 +54,7 @@ public class LiveEventCodec {
         ObjectNode state = json.valueToTree(event.payload());
         String kind = "object", text = "", revision = event.sequence(), id;
         switch (event.type()) {
-            case "block.updated" -> {
+            case "block.created", "block.updated" -> {
                 kind = "block";
                 id = "block:" + state.path("messageId").asText() + ":" + state.path("block").path("id").asText();
                 revision = state.path("block").path("revision").asText();
@@ -84,7 +84,7 @@ public class LiveEventCodec {
         } : "";
         return new Mutation(event.eventId(), event.runId(), id, kind, "", revision, write(state), text,
             envelope(event.eventId(), event.enterpriseId(), event.conversationId(), event.runId(),
-                event.createdAt(), event.type(), event.payload()), active, version);
+                event.createdAt(), "block.created".equals(event.type()) ? "block.updated" : event.type(), event.payload()), active, version);
     }
 
     private String envelope(String id, String enterprise, String conversation, String run, String created,

@@ -131,6 +131,40 @@ class ChatEventNormalizerTest {
         assertTrue(result.mentions().isEmpty());
     }
 
+    @Test
+    void wecomCardButtonsReadTheNestedOfficialEventPayload() throws Exception {
+        // 采用官方接收事件文档的原始结构，不能用SDK的简化类型替代线上协议。
+        var raw = json.readTree("""
+            {
+              "cmd": "aibot_event_callback",
+              "headers": {"req_id": "card-request"},
+              "body": {
+                "msgid": "card-event", "create_time": 1791892800,
+                "aibotid": "bot", "chatid": "group-id", "chattype": "group",
+                "from": {"userid": "member-id"}, "msgtype": "event",
+                "event": {
+                  "eventtype": "template_card_event",
+                  "template_card_event": {
+                    "card_type": "button_interaction",
+                    "event_key": "conversation_new", "task_id": "sent-card-id"
+                  }
+                }
+              }
+            }
+            """);
+        var result = wc.normalize(wecom, "bot", raw, now);
+        assertEquals(Kind.CARD_ACTION, result.kind());
+        assertEquals("card-event", result.deliveryId());
+        assertEquals("group", result.chatKind());
+        assertEquals("group-id", result.externalChatId());
+        assertEquals("member-id", result.senderId());
+        assertEquals("conversation_new", result.metadata().path("event_key").asText());
+        assertEquals("sent-card-id", result.metadata().path("task_id").asText());
+        assertFalse(result.humanMessage());
+        ((ObjectNode) raw.path("body")).remove("chattype");
+        assertEquals("group", wc.normalize(wecom, "bot", raw, now).chatKind());
+    }
+
     @ParameterizedTest
     @CsvSource({"enter_chat,SESSION_ENTERED", "feedback_event,FEEDBACK", "template_card_event,CARD_ACTION",
         "disconnected_event,CONNECTION_REPLACED", "unknown_event,IGNORED"})
