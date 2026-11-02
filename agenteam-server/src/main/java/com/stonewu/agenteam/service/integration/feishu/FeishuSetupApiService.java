@@ -128,7 +128,7 @@ public class FeishuSetupApiService {
         if (SessionIdentityService.state(request.getSession(false)) != null) {
             throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED", "请结束代操作，使用本人账号创建飞书机器人。");
         }
-        if (ChannelSessionGuard.external(request.getSession(false))) {
+        if (ChannelSessionGuard.restricted(request.getSession(false))) {
             if (system(request)) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证账号密码，再访问平台管理。");
             }

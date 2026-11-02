@@ -34,7 +34,7 @@ public class ChannelAuthorizationPolicy {
         var row = connections.selectById(id);
         if (row == null || !"enabled".equals(row.getStatus()) || row.getIdentityVerifiedAt() == null
             || row.getExternalTenantId() == null || "bind".equals(purpose) && !Boolean.TRUE.equals(row.getBindingEnabled())
-            || "login".equals(purpose) && !Boolean.TRUE.equals(row.getLoginEnabled())) {
+            || "login".equals(purpose) && (!Boolean.TRUE.equals(row.getLoginEnabled()) || !"enterprise".equals(row.getPurpose()))) {
             throw new ApiException(HttpStatus.NOT_FOUND, "CHANNEL_UNAVAILABLE", "此接入暂时无法授权，请联系企业管理员。");
         }
         var enterprise = enterprises.findById(row.getEnterpriseId());

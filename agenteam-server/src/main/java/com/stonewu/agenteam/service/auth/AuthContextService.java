@@ -62,7 +62,7 @@ public class AuthContextService {
      */
     public AuthContext requireEnterprise(HttpSession session, String enterpriseId) {
         UserEntity user = requireUser(session);
-        if (ChannelSessionGuard.external(session) && !Objects.equals(enterpriseId, ChannelSessionGuard.enterprise(session))) {
+        if (ChannelSessionGuard.restricted(session) && !Objects.equals(enterpriseId, ChannelSessionGuard.enterprise(session))) {
             throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", "当前企业无法访问。");
         }
         if (!behavior.enterpriseAllowed(user, enterpriseId)) {

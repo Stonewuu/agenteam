@@ -20,6 +20,7 @@ public final class AuthSessionAttributes {
     public static final String CHANNEL_CONNECTION = "agenteam.auth.channel-connection";
     public static final String CHANNEL_REVISION = "agenteam.auth.channel-revision";
     public static final String CHANNEL_CONNECTION_REVISION = "agenteam.auth.channel-connection-revision";
+    public static final String CHANNEL_ADMINISTRATOR = "agenteam.auth.channel-administrator";
 
     private AuthSessionAttributes() {
     }

@@ -45,18 +45,26 @@ public class ChannelIdentityScopeService {
     }
 
     public List<UserChannelBindingRow> related(EnterpriseIntegrationRow connection, UserChannelBindingRow row) {
-        String identity = identityKey(connection, row);
-        if (!shared(connection) || identity == null || identity.isBlank()) {
+        if (!shared(connection)) {
             return List.of(row);
         }
-        return bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
+        String identity = identityKey(connection, row);
+        var ids = connectionIds(connection, false);
+        if (identity == null || identity.isBlank() || ids.isEmpty()) {
+            return List.of(row);
+        }
+        var related = new LinkedHashMap<String, UserChannelBindingRow>();
+        // 已删除接入不参与身份复用，但用户选中的原绑定仍然必须被解绑。
+        related.put(row.getId(), row);
+        bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getEnterpriseId, row.getEnterpriseId()).eq(UserChannelBindingRow::getUserId, row.getUserId())
-            .in(UserChannelBindingRow::getConnectionId, connectionIds(connection, false))
+            .in(UserChannelBindingRow::getConnectionId, ids)
             .eq("feishu".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalUnionId, identity)
             .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectType, "wecom_userid")
             .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectId, identity)
             .ne(UserChannelBindingRow::getStatus, "revoked")).stream()
-            .filter(value -> identity.equals(identityKey(connection, value))).toList();
+            .filter(value -> identity.equals(identityKey(connection, value))).forEach(value -> related.put(value.getId(), value));
+        return List.copyOf(related.values());
     }
 
     public List<EnterpriseIntegrationRow> choices(List<EnterpriseIntegrationRow> choices, Map<String, UserChannelBindingRow> current) {
@@ -83,6 +91,10 @@ public class ChannelIdentityScopeService {
                 accounts.putIfAbsent(key, connection);
             }
             result.addAll(accounts.values());
+            if (bound.stream().noneMatch(value -> "enabled".equals(value.getStatus()))) {
+                group.stream().filter(value -> "enabled".equals(value.getStatus()) && !current.containsKey(value.getId()))
+                    .min(order).ifPresent(result::add);
+            }
         }
         return List.copyOf(result);
     }
@@ -91,9 +103,13 @@ public class ChannelIdentityScopeService {
         if (!shared(connection) || unionId == null || unionId.isBlank()) {
             return false;
         }
+        var ids = connectionIds(connection, false);
+        if (ids.isEmpty()) {
+            return false;
+        }
         return bindings.selectList(new LambdaQueryWrapper<UserChannelBindingRow>()
             .eq(UserChannelBindingRow::getEnterpriseId, connection.getEnterpriseId())
-            .in(UserChannelBindingRow::getConnectionId, connectionIds(connection, false))
+            .in(UserChannelBindingRow::getConnectionId, ids)
             .eq("feishu".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalUnionId, unionId)
             .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectType, "wecom_userid")
             .eq("wecom".equals(connection.getProviderCode()), UserChannelBindingRow::getExternalSubjectId, unionId)

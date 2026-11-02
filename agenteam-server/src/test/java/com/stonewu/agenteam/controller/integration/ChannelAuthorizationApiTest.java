@@ -1,42 +1,20 @@
 package com.stonewu.agenteam.controller.integration;
 
-import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
-import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.stonewu.agenteam.mapper.integration.ChannelOauthSessionMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseSqlMapper;
 import com.stonewu.agenteam.model.enterprise.entity.EnterpriseRow;
-import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelOauthSessionRow;
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
-import com.stonewu.agenteam.model.integration.entity.UserChannelBindingRow;
-import com.stonewu.agenteam.service.integration.ChannelAuthorizationSecrets;
-import com.stonewu.agenteam.support.EnterpriseTestData;
-import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
-import com.stonewu.agenteam.support.MockChannelServer;
-import jakarta.servlet.http.Cookie;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -45,72 +23,15 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** 经正式会话、模拟平台网络和真实数据库验证绑定与外部登录。 */
-@Import({SharedEnterpriseTestEdition.class, ChannelAuthorizationApiTest.PlatformConfiguration.class})
-class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
-    private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
-    private static final MockChannelServer PLATFORM = platform();
-    private static final AtomicInteger SOURCES = new AtomicInteger();
-    @Autowired
-    private ChannelAuthorizationSecrets authorizationSecrets;
-    private String connection;
-    private String loginKey;
-    private Browser member;
-    private final Map<String, String> reviews = new ConcurrentHashMap<>();
-
-    @TestConfiguration
-    static class PlatformConfiguration {
-        @Bean
-        @Primary
-        IntegrationEndpoints channelTestEndpoints() {
-            return new IntegrationEndpoints(PLATFORM.origin(), PLATFORM.origin(), PLATFORM.origin());
-        }
-    }
-
-    @DynamicPropertySource
-    static void dependencies(DynamicPropertyRegistry registry) {
-        ENVIRONMENT.properties(registry);
-    }
-
-    @AfterAll
-    void closeDependencies() throws Exception {
-        PLATFORM.close();
-        ENVIRONMENT.close();
-    }
-
-    @BeforeEach
-    void prepareAuthorization() throws Exception {
-        PLATFORM.reset();
-        reviews.clear();
-        connection = null;
-        loginKey = null;
-        member = member();
-    }
-
-    private void configureConnection() throws Exception {
-        var result = data(write(base() + "/integrations", Map.of("providerCode", "feishu", "name", "授权测试飞书",
-            "externalAppId", "cli_" + key().replace("-", ""), "secret", "test-auth-secret",
-            "bindingEnabled", true, "loginEnabled", true, "messagingEnabled", true), key()).andExpect(status().isCreated()).andReturn());
-        connection = result.path("id").asText();
-        PLATFORM.reply("feishu.token");
-        PLATFORM.reply("feishu.tenant");
-        change(HttpMethod.POST, base() + "/integrations/" + connection + "/check", null, "1", key()).andExpect(status().isOk());
-        PLATFORM.take();
-        PLATFORM.take();
-        change(HttpMethod.PATCH, base() + "/integrations/" + connection + "/status", Map.of("status", "enabled"), "2", key()).andExpect(status().isOk());
-        loginKey = databaseAccess.mapper(EnterpriseIntegrationMapper.class).selectById(connection).getPublicLoginKey();
-    }
-
+/** 通过平台授权回调验证本人确认、外部登录及会话失效。 */
+class ChannelAuthorizationApiTest extends ChannelAuthorizationTestSupport {
     @Test
     void anonymousLoginOptionsOnlyExposeEnabledVerifiedConnectionsInActiveEnterprises() throws Exception {
         configureConnection();
@@ -221,10 +142,6 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         assertEquals(0, PLATFORM.remainingRequests());
     }
 
-
-
-
-
     @Test
     void expiredStateAndChangedConfigurationAreRejectedBeforeNetworkCalls() throws Exception {
         String state = state(begin(member));
@@ -240,8 +157,6 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         assertEquals(0, countBindings());
         rejectChangedBrowserAccount();
     }
-
-
 
     @Test
     void wrongExternalTenantAndDeclinedAuthorizationDoNotCreateBinding() throws Exception {
@@ -273,8 +188,6 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         }
         assertEquals(1, countBindings());
     }
-
-
 
     @Test
     void anotherTabsCallbackCannotReplaceTheIdentityShownOnConfirmationPage() throws Exception {
@@ -320,24 +233,38 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         verifyLocalReauthentication();
     }
 
-
-
-
-
     @Test
-    void superAdministratorCanReceiveButCannotEnableExternalLogin() throws Exception {
+    void superAdministratorCanLoginAndRetainManagementAccessUntilBindingIsRevoked() throws Exception {
         var administrator = new Browser(cookie, csrf, admin, "203.0.113.250");
         callback(administrator, state(begin(administrator)));
-        confirm(administrator, key()).andExpect(status().isUnprocessableEntity());
+        var review = data(mvc.perform(get("/api/v1/auth/channel-authorization").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertTrue(review.path("loginAvailable").asBoolean());
         var bound = data(writeAs(administrator, HttpMethod.POST, channels() + "/confirm",
-            Map.of("authorizationId", reviews.get(administrator.cookie().getValue()), "receiveEnabled", true, "externalLoginEnabled", false),
+            Map.of("authorizationId", reviews.get(administrator.cookie().getValue()), "receiveEnabled", true, "externalLoginEnabled", true),
             null, key()).andExpect(status().isCreated()).andReturn());
         assertTrue(bound.path("receiveEnabled").asBoolean());
-        assertFalse(bound.path("externalLoginEnabled").asBoolean());
+        assertTrue(bound.path("externalLoginEnabled").asBoolean());
+        var external = externalLogin();
+        var me = data(mvc.perform(get("/api/v1/auth/me").cookie(external.cookie())).andExpect(status().isOk()).andReturn());
+        assertEquals(admin, me.path("id").asText());
+        assertTrue(me.path("superAdmin").asBoolean());
+        assertEquals("channel", me.path("authenticationMethod").asText());
+        assertTrue(me.path("restrictedEnterpriseId").isNull());
+        assertFalse(me.path("capabilities").isEmpty());
+        mvc.perform(get("/api/v1/system/enterprises/" + enterprise + "/integrations").cookie(external.cookie())).andExpect(status().isOk());
+        writeAs(external, HttpMethod.DELETE, channels() + "/" + bound.path("id").asText(), null, "1", key())
+            .andExpect(status().isForbidden());
+        writeAs(administrator, HttpMethod.DELETE, channels() + "/" + bound.path("id").asText(), null, "1", key())
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/auth/me").cookie(external.cookie())).andExpect(status().isUnauthorized());
     }
 
-    @Test
-    void wecomApplicationAuthorizationAlsoSupportsBindingAndRestrictedLogin() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void wecomApplicationAuthorizationSupportsMembersAndSuperAdministrators(boolean administrator) throws Exception {
+        if (administrator) {
+            member = new Browser(cookie, csrf, admin, "203.0.113.251");
+        }
         var created = data(write(base() + "/integrations", Map.of("providerCode", "wecom", "name", "授权测试企微",
             "externalAppId", "1000001", "externalTenantId", "ww_" + key().replace("-", ""),
             "secret", "test-wecom-auth-secret", "bindingEnabled", true, "loginEnabled", true, "messagingEnabled", true), key())
@@ -368,157 +295,12 @@ class ChannelAuthorizationApiTest extends ExecutionApiTestSupport {
         PLATFORM.take();
         PLATFORM.take();
         assertEquals("/enterprises/" + enterprise + "/workspace", response.getResponse().getHeader("Location"));
-        assertEquals("channel", data(mvc.perform(get("/api/v1/auth/me").cookie(response.getResponse().getCookie("SESSION")))
-            .andExpect(status().isOk()).andReturn()).path("authenticationMethod").asText());
+        var loggedInCookie = response.getResponse().getCookie("SESSION");
+        var me = data(mvc.perform(get("/api/v1/auth/me").cookie(loggedInCookie)).andExpect(status().isOk()).andReturn());
+        assertEquals("channel", me.path("authenticationMethod").asText());
+        assertEquals(administrator, me.path("superAdmin").asBoolean());
+        mvc.perform(get("/api/v1/system/enterprises/" + enterprise + "/integrations").cookie(loggedInCookie))
+            .andExpect(administrator ? status().isOk() : status().isForbidden());
     }
 
-    private void rejectChangedBrowserAccount() throws Exception {
-        String state = state(begin(member));
-        var loggedIn = login(member, "execution-submission-admin", "执行提交测试所使用的独立完整口令");
-        rawCallback(loggedIn, connection, state).andExpect(status().isSeeOther());
-        assertEquals(0, PLATFORM.remainingRequests());
-        assertEquals(0, countBindings());
-    }
-
-    private void verifyLoginToggleRevokesSession() throws Exception {
-        var external = externalLogin();
-        change(HttpMethod.PATCH, base() + "/integrations/" + connection, Map.of("loginEnabled", false), "3", key()).andExpect(status().isOk());
-        change(HttpMethod.PATCH, base() + "/integrations/" + connection, Map.of("loginEnabled", true), "4", key()).andExpect(status().isOk());
-        mvc.perform(get("/api/v1/auth/me").cookie(external.cookie())).andExpect(status().isUnauthorized());
-    }
-
-    private void verifyLocalReauthentication() throws Exception {
-        var external = externalLogin();
-        writeAs(external, HttpMethod.POST, "/api/v1/auth/reauthenticate", Map.of("password", "错误密码"), null, key())
-            .andExpect(status().isUnprocessableEntity());
-        var response = writeAs(external, HttpMethod.POST, "/api/v1/auth/reauthenticate", Map.of("password", "channel-member-password"), null, key())
-            .andExpect(status().isOk()).andReturn();
-        assertNotEquals(external.cookie().getValue(), response.getResponse().getCookie("SESSION").getValue());
-        assertEquals("password", data(response).path("authenticationMethod").asText());
-    }
-
-    private JsonNode bind(Browser browser) throws Exception {
-        callback(browser, state(begin(browser)));
-        return data(confirm(browser, key()).andExpect(status().isCreated()).andReturn());
-    }
-
-    private Browser externalLogin() throws Exception {
-        var browser = anonymous();
-        var start = data(writeAs(browser, HttpMethod.POST, "/api/v1/auth/channel-login/" + loginKey,
-            Map.of("embeddedClient", false), null, key()).andExpect(status().isOk()).andReturn());
-        queueIdentity();
-        var response = rawCallback(browser, connection, state(start)).andExpect(status().isSeeOther()).andReturn();
-        takeIdentityRequests();
-        assertEquals("/enterprises/" + enterprise + "/workspace", response.getResponse().getHeader("Location"));
-        return browser(response.getResponse().getCookie("SESSION"), member.userId(), browser.source());
-    }
-
-    private JsonNode begin(Browser browser) throws Exception {
-        if (connection == null) {
-            configureConnection();
-        }
-        return data(writeAs(browser, HttpMethod.POST, channels() + "/" + connection + "/authorize",
-            Map.of("embeddedClient", false), null, key()).andExpect(status().isOk()).andReturn());
-    }
-
-    private String state(JsonNode start) {
-        return UriComponentsBuilder.fromUriString(start.path("authorizationUrl").asText()).build().getQueryParams().getFirst("state");
-    }
-
-    private void callback(Browser browser, String state) throws Exception {
-        queueIdentity();
-        var result = rawCallback(browser, connection, state).andExpect(status().isSeeOther()).andReturn();
-        assertEquals("/channel-authorization", result.getResponse().getHeader("Location"));
-        takeIdentityRequests();
-        reviews.put(browser.cookie().getValue(), flow(state).getId());
-    }
-
-    private ResultActions rawCallback(Browser browser, String id, String state) throws Exception {
-        return mvc.perform(get("/api/v1/auth/channel-callbacks/" + id).cookie(browser.cookie()).param("state", state).param("code", "test-one-use-code"));
-    }
-
-    private ResultActions confirm(Browser browser, String key) throws Exception {
-        return writeAs(browser, HttpMethod.POST, channels() + "/confirm", Map.of("authorizationId", reviews.get(browser.cookie().getValue()),
-            "receiveEnabled", true, "externalLoginEnabled", true), null, key);
-    }
-
-    private ChannelOauthSessionRow flow(String state) {
-        return databaseAccess.mapper(ChannelOauthSessionMapper.class).selectOne(new LambdaQueryWrapper<ChannelOauthSessionRow>()
-            .eq(ChannelOauthSessionRow::getStateHash, authorizationSecrets.hash(state)));
-    }
-
-    private long countBindings() {
-        return databaseAccess.mapper(UserChannelBindingMapper.class).selectCount(new LambdaQueryWrapper<UserChannelBindingRow>()
-            .eq(UserChannelBindingRow::getConnectionId, connection));
-    }
-
-    private Browser member() throws Exception {
-        String username = "channel_" + key().substring(0, 8);
-        EnterpriseTestData.member(users, permissions, enterprise, username, "channel-member-password", "授权测试成员",
-            List.of(permissions.builtinRoleId(enterprise, "member")));
-        return login(anonymous(), username, "channel-member-password");
-    }
-
-    private Browser login(Browser before, String username, String password) throws Exception {
-        var response = writeAs(before, HttpMethod.POST, "/api/v1/auth/login", Map.of("identifier", username, "password", password), null, key())
-            .andExpect(status().isOk()).andReturn();
-        return browser(response.getResponse().getCookie("SESSION"), data(response).path("id").asText(), before.source());
-    }
-
-    private Browser anonymous() throws Exception {
-        var response = mvc.perform(get("/api/v1/auth/csrf")).andExpect(status().isOk()).andReturn();
-        return new Browser(response.getResponse().getCookie("SESSION"), data(response).path("token").asText(), null,
-            "203.0.113." + SOURCES.incrementAndGet());
-    }
-
-    private Browser browser(Cookie cookie, String user, String source) throws Exception {
-        var response = mvc.perform(get("/api/v1/auth/csrf").cookie(cookie)).andExpect(status().isOk()).andReturn();
-        return new Browser(cookie, data(response).path("token").asText(), user, source);
-    }
-
-    private ResultActions writeAs(Browser browser, HttpMethod method, String path, Object body, String revision, String key) throws Exception {
-        var request = request(method, path).cookie(browser.cookie()).header("X-CSRF-Token", browser.csrf()).header("Idempotency-Key", key);
-        request.with(value -> {
-            value.setRemoteAddr(browser.source());
-            return value;
-        });
-        if (body != null) {
-            request.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body));
-        }
-        if (revision != null) {
-            request.header("If-Match", "\"" + revision + "\"");
-        }
-        return mvc.perform(request);
-    }
-
-    private String channels() {
-        return base() + "/me/channels";
-    }
-
-    private void queueIdentity() {
-        PLATFORM.reply("feishu.token");
-        PLATFORM.reply("feishu.userToken");
-        PLATFORM.reply("feishu.identity");
-    }
-
-    private void takeIdentityRequests() throws Exception {
-        PLATFORM.take();
-        PLATFORM.take();
-        PLATFORM.take();
-    }
-
-    private String key() {
-        return UUID.randomUUID().toString();
-    }
-
-    private static MockChannelServer platform() {
-        try {
-            return new MockChannelServer();
-        } catch (IOException failure) {
-            throw new IllegalStateException("无法启动模拟授权平台", failure);
-        }
-    }
-
-    private record Browser(Cookie cookie, String csrf, String userId, String source) {
-    }
 }

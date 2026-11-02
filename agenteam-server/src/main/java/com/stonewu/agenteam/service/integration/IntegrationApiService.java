@@ -174,7 +174,7 @@ public class IntegrationApiService {
     }
 
     private void requireScope(String enterprise, HttpServletRequest request) {
-        if (ChannelSessionGuard.external(request.getSession(false))) {
+        if (ChannelSessionGuard.restricted(request.getSession(false))) {
             if (system(request)) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证账号密码，再访问平台管理。");
             }

@@ -39,11 +39,13 @@ public class IntegrationManagementService {
     private final Clock clock;
     private final IntegrationConfigurationMapper configuration;
     private final ChannelDeliveryCancellation cancellations;
+    private final ChannelBindingRevocationService bindingRevocations;
 
     public IntegrationManagementService(EnterpriseIntegrationMapper connections, IntegrationManagementPolicy policy,
                                         IntegrationQueryService queries, IntegrationSecretService secrets,
                                         IntegrationProviderRegistry providers, AuditEventService audit, Clock clock,
-                                        IntegrationConfigurationMapper configuration, ChannelDeliveryCancellation cancellations) {
+                                        IntegrationConfigurationMapper configuration, ChannelDeliveryCancellation cancellations,
+                                        ChannelBindingRevocationService bindingRevocations) {
         this.connections = connections;
         this.policy = policy;
         this.queries = queries;
@@ -53,6 +55,7 @@ public class IntegrationManagementService {
         this.clock = clock;
         this.configuration = configuration;
         this.cancellations = cancellations;
+        this.bindingRevocations = bindingRevocations;
     }
 
     public IntegrationView create(UserEntity actor, String enterprise, boolean system, IntegrationCreateRequest input) {
@@ -203,9 +206,13 @@ public class IntegrationManagementService {
             throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ENABLED", "请先停用接入，再执行删除。");
         }
         cancellations.requireNoActive(enterprise, id);
+        int revokedBindings = bindingRevocations.revokeConnection(row);
         save(row, changes(row, actor).set(EnterpriseIntegrationRow::getStatus, "deleted")
+            .set(EnterpriseIntegrationRow::getBindingEnabled, false).set(EnterpriseIntegrationRow::getLoginEnabled, false)
+            .set(EnterpriseIntegrationRow::getMessagingEnabled, false)
             .set(EnterpriseIntegrationRow::getDeletedAt, clock.instant()).set(EnterpriseIntegrationRow::getDeletedToken, id));
-        audit.record(enterprise, actor, "integration.delete", "integration", id, "删除已停用的企业接入配置", Map.of());
+        audit.record(enterprise, actor, "integration.delete", "integration", id, "删除已停用的企业接入配置并解除其成员绑定",
+            Map.of("revokedBindings", revokedBindings));
     }
 
     public IntegrationView recordCheck(UserEntity actor, boolean system, PreparedCheck check) {

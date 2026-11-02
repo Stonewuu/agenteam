@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
- * 外部会话只有明确企业路径和必要登录入口可用，新增全局接口默认要求本地认证。
+ * 普通成员外部会话限定企业路径；超级管理员按本地账号权限访问，仍由会话校验检查绑定是否有效。
  */
 @Component
 @Order(SessionRepositoryFilter.DEFAULT_ORDER + 60)
@@ -37,7 +37,7 @@ public class ChannelSessionRequestFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return !request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/")
-            || !ChannelSessionGuard.external(request.getSession(false));
+            || !ChannelSessionGuard.restricted(request.getSession(false));
     }
 
     @Override

@@ -22,10 +22,8 @@ import styles from "./integration.module.css";
 
 export function ChannelSettingsPanel({
   enterpriseId,
-  superAdmin = false,
 }: {
   enterpriseId: string;
-  superAdmin?: boolean;
 }) {
   const t = useT();
   const path = channelsPath(enterpriseId);
@@ -148,8 +146,7 @@ export function ChannelSettingsPanel({
                         onChange={(checked) => update(value, "chatEnabled", checked)}
                       />
                     )}
-                    {!superAdmin &&
-                      value.providerCode !== "wecom_aibot" &&
+                    {value.providerCode !== "wecom_aibot" &&
                       (value.loginAvailable || value.externalLoginEnabled) && (
                         <SettingRow
                           icon={<IconKey size={18} />}

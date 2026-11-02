@@ -37,7 +37,7 @@ public class EnterpriseSelectionService {
 
     public ApiOperationResult select(String enterpriseId, HttpServletRequest request) {
         var actor = identity.requireEnterprise(request.getSession(false), enterpriseId);
-        if (ChannelSessionGuard.external(request.getSession(false))) {
+        if (ChannelSessionGuard.restricted(request.getSession(false))) {
             return ApiOperationResult.of(200, context.get(request.getSession(false), enterpriseId));
         }
         return requests.execute(request, actor.user(), enterpriseId, Set.of(), () -> {

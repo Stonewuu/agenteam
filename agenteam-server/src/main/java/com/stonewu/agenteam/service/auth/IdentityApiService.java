@@ -46,6 +46,11 @@ public class IdentityApiService {
                 impersonation.view(session, sessionIdentity.authenticated(session)));
         }
         String enterprise = ChannelSessionGuard.enterprise(session);
+        if (current.superAdmin()) {
+            return new CurrentIdentityResponse(current.id(), current.username(), current.displayName(), current.email(), current.emailVerified(),
+                true, current.lastEnterpriseId(), current.enterprises(), current.preferences(), current.revision(), "channel", null,
+                current.capabilities()).withSession(SessionIdentityService.revision(session), null);
+        }
         return new CurrentIdentityResponse(current.id(), current.username(), current.displayName(), null, false,
             false, enterprise, current.enterprises().stream().filter(value -> value.id().equals(enterprise)).toList(),
             current.preferences(), current.revision(), "channel", enterprise, List.of())

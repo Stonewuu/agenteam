@@ -121,7 +121,7 @@ export function SettingsPage() {
                                                    items={available} orientation="vertical" variant="navigation"
                                                    label={uiText("设置分类")}/></aside>
         <MotionPanel value={tab} className={styles.panel}>
-          {tab === "channels" && (enterpriseId ? <ChannelSettingsPanel key={enterpriseId} enterpriseId={enterpriseId} superAdmin={user.superAdmin}/>
+          {tab === "channels" && (enterpriseId ? <ChannelSettingsPanel key={enterpriseId} enterpriseId={enterpriseId}/>
             : <p>{uiText("请先加入企业，再绑定企业账号。")}</p>)}
           {tab === "robot-chat" && (replyEnterprise ? <ReplyPreferencesPanel key={replyEnterprise} enterpriseId={replyEnterprise}
             selectedConversation={params.get("conversation")}/> : <p>{uiText("请先加入企业，再使用机器人聊天。")}</p>)}

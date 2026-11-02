@@ -13,7 +13,7 @@ export function ChannelSettingsPage({enterpriseId}: {enterpriseId: string}) {
   return <EnterpriseGate enterpriseId={enterpriseId}>{({user, context}) =>
     <PlatformShell user={user} context={context} area="user" title={t("企业账号绑定")}>
       <div className={styles.settingsPage}><PageHeader title={t("企业账号绑定")} icon={<IconPlug size={24} variant="Bulk"/>}/>
-        <ChannelSettingsPanel enterpriseId={enterpriseId} superAdmin={user.superAdmin}/></div>
+        <ChannelSettingsPanel enterpriseId={enterpriseId}/></div>
     </PlatformShell>}
   </EnterpriseGate>;
 }

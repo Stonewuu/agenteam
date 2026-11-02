@@ -44,6 +44,7 @@ public class AuthSessionService {
         session.setAttribute(AuthSessionAttributes.CHANNEL_CONNECTION, binding.getConnectionId());
         session.setAttribute(AuthSessionAttributes.CHANNEL_REVISION, binding.getRevision());
         session.setAttribute(AuthSessionAttributes.CHANNEL_CONNECTION_REVISION, connectionRevision);
+        session.setAttribute(AuthSessionAttributes.CHANNEL_ADMINISTRATOR, user.superAdmin());
         session.setMaxInactiveInterval(30 * 60);
         return session;
     }

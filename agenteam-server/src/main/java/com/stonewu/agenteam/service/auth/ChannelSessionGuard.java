@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * 每次请求核对外部登录的本地撤销状态，不能从企业身份获得全局权限。
+ * 每次请求核对绑定、接入和账号权限；管理员权限只来自已绑定的本地账号。
  */
 @Service
 public class ChannelSessionGuard {
@@ -35,6 +35,10 @@ public class ChannelSessionGuard {
         return session != null && "channel".equals(session.getAttribute(AuthSessionAttributes.METHOD));
     }
 
+    public static boolean restricted(HttpSession session) {
+        return external(session) && !Boolean.TRUE.equals(session.getAttribute(AuthSessionAttributes.CHANNEL_ADMINISTRATOR));
+    }
+
     public static String enterprise(HttpSession session) {
         Object value = session == null ? null : session.getAttribute(AuthSessionAttributes.RESTRICTED_ENTERPRISE);
         return value instanceof String text ? text : null;
@@ -48,7 +52,8 @@ public class ChannelSessionGuard {
         if (!"channel".equals(attributes.apply(AuthSessionAttributes.METHOD))) {
             return true;
         }
-        if (user.superAdmin() || !(attributes.apply(AuthSessionAttributes.AUTHENTICATED_AT) instanceof Number time)
+        if (Boolean.TRUE.equals(attributes.apply(AuthSessionAttributes.CHANNEL_ADMINISTRATOR)) != user.superAdmin()
+            || !(attributes.apply(AuthSessionAttributes.AUTHENTICATED_AT) instanceof Number time)
             || clock.millis() - time.longValue() >= Duration.ofHours(1).toMillis()) {
             return false;
         }

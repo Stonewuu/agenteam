@@ -87,4 +87,20 @@ class ChannelSessionGuardTest {
         binding.setEnterpriseId("enterprise-b");
         assertFalse(guard.valid(session, user));
     }
+
+    @Test
+    void administratorLoginRequiresItsOwnBindingAndSameServerRecordedRole() {
+        var user = AuthSessionSecurityTest.user(true, 1, "active");
+        var session = new AuthSessionService(clock, new RequestForgeryProtection())
+            .establishExternal(new MockHttpServletRequest(), user, binding, 3);
+        assertTrue(guard.valid(session, user));
+        assertTrue(ChannelSessionGuard.external(session));
+        assertFalse(ChannelSessionGuard.restricted(session));
+        assertFalse(guard.valid(session, AuthSessionSecurityTest.user(false, 1, "active")));
+        binding.setUserId("another-user");
+        assertFalse(guard.valid(session, user));
+        binding.setUserId(user.id());
+        binding.setExternalLoginEnabled(false);
+        assertFalse(guard.valid(session, user));
+    }
 }
