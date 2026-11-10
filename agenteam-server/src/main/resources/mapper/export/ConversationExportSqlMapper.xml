@@ -6,7 +6,9 @@
     SELECT m.id, m.created_at, m.role, m.attempt_no, m.status, m.content, m.blocks_json
     FROM agent_message m
     JOIN agent_conversation c ON c.enterprise_id = m.enterprise_id AND c.id = m.conversation_id
+    LEFT JOIN agent_run r ON r.enterprise_id = m.enterprise_id AND r.conversation_id = m.conversation_id AND r.id = m.run_id
     WHERE m.enterprise_id = #{enterprise} AND m.conversation_id = #{conversation}
+    AND (r.queue_position IS NULL OR (r.error_code = 'PRECEDING_RUN_FAILED' AND m.role = 'user'))
     AND c.user_id = #{user} AND c.status &lt;&gt; 'deleted'
     ORDER BY m.created_at, CASE WHEN m.role = 'user' THEN 0 ELSE 1 END, m.attempt_no, m.id
     LIMIT #{limit}

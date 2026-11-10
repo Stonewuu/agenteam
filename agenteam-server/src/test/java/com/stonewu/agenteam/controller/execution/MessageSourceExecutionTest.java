@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
+import com.stonewu.agenteam.mapper.file.MessageAttachmentMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeDocumentSqlMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
 import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
@@ -67,6 +68,9 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
     private FileMapper files;
 
     @Autowired
+    private MessageAttachmentMapper attachments;
+
+    @Autowired
     private KnowledgeProcessingWorker knowledge;
 
     @Autowired
@@ -94,6 +98,36 @@ class MessageSourceExecutionTest extends ExecutionApiTestSupport {
     void closeEnvironment() throws Exception {
         SCANNER.close();
         ENVIRONMENT.close();
+    }
+
+    @Test
+    void queuedAttachmentsAppearInTheWorkspaceOnlyWhenTheirMessageStarts() throws Exception {
+        configureAgent(config -> config.put("attachmentsEnabled", true));
+        var accepted = data(write(base() + "/conversations", Map.of("agentId", agent, "input", input("开始核对")),
+            UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        String conversation = accepted.path("conversationId").asText();
+        String path = base() + "/conversations/" + conversation;
+        String file = upload("attachment", null, "核对清单.txt", "单独核对".getBytes(StandardCharsets.UTF_8), true);
+        var input = new LinkedHashMap<>(input(""));
+        input.put("attachmentIds", List.of(file));
+        var first = data(write(path + "/messages?queue=true", input, UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        var second = data(write(path + "/messages?queue=true", input, UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        assertTrue(attachments.forConversation(enterprise, admin, conversation, 10).isEmpty());
+        var snapshot = data(mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals("核对清单.txt", snapshot.at("/queuedMessages/0/text").asText());
+        change(HttpMethod.DELETE, path + "/queue/" + first.path("runId").asText(), null, null, UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        assertEquals(1, count("message_attachment"));
+        assertNull(files.find(enterprise, file, false).orElseThrow().expiresAt());
+        var lease = lifecycle.claim("queue-attachment-test").orElseThrow();
+        lifecycle.start(lease).orElseThrow();
+        lifecycle.finish(lease, "completed", null, null);
+        assertEquals(List.of(file), attachments.forConversation(enterprise, admin, conversation, 10));
+        var started = data(mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(second.path("runId"), started.at("/activeRun/id"));
+        assertEquals(file, started.at("/messages/2/attachments/0/id").asText());
     }
 
     @Test

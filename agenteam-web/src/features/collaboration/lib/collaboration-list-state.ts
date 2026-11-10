@@ -1,4 +1,4 @@
-export const taskStatusFilters = ["active", "waiting_input", "waiting_approval", "blocked", "completed", "failed", "cancelled", "cancelling"] as const;
+export const taskStatusFilters = ["not_started", "active", "waiting_input", "waiting_approval", "blocked", "completed", "failed", "cancelled", "cancelling"] as const;
 
 export type CollaborationListState = {
   query: string; status: string; cursor: string | null; previous: (string | null)[]; scrollTop: number;
@@ -7,7 +7,7 @@ export type CollaborationListState = {
 export const emptyListState: CollaborationListState = {query: "", status: "", cursor: null, previous: [], scrollTop: 0};
 
 export function listStateKey(enterprise: string, user: string) {
-  return `agenteam:collaboration-list:v1:${encodeURIComponent(enterprise)}:${encodeURIComponent(user)}`;
+  return `agenteam:collaboration-directory:v1:${encodeURIComponent(enterprise)}:${encodeURIComponent(user)}`;
 }
 
 export function readListState(value: unknown): CollaborationListState {

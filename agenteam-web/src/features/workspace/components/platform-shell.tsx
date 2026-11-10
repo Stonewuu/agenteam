@@ -9,7 +9,7 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {createContext, type ReactNode, useContext, useState} from "react";
 import {landingPath} from "@/features/auth/lib/identity-navigation";
-import {workspaceParts, workspacePath} from "@/features/auth/lib/workspace-path";
+import {isWebRoomDetail, workspaceParts, workspacePath} from "@/features/auth/lib/workspace-path";
 import type {EnterpriseContext, IdentityUser} from "@/features/auth/types/identity";
 import {ThemeMenu} from "@/features/auth/components/theme-menu";
 import {LanguageMenu} from "@/features/auth/components/language-menu";
@@ -103,9 +103,11 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
       }))
       : localizeCatalog(workspaceNavigation, uiText).filter((item) => item.permissions.some(allowed));
   const [section, pageSection] = workspaceParts(pathname);
-  const chatArea = area === "user" && (section === "conversations" || section === "new-task") && allowed("conversation.view");
+  const roomDetail = isWebRoomDetail(pathname);
+  const chatArea = area === "user" && (roomDetail ? allowed("agent.run") : (section === "conversations" || section === "new-task") && allowed("conversation.view"));
   const navigationPath = pathname.replace(/\/organization\/invitations$/, "/organization/members").replace(/\/organization\/permissions$/, "/organization/roles");
   const isActive = (path: string, index: number) => navigationPath === `${root}/${path}` || navigationPath.startsWith(`${root}/${path}/`) || path === "conversations" && section === "new-task"
+    || path === "collaboration/tasks" && section === "collaboration" && pageSection === "rooms"
     || area !== "user" && pathname === workspacePath(`/${area}`) && index === 0;
   const selectedIndex = items.findIndex((item, index) => isActive(item.path, index));
   const PageIcon = localizeCatalog(platformManagementNavigation, uiText).find((item) => item.path === pathname)?.icon ?? (pathname.startsWith("/settings") ? IconSettings : section === "notifications" ? IconBell : section === "memories" ? IconBookmark
@@ -179,7 +181,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
       <main ref={container} id="main-content" tabIndex={-1} data-page-scroll={fullHeight ? undefined : ""}
             className={`workspace-scroll-region${fullHeight ? " workspace-full-height" : ""}`}>
         <div className={fullHeight ? "workspace-viewport" : "page-content"}><ExistingShell.Provider key={user.id} value><PageHeaderIconProvider
-          icon={<PageIcon size={26} variant="Bulk"/>}>{chatArea ? <ConversationFrame>{children}</ConversationFrame> :
+          icon={<PageIcon size={26} variant="Bulk"/>}>{chatArea ? <ConversationFrame roomDirectory={roomDetail}>{children}</ConversationFrame> :
           <LoadingTransition className={fullHeight ? "workspace-viewport-frame" : undefined}>{children}</LoadingTransition>}</PageHeaderIconProvider></ExistingShell.Provider></div>
       </main>
     </div>

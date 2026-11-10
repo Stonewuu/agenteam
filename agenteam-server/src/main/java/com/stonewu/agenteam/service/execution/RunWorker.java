@@ -174,6 +174,9 @@ public class RunWorker implements AutoCloseable {
             }
         } catch (Throwable failure) {
             Throwable cause = Exceptions.unwrap(failure);
+            if (cause instanceof ConversationRunQueue.Continued) {
+                return;
+            }
             if (!(cause instanceof ExecutionStoppedException)) {
                 LOG.error("对话执行失败，执行编号 {}，工作编号 {}", running.lease.runId(), running.lease.id(), failure);
             }

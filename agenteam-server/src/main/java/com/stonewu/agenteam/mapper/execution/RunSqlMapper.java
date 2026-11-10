@@ -107,7 +107,7 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
 
     default int createAgentRun(String id, String enterprise, String user, String conversation, String input,
                                String output, String version, String mode, String executionConfigJson, int maxAttempts,
-                               Timestamp now) {
+                               Long queuePosition, Timestamp now) {
         var databaseRow = new AgentRunRow();
         databaseRow.setId(id);
         databaseRow.setEnterpriseId(enterprise);
@@ -119,6 +119,10 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
         databaseRow.setMode(mode);
         databaseRow.setExecutionConfigJson(executionConfigJson);
         databaseRow.setMaxAttempts(maxAttempts);
+        if (queuePosition != null) {
+            databaseRow.setStatus("waiting_turn");
+            databaseRow.setQueuePosition(queuePosition);
+        }
         databaseRow.setCreatedAt((now == null ? null : now.toInstant()));
         databaseRow.setUpdatedAt((now == null ? null : now.toInstant()));
         return insert(databaseRow);
@@ -327,7 +331,7 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
 
     default List<String> previousRunAgentRun(String enterprise, String conversation) {
         var criteria = new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getId)
-            .orderByDesc(AgentRunRow::getCreatedAt).orderByDesc(AgentRunRow::getId)
+            .orderByDesc(AgentRunRow::getLastSequence).orderByDesc(AgentRunRow::getId)
             .eq(AgentRunRow::getEnterpriseId, enterprise).eq(AgentRunRow::getConversationId, conversation)
             .eq(AgentRunRow::getStatus, "completed");
         long pageSize = 1;
@@ -342,6 +346,7 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
         var criteria = new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getId)
             .orderByDesc(AgentRunRow::getLastSequence).orderByDesc(AgentRunRow::getId)
             .eq(AgentRunRow::getEnterpriseId, enterprise).eq(AgentRunRow::getConversationId, conversation)
+            .isNull(AgentRunRow::getQueuePosition)
             .in(AgentRunRow::getStatus, Arrays.asList("completed", "failed", "cancelled"));
         long pageSize = 1;
         if (pageSize == 0) {

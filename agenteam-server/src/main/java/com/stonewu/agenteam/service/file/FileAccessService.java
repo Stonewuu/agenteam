@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
 import com.stonewu.agenteam.mapper.background.PublicJobMapper;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationRoomEntryFileMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.mapper.file.MessageAttachmentMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -28,6 +29,7 @@ public class FileAccessService {
     private final ToolArtifactAccessService artifacts;
     private final KnowledgeFileAccess knowledge;
     private final MessageAttachmentMapper attachments;
+    private final CollaborationRoomEntryFileMapper roomFiles;
     private final PublicJobMapper jobs;
     private final ExportAccessService dataExports;
     private final ProjectInputFileService projectInputs;
@@ -37,7 +39,8 @@ public class FileAccessService {
                              SkillExportService exports, ToolArtifactAccessService artifacts,
                              KnowledgeFileAccess knowledge, MessageAttachmentMapper attachments,
                              PublicJobMapper jobs, ExportAccessService dataExports,
-                             ProjectInputFileService projectInputs, CollaborationFileAuthorization collaboration) {
+                             ProjectInputFileService projectInputs, CollaborationFileAuthorization collaboration, CollaborationRoomEntryFileMapper roomFiles) {
+        this.roomFiles = roomFiles;
         this.files = files;
         this.purposes = purposes;
         this.clock = clock;
@@ -60,7 +63,7 @@ public class FileAccessService {
         requireLive(file);
         if (file.purpose().equals("attachment") && file.expiresAt() == null && !attachments.readable(actor, file,
             clock.instant())
-            && !projectInputs.contains(actor.enterpriseId(), actor.userId(), id)) {
+            && !projectInputs.contains(actor.enterpriseId(), actor.userId(), id) && !roomFiles.readable(actor, file)) {
             throw unavailable();
         }
         boolean sharedKnowledge = file.purpose().equals("knowledge") && file.expiresAt() == null && !mutation;

@@ -62,6 +62,7 @@ public class LiveEventCodec {
                 ((ObjectNode) state.path("block")).put("text", "");
             }
             case "message.created" -> id = "message:" + state.path("id").asText();
+            case "queue.updated" -> id = "queue:" + event.runId();
             case "step.updated" -> {
                 id = "step:" + state.path("id").asText();
                 var wrapper = json.createObjectNode().put("runId", event.runId());

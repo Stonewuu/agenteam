@@ -23,7 +23,7 @@ export function localFileUrl(value: string) {
 export type FilePurpose = "skill_import" | "attachment" | "knowledge" | "data_import";
 export const fileAccept: Record<FilePurpose, string> = {
   skill_import: ".json,.md,.txt",
-  attachment: ".pdf,.docx,.xlsx,.pptx,.txt,.md",
+  attachment: ".pdf,.docx,.xlsx,.pptx,.txt,.md,.png,.jpg,.jpeg,.gif,.webp",
   knowledge: ".pdf,.docx,.txt,.md",
   data_import: ".csv"
 };
@@ -35,6 +35,11 @@ export function validateUploadFile(file: File, purpose: FilePurpose) {
     throw new Error(`请选择不超过 ${max} 兆字节的 ${fileAccept[purpose].replaceAll(".", "").toUpperCase().replaceAll(",", "、")} 文件。`);
   }
   const media: Record<string, string> = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

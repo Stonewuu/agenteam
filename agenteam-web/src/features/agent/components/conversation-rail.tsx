@@ -10,6 +10,7 @@ import {useEffect, useId, useRef, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
 import {workspaceParts} from "@/features/auth/lib/workspace-path";
 import Link from "next/link";
+import {collaborationHome} from "@/features/collaboration/types/web-room";
 import {SearchInput} from "@/components/ui/search-input";
 import {Select} from "@/components/ui/select";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/shadcn/collapsible";
@@ -78,6 +79,7 @@ export function ConversationRail({onNavigate}: { onNavigate: () => void }) {
   return <div className={styles.rail}>
     <header className={styles.railHeader}><h2>{uiText("对话任务")}</h2></header>
     <div className={styles.railBody}>
+      <Link className={styles.roomDirectory} href={collaborationHome} onClick={onNavigate}><IconCollaboration size={17}/>{uiText("协作任务")}</Link>
       <Collapsible className={styles.filterDisclosure} open={filtersOpen} onOpenChange={setFiltersOpen}
                    onKeyDown={(event) => {
                      if (filtersOpen && event.key === "Escape" && !event.defaultPrevented && event.currentTarget.contains(event.target as Node)) {

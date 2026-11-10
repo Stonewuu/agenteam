@@ -86,6 +86,20 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
       snapshot = {...snapshot, messages: [...snapshot.messages, event.payload]};
       break;
     }
+    case "queue.updated": {
+      const item = event.payload;
+      if (item.runId !== event.runId || typeof item.text !== "string"
+        || (item.position !== null && !Number.isSafeInteger(item.position))) {
+        throw new SnapshotRequired();
+      }
+      const remaining = (snapshot.queuedMessages ?? []).filter(value => value.runId !== item.runId);
+      if (item.position !== null) {
+        remaining.push(item);
+        remaining.sort((left, right) => left.position! - right.position!);
+      }
+      snapshot = {...snapshot, queuedMessages: remaining};
+      break;
+    }
     case "block.updated": {
       const {messageId, block} = event.payload;
       record(block);

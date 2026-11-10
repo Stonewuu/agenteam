@@ -451,6 +451,11 @@
   }
 }
 
+.roomDirectory { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 6px 10px; margin-bottom: 7px; border-radius: 10px; color: var(--secondary); text-decoration: none; font-size: 13px; }
+.roomDirectory:hover { background: var(--surface-soft); color: var(--text); }
+.roomDirectory:focus-visible { outline: 2px solid var(--input-border-focus); outline-offset: 2px; }
+@media (max-width: 640px) { .roomDirectory { min-height: 44px; } }
+
 .itemActions > p {
   position: absolute;
   top: 30px;

@@ -35108,6 +35108,16 @@
               "maxLength": 100
             },
             "description": "同一逻辑操作重复请求必须复用的随机键，至少保留 24 小时"
+          },
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "description": "当前会话正在执行时，按发送顺序保存这条补充消息。",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "security": [
@@ -52248,6 +52258,444 @@
           }
         }
       }
+    },
+    "/enterprises/{enterpriseId}/conversations/{conversationId}/queue/{runId}/prioritize": {
+      "post": {
+        "operationId": "prioritizeQueuedMessage",
+        "summary": "将待处理消息移到队首",
+        "description": "只能停止本人执行；预览检查 agent.preview，普通或定时执行检查 agent.run。权限由已保存的执行方式确定，不能由客户端选择。",
+        "x-permissions": [],
+        "x-tables": [
+          "agent_run",
+          "run_approval",
+          "run_checkpoint",
+          "quota_entry"
+        ],
+        "x-feature-ids": [
+          "F07"
+        ],
+        "x-permissions-by-run-mode": {
+          "preview": "agent.preview",
+          "interactive": "agent.run",
+          "scheduled": "agent.run",
+          "manual_schedule": "agent.run"
+        },
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 256
+            },
+            "description": "与当前会话绑定的请求防伪令牌"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 100
+            },
+            "description": "同一逻辑操作重复请求必须复用的随机键，至少保留 24 小时"
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功，字段和权限以本操作声明为准",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprises/{enterpriseId}/conversations/{conversationId}/queue/{runId}": {
+      "delete": {
+        "operationId": "withdrawQueuedMessage",
+        "summary": "撤回尚未开始处理的消息",
+        "description": "只能停止本人执行；预览检查 agent.preview，普通或定时执行检查 agent.run。权限由已保存的执行方式确定，不能由客户端选择。",
+        "x-permissions": [],
+        "x-tables": [
+          "agent_run",
+          "run_approval",
+          "run_checkpoint",
+          "quota_entry"
+        ],
+        "x-feature-ids": [
+          "F07"
+        ],
+        "x-permissions-by-run-mode": {
+          "preview": "agent.preview",
+          "interactive": "agent.run",
+          "scheduled": "agent.run",
+          "manual_schedule": "agent.run"
+        },
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 256
+            },
+            "description": "与当前会话绑定的请求防伪令牌"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 100
+            },
+            "description": "同一逻辑操作重复请求必须复用的随机键，至少保留 24 小时"
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功，字段和权限以本操作声明为准",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "统一错误，具体业务条件见接口分册",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -61011,7 +61459,10 @@
             "maxLength": 100
           },
           "status": {
-            "const": "queued"
+            "enum": [
+              "queued",
+              "waiting_turn"
+            ]
           },
           "lastSequence": {
             "type": "string",
@@ -61065,7 +61516,8 @@
               "cancelling",
               "completed",
               "failed",
-              "cancelled"
+              "cancelled",
+              "waiting_turn"
             ]
           },
           "mode": {
@@ -61916,6 +62368,13 @@
             },
             "maxItems": 2048,
             "minItems": 0
+          },
+          "queuedMessages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueuedMessage"
+            },
+            "maxItems": 20
           }
         },
         "additionalProperties": false,
@@ -67914,6 +68373,64 @@
               "type",
               "payload"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "protocolVersion": {
+                "const": 1
+              },
+              "eventId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "enterpriseId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "conversationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "sequence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 19,
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "createdAt": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 40,
+                "format": "date-time"
+              },
+              "type": {
+                "const": "queue.updated"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/QueuedMessage"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "protocolVersion",
+              "eventId",
+              "enterpriseId",
+              "conversationId",
+              "runId",
+              "sequence",
+              "createdAt",
+              "type",
+              "payload"
+            ]
           }
         ]
       },
@@ -70059,6 +70576,77 @@
               "type",
               "payload"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "protocolVersion": {
+                "const": 2
+              },
+              "generation": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "sequence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 19,
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "databaseVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 19,
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "eventId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "enterpriseId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "conversationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "createdAt": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 40,
+                "format": "date-time"
+              },
+              "type": {
+                "const": "queue.updated"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/QueuedMessage"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "protocolVersion",
+              "generation",
+              "sequence",
+              "databaseVersion",
+              "eventId",
+              "enterpriseId",
+              "conversationId",
+              "runId",
+              "createdAt",
+              "type",
+              "payload"
+            ]
           }
         ]
       },
@@ -70438,6 +71026,31 @@
             "type": "boolean"
           }
         }
+      },
+      "QueuedMessage": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "position": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "runId",
+          "position",
+          "text"
+        ]
       }
     }
   },

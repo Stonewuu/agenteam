@@ -2,6 +2,8 @@ package com.stonewu.agenteam.mapper.collaboration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
+import com.stonewu.agenteam.model.execution.entity.RunRecord;
+import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.model.tool.entity.ToolDefinition;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /** 固定工具名与严格参数结构；企业、用户、任务和工作身份不由模型传入。 */
 @Component
@@ -18,12 +21,41 @@ public class CollaborationToolDefinitions {
         "collab_ask_user", "collab_submit_result", "collab_complete_task");
     public static final Set<String> READS = Set.of("collab_list_roles", "collab_read_context", "collab_read_artifact");
     private final ResourceJson json;
+    private final List<ToolDefinition> definitions;
+    private final JsonNode bindingConfig;
 
     public CollaborationToolDefinitions(ResourceJson json) {
         this.json = json;
+        this.definitions = List.copyOf(build());
+        this.bindingConfig = json.tree(Map.of("pluginType", "builtin", "builtinCode", "group_collaboration"));
+    }
+
+    public static boolean handles(ExecutionToolBinding binding) {
+        return "builtin".equals(binding.config().path("pluginType").asText())
+            && "group_collaboration".equals(binding.config().path("builtinCode").asText());
+    }
+
+    /** 协作工作在自己的岗位版本下使用内置工具，旧插件已经提供的同名工具沿用原调用编号。 */
+    public void addTo(RunRecord run, Map<String, ExecutionToolBinding> bindings) {
+        if (!"interactive".equals(run.mode()) || !"collaboration".equals(run.executionConfig().path("sourceType").asText())) {
+            return;
+        }
+        var installed = bindings.values().stream().filter(CollaborationToolDefinitions::handles)
+            .map(binding -> binding.definition().name()).collect(Collectors.toSet());
+        for (var definition : tools()) {
+            if (!installed.contains(definition.name())) {
+                var binding = new ExecutionToolBinding(run.executionConfig().path("agentId").asText(), run.agentVersionId(),
+                    "agent", "团队协作", null, definition, bindingConfig);
+                bindings.put(binding.alias(), binding);
+            }
+        }
     }
 
     public List<ToolDefinition> tools() {
+        return definitions;
+    }
+
+    private List<ToolDefinition> build() {
         var result = new ArrayList<ToolDefinition>();
         result.add(tool("collab_list_roles", "分页读取本任务固定岗位及当前可用情况。只能使用返回的岗位编号，按 nextCursor 继续查询。", false,
             fields("cursor", text(30), "limit", integer(1, 10))));

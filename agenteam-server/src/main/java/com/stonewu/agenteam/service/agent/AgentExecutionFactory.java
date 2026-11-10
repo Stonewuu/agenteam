@@ -2,6 +2,7 @@ package com.stonewu.agenteam.service.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -15,6 +16,7 @@ import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
 import com.stonewu.agenteam.service.execution.RunCheckpointService;
+import com.stonewu.agenteam.service.execution.ConversationRunQueue;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.memory.MemoryPromptService;
@@ -39,6 +41,7 @@ import io.agentscope.harness.agent.subagent.SubagentDeclaration.Mode;
 import io.agentscope.harness.agent.tool.AgentSpawnTool;
 import org.springframework.http.HttpStatus;
 import com.stonewu.agenteam.service.collaboration.CollaborationInstructions;
+import com.stonewu.agenteam.service.collaboration.WebRoomQueue;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -159,11 +162,14 @@ public class AgentExecutionFactory {
         var timeout = ExecutionLimits.minTimeout(remaining, limit);
         Path workspace = session.equals(run.conversationId()) ? paths.workspace(run) : paths.workspace(run)
             .resolve("nodes").resolve(EncryptedAgentStateStore.component(session));
-        var runtimeTools = new ExecutionToolRuntime(run, lease, tools(run, config, model), toolCalls, toolExecution,
+        var runtimeTools = new ExecutionToolRuntime(run, lease, tools(run, config, model, true), toolCalls, toolExecution,
             callRecords, resourceJson, timeout);
         runtimeTools.modelContext(session, model.getContextWindowSize());
         guard.tools(runtimeTools);
         guard.checkpoint(checkpoint);
+        if (session.equals(run.conversationId()) && (ConversationRunQueue.supported(run) || WebRoomQueue.supports(run))) {
+            guard.afterTools((context, flush) -> checkpoints.continueIfWaiting(run, lease, states, context.getAgentState(), flush));
+        }
         List<HarnessAgent> children = new CopyOnWriteArrayList<>();
         String projectInstructions = projects.instructions(run);
         String languageInstruction = languages.instruction(run.userId());
@@ -184,7 +190,7 @@ public class AgentExecutionFactory {
             var childTimeout = ExecutionLimits.minTimeout(childLimit, timeout);
             String childInstructions = selected.resourceId() == null ? definition.instructions() : childInstructions(
                 run, selected.resourceId(), childConfig);
-            runtimeTools.childTools(definition.id(), tools(run, childConfig, childModel));
+            runtimeTools.childTools(definition.id(), tools(run, childConfig, childModel, false));
             int steps = Math.min(ExecutionLimits.frameworkMaxSteps(definition.maxSteps()),
                 ExecutionLimits.frameworkMaxSteps(config.path("maxSteps").asInt()));
             var declaration = SubagentDeclaration.builder().name(definition.id())
@@ -258,8 +264,11 @@ public class AgentExecutionFactory {
             .enableAgentTracingLog(false);
     }
 
-    private Map<String, ExecutionToolBinding> tools(RunRecord run, JsonNode config, ConfiguredModel model) {
-        var configured = toolCatalog.list(run, config);
+    private Map<String, ExecutionToolBinding> tools(RunRecord run, JsonNode config, ConfiguredModel model, boolean topLevel) {
+        var configured = new LinkedHashMap<>(toolCatalog.list(run, config));
+        if (!topLevel || !model.supportsTools()) {
+            configured.values().removeIf(CollaborationToolDefinitions::handles);
+        }
         if (model.supportsTools()) {
             return configured.entrySet().stream().filter(entry -> model.supportsImages()
                     || !WorkspaceToolDefinitions.handles(entry.getValue()) || !entry.getValue().definition().name()

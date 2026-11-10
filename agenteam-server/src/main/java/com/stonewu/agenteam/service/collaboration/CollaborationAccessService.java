@@ -60,7 +60,8 @@ public class CollaborationAccessService {
     }
 
     public AuthContext actor(CollaborationTaskRow task) {
-        return identities.actor(task.getEnterpriseId(), task.getInitiatorUserId(), task.getOriginUserBindingId());
+        return task.fromWebRoom() ? identities.actor(task.getEnterpriseId(), task.getInitiatorUserId())
+            : identities.actor(task.getEnterpriseId(), task.getInitiatorUserId(), task.getOriginUserBindingId());
     }
 
     public CollaborationParticipantRow participant(CollaborationTaskRow task, String id) {
@@ -75,6 +76,15 @@ public class CollaborationAccessService {
 
     public AuthContext requireRole(CollaborationTaskRow task, CollaborationParticipantRow role) {
         var actor = actor(task);
+        if (task.fromWebRoom()) {
+            if (!task.getId().equals(role.getTaskId()) || !task.getWebRoomId().equals(role.getWebRoomId())
+                || role.getWebMemberId() == null || !"available".equals(role.getAvailability())) {
+                throw roleUnavailable();
+            }
+            requireVersion(actor, role.getAgentId(), role.getAgentVersionId());
+            hires.requireActive(actor, role.getAgentId());
+            return actor;
+        }
         var bot = bots.require(task.getEnterpriseId(), role.getBotBindingId());
         var group = conversations.require(task.getEnterpriseId(), task.getConversationId());
         var member = conversations.member(task.getEnterpriseId(), task.getConversationId(), role.getBotBindingId());
@@ -89,16 +99,22 @@ public class CollaborationAccessService {
     }
 
     public void requireAgent(AuthContext actor, String agent, String version) {
+        requireVersion(actor, agent, version);
+        hires.requireUsable(actor, agent);
+    }
+
+    private void requireVersion(AuthContext actor, String agent, String version) {
         resources.requireUse(actor, agent, "agent");
         if (versions.find(actor.enterpriseId(), version).filter(value -> value.resourceId().equals(agent) && value.status().equals("available")).isEmpty()) {
             throw roleUnavailable();
         }
-        hires.requireUsable(actor, agent);
     }
 
     public AuthContext prepareRole(CollaborationTaskRow task, CollaborationParticipantRow role) {
         var actor = requireRole(task, role);
-        hires.ensure(actor, role.getAgentId());
+        if (!task.fromWebRoom()) {
+            hires.ensure(actor, role.getAgentId());
+        }
         return actor;
     }
 

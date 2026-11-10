@@ -27,6 +27,7 @@ class LiveSnapshotMapperTest {
         var live = new LiveConversationState(new StreamCursor("generation", "120"), 0, 10, "run",
             Map.of("block:second:text", json.valueToTree(Map.of("messageId", "second", "block", current))));
         var result = mapper.merge(base(List.of(old)), live, Map.of());
+        assertEquals(List.of("first", "second"), result.messages().stream().map(MessageView::id).toList());
         assertEquals("正文前半段和新增内容", result.messages().get(1).content());
         assertEquals("120", result.streamCursor().sequence());
         assertEquals("10", result.lastSequence());
@@ -65,7 +66,7 @@ class LiveSnapshotMapperTest {
         var run = new RunRecord("run", "enterprise", "conversation", "user", "input", "second", "version", "interactive", "running",
             json.createObjectNode(), 2, 3, 1, false, 9, now, null, null, null, null, null, now);
         var first = new MessageView("first", "run", 1, "assistant", "之前的尝试", "failed", List.of(), List.of(), null, now.toString(), now.toString());
-        var second = new MessageView("second", "run", 2, "assistant", "", "streaming", blocks, List.of(), null, now.plusSeconds(1).toString(), now.toString());
+        var second = new MessageView("second", "run", 2, "assistant", "", "streaming", blocks, List.of(), null, now.plusMillis(150).toString(), now.toString());
         return new ConversationSnapshotView(conversation, List.of(first, second), RunView.from(run, false), "9", false, null, false);
     }
 

@@ -204,6 +204,15 @@ public class CollaborationSubmissionRecords {
             .path("approvalPolicy").asText(ToolApprovalPolicy.DEFAULT.value())).value();
     }
 
+    public boolean resumesYieldedWork(Prepared prepared) {
+        var work = prepared.work();
+        return prepared.task().fromWebRoom() && "retry".equals(work.getResumeReason()) && links.exists(
+            new LambdaQueryWrapper<CollaborationRunLinkRow>().eq(CollaborationRunLinkRow::getEnterpriseId, work.getEnterpriseId())
+                .eq(CollaborationRunLinkRow::getTaskId, work.getTaskId()).eq(CollaborationRunLinkRow::getWorkId, work.getId())
+                .eq(CollaborationRunLinkRow::getRunRound, work.getRunRound()).eq(CollaborationRunLinkRow::getInputRevision, work.getInputRevision())
+                .eq(CollaborationRunLinkRow::getRequestedStopReason, WebRoomQueue.YIELDED).isNotNull(CollaborationRunLinkRow::getTerminalObservedAt));
+    }
+
     public boolean planningOnly(Prepared prepared) {
         return prepared.work().getId().equals(prepared.task().getOwnerWorkId())
             && prepared.work().getResumeReason().equals("input_changed")

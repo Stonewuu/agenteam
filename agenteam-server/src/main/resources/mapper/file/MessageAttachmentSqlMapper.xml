@@ -11,6 +11,7 @@
     <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
     AND f.purpose = 'attachment'
     AND NOT EXISTS (SELECT 1 FROM message_attachment a WHERE a.enterprise_id = f.enterprise_id AND a.file_id = f.id)
+    AND NOT EXISTS (SELECT 1 FROM collaboration_room_entry_file r WHERE r.enterprise_id = f.enterprise_id AND r.file_id = f.id)
     AND NOT EXISTS (SELECT 1 FROM workspace_project_file p WHERE p.enterprise_id = f.enterprise_id AND p.file_id = f.id)
   </update>
 </mapper>

@@ -46,8 +46,12 @@ test("纯文字粘贴不被接管，禁用附件时不触发文件上传", () =>
   assert.deepEqual(calls, []);
 });
 
-const composerSource = readFileSync(new URL("../src/features/agent/components/conversation-composer.tsx", import.meta.url), "utf8");
-const composerCode = ts.transpileModule(composerSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+function compileComposer(file) {
+  const source = readFileSync(new URL("../src/features/agent/components/" + file, import.meta.url), "utf8");
+  return ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX}}).outputText;
+}
+const composerCode = compileComposer("conversation-composer.tsx");
+const surfaceCode = compileComposer("conversation-composer-surface.tsx");
 
 function composer(overrides = {}) {
   const calls = [];
@@ -59,13 +63,20 @@ function composer(overrides = {}) {
     "../hooks/use-composer-input-size": { useComposerInputSize: () => ({ current: null }) },
     "../hooks/use-composer-layout": { useComposerLayout: () => ({ current: null }) },
   };
+  const load = name => modules[name] ?? new Proxy({default: {}}, {get: (target, key) => key in target ? target[key] : String(key)});
+  const surface = {};
+  vm.runInNewContext(surfaceCode, {exports: surface, require: load});
+  modules["./conversation-composer-surface"] = surface;
   const exports = {};
-  vm.runInNewContext(composerCode, { exports, require: name => modules[name] ?? new Proxy({ default: {} }, { get: (target, key) => key in target ? target[key] : String(key) }) });
+  vm.runInNewContext(composerCode, {exports, require: load});
   const tree = exports.ConversationComposer({ text: "保留已有草稿", skills: [], documents: [], model: {}, approvalPolicy: {},
     files: { add: value => calls.push(value), items: [], fileIds: [] }, employeeReady: true, attachmentsEnabled: true, submitting: false, ...overrides });
   function visit(node) {
     if (!node || typeof node !== "object") {
       return null;
+    }
+    if (node.type === surface.ConversationComposerSurface) {
+      return visit(node.type(node.props));
     }
     if (node.type === "Textarea") {
       return node;
@@ -95,6 +106,26 @@ test("对话提交中、员工未就绪或不接收附件时，粘贴不能绕�
     state.input.onPaste(clipboard([new File(["内容"], "附件.txt")]));
     assert.deepEqual(state.calls, []);
   }
+});
+
+test("选定输入法候选词和换行都不会发送消息，普通回车仅提交一次", () => {
+  let sent = 0;
+  const state = composer({canSubmit: true, onSubmit: () => {
+    sent++;
+  }});
+  function enter({shiftKey = false, isComposing = false, keyCode = 13} = {}) {
+    let prevented = false;
+    state.input.onKeyDown({key: "Enter", shiftKey, keyCode, nativeEvent: {isComposing}, preventDefault() {
+      prevented = true;
+    }});
+    return prevented;
+  }
+  assert.equal(enter({isComposing: true}), false);
+  assert.equal(enter({keyCode: 229}), false);
+  assert.equal(enter({shiftKey: true}), false);
+  assert.equal(sent, 0);
+  assert.equal(enter(), true);
+  assert.equal(sent, 1);
 });
 
 test("已上传的无文字 PDF 如实说明，损坏与加密文件显示各自原因，英文同步翻译", () => {

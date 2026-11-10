@@ -12,6 +12,8 @@ import io.agentscope.core.middleware.ActingInput;
 import io.agentscope.core.middleware.AgentInput;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.middleware.ModelCallInput;
+import io.agentscope.core.middleware.ReasoningInput;
+import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
@@ -61,6 +64,8 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
     private Consumer<RuntimeContext> checkpoint = context -> {
     };
     private StepBoundary boundary;
+    private BiConsumer<RuntimeContext, Runnable> afterTools;
+    private final AtomicBoolean finishedRootTools = new AtomicBoolean();
 
     public ExecutionGuardMiddleware(RunLifecycleService lifecycle, JobLease lease, String rootSession, int maxSteps) {
         this.lifecycle = lifecycle;
@@ -106,6 +111,24 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
                     failed instanceof ExecutionStoppedException ? "cancelled" : "failed"))
                 .doOnCancel(() -> childOutcomes.putIfAbsent(call, "cancelled"));
         });
+    }
+
+    public void afterTools(BiConsumer<RuntimeContext, Runnable> action) {
+        afterTools = action;
+    }
+
+    @Override
+    public Flux<AgentEvent> onReasoning(Agent agent, RuntimeContext context, ReasoningInput input,
+                                        Function<ReasoningInput, Flux<AgentEvent>> next) {
+        if (afterTools == null || !rootSession.equals(context.getSessionId())) {
+            return next.apply(input);
+        }
+        var history = context.getAgentState().getContext();
+        if (!finishedRootTools.getAndSet(false) && (history.isEmpty()
+            || history.getLast().getContent().stream().noneMatch(ToolResultBlock.class::isInstance))) {
+            return next.apply(input);
+        }
+        return Mono.fromRunnable(() -> afterTools.accept(context, beforeStep)).subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.defer(() -> next.apply(input)));
     }
 
     @Override
@@ -181,7 +204,11 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
                     }
                     return Flux.empty();
                 });
-        })).map(event -> stamp(event, context));
+        })).map(event -> stamp(event, context)).doOnComplete(() -> {
+            if (afterTools != null && rootSession.equals(context.getSessionId())) {
+                finishedRootTools.set(true);
+            }
+        });
     }
 
     private boolean allowed(Agent agent, ToolUseBlock call, boolean child) {

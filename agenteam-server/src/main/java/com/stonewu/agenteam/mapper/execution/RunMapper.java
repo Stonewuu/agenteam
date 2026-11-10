@@ -1,8 +1,10 @@
 package com.stonewu.agenteam.mapper.execution;
 
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.execution.entity.RunQueryRow;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
@@ -46,9 +48,52 @@ public class RunMapper {
 
     public void create(String id, String enterprise, String user, String conversation, String input, String output,
                        String version, String mode, JsonNode config, int maxAttempts, Instant now) {
+        create(id, enterprise, user, conversation, input, output, version, mode, config, maxAttempts, null, now);
+    }
+
+    public void create(String id, String enterprise, String user, String conversation, String input, String output,
+                       String version, String mode, JsonNode config, int maxAttempts, Long queuePosition, Instant now) {
         statements.createAgentRun(id, enterprise, user, conversation, input, output, version, mode, json.write(config),
-            maxAttempts, timestamp(now));
+            maxAttempts, queuePosition, timestamp(now));
         runAttemptSqlMapper.createRunAttempt(UUID.randomUUID().toString(), enterprise, id, output);
+    }
+
+    private LambdaQueryWrapper<AgentRunRow> waiting(String enterprise, String conversation) {
+        return new LambdaQueryWrapper<AgentRunRow>().eq(AgentRunRow::getEnterpriseId, enterprise)
+            .eq(AgentRunRow::getConversationId, conversation).eq(AgentRunRow::getStatus, "waiting_turn");
+    }
+
+    public long waitingCount(String enterprise, String conversation) {
+        return statements.selectCount(waiting(enterprise, conversation));
+    }
+
+    public List<String> waitingIds(String enterprise, String conversation) {
+        return statements.selectList(waiting(enterprise, conversation).select(AgentRunRow::getId)
+            .orderByAsc(AgentRunRow::getQueuePosition)).stream().map(AgentRunRow::getId).toList();
+    }
+
+    public void moveWaiting(RunRecord run, long position) {
+        int changed = statements.update(new LambdaUpdateWrapper<AgentRunRow>()
+            .eq(AgentRunRow::getEnterpriseId, run.enterpriseId()).eq(AgentRunRow::getConversationId, run.conversationId())
+            .eq(AgentRunRow::getId, run.id()).eq(AgentRunRow::getStatus, "waiting_turn")
+            .set(AgentRunRow::getQueuePosition, position));
+        if (changed != 1) {
+            throw new IllegalStateException("这条补充消息已经离开队列。");
+        }
+    }
+
+    public void activateWaiting(RunRecord run, String previous, Instant now) {
+        ObjectNode config = run.executionConfig().deepCopy();
+        config.put("previousRunId", previous);
+        int changed = statements.update(new LambdaUpdateWrapper<AgentRunRow>()
+            .eq(AgentRunRow::getEnterpriseId, run.enterpriseId()).eq(AgentRunRow::getConversationId, run.conversationId())
+            .eq(AgentRunRow::getId, run.id()).eq(AgentRunRow::getStatus, "waiting_turn")
+            .set(AgentRunRow::getStatus, "queued").set(AgentRunRow::getQueuedAt, now)
+            .set(AgentRunRow::getQueuePosition, null).set(AgentRunRow::getExecutionConfigJson, json.write(config))
+            .set(AgentRunRow::getUpdatedAt, now));
+        if (changed != 1) {
+            throw new IllegalStateException("这条补充消息已经交给智能体或被停止。");
+        }
     }
 
     public int activeCount(String enterprise, String user) {

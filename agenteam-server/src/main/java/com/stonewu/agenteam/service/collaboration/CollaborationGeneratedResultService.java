@@ -33,7 +33,7 @@ public class CollaborationGeneratedResultService {
 
     public Prepared prepare(CollaborationRunLinkRow link) {
         var run = runs.find(link.getEnterpriseId(), link.getRunId(), false).orElseThrow();
-        if (!run.status().equals("completed")) {
+        if (!run.status().equals("completed") || WebRoomQueue.YIELDED.equals(link.getRequestedStopReason())) {
             return null;
         }
         var task = access.require(link.getEnterpriseId(), link.getTaskId());

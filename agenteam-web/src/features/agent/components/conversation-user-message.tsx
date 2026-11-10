@@ -13,13 +13,13 @@ import skillStyles from "@/features/skill/components/workspace-skills.module.css
 import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
 import {IconChevronDown, IconUser} from "@/components/ui/icons";
 
-export function ConversationUserMessage({message, enterprise}: { message: DisplayMessage; enterprise: string }) {
+export function ConversationUserMessage({message, enterprise}: { message: Pick<DisplayMessage, "content" | "blocks" | "attachments" | "createdAt"> & {status?: DisplayMessage["status"]}; enterprise: string }) {
   const uiText = useT();
   const labels = message.blocks.filter((block): block is Extract<DisplayBlock, {
     kind: "status"
   }> => block.kind === "status");
   return <div className={styles.content}>
-    <div className={styles.meta}><EnterpriseDateTime value={message.createdAt} compact/><span>{uiText("你")}</span><span
+    <div className={styles.meta}>{message.status === "cancelled" && <span>{uiText("未执行")}</span>}<EnterpriseDateTime value={message.createdAt} compact/><span>{uiText("你")}</span><span
       className={styles.avatar} data-icon-surface><IconUser size={18}/></span></div>
     {(message.content || labels.length > 0) &&
       <div className={styles.bubble}>{message.content && <CollapsibleUserText text={message.content}/>}

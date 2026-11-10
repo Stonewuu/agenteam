@@ -30,6 +30,15 @@ public class CollaborationTaskRow implements EnterpriseScopedRecord {
     @TableField("updated_at")
     private Instant updatedAt;
 
+    private String originKind;
+    private String webRoomId;
+    private String webOriginEntryId;
+    private String webTopicId;
+
+    public boolean fromWebRoom() {
+        return "web".equals(originKind);
+    }
+
     @TableField("conversation_id")
     private String conversationId;
 

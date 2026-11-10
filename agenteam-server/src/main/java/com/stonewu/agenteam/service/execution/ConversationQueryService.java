@@ -147,7 +147,8 @@ public class ConversationQueryService {
         var snapshot = new ConversationSnapshotView(view(actor, row, new HashMap<>()),
             decorateMessages(actor, id, latest.reversed()),
             run == null ? null : RunView.from(run, false), Long.toString(row.lastSequence()), older, before,
-            attachments);
+            attachments, 1, null, List.of(), List.of(), run != null && ConversationRunQueue.supported(run)
+                ? messages.waiting(actor.enterpriseId(), id) : List.of());
         return new SnapshotBase(row, snapshot, run);
     }
 

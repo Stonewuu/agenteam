@@ -16,6 +16,8 @@ import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
 import com.stonewu.agenteam.model.integration.entity.UserChannelBindingRow;
 import com.stonewu.agenteam.service.collaboration.CollaborationRunAccessService;
+import com.stonewu.agenteam.service.collaboration.CollaborationRunQuestionChannel;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
@@ -37,6 +39,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class CollaborationInvariantTest extends CollaborationToolTestSupport {
     private static final InvitationHttpTestEnvironment ENV = new InvitationHttpTestEnvironment();
     @Autowired CollaborationRunAccessService runAccess;
+    @Autowired CollaborationRunQuestionChannel interaction;
+    @Autowired TransactionTemplate transactionsForStatus;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
@@ -127,6 +131,45 @@ class CollaborationInvariantTest extends CollaborationToolTestSupport {
         assertTrue(rejected.path("isError").asBoolean(), rejected::toString);
         assertNotEquals("completed", onlyTask().getStatus());
         assertNotEquals(onlyTask().getOwnerWorkId(), link(assistance.run().id()).getWorkId());
+    }
+
+    @Test
+    void replacingTheFailedAssignmentUnblocksTheLeadForLaterApprovals() {
+        startTask("核对附件后汇总");
+        var owner = startNext();
+        String role = financeRole().getId();
+        assign(owner, "assign-review", role);
+        var original = allWorks().stream().filter(work -> "assist".equals(work.getPurpose())).findFirst().orElseThrow();
+        invoke(owner, "wait-review", "collab_wait", Map.of("expectedInputRevision", 1, "workItemIds", List.of(original.getId()), "reason", "等待核对"));
+        finish(owner);
+        var failed = startNext();
+        lifecycle.finish(failed.lease(), "failed", "EXECUTION_FAILED", "文件检查未完成");
+        observer.observe(enterprise, link(failed.run().id()).getId());
+        assertEquals("blocked", onlyTask().getStatus());
+        var replanning = startNext();
+        var result = invoke(replanning, "replace-review", "collab_assign", Map.of("expectedInputRevision", 1, "targetRoleId", role,
+            "goal", "直接核对可读正文", "acceptanceCriteria", "提交核对结论", "artifactRefs", List.of(),
+            "dependsOnWorkIds", List.of(), "replacesWorkItemId", original.getId()));
+        assertFalse(result.path("isError").asBoolean(), result::toString);
+        assertEquals("superseded", work(original.getId()).getStatus());
+        assertEquals("active", onlyTask().getStatus());
+        assertNull(onlyTask().getErrorCode());
+
+        String replacement = work(original.getId()).getReplacementWorkId();
+        invoke(replanning, "wait-again", "collab_wait", Map.of("expectedInputRevision", 1, "workItemIds", List.of(replacement), "reason", "等替换的工作完成"));
+        finish(replanning);
+        var analyst = startNext();
+        submit(analyst, "finished-reading", "已核对清单");
+        finish(analyst);
+        var queued = dispatch.submit(dispatch.claim("resume-after-approval").orElseThrow());
+        // 旧版本可能已保存替换关系，却仍保留原工作的错误；模拟在该状态下确认执行。
+        var task = onlyTask();
+        assertEquals(1, databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
+            .eq(CollaborationTaskRow::getEnterpriseId, enterprise).eq(CollaborationTaskRow::getId, task.getId())
+            .set(CollaborationTaskRow::getStatus, "blocked").set(CollaborationTaskRow::getErrorCode, "EXECUTION_FAILED")));
+        transactionsForStatus.executeWithoutResult(status -> interaction.resumed(runs.find(enterprise, queued.runId(), false).orElseThrow()));
+        assertEquals("active", onlyTask().getStatus());
+        assertNull(onlyTask().getErrorCode());
     }
 
     @Test

@@ -43,6 +43,9 @@ public class CollaborationReplyModeService {
 
     public CollaborationReplyModeView get(AuthContext actor, String id) {
         var task = access.owned(actor, id);
+        if (task.fromWebRoom()) {
+            throw ApiException.invalidField("taskId", "网页协作对话不向外部平台发送消息。");
+        }
         var preference = preferences.get(actor, task.getConversationId());
         return new CollaborationReplyModeView(id, revision(task), preference.fullAllowed() ? task.getOutputVisibility() : "summary_link",
             preference, "completed".equals(task.getStatus()) && task.getFinalArtifactId() != null);
@@ -52,6 +55,9 @@ public class CollaborationReplyModeService {
     public CollaborationReplyModeView save(AuthContext actor, String id, CollaborationReplyModeRequest input) {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
         var task = access.owned(actor, id);
+        if (task.fromWebRoom()) {
+            throw ApiException.invalidField("taskId", "网页协作对话不向外部平台发送消息。");
+        }
         var group = preferences.owned(actor, task.getConversationId());
         ChatReplyPreferenceService.validate(group, input.outputVisibility());
         long current = revision(task);

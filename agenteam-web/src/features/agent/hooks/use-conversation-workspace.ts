@@ -90,6 +90,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const pending = useRef(false);
   const mutation = useRef(new ApiMutation());
   const stopMutation = useRef(new ApiMutation());
+  const queueMutation = useRef(new ApiMutation());
   const retryMutation = useRef(new ApiMutation());
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const draftKey = `${userId}:${enterpriseId}:${conversationId ?? `new:${selectedAgent ?? ""}`}`;
@@ -253,12 +254,17 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     });
   }
 
+  const activeRun = stream.state?.snapshot.activeRun;
+  const canQueue = Boolean(activeRun?.mode === "interactive" && ["queued", "running", "waiting_approval"].includes(activeRun.status)
+    && detail?.mode === "normal" && detail.status === "active" && !detail.collaborationTaskId && canRun);
+  const canSendHere = conversationId ? (activeRun ? canQueue : Boolean(detail?.canContinue)) : Boolean(employee.data?.canRun);
+
   async function submitMessageContent(text = draft) {
     const content = text.trim();
     if (!model.ready || project.saving) {
       return;
     }
-    if (approvalPolicy.saving || stream.state?.snapshot.activeRun || (!content && !files.fileIds.length) || !sourcesReady || pending.current || !canRun || skills.error || skills.loading || (conversationId ? !detail?.canContinue : !employee.data?.canRun)) {
+    if (approvalPolicy.saving || (!content && !files.fileIds.length) || !sourcesReady || pending.current || !canRun || skills.error || skills.loading || !canSendHere) {
       return;
     }
     pending.current = true;
@@ -276,7 +282,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
           generation: document.generation
         }))
       };
-      const response = await mutation.current.run<RunAccepted>(conversationId ? `${conversationPath(enterpriseId, conversationId)}/messages` : conversationPath(enterpriseId), {
+      const response = await mutation.current.run<RunAccepted>(conversationId ? `${conversationPath(enterpriseId, conversationId)}/messages?queue=true` : conversationPath(enterpriseId), {
         method: "POST",
         body: conversationId ? input : {
           agentId: selectedAgent,
@@ -311,6 +317,26 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     } finally {
       pending.current = false;
       setSubmitting(false);
+    }
+  }
+
+  async function changeQueue(run: string, prioritize: boolean) {
+    if (!conversationId) {
+      return;
+    }
+    const route = currentRoute.current;
+    const path = `${conversationPath(enterpriseId, conversationId)}/queue/${encodeURIComponent(run)}`;
+    setActionError("");
+    try {
+      await queueMutation.current.run(prioritize ? `${path}/prioritize` : path, {method: prioritize ? "POST" : "DELETE"});
+    } catch (error) {
+      if (currentRoute.current === route) {
+        setActionError(errorMessage(error, uiText("未能更新待处理消息。")));
+      }
+    } finally {
+      if (currentRoute.current === route) {
+        stream.reload();
+      }
     }
   }
 
@@ -415,7 +441,9 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     documentPickerOpen,
     setDocumentPickerOpen,
     chooseDocuments: (value: DocumentOption[]) => setDocuments((current) => ({...current, [draftKey]: value})),
-    canSubmit: canRun && model.ready && !project.saving && !approvalPolicy.saving && !stream.state?.snapshot.activeRun && !submitting && !skills.error && !skills.loading && sourcesReady && (conversationId ? Boolean(detail?.canContinue) : Boolean(employee.data?.canRun)),
+    canQueue,
+    changeQueue,
+    canSubmit: canRun && model.ready && !project.saving && !approvalPolicy.saving && !submitting && !skills.error && !skills.loading && sourcesReady && canSendHere,
     title: detail?.title ?? (conversationId ? uiText("对话任务") : uiText("新对话")),
     agentName: detail?.agentName ?? displayEmployee?.name ?? "",
     newTaskPath: `${base}/new-task`

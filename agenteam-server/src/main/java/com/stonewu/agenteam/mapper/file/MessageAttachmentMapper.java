@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.mapper.file;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.yulichang.toolkit.JoinWrappers;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
@@ -98,7 +99,7 @@ public class MessageAttachmentMapper {
             .eq(MessageAttachmentRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getId, conversation)
             .eq(AgentConversationRow::getUserId, user)
             .ne(AgentConversationRow::getStatus, "deleted").eq(AgentMessageRow::getRole, "user")
-            .orderByAsc(MessageAttachmentRow::getFileId);
+            .eq(AgentMessageRow::getStatus, "completed").orderByAsc(MessageAttachmentRow::getFileId);
         return statements.selectJoinPage(new Page<>(1, limit, false), MessageAttachmentRow.class, query)
             .getRecords().stream().map(MessageAttachmentRow::getFileId).toList();
     }
@@ -114,9 +115,20 @@ public class MessageAttachmentMapper {
                 .eq(AgentConversationRow::getId, AgentMessageRow::getConversationId))
             .eq(MessageAttachmentRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getUserId, user)
             .eq(AgentConversationRow::getId, conversation).ne(AgentConversationRow::getStatus, "deleted")
-            .eq(AgentMessageRow::getRole, "user").in(MessageAttachmentRow::getMessageId, ids);
+            .eq(AgentMessageRow::getRole, "user").eq(AgentMessageRow::getStatus, "completed")
+            .in(MessageAttachmentRow::getMessageId, ids);
         var scoped = statements.selectJoinList(MessageAttachmentRow.class, query).stream().map(MessageAttachmentRow::getMessageId).toList();
         return forMessages(enterprise, scoped);
+    }
+
+    public void removeWaitingInput(String enterprise, String message, Instant now) {
+        var scope = new LambdaQueryWrapper<MessageAttachmentRow>().eq(MessageAttachmentRow::getEnterpriseId, enterprise)
+            .eq(MessageAttachmentRow::getMessageId, message);
+        var ids = statements.selectList(scope).stream().map(MessageAttachmentRow::getFileId).toList();
+        if (!ids.isEmpty()) {
+            statements.delete(scope);
+            statements.expireDetachedFiles(enterprise, ids, now);
+        }
     }
 
     public void removeConversation(String enterprise, String conversation, Instant now) {

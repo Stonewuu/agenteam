@@ -11,7 +11,6 @@ import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationRunLinkRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
-import com.stonewu.agenteam.service.chat.ChatOutboundService;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
 import org.slf4j.Logger;
@@ -33,12 +32,12 @@ public class CollaborationRecoveryService {
     private final EnterpriseMapper enterprises;
     private final RunMapper runs;
     private final CollaborationAccessService access;
-    private final ChatOutboundService outbound;
+    private final CollaborationNotices outbound;
     private final Clock clock;
 
     public CollaborationRecoveryService(CollaborationRunLinkMapper links, CollaborationTaskMapper tasks,
             CollaborationWorkItemMapper works, EnterpriseMapper enterprises, RunMapper runs,
-            CollaborationAccessService access, ChatOutboundService outbound, Clock clock) {
+            CollaborationAccessService access, CollaborationNotices outbound, Clock clock) {
         this.links = links;
         this.tasks = tasks;
         this.works = works;
@@ -93,7 +92,12 @@ public class CollaborationRecoveryService {
     }
 
     public List<CollaborationTaskRow> ending() {
+        return ending(null);
+    }
+
+    public List<CollaborationTaskRow> ending(String source) {
         return tasks.selectPage(new Page<CollaborationTaskRow>(1, 50, false), new LambdaQueryWrapper<CollaborationTaskRow>()
+            .eq(source != null, CollaborationTaskRow::getOriginKind, source)
             .and(query -> query.eq(CollaborationTaskRow::getStatus, "cancelling").or(expired -> expired
                 .in(CollaborationTaskRow::getStatus, "active", "blocked", "waiting_input", "waiting_approval")
                 .le(CollaborationTaskRow::getDeadlineAt, clock.instant())))
@@ -127,9 +131,9 @@ public class CollaborationRecoveryService {
             throw ApiException.versionConflict(task.getRevision());
         }
         if (active == 0) {
-            outbound.text(enterprise, task.getConversationId(), task.getEntryBotId(), taskId, null, "task-ended:" + taskId, "cancelled",
+            outbound.send(task, null, null, "task-ended:" + taskId, "cancelled",
                 "任务 【" + task.getShortCode() + "】：" + (expired ? "已到截止时间，未继续执行。已保存的成果仍可在群策查看。" : "已取消。已完成的业务操作与成果保留。")
-                    + ("TOOL_RESULT_UNKNOWN".equals(task.getErrorCode()) ? "仍有操作结果尚未确认，请先在群策核实。" : ""), null);
+                    + ("TOOL_RESULT_UNKNOWN".equals(task.getErrorCode()) ? "仍有操作结果尚未确认，请先在群策核实。" : ""), false, null);
         }
     }
 

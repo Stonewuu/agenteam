@@ -79,7 +79,9 @@ public class CollaborationResultService {
             finishTask(context, action, result.getId(), summary, input.path("artifactRefs"), replyText);
         } else if (!owner) {
             works.change(work, "completed");
-            works.notify(context, action, "work_completed", "任务 【" + context.task().getShortCode() + "】：【" + context.participant().getRoleName() + "】已提交协助成果。");
+            String submitted = replyText == null || replyText.isBlank() ? summary : replyText;
+            works.notify(context, action, "work_completed", context.task().fromWebRoom() ? submitted
+                : "任务 【" + context.task().getShortCode() + "】：【" + context.participant().getRoleName() + "】已提交协助成果。");
         } else {
             var required = unfinished(context.task(), work.getId());
             if (required.isEmpty() && missingRoles(context.task()).isEmpty()) {
@@ -168,6 +170,10 @@ public class CollaborationResultService {
             .set(CollaborationWorkItemRow::getStatus, "cancelled").setIncrBy(CollaborationWorkItemRow::getRevision, 1));
         // 排队时保存完整候选内容，是否向原会话发送由实际发送前的当前设置决定。
         String message = replyText == null || replyText.isBlank() ? summary : replyText;
+        if (task.fromWebRoom()) {
+            works.notify(context, action, "completed", message);
+            return;
+        }
         if (message.codePointCount(0, message.length()) > 32000) {
             message = "完整回复较长，已整理为文件，请查看附件。";
         }

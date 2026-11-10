@@ -171,6 +171,9 @@ export function ConversationPane({
                                                                                          onText={workspace.setDraft}
                                                                                          onSubmit={() => void workspace.submitMessageContent()}
                                                                                          canSubmit={workspace.canSubmit}
+                                                                                         canQueue={workspace.canQueue}
+                                                                                         queuedMessages={stream.state?.snapshot.queuedMessages ?? []}
+                                                                                         onQueueChange={workspace.changeQueue}
                                                                                          submitting={workspace.submitting || loading}
                                                                                          activeRun={run}
                                                                                          canStop={canStop}

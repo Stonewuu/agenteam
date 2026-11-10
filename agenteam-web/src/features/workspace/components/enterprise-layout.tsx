@@ -6,7 +6,7 @@ import {localizeCatalog} from "@/lib/i18n/translate";
 import {usePathname} from "next/navigation";
 import type {ReactNode} from "react";
 import {EnterpriseGate} from "@/features/auth/components/enterprise-gate";
-import {workspaceParts} from "@/features/auth/lib/workspace-path";
+import {isWebRoomDetail, workspaceParts} from "@/features/auth/lib/workspace-path";
 import {SystemManagementGate} from "@/features/auth/components/system-management-gate";
 import {PlatformShell} from "./platform-shell";
 import {
@@ -23,7 +23,7 @@ export function EnterpriseLayout({enterpriseId, children}: { enterpriseId: strin
   const platformPage = localizeCatalog(platformManagementNavigation, uiText).find((item) => item.path === pathname);
   const [section, detail, resourceId] = workspaceParts(pathname);
   const area = platformPage || section === "management" ? "management" : section === "capabilities" ? "capabilities" : "user";
-  const fullHeight = section === "new-task" || section === "conversations" ||
+  const fullHeight = isWebRoomDetail(pathname) || section === "new-task" || section === "conversations" ||
     section === "capabilities" && detail === "workflows" && Boolean(resourceId);
   return <EnterpriseGate enterpriseId={enterpriseId} onUnavailable={platformPage ? () =>
     <SystemManagementGate title={platformPage.label}>{() => children}</SystemManagementGate> : undefined}>{({

@@ -258,6 +258,12 @@ public class RunApprovalService {
                            boolean restored) {
         var saved = states.get(run.userId(), session, "agent_state", AgentState.class);
         if (!restored) {
+            if (session.equals(run.conversationId()) && run.executionConfig().path("resumeWebRoomWork").asBoolean()) {
+                if (saved.isEmpty() || saved.get().getContext().isEmpty()) {
+                    throw new IllegalStateException("继续协作工作时缺少上一批工具的执行记录");
+                }
+                return List.of();
+            }
             return List.of(first);
         }
         if (saved.isEmpty()) {

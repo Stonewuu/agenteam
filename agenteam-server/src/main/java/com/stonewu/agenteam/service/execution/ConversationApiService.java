@@ -14,6 +14,7 @@ import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.util.Set;
 
 /**
@@ -27,10 +28,15 @@ public class ConversationApiService {
     private final EnterpriseAuthorizationService authorization;
     private final ConversationMapper conversations;
     private final ConversationModelService models;
+    private final ConversationRunQueue queue;
+    private final Clock clock;
 
     public ConversationApiService(AuthContextService identity, IdempotentRequestService requests,
                                   RunSubmissionService submission, EnterpriseAuthorizationService authorization,
-                                  ConversationMapper conversations, ConversationModelService models) {
+                                  ConversationMapper conversations, ConversationModelService models,
+                                  ConversationRunQueue queue, Clock clock) {
+        this.queue = queue;
+        this.clock = clock;
         this.identity = identity;
         this.requests = requests;
         this.submission = submission;
@@ -48,7 +54,7 @@ public class ConversationApiService {
         }, () -> ApiOperationResult.of(202, submission.create(actor, value)));
     }
 
-    public ApiOperationResult send(String enterprise, String id, MessageInput value, HttpServletRequest request) {
+    public ApiOperationResult send(String enterprise, String id, MessageInput value, boolean queue, HttpServletRequest request) {
         InputValidation.request(request, MessageInput.class);
         var actor = identity.requireEnterprise(request.getSession(false), enterprise);
         return requests.execute(request, actor.user(), enterprise, Set.of(), () -> {
@@ -56,7 +62,21 @@ public class ConversationApiService {
             authorization.lockAndRequire(current, "agent.run");
             conversations.find(enterprise, actor.userId(), id, false).filter(row -> !row.status().equals("deleted"))
                 .orElseThrow(ResourceAuthorizationService::unavailable);
-        }, () -> ApiOperationResult.of(202, submission.send(actor, id, value)));
+        }, () -> ApiOperationResult.of(202, queue ? submission.sendOrQueue(actor, id, value) : submission.send(actor, id, value)));
+    }
+
+    public ApiOperationResult changeQueue(String enterprise, String id, String run, boolean prioritize,
+                                          HttpServletRequest request) {
+        var actor = identity.requireEnterprise(request.getSession(false), enterprise);
+        return requests.execute(request, actor.user(), enterprise, Set.of(), () -> {
+            var current = identity.requireEnterprise(request.getSession(false), enterprise);
+            authorization.lockAndRequire(current, "agent.run");
+            conversations.find(enterprise, actor.userId(), id, false).filter(row -> row.status().equals("active"))
+                .orElseThrow(ResourceAuthorizationService::unavailable);
+        }, () -> {
+            queue.change(actor, id, run, prioritize, clock.instant());
+            return ApiOperationResult.of(200, run);
+        });
     }
 
     public ApiOperationResult selectModel(String enterprise, String id, ModelSelection value,

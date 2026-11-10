@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.tool;
 import com.stonewu.agenteam.service.workflow.WorkflowNodes;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * 只读取员工明确绑定的固定版本，技能不能借助间接依赖扩大工具范围。
+ * 普通工具来自岗位绑定的固定版本；内置任务工具按当前执行场景提供。
  */
 @Service
 public class ExecutionToolCatalog {
@@ -29,10 +30,12 @@ public class ExecutionToolCatalog {
     private final ResourceVersionMapper versions;
     private final JavaPluginRegistry javaPlugins;
     private final UserQuestionTool questions;
+    private final CollaborationToolDefinitions collaboration;
 
     public ExecutionToolCatalog(PluginToolMapper tools, SourceToolDefinitions sources,
                                 WorkspaceToolDefinitions workspace, ResourceVersionMapper versions, JavaPluginRegistry javaPlugins,
-                                UserQuestionTool questions) {
+                                UserQuestionTool questions, CollaborationToolDefinitions collaboration) {
+        this.collaboration = collaboration;
         this.tools = tools;
         this.sources = sources;
         this.workspace = workspace;
@@ -78,7 +81,7 @@ public class ExecutionToolCatalog {
                                 .equals("read")) {
                                 continue;
                             }
-                            if (!sourceEnabled(run, tool, sourceTools, available, javaAvailable)) {
+                            if (!sourceEnabled(run.enterpriseId(), tool, sourceTools, available, javaAvailable)) {
                                 continue;
                             }
                             result.put(binding.alias(), binding);
@@ -109,6 +112,7 @@ public class ExecutionToolCatalog {
         }
         result.putAll(workspace.list(run));
         result.putAll(questions.list(run));
+        collaboration.addTo(run, result);
         return Map.copyOf(result);
     }
 
@@ -177,8 +181,15 @@ public class ExecutionToolCatalog {
                     }
                     javaPlugins.require(run.enterpriseId(), selected.source().versionId());
                 }
-                if (sourceEnabled(run, selected, sourceTools, available, javaAvailable)) {
-                    return binding(dependency, selected);
+                if (sourceEnabled(run.enterpriseId(), selected, sourceTools, available, javaAvailable)) {
+                    var binding = binding(dependency, selected);
+                    if (CollaborationToolDefinitions.handles(binding) && !"collaboration".equals(run.executionConfig().path("sourceType").asText())) {
+                        if (omitUnavailableJava) {
+                            return null;
+                        }
+                        throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_REQUIRED", "此工具只在协作任务中可用。");
+                    }
+                    return binding;
                 }
             }
         }
@@ -217,7 +228,7 @@ public class ExecutionToolCatalog {
         return versions.available(run.enterpriseId(), ids.stream().distinct().toList());
     }
 
-    private boolean sourceEnabled(RunRecord run, PluginToolRecord tool, Map<String, List<PluginToolRecord>> sourceTools,
+    private boolean sourceEnabled(String enterprise, PluginToolRecord tool, Map<String, List<PluginToolRecord>> sourceTools,
                                   Set<String> available, Set<String> javaAvailable) {
         if (tool.source() != null && tool.source().type().equals("java")) {
             return javaAvailable.contains(tool.source().versionId());
@@ -228,7 +239,7 @@ public class ExecutionToolCatalog {
         if (!available.contains(tool.source().versionId())) {
             return false;
         }
-        return sourceTools.computeIfAbsent(tool.source().versionId(), id -> tools.list(run.enterpriseId(), id)).stream()
+        return sourceTools.computeIfAbsent(tool.source().versionId(), id -> tools.list(enterprise, id)).stream()
             .anyMatch(source -> source.enabled()
                 && source.definition().name().equals(tool.definition().name()) && source.definition().schemaHash()
                 .equals(tool.definition().schemaHash()));

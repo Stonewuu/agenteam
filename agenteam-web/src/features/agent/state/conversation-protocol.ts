@@ -164,6 +164,11 @@ export function validateSnapshot(snapshot: ConversationSnapshot) {
       }
     }
   }
+  if (snapshot.queuedMessages !== undefined && (!Array.isArray(snapshot.queuedMessages)
+    || snapshot.queuedMessages.length > 20 || snapshot.queuedMessages.some(item => !item || typeof item.runId !== "string"
+      || !Number.isSafeInteger(item.position) || typeof item.text !== "string"))) {
+    throw new SnapshotRequired();
+  }
   sequence(value.lastSequence);
   if (typeof conversation.id !== "string" || !conversation.id || typeof conversation.title !== "string" || !Array.isArray(value.messages) || typeof value.attachmentsEnabled !== "boolean") {
     throw new SnapshotRequired();

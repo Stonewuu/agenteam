@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.collaboration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -29,10 +30,12 @@ public class CollaborationDispatchService {
     private final CollaborationContextService contexts;
     private final RunSubmissionService submissions;
     private final Clock clock;
+    private final WebRoomQueue roomQueue;
 
     public CollaborationDispatchService(CollaborationWorkItemMapper works, CollaborationTaskMapper tasks, EnterpriseMapper enterprises,
             CollaborationAccessService access, CollaborationDependencyService dependencies, CollaborationContextService contexts,
-            RunSubmissionService submissions, Clock clock) {
+            RunSubmissionService submissions, Clock clock, WebRoomQueue roomQueue) {
+        this.roomQueue = roomQueue;
         this.works = works;
         this.tasks = tasks;
         this.enterprises = enterprises;
@@ -45,9 +48,17 @@ public class CollaborationDispatchService {
 
     @Transactional
     public Optional<CollaborationWorkLease> claim(String owner) {
+        return claim(owner, null);
+    }
+
+    @Transactional
+    public Optional<CollaborationWorkLease> claim(String owner, String source) {
         var now = clock.instant();
-        var candidates = works.selectPage(new Page<CollaborationWorkItemRow>(1, 1, false),
-            new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getStatus, "ready")
+        var candidates = works.selectJoinPage(new Page<CollaborationWorkItemRow>(1, 1, false),
+            CollaborationWorkItemRow.class, new MPJLambdaWrapper<>(CollaborationWorkItemRow.class).selectAll(CollaborationWorkItemRow.class)
+                .innerJoin(CollaborationTaskRow.class, on -> on.eq(CollaborationTaskRow::getEnterpriseId, CollaborationWorkItemRow::getEnterpriseId)
+                    .eq(CollaborationTaskRow::getId, CollaborationWorkItemRow::getTaskId))
+                .eq(source != null, CollaborationTaskRow::getOriginKind, source).eq(CollaborationWorkItemRow::getStatus, "ready")
                 .isNull(CollaborationWorkItemRow::getActiveRunId)
                 .and(value -> value.isNull(CollaborationWorkItemRow::getNextAttemptAt).or().le(CollaborationWorkItemRow::getNextAttemptAt, now))
                 .and(value -> value.isNull(CollaborationWorkItemRow::getLeaseUntil).or().le(CollaborationWorkItemRow::getLeaseUntil, now))
@@ -75,6 +86,11 @@ public class CollaborationDispatchService {
         var task = access.require(lease.enterpriseId(), work.getTaskId());
         var role = access.participant(task, work.getParticipantId());
         access.requireRole(task, role);
+        if (roomQueue.waitToDispatch(task, role, work)) {
+            changed(works.update(guard(lease).set(CollaborationWorkItemRow::getNextAttemptAt, clock.instant().plusSeconds(1))
+                .set(CollaborationWorkItemRow::getLeaseOwner, null).set(CollaborationWorkItemRow::getLeaseUntil, null)));
+            return null;
+        }
         String readiness = dependencies.readiness(task, work.getId());
         boolean resolveFailure = readiness.equals("blocked") && work.getId().equals(task.getOwnerWorkId())
             && work.getResumeReason().equals("dependencies_ready");
@@ -86,7 +102,9 @@ public class CollaborationDispatchService {
         }
         var context = contexts.freeze(task, work, work.getRunRound() + 1);
         var actor = access.prepareRole(task, role);
-        return submissions.collaboration(actor, lease, context.getId(), context.getRunRound());
+        var accepted = submissions.collaboration(actor, lease, context.getId(), context.getRunRound());
+        roomQueue.started(task, role, work);
+        return accepted;
     }
 
     @Transactional

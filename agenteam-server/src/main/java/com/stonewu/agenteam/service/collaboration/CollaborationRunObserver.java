@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.collaboration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationArtifactMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
@@ -21,10 +22,8 @@ import com.stonewu.agenteam.model.collaboration.entity.CollaborationRunLinkRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
-import com.stonewu.agenteam.service.chat.ChatOutboundService;
 import com.stonewu.agenteam.service.chat.ChatPublicLinks;
 import com.stonewu.agenteam.service.http.ApiException;
-import com.stonewu.agenteam.service.tool.ExecutionToolCatalog;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,11 +51,10 @@ public class CollaborationRunObserver {
     private final CollaborationActionService actions;
     private final CollaborationArtifactService artifacts;
     private final CollaborationResultService results;
-    private final ChatOutboundService outbound;
+    private final CollaborationNotices outbound;
     private final ChatPublicLinks publicLinks;
     private final ResourceJson json;
     private final Clock clock;
-    private final ExecutionToolCatalog tools;
     private final FileMapper files;
     private final FileTextMapper texts;
 
@@ -64,8 +62,8 @@ public class CollaborationRunObserver {
             CollaborationArtifactMapper artifactRows, EnterpriseMapper enterprises, RunMapper runs, ToolCallMapper calls,
             ExecutionMessageMapper messages, CollaborationAccessService access, CollaborationWorkService works,
             CollaborationDependencyService dependencies, CollaborationActionService actions, CollaborationArtifactService artifacts,
-            CollaborationResultService results, ChatOutboundService outbound, ChatPublicLinks publicLinks, ResourceJson json, Clock clock,
-            ExecutionToolCatalog tools, FileMapper files, FileTextMapper texts) {
+            CollaborationResultService results, CollaborationNotices outbound, ChatPublicLinks publicLinks, ResourceJson json, Clock clock,
+            FileMapper files, FileTextMapper texts) {
         this.links = links;
         this.tasks = tasks;
         this.workRows = workRows;
@@ -84,13 +82,20 @@ public class CollaborationRunObserver {
         this.publicLinks = publicLinks;
         this.json = json;
         this.clock = clock;
-        this.tools = tools;
         this.files = files;
         this.texts = texts;
     }
 
     public List<CollaborationRunLinkRow> pending() {
-        return links.selectPage(new Page<CollaborationRunLinkRow>(1, 50, false), new LambdaQueryWrapper<CollaborationRunLinkRow>()
+        return pending(null);
+    }
+
+    public List<CollaborationRunLinkRow> pending(String source) {
+        return links.selectJoinPage(new Page<CollaborationRunLinkRow>(1, 50, false), CollaborationRunLinkRow.class,
+            new MPJLambdaWrapper<>(CollaborationRunLinkRow.class).selectAll(CollaborationRunLinkRow.class)
+            .innerJoin(CollaborationTaskRow.class, on -> on.eq(CollaborationTaskRow::getEnterpriseId, CollaborationRunLinkRow::getEnterpriseId)
+                .eq(CollaborationTaskRow::getId, CollaborationRunLinkRow::getTaskId))
+            .eq(source != null, CollaborationTaskRow::getOriginKind, source)
             .isNull(CollaborationRunLinkRow::getTerminalObservedAt).orderByAsc(CollaborationRunLinkRow::getUpdatedAt, CollaborationRunLinkRow::getId)).getRecords();
     }
 
@@ -142,6 +147,14 @@ public class CollaborationRunObserver {
                     .set(owner, CollaborationWorkItemRow::getDeadlineAt, task.getDeadlineAt())
                     .set(!owner, CollaborationWorkItemRow::getErrorCode, "TASK_INPUT_CHANGED")
                     .set(CollaborationWorkItemRow::getResumeReason, "input_changed").set(CollaborationWorkItemRow::getContextId, null));
+            }
+        } else if (!recorded && run.status().equals("completed") && WebRoomQueue.YIELDED.equals(link.getRequestedStopReason())) {
+            // 本次只交回了工具结果；由原岗位在排队消息就绪后继续，不把半成品当作最终回复。
+            works.change(work, "ready");
+            if (workRows.update(new LambdaUpdateWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, enterprise)
+                .eq(CollaborationWorkItemRow::getId, work.getId()).eq(CollaborationWorkItemRow::getActiveRunId, run.id())
+                .eq(CollaborationWorkItemRow::getRevision, work.getRevision()).set(CollaborationWorkItemRow::getResumeReason, "retry")) != 1) {
+                throw ApiException.versionConflict(work.getRevision());
             }
         } else if (!recorded && run.status().equals("completed")) {
             automaticResult(task, work, link, run, generated);
@@ -232,13 +245,6 @@ public class CollaborationRunObserver {
             }
         }
         var context = new CollaborationExecutionContext(actor, task, work, role, link);
-        if (work.getId().equals(task.getOwnerWorkId()) && !results.missingRoles(task).isEmpty()
-            && (run.executionConfig().at("/config/agentType").asText().equals("workflow")
-                || tools.all(run).values().stream().noneMatch(tool -> tool.definition().name().equals("collab_assign")))) {
-            block(task, work, "COLLABORATION_PLUGIN_REQUIRED");
-            actions.finish(action, Map.of("status", "blocked", "reason", "负责人没有配置团队协作插件，未安排其他明确指定岗位。"));
-            return;
-        }
         var input = json.tree(Map.of("summary", summary, "artifactRefs", refs));
         var result = results.submit(context, action, input, false, text);
         actions.finish(action, result);
@@ -250,8 +256,8 @@ public class CollaborationRunObserver {
             tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
                 .eq(CollaborationTaskRow::getId, task.getId()).in(CollaborationTaskRow::getStatus, "active", "waiting_input")
                 .set(CollaborationTaskRow::getStatus, "waiting_approval").setIncrBy(CollaborationTaskRow::getRevision, 1));
-            outbound.text(task.getEnterpriseId(), task.getConversationId(), task.getEntryBotId(), task.getId(), null, "approval:" + run.id(),
-                "waiting_approval", "任务 【" + task.getShortCode() + "】：有一项操作需要原发起人确认。\n" + publicLinks.task(task.getEnterpriseId(), task.getId()), null);
+            outbound.send(task, null, null, "approval:" + run.id(),
+                "waiting_approval", "任务 【" + task.getShortCode() + "】：有一项操作需要原发起人确认。\n" + publicLinks.task(task.getEnterpriseId(), task.getId()), false, null);
         } else if (run.status().equals("running") && work.getStatus().equals("waiting_approval")) {
             works.change(work, "running");
             tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
@@ -260,8 +266,8 @@ public class CollaborationRunObserver {
         }
         if (run.status().equals("running") && run.startedAt() != null && link.getLastStatus().equals("queued")) {
             var role = access.participant(task, work.getParticipantId());
-            outbound.progress(task.getEnterpriseId(), task.getConversationId(), role.getBotBindingId(), task.getId(), null, "started:" + run.id(),
-                "started", "任务 【" + task.getShortCode() + "】：【" + role.getRoleName() + "】已开始处理。", null);
+            outbound.send(task, role, null, "started:" + run.id(),
+                "started", "任务 【" + task.getShortCode() + "】：【" + role.getRoleName() + "】已开始处理。", true, null);
         }
     }
 

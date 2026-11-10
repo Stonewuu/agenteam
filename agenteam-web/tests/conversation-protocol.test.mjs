@@ -103,6 +103,23 @@ test("子智能体启动和继续调用使用子智能体分组，原父子关�
   assert.equal(isSubagentTool({ ...tools[0], label: "自定义插件：agent_spawn", blocks: [] }), false);
 });
 
+test("排队、优先和撤回只更新输入框上方的列表，并保留正在执行的对话", () => {
+  let state = fromSnapshot(liveSnapshot("100"));
+  const update = (sequence, runId, position, text) => {
+    const frame = liveEvent(String(sequence), "queue.updated", {runId, position, text}, String(sequence));
+    frame.event.runId = runId;
+    state = apply(state, frame);
+  };
+  update(101, "next-a", 10, "第一条");
+  update(102, "next-b", 11, "第二条");
+  update(103, "next-b", -12, "第二条");
+  assert.deepEqual(state.snapshot.queuedMessages.map(item => item.text), ["第二条", "第一条"]);
+  update(104, "next-a", null, "");
+  assert.deepEqual(state.snapshot.queuedMessages.map(item => item.runId), ["next-b"]);
+  assert.equal(state.snapshot.activeRun.id, "run");
+  assert.equal(displayMessages(state).length, 1);
+});
+
 function block(id, type = "text", parentBlockId = null, order = 1) {
   return { id, type, parentBlockId, displayOrder: order, revision: "1", text: "", status: "running", stepId: null, approvalId: null,
     file: null, citation: null, label: null, tool: type === "tool" ? { toolCallId: id, name: "query_tool", sourceKind: null, input: "查询问题", result: "", callStatus: "completed", resultStatus: "running" } : null };
@@ -118,7 +135,7 @@ function event(sequence, type, payload) {
     sequence, createdAt: time, type, payload } };
 }
 function apply(state, frame) {
- return applyConversationFrame(state, frame, "enterprise"); 
+  return applyConversationFrame(state, frame, "enterprise");
 }
 
 function liveSnapshot(position = "100", blocks = []) {

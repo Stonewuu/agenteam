@@ -31,13 +31,13 @@ export function ComposerExtraTools({
                                    }: {
   files: ReturnType<typeof useFileUploads>;
   attachmentsEnabled: boolean;
-  canChooseSkills: boolean;
-  canChooseDocuments: boolean;
-  skillsLoading: boolean;
+  canChooseSkills?: boolean;
+  canChooseDocuments?: boolean;
+  skillsLoading?: boolean;
   loading?: boolean;
   disabled: boolean;
-  onChooseSkills: (context?: ComposerSelectionContext) => void;
-  onChooseDocuments: (context?: ComposerSelectionContext) => void;
+  onChooseSkills?: (context?: ComposerSelectionContext) => void;
+  onChooseDocuments?: (context?: ComposerSelectionContext) => void;
 }) {
   const uiText = useT();
   const attachmentInput = useRef<HTMLInputElement>(null);
@@ -52,14 +52,14 @@ export function ComposerExtraTools({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={<Button ref={moreTools} type="button" className="icon-button" aria-label={uiText("添加内容")}
-                        title={uiText("添加附件、技能或知识库资料")} disabled={disabled || loading}><IconPlus size={20}/></Button>}/>
+                        title={uiText(!canChooseSkills && !canChooseDocuments ? "添加附件" : "添加内容")} disabled={disabled || loading}><IconPlus size={20}/></Button>}/>
       <DropdownMenuContent className={styles.menu} side="top" align="start" sideOffset={8}>
         {attachmentsEnabled && <DropdownMenuItem onClick={() => attachmentInput.current?.click()}><IconPaperclip
           size={18}/>{uiText("添加附件")}</DropdownMenuItem>}
-        {canChooseSkills &&
+        {canChooseSkills && onChooseSkills &&
           <DropdownMenuItem disabled={skillsLoading} onClick={() => onChooseSkills({anchor: moreTools})}><IconSparkles
             size={18}/>{skillsLoading ? uiText("正在读取技能") : uiText("选择技能")}</DropdownMenuItem>}
-        {canChooseDocuments && <DropdownMenuItem onClick={() => onChooseDocuments({anchor: moreTools})}><IconBook2
+        {canChooseDocuments && onChooseDocuments && <DropdownMenuItem onClick={() => onChooseDocuments({anchor: moreTools})}><IconBook2
           size={18}/>{uiText("知识库")}</DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>

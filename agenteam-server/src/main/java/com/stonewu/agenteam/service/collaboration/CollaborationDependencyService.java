@@ -119,6 +119,17 @@ public class CollaborationDependencyService {
         }
     }
 
+    /** 只有导致任务暂停的旧工作已被替换，且没有其他工作仍被阻止时，才清除旧错误。 */
+    public boolean failureReplaced(CollaborationTaskRow task) {
+        if (!"blocked".equals(task.getStatus()) || task.getErrorCode() == null || "TOOL_RESULT_UNKNOWN".equals(task.getErrorCode())) {
+            return false;
+        }
+        var current = works(task);
+        return current.stream().noneMatch(work -> "blocked".equals(work.getStatus()))
+            && current.stream().anyMatch(work -> "superseded".equals(work.getStatus()) && work.getReplacementWorkId() != null
+                && task.getErrorCode().equals(work.getErrorCode()));
+    }
+
     private Map<String, Set<String>> graph(List<CollaborationWorkDependencyRow> edges) {
         var graph = new HashMap<String, Set<String>>();
         for (var edge : edges) {

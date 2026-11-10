@@ -1,4 +1,10 @@
-import type {ConversationMessage} from "../types/execution";
+/** 滚动只关心消息顺序和可见内容；协作进展也可以独立更新。 */
+export type ConversationScrollItem = {
+  id: string;
+  content: string;
+  status?: string;
+  blocks?: readonly {id: string; revision: string}[];
+};
 
 export type ConversationReadingPosition = {top: number; anchorId: string | null; offset: number; atBottom: boolean};
 const positions = new Map<string, ConversationReadingPosition>();
@@ -17,7 +23,7 @@ export function rememberConversationPosition(scope: string, value: ConversationR
 }
 
 /** 只提示新到达的消息或内容变化；加载历史与评价变化不算新内容。 */
-export function hasNewConversationContent(previous: readonly ConversationMessage[], current: readonly ConversationMessage[]) {
+export function hasNewConversationContent(previous: readonly ConversationScrollItem[], current: readonly ConversationScrollItem[]) {
   if (!previous.length || !current.length) {
     return false;
   }
@@ -28,7 +34,7 @@ export function hasNewConversationContent(previous: readonly ConversationMessage
   }
   return current.some((message) => {
     const old = before.get(message.id);
-    return old && (old.content !== message.content || old.status !== message.status || old.blocks.length !== message.blocks.length
-      || message.blocks.some((block, index) => block.id !== old.blocks[index]?.id || block.revision !== old.blocks[index]?.revision));
+    return old && (old.content !== message.content || old.status !== message.status || old.blocks?.length !== message.blocks?.length
+      || message.blocks?.some((block, index) => block.id !== old.blocks?.[index]?.id || block.revision !== old.blocks?.[index]?.revision));
   });
 }

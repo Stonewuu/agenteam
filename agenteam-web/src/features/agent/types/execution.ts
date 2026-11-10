@@ -1,6 +1,6 @@
 import type {ModelSelection, ReasoningEffort} from "@/features/modelprofile/lib/reasoning-effort";
 
-export type RunStatus = "queued" | "running" | "waiting_approval" | "waiting_input" | "cancelling" | "completed" | "failed" | "cancelled";
+export type RunStatus = "waiting_turn" | "queued" | "running" | "waiting_approval" | "waiting_input" | "cancelling" | "completed" | "failed" | "cancelled";
 export type ToolApprovalPolicy = "default" | "auto_approve" | "full_access";
 export type BlockStatus = "pending" | "running" | "waiting_approval" | "waiting_input" | "completed" | "failed" | "cancelled" | "skipped";
 export type RunQuestion = {
@@ -116,7 +116,10 @@ export type ConversationNavigationItem = {
   key: string; title: string; updatedAt: string; favorite: boolean; conversation: Conversation;
   collaboration: CollaborationConversationGroup | null; matchedRole: boolean;
 };
+export type QueuedMessage = {runId: string; position: number | null; text: string};
+
 export type ConversationSnapshot = {
+  queuedMessages?: QueuedMessage[];
   conversation: Conversation;
   messages: ConversationMessage[];
   activeRun: Run | null;
@@ -147,7 +150,7 @@ export type RunAccepted = {
   runId: string;
   inputMessageId: string;
   outputMessageId: string;
-  status: "queued";
+  status: "queued" | "waiting_turn";
   lastSequence: string;
 };
 export type MessageInput = {
@@ -184,7 +187,7 @@ export type RunAttempt = {
   id: string;
   attemptNo: number;
   outputMessageId: string;
-  status: Exclude<RunStatus, "cancelling">;
+  status: Exclude<RunStatus, "cancelling" | "waiting_turn">;
   startedAt: string | null;
   finishedAt: string | null;
   errorSummary: string | null;
@@ -237,6 +240,7 @@ type EventPayloads = {
   "run.failed": Run;
   "run.cancelled": Run;
   "message.created": ConversationMessage;
+  "queue.updated": QueuedMessage;
   "message.delta": {
     messageId: string;
     blockId: string;

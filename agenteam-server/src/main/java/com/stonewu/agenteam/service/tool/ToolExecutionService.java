@@ -2,6 +2,7 @@ package com.stonewu.agenteam.service.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -163,7 +164,7 @@ public class ToolExecutionService {
                 workspaceResult = workspace.invoke(run, lease, binding, call, session, arguments, timeout, control,
                     maximumBytes, sharedResults);
                 response = workspaceResult.value();
-            } else if (!binding.resourceKind().equals("plugin")) {
+            } else if (!binding.resourceKind().equals("plugin") && !CollaborationToolDefinitions.handles(binding)) {
                 response = sources.invoke(run, binding, arguments, timeout, control);
             } else {
                 var source = providerMapper.source(binding);

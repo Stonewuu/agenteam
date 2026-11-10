@@ -58,6 +58,7 @@ public class RunLifecycleService {
     private final ApplicationEventPublisher leaseNotifications;
     private final LivePartialOutputRecovery partialOutput;
     private final RunQuestionLifecycle questions;
+    private final ConversationRunQueue queue;
 
     public RunLifecycleService(EnterpriseMapper enterprises, ConversationMapper conversations, RunMapper runs,
                                RunJobMapper jobs,
@@ -70,7 +71,8 @@ public class RunLifecycleService {
                                ScheduleRunStateService scheduleStates, ScheduleRecheckService scheduleAccess,
                                RunAttemptRetryService retries, ExecutionNotificationService notifications,
                                ApplicationEventPublisher leaseNotifications, LivePartialOutputRecovery partialOutput,
-                               RunQuestionLifecycle questions) {
+                               RunQuestionLifecycle questions, ConversationRunQueue queue) {
+        this.queue = queue;
         this.enterprises = enterprises;
         this.conversations = conversations;
         this.runs = runs;
@@ -421,6 +423,10 @@ public class RunLifecycleService {
         if (run.terminal() || run.status().equals("cancelling")) {
             return;
         }
+        if (run.status().equals("waiting_turn")) {
+            queue.cancel(run, clock.instant());
+            return;
+        }
         if (List.of("queued", "waiting_approval", "waiting_input").contains(run.status())) {
             finishLocked(run, "cancelled", null, null);
         } else {
@@ -431,7 +437,15 @@ public class RunLifecycleService {
         }
     }
 
+    void continueAfterAction(RunRecord run) {
+        finishLocked(run, "completed", null, null, true);
+    }
+
     private void finishLocked(RunRecord run, String status, String code, String message) {
+        finishLocked(run, status, code, message, false);
+    }
+
+    private void finishLocked(RunRecord run, String status, String code, String message, boolean continuing) {
         if (!List.of("completed", "failed", "cancelled").contains(status)) {
             throw new IllegalArgumentException("执行结束状态不合法");
         }
@@ -493,12 +507,15 @@ public class RunLifecycleService {
         runs.finish(run, status, code, message, clock.instant());
         var finalRun = runs.find(run.enterpriseId(), run.id(), false).orElseThrow();
         scheduleStates.changed(finalRun);
-        notifications.finished(finalRun);
+        if (!continuing || !status.equals("completed")) {
+            notifications.finished(finalRun);
+        }
         var event = events.append(finalRun, "run." + status, RunView.from(finalRun, false), clock.instant());
         messages.status(run.enterpriseId(), output.id(), status, Long.parseLong(event.sequence()), clock.instant());
         quotas.release(run.enterpriseId(), run.id());
         jobs.finish(run.enterpriseId(), run.id(), status, code, message, clock.instant());
         conversations.finish(run.enterpriseId(), run.conversationId(), run.id(), clock.instant());
+        queue.afterFinish(finalRun, clock.instant());
     }
 
     public static final class ExecutionStoppedException extends RuntimeException {

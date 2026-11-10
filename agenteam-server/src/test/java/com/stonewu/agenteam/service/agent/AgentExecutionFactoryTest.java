@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.service.plugin.JavaPluginRegistry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -144,7 +145,7 @@ class AgentExecutionFactoryTest {
             "user", "后续任务", "completed", List.of(), List.of(), null, now.toString(), now.toString())));
         var factory = new AgentExecutionFactory(models, paths, encryption, json, lifecycle, savedRuns, messages, checkpoints,
             new ExecutionToolCatalog(mock(PluginToolMapper.class), new SourceToolDefinitions(new ResourceJson(json)), new WorkspaceToolDefinitions(new ResourceJson(json),
-                new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions, mock(JavaPluginRegistry.class), mock(UserQuestionTool.class)), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
+                new WorkspaceSettings(directory.resolve("files").toString(), "python:3.13-slim", true, 128, 20, 2000, 512, 1, 64, 120, "none")), availableVersions, mock(JavaPluginRegistry.class), mock(UserQuestionTool.class), new CollaborationToolDefinitions(new ResourceJson(json))), transactions, toolExecution, mock(ToolCallMapper.class), new ResourceJson(json), memories,
             new ProjectPromptService(mock(ProjectMetadataService.class), mock(ConversationProjectService.class), json), languages,
             mock(AgentImageInputService.class));
         try (var execution = factory.create(run, lease)) {

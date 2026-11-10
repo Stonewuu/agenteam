@@ -36,6 +36,13 @@ public class AgentChatHireService {
         this.notifications = notifications;
     }
 
+    public void requireActive(AuthContext actor, String agent) {
+        if (hires.forAgent(actor.enterpriseId(), actor.userId(), agent, false)
+            .filter(hire -> "active".equals(hire.status())).isEmpty()) {
+            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", "请先雇佣或恢复这位智能体。");
+        }
+    }
+
     public void requireUsable(AuthContext actor, String agent) {
         var existing = hires.forAgent(actor.enterpriseId(), actor.userId(), agent, false).orElse(null);
         if (existing != null) {

@@ -32,6 +32,6 @@
     has_step_errors = EXISTS (SELECT 1 FROM run_step s WHERE s.enterprise_id = agent_run.enterprise_id AND s.run_id =
     agent_run.id AND s.status = 'failed')
     WHERE enterprise_id = #{enterpriseId} AND id = #{id} AND status IN
-    ('queued','running','waiting_approval','waiting_input','cancelling')
+    ('waiting_turn','queued','running','waiting_approval','waiting_input','cancelling')
   </update>
 </mapper>

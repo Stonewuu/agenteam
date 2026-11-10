@@ -57,6 +57,9 @@ public final class AgentHistoryContext {
                 .stream().collect(Collectors.groupingBy(ToolCallRecord::runId,
                     Collectors.toMap(ToolCallRecord::stepId, call -> call)));
             for (var message : page) {
+                if (message.role().equals("user") && message.status().equals("cancelled")) {
+                    continue;
+                }
                 String source = message.role().equals("user") && message.runId() != null ? sources.getOrDefault(message.runId(), "") : "";
                 var mapped = AgentHistoryMessageMapper.map(message, source,
                     callsByRun.getOrDefault(message.runId(), Map.of()));

@@ -141,18 +141,41 @@ public class CollaborationTaskCreationService {
         task.setInitiatorUserId(actor.userId());
         task.setOriginUserBindingId(message.getOriginBindingId());
         task.setEntryBotId(entryBot);
-        task.setShortCode("GC-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
-        task.setObjectiveEncrypted(cipher.encrypt(actor.enterpriseId(), "task-objective", task.getId(), Map.of("text", ChatMessageText.withQuote(content), "messageId", message.getId())));
-        task.setInputRevision(1L);
-        task.setStatus("active");
         var replyPreference = replyPreferences.initial(actor.enterpriseId(), actor.userId(), group);
         task.setOutputVisibility(replyPreference.visibility());
         task.setReplyModeExplicit(replyPreference.explicit());
-        task.setReplyModeRevision(0L);
         task.setRosterRevision(group.getRevision());
-        var policy = limits(json.read(group.getPolicyJson()));
+        var owner = roster.stream().filter(role -> role.getBotBindingId().equals(entryBot)).findFirst().orElseThrow();
+        return initialize(actor, task, roster, owner, ChatMessageText.withQuote(content), message.getId(),
+            json.read(group.getPolicyJson()), ToolApprovalPolicy.FULL_ACCESS, group.getPlatformCode().equals("feishu") ? message.getPlatformMessageId() : null);
+    }
+
+    @Transactional
+    public CollaborationTaskRow createWeb(AuthContext actor, String roomId, String initialEntryId, long rosterRevision,
+            List<CollaborationParticipantRow> roster, CollaborationParticipantRow owner, String objective, String topicId) {
+        var task = ChatRecords.initialize(new CollaborationTaskRow(), actor.enterpriseId(), clock.instant());
+        task.setOriginKind("web");
+        task.setWebRoomId(roomId);
+        task.setWebOriginEntryId(initialEntryId);
+        task.setWebTopicId(topicId);
+        task.setInitiatorUserId(actor.userId());
+        task.setOutputVisibility("web_private");
+        task.setReplyModeExplicit(false);
+        task.setRosterRevision(rosterRevision);
+        return initialize(actor, task, roster, owner, objective, initialEntryId, json.tree(Map.of()), ToolApprovalPolicy.DEFAULT, null);
+    }
+
+    private CollaborationTaskRow initialize(AuthContext actor, CollaborationTaskRow task, List<CollaborationParticipantRow> roster,
+            CollaborationParticipantRow owner, String text, String origin, JsonNode settings, ToolApprovalPolicy approval, String replyTo) {
+        var now = clock.instant();
+        task.setShortCode("GC-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
+        task.setObjectiveEncrypted(cipher.encrypt(actor.enterpriseId(), "task-objective", task.getId(), Map.of("text", text, task.fromWebRoom() ? "roomEntryId" : "messageId", origin)));
+        task.setInputRevision(1L);
+        task.setStatus("active");
+        task.setReplyModeRevision(0L);
+        var policy = limits(settings);
         var executionPolicy = new LinkedHashMap<String, Object>(policy);
-        executionPolicy.put("approvalPolicy", ToolApprovalPolicy.FULL_ACCESS.value());
+        executionPolicy.put("approvalPolicy", approval.value());
         task.setPolicySnapshot(json.write(json.tree(executionPolicy)));
         task.setWaivedRequestedRolesJson("[]");
         task.setNextSequence(1L);
@@ -167,8 +190,7 @@ public class CollaborationTaskCreationService {
             role.setProjectId(project.getId());
             participants.insert(role);
         }
-        var owner = roster.stream().filter(role -> role.getBotBindingId().equals(entryBot)).findFirst().orElseThrow();
-        var action = actions.begin(task, null, null, null, "message:" + message.getId(), "created", json.tree(Map.of("originMessageId", message.getId())));
+        var action = actions.begin(task, null, null, null, (task.fromWebRoom() ? "room:" : "message:") + origin, "created", json.tree(Map.of("originMessageId", origin)));
         var work = ChatRecords.initialize(new CollaborationWorkItemRow(), actor.enterpriseId(), now);
         work.setTaskId(task.getId());
         work.setParticipantId(owner.getId());
@@ -183,16 +205,19 @@ public class CollaborationTaskCreationService {
         work.setLeaseVersion(0L);
         work.setDeadlineAt(task.getDeadlineAt());
         works.insert(work);
-        inputArtifacts.register(actor, task, work, message.getId());
+        if (!task.fromWebRoom()) {
+            inputArtifacts.register(actor, task, work, origin);
+        }
         if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getId, task.getId()).set(CollaborationTaskRow::getOwnerParticipantId, owner.getId())
             .set(CollaborationTaskRow::getOwnerWorkId, work.getId())) != 1) {
             throw new IllegalStateException("协作任务负责人无法保存");
         }
         actions.finish(action, Map.of("taskId", task.getId(), "workItemId", work.getId(), "status", "ready"));
-        outbound.progress(actor.enterpriseId(), group.getId(), entryBot, task.getId(), action.getId(), "task:" + task.getId() + ":accepted",
-            "accepted", "任务 【" + task.getShortCode() + "】：已收到，由【" + owner.getRoleName() + "】负责处理。",
-            group.getPlatformCode().equals("feishu") ? message.getPlatformMessageId() : null);
+        if (!task.fromWebRoom()) {
+            outbound.progress(actor.enterpriseId(), task.getConversationId(), task.getEntryBotId(), task.getId(), action.getId(), "task:" + task.getId() + ":accepted",
+                "accepted", "任务 【" + task.getShortCode() + "】：已收到，由【" + owner.getRoleName() + "】负责处理。", replyTo);
+        }
         return access.require(actor.enterpriseId(), task.getId());
     }
 

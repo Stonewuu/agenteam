@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -218,6 +219,94 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
             assertTrue(continued.at("/messages/3/blocks").toString().contains("子任务继续结果"));
         } finally {
             finishChildren.countDown();
+            worker.close();
+        }
+    }
+
+    @Test
+    void supplementsWaitForBothToolsAndReachTheNextModelCallInOrder() throws Exception {
+        configureChild();
+        var entered = new CountDownLatch(2);
+        var release = new CountDownLatch(1);
+        var roots = new CopyOnWriteArrayList<String>();
+        var requests = new CopyOnWriteArrayList<JsonNode>();
+        var childCalls = new AtomicInteger();
+        modelResponse = exchange -> {
+            var request = json.readTree(exchange.getRequestBody());
+            String question = lastUserText(request);
+            begin(exchange);
+            try {
+                if (question.equals("核对甲") || question.equals("核对乙")) {
+                    childCalls.incrementAndGet();
+                    entered.countDown();
+                    if (!release.await(20, TimeUnit.SECONDS)) {
+                        throw new IOException("等待释放测试工具超时");
+                    }
+                    frame(exchange, Map.of("content", question + "已完成"), "stop");
+                } else {
+                    roots.add(question);
+                    requests.add(request);
+                    if (roots.size() == 1) {
+                        frame(exchange, Map.of("tool_calls", List.of(spawn(0, "qa", "甲", "核对甲"),
+                            spawn(1, "qb", "乙", "核对乙"))), "tool_calls");
+                    } else {
+                        frame(exchange, Map.of("content", "答复" + question), "stop");
+                    }
+                }
+                exchange.getResponseBody().write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } finally {
+                exchange.close();
+            }
+        };
+        allowModelCalls = true;
+        var initial = data(write(base() + "/conversations", Map.of("agentId", agent, "input", input("先核对")),
+            UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        String conversation = initial.path("conversationId").asText();
+        String path = base() + "/conversations/" + conversation + "/messages?queue=true";
+        var worker = new RunWorker(lifecycle, tasks);
+        try {
+            worker.poll();
+            assertTrue(entered.await(12, TimeUnit.SECONDS));
+            String key = UUID.randomUUID().toString();
+            var second = data(write(path, input("按成本汇总"), key).andExpect(status().isAccepted()).andReturn());
+            var replay = data(write(path, input("按成本汇总"), key).andExpect(status().isAccepted()).andReturn());
+            var third = data(write(path, input("再给出数量"), UUID.randomUUID().toString())
+                .andExpect(status().isAccepted()).andReturn());
+            assertEquals(second.path("runId"), replay.path("runId"));
+            assertEquals("waiting_turn", second.path("status").asText());
+            assertEquals("waiting_turn", runState(third.path("runId").asText()));
+            var snapshot = data(mvc.perform(get(base() + "/conversations/" + conversation).cookie(cookie))
+                .andExpect(status().isOk()).andReturn());
+            assertEquals("按成本汇总", snapshot.at("/queuedMessages/0/text").asText());
+            assertEquals("再给出数量", snapshot.at("/queuedMessages/1/text").asText());
+            assertEquals(2, snapshot.path("messages").size());
+            schemas.validate("ConversationSnapshot", snapshot);
+            assertEquals(List.of("先核对"), roots);
+            release.countDown();
+            await(() -> !runState(initial.path("runId").asText()).equals("running"));
+            assertEquals("completed", runState(initial.path("runId").asText()));
+            assertEquals("queued", runState(second.path("runId").asText()));
+            worker.poll();
+            await(() -> runState(second.path("runId").asText()).equals("completed"));
+            worker.poll();
+            await(() -> runState(third.path("runId").asText()).equals("completed"));
+            assertEquals(List.of("先核对", "按成本汇总", "再给出数量"), roots);
+            assertEquals(2, childCalls.get());
+            var history = requests.get(1).path("messages");
+            var observed = new HashSet<String>();
+            for (var message : history) {
+                if (message.path("role").asText().equals("tool")) {
+                    observed.add(message.path("tool_call_id").asText());
+                }
+            }
+            assertEquals(Set.of("qa", "qb"), observed, history::toString);
+            assertEquals("user", history.get(history.size() - 1).path("role").asText());
+            assertTrue(requests.get(2).toString().contains("答复按成本汇总"));
+            assertEquals("completed", visibleMessage(conversation, second.path("inputMessageId").asText()).path("status").asText());
+        } finally {
+            release.countDown();
             worker.close();
         }
     }

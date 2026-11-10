@@ -25,6 +25,7 @@ import ui from "@/components/ui/surface.module.css";
 import styles from "./workflow.module.css";
 
 const states: Record<RunStatus, string> = {
+  waiting_turn: "排队中",
   queued: "等待执行",
   running: "正在处理",
   waiting_approval: "等待确认",

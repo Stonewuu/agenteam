@@ -32,7 +32,7 @@ public class BuiltinPluginRegistry {
     }
 
     public List<BuiltinPluginView> list() {
-        return adapters.values().stream().map(
+        return adapters.values().stream().filter(value -> !"group_collaboration".equals(value.code())).map(
             value -> new BuiltinPluginView(value.code(), value.name(), value.description(),
                 value.tools().stream().map(tool -> tool.name()).toList())).toList();
     }

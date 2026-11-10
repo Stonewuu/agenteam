@@ -2,15 +2,16 @@ import type {RunQuestion} from "@/features/agent/types/execution";
 
 export type CollaborationTask = {
   id: string; shortCode: string; title: string; conversationId: string; status: string; revision: number; inputRevision: number;
-  outputVisibility: "summary_link" | "chat_full"; createdAt: string; updatedAt: string; deadlineAt: string; finishedAt: string | null; errorCode: string | null;
+  outputVisibility: "summary_link" | "chat_full" | "web_private"; createdAt: string; updatedAt: string; deadlineAt: string; finishedAt: string | null; errorCode: string | null;
   source?: {platformCode: string; kind: string; name: string | null} | null;
   roles?: {id: string; name: string; conversationId: string | null}[];
   primaryConversationId?: string | null;
 };
+export type CollaborationDirectoryEntry = {task: CollaborationTask; room: null} | {task: null; room: {id: string; title: string; updatedAt: string; members: string[]}};
 export type CollaborationArtifact = {id: string; version: number; kind: "text" | "json" | "file"; title: string; summary: string; inputRevision: number; summaryOnly: boolean};
 export type CollaborationDetail = {
   task: CollaborationTask; requirements: {text: string; additionalRequirements?: {text: string}[]}; ownerWorkId: string; ownerRoleId: string; fullOutputAllowed: boolean;
-  roles: {id: string; botId: string; name: string; description: string; explicitlyRequested: boolean; availability: string; conversationId: string | null}[];
+  roles: {id: string; botId: string | null; name: string; description: string; explicitlyRequested: boolean; availability: string; conversationId: string | null}[];
   works: {id: string; roleId: string; purpose: string; status: string; required: boolean; inputRevision: number; runRound: number; activeRunId: string | null; errorCode: string | null; replacementWorkId: string | null}[];
   artifacts: CollaborationArtifact[];
   runQuestions?: RunQuestion[];
@@ -20,7 +21,7 @@ export type CollaborationDetail = {
 
 export const collaborationPath = (enterprise: string) => `/api/v1/enterprises/${encodeURIComponent(enterprise)}/collaboration/tasks`;
 export const collaborationStatus: Record<string, string> = {
-  active: "正在处理", ready: "等待开始", running: "正在处理", waiting_input: "等待补充要求", waiting_approval: "等待确认操作",
+  not_started: "未开始", active: "正在处理", ready: "等待开始", running: "正在处理", waiting_input: "等待补充要求", waiting_approval: "等待确认操作",
   waiting_dependency: "等待协作成果", blocked: "需要处理", completed: "已完成", failed: "执行失败", cancelled: "已取消", cancelling: "正在停止",
   handed_off: "已交接", superseded: "已替换",
 };

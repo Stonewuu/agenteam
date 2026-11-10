@@ -8,6 +8,8 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.response.RunQuestionView;
 import com.stonewu.agenteam.service.chat.ChatQuestionMessages;
 import com.stonewu.agenteam.service.execution.RunQuestionChannel;
+import com.stonewu.agenteam.service.http.ApiException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 /** 协作任务的问题沿用同一次执行，回答不会变成新一轮任务要求。 */
@@ -17,9 +19,11 @@ public class CollaborationRunQuestionChannel implements RunQuestionChannel {
     private final CollaborationWorkService works;
     private final CollaborationTaskMapper tasks;
     private final ChatQuestionMessages messages;
+    private final CollaborationDependencyService dependencies;
 
     public CollaborationRunQuestionChannel(CollaborationRunAccessService access, CollaborationWorkService works,
-            CollaborationTaskMapper tasks, ChatQuestionMessages messages) {
+            CollaborationTaskMapper tasks, ChatQuestionMessages messages, CollaborationDependencyService dependencies) {
+        this.dependencies = dependencies;
         this.access = access;
         this.works = works;
         this.tasks = tasks;
@@ -50,7 +54,9 @@ public class CollaborationRunQuestionChannel implements RunQuestionChannel {
         if (context.work().getId().equals(context.task().getOwnerWorkId())) {
             taskStatus(context.task(), "waiting_input");
         }
-        messages.send(question, view);
+        if (!context.task().fromWebRoom()) {
+            messages.send(question, view);
+        }
     }
 
     @Override
@@ -66,9 +72,15 @@ public class CollaborationRunQuestionChannel implements RunQuestionChannel {
     }
 
     private void taskStatus(CollaborationTaskRow task, String status) {
+        boolean blocked = "blocked".equals(task.getStatus());
+        if (blocked && !dependencies.failureReplaced(task)) {
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_TASK_BLOCKED", "这项任务还有工作需要先处理，请查看任务详情。");
+        }
         if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>()
                 .eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId()).eq(CollaborationTaskRow::getId, task.getId())
-                .in(CollaborationTaskRow::getStatus, "active", "waiting_input", "waiting_approval")
+                .eq(blocked, CollaborationTaskRow::getStatus, "blocked")
+                .in(!blocked, CollaborationTaskRow::getStatus, "active", "waiting_input", "waiting_approval")
+                .set(blocked, CollaborationTaskRow::getErrorCode, null)
                 .set(CollaborationTaskRow::getStatus, status).setIncrBy(CollaborationTaskRow::getRevision, 1)) != 1) {
             throw new IllegalStateException("当前任务已不能等待或继续回答");
         }

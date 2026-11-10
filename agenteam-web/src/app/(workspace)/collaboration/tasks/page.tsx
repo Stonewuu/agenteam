@@ -1,9 +1,5 @@
-"use client";
-
-import {useWorkspaceLocation} from "@/features/auth/components/workspace-location-provider";
 import {CollaborationPage} from "@/features/collaboration/components/collaboration-page";
 
-export default function Page() {
-  const {enterpriseId} = useWorkspaceLocation();
-  return <CollaborationPage enterpriseId={enterpriseId}/>;
+export default async function Page({searchParams}: {searchParams: Promise<{create?: string}>}) {
+  return <CollaborationPage create={(await searchParams).create === "1"}/>;
 }

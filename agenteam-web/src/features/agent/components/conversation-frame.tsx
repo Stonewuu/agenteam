@@ -5,13 +5,16 @@ import {useT} from "@/lib/i18n/locale-provider";
 import {Button} from "@/components/ui/button";
 
 import {type ReactNode, useId, useLayoutEffect, useRef} from "react";
-import {usePathname} from "next/navigation";
+import {usePathname, useRouter} from "next/navigation";
 import {IconPencil, IconSidebarLeft} from "@/components/ui/icons";
 import {useConversationNavigation} from "./conversation-navigation-context";
+import {newRoomUrl} from "@/features/collaboration/types/web-room";
+import {WebRoomRail} from "@/features/collaboration/components/web-room-rail";
 import {ConversationRail} from "./conversation-rail";
 import styles from "./conversation-frame.module.css";
 
-export function ConversationFrame({children}: { children: ReactNode }) {
+export function ConversationFrame({children, roomDirectory = false}: {children: ReactNode; roomDirectory?: boolean}) {
+  const router = useRouter();
   const uiText = useT();
   const navigation = useConversationNavigation();
   const pathname = usePathname();
@@ -21,6 +24,7 @@ export function ConversationFrame({children}: { children: ReactNode }) {
   const actions = useRef<HTMLDivElement>(null);
   const mobile = navigation?.mobile ?? false;
   const rootPage = pathname.endsWith("/conversations");
+  const newLabel = uiText(roomDirectory ? "新建协作对话" : "新建对话");
   const showList = mobile && (rootPage || Boolean(navigation?.mobileListOpen));
   const collapsed = !mobile && Boolean(navigation?.collapsed);
   const listVisible = mobile ? showList : !collapsed;
@@ -64,16 +68,20 @@ export function ConversationFrame({children}: { children: ReactNode }) {
         <IconSidebarLeft size={20} variant="Linear"/>
       </Button>}
       {canCreate &&
-        <Button type="button" data-new-conversation className={styles.newConversation} aria-label={uiText("新建对话")}
-                title={uiText("新建对话")} inert={mobile && !showList} aria-hidden={mobile && !showList}
+        <Button type="button" data-new-conversation className={styles.newConversation} aria-label={newLabel}
+                title={newLabel} inert={mobile && !showList} aria-hidden={mobile && !showList}
                 onClick={() => {
                   closeMobileList();
-                  navigation.startNewTask();
-                }}><IconPencil size={18}/><span>{uiText("新建对话")}</span></Button>}
+                  if (roomDirectory) {
+                    router.push(newRoomUrl);
+                  } else {
+                    navigation.startNewTask();
+                  }
+                }}><IconPencil size={18}/><span>{newLabel}</span></Button>}
     </div>
-    <aside ref={aside} id={listId} className={styles.frameAside} aria-label={uiText("对话列表")} inert={!listVisible}
+    <aside ref={aside} id={listId} className={styles.frameAside} aria-label={uiText(roomDirectory ? "协作对话列表" : "对话列表")} inert={!listVisible}
            aria-hidden={!listVisible}>
-      <ConversationRail onNavigate={closeMobileList}/>
+      {roomDirectory ? <WebRoomRail enterprise={navigation.context.enterprise.id} onNavigate={closeMobileList}/> : <ConversationRail onNavigate={closeMobileList}/>}
     </aside>
     <div ref={content} className={styles.frameContent} inert={showList} aria-hidden={showList}>{children}</div>
   </div>;

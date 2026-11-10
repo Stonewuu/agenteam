@@ -67,6 +67,8 @@ logging:
     io:
       agentscope: "OFF"
       modelcontextprotocol: "OFF"
+collaboration:
+  web-worker-enabled: "false"
 files:
   inspection:
     enabled: "false"

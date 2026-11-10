@@ -60,6 +60,7 @@ public class ConversationFileMapper {
             .and(part -> part.isNull(FileObjectRow::getExpiresAt).or().gt(FileObjectRow::getExpiresAt, now))
             .and(part -> part.eq(FileObjectRow::getPurpose, "attachment")
                 .eq(AgentMessageRow::getConversationId, conversation).eq(AgentMessageRow::getRole, "user")
+                .eq(AgentMessageRow::getStatus, "completed")
                 .or(output -> output.eq(FileObjectRow::getPurpose, "artifact")
                     .eq(AgentRunRow::getConversationId, conversation).eq(AgentRunRow::getUserId, user)));
     }

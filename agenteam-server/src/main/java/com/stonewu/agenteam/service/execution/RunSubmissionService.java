@@ -13,6 +13,7 @@ import com.stonewu.agenteam.model.execution.request.PreviewInput;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
 import com.stonewu.agenteam.model.execution.response.RunAccepted;
 import com.stonewu.agenteam.model.execution.response.RunView;
+import com.stonewu.agenteam.model.execution.response.QueuedMessageView;
 import com.stonewu.agenteam.model.workflow.request.WorkflowPreviewInput;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
@@ -115,10 +116,15 @@ public class RunSubmissionService {
 
     @Transactional
     public RunAccepted send(AuthContext actor, String id, MessageInput input) {
-        return send(actor, id, input, null);
+        return send(actor, id, input, null, false);
     }
 
-    private RunAccepted send(AuthContext actor, String id, MessageInput input, String retryOf) {
+    @Transactional
+    public RunAccepted sendOrQueue(AuthContext actor, String id, MessageInput input) {
+        return send(actor, id, input, null, true);
+    }
+
+    private RunAccepted send(AuthContext actor, String id, MessageInput input, String retryOf, boolean allowQueue) {
         authorization.lockAndRequire(actor, "agent.run");
         collaboration.requireWebConversation(actor, id);
         input = configuration.input(input);
@@ -131,6 +137,18 @@ public class RunSubmissionService {
         var modelSelection = input.modelSelection() == null ? conversation.modelSelection() : input.modelSelection();
         var selected = configuration.normal(actor, conversation.agentId(), conversation.agentVersionId(),
             modelSelection);
+        if (allowQueue && conversation.activeRunId() != null) {
+            var active = runs.find(actor.enterpriseId(), conversation.activeRunId(), true).orElseThrow();
+            if (!ConversationRunQueue.supported(active) || !List.of("running", "queued", "waiting_approval").contains(active.status())) {
+                throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY", "请先处理当前任务的等待或停止操作。");
+            }
+            if (runs.waitingCount(actor.enterpriseId(), id) >= 20) {
+                throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_QUEUE_FULL", "已有 20 条消息排队，请稍后再发送。");
+            }
+            var prepared = prepare(actor, id, selected, input, null, true);
+            quotas.reserve(actor, prepared.run());
+            return persist(actor, conversation, selected, input, prepared, "interactive", 1);
+        }
         return submit(actor, conversation, selected, input, retryOf);
     }
 
@@ -173,7 +191,7 @@ public class RunSubmissionService {
                 "此任务当前不能重试，请先核对执行结果。");
         }
         return send(actor, original.conversationId(), messages.input(actor.enterpriseId(), original.inputMessageId()),
-            original.id());
+            original.id(), false);
     }
 
     private RunAccepted submit(AuthContext actor, ConversationRecord conversation,
@@ -183,7 +201,7 @@ public class RunSubmissionService {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
                 "当前对话还有未结束的任务，请等待完成或先停止。");
         }
-        var prepared = prepare(actor, conversation.id(), selected, input, retryOf);
+        var prepared = prepare(actor, conversation.id(), selected, input, retryOf, false);
         quotas.reserve(actor, prepared.run());
         var modelSelection = ModelSelection.fromConfig(selected.snapshot().path("config"));
         if (modelSelection != null && !modelSelection.equals(conversation.modelSelection())) {
@@ -202,7 +220,7 @@ public class RunSubmissionService {
                                            String scheduleId, String occurrenceId, boolean manual, int maxRetries) {
         authorization.lockAndRequire(actor, "agent.run");
         var input = configuration.input(new MessageInput(text, List.of(), List.of(), List.of(), List.of()));
-        var prepared = prepare(actor, null, selected, input, null);
+        var prepared = prepare(actor, null, selected, input, null, false);
         prepared.fixed().put("scheduleId", scheduleId).put("scheduleOccurrenceId", occurrenceId);
         if (!quotas.tryReserve(actor, prepared.run())) {
             return Optional.empty();
@@ -231,8 +249,13 @@ public class RunSubmissionService {
         selected.snapshot().put("sourceType", "collaboration");
         selected.snapshot().put("collaborationInputContext", preparedRole.text());
         selected.snapshot().putObject("collaboration").put("taskId", preparedRole.task().getId())
+            .put("originKind", preparedRole.task().fromWebRoom() ? "web" : "external_chat")
+            .put("webAssignment", preparedRole.task().fromWebRoom() && preparedRole.work().getRequesterWorkId() != null)
             .put("workItemId", preparedRole.work().getId()).put("participantId", role.getId()).put("contextId", contextId)
             .put("inputRevision", preparedRole.task().getInputRevision()).put("runRound", round).put("planningOnly", planningOnly);
+        if (collaboration.resumesYieldedWork(preparedRole)) {
+            selected.snapshot().put("resumeWebRoomWork", true);
+        }
         if (planningOnly) {
             ((ObjectNode) selected.snapshot().path("config")).putArray("workflowVersionIds");
         }
@@ -264,9 +287,9 @@ public class RunSubmissionService {
 
     private PreparedSubmission prepare(AuthContext actor, String conversation,
                                        ExecutionConfigurationService.Selection selected, MessageInput input,
-                                       String retryOf) {
-        if (runs.activeCount(actor.enterpriseId(), null) >= 20 || runs.activeCount(actor.enterpriseId(),
-            actor.userId()) >= 3) {
+                                       String retryOf, boolean waiting) {
+        if (!waiting && (runs.activeCount(actor.enterpriseId(), null) >= 20 || runs.activeCount(actor.enterpriseId(),
+            actor.userId()) >= 3)) {
             throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT",
                 "当前同时执行的任务已达到上限，请稍后再试。");
         }
@@ -317,10 +340,14 @@ public class RunSubmissionService {
             prepared.fixed().put("workspaceProjectDirectory", project.getDirectoryPath());
         }
         String run = prepared.run(), inputId = prepared.inputId(), outputId = prepared.outputId();
-        if (liveEvents) {
+        boolean waiting = conversation.activeRunId() != null;
+        if (liveEvents && !waiting) {
             conversations.enableLiveEvents(conversation);
         }
         var now = clock.instant();
+        if (waiting && !now.isAfter(conversation.updatedAt().plusMillis(1))) {
+            now = conversation.updatedAt().plusMillis(1);
+        }
         var inputBlocks = prepared.inputBlocks();
         var initialBlocks = prepared.initialBlocks();
         messages.create(actor.enterpriseId(), conversation.id(), inputId, "user", input, inputBlocks, now);
@@ -330,18 +357,24 @@ public class RunSubmissionService {
             mode.equals("interactive") ? conversation.approvalPolicy() : ToolApprovalPolicy.DEFAULT.value());
         runs.create(run, actor.enterpriseId(), actor.userId(), conversation.id(), inputId, outputId,
             selected.versionId(),
-            mode, prepared.fixed(), maxAttempts, now);
+            mode, prepared.fixed(), maxAttempts, waiting ? conversation.lastSequence() + 1 : null, now);
         messages.associate(actor.enterpriseId(), inputId, run);
         messages.associate(actor.enterpriseId(), outputId, run);
-        conversations.activate(actor.enterpriseId(), conversation.id(), run, now);
         var record = runs.find(actor.enterpriseId(), run, true).orElseThrow();
+        if (waiting) {
+            messages.status(actor.enterpriseId(), inputId, "pending", 0, now);
+            var message = messages.find(actor.enterpriseId(), conversation.id(), inputId).orElseThrow();
+            var event = events.append(record, "queue.updated", QueuedMessageView.from(run, conversation.lastSequence() + 1, message), now);
+            return new RunAccepted(conversation.id(), run, inputId, outputId, record.status(), event.sequence());
+        }
+        conversations.activate(actor.enterpriseId(), conversation.id(), run, now);
         events.append(record, "run.created", RunView.from(record, false), now);
         events.append(record, "message.created",
             messages.find(actor.enterpriseId(), conversation.id(), inputId).orElseThrow(), now);
         var last = events.append(record, "message.created",
             messages.find(actor.enterpriseId(), conversation.id(), outputId).orElseThrow(), now);
         jobs.enqueue(actor.enterpriseId(), actor.userId(), run, now);
-        return new RunAccepted(conversation.id(), run, inputId, outputId, "queued", last.sequence());
+        return new RunAccepted(conversation.id(), run, inputId, outputId, record.status(), last.sequence());
     }
 
     public static void active(ConversationRecord conversation) {

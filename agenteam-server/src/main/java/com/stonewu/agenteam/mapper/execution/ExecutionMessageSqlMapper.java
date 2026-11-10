@@ -6,6 +6,7 @@ import com.github.yulichang.base.MPJBaseMapper;
 import com.github.yulichang.toolkit.JoinWrappers;
 import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
 import com.stonewu.agenteam.model.execution.entity.AgentMessageRow;
+import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.execution.entity.ExecutionMessageQueryRow;
 import com.stonewu.agenteam.model.execution.entity.MessageFeedbackRow;
 import com.stonewu.agenteam.model.memory.entity.MemorySourceQueryRow;
@@ -26,6 +27,17 @@ public interface ExecutionMessageSqlMapper extends MPJBaseMapper<AgentMessageRow
                                                    @Param("beforeTime") Instant beforeTime,
                                                    @Param("beforeRole") int beforeRole,
                                                    @Param("beforeId") String beforeId, @Param("limit") int limit);
+
+    default List<ExecutionMessageQueryRow> waitingMessages(String enterprise, String conversation) {
+        var query = JoinWrappers.lambda(AgentMessageRow.class).selectAll(AgentMessageRow.class)
+            .selectAs(AgentRunRow::getQueuePosition, ExecutionMessageQueryRow::getQueuePosition)
+            .innerJoin(AgentRunRow.class, on -> on.eq(AgentRunRow::getEnterpriseId, AgentMessageRow::getEnterpriseId)
+                .eq(AgentRunRow::getConversationId, AgentMessageRow::getConversationId)
+                .eq(AgentRunRow::getInputMessageId, AgentMessageRow::getId))
+            .eq(AgentMessageRow::getEnterpriseId, enterprise).eq(AgentMessageRow::getConversationId, conversation)
+            .eq(AgentRunRow::getStatus, "waiting_turn").orderByAsc(AgentRunRow::getQueuePosition);
+        return selectJoinList(ExecutionMessageQueryRow.class, query);
+    }
 
     default int createAgentMessage(String id, String enterprise, String conversation, String role, String content,
                                    String status, int attemptNo, String blocksJson, String contextJson, Timestamp now) {

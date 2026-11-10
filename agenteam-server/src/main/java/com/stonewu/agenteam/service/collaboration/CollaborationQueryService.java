@@ -120,7 +120,7 @@ public class CollaborationQueryService {
         var requirements = display.requirements(actor, List.of(requirements(task))).getFirst();
         return new CollaborationTaskDetail(summary(task, requirements), json.object(requirements),
             task.getOwnerWorkId(), task.getOwnerParticipantId(), roles, work, results, questions, deliveries,
-            ChatReplyPolicy.allowsFullResult(task, conversations.require(actor.enterpriseId(), task.getConversationId())),
+            !task.fromWebRoom() && ChatReplyPolicy.allowsFullResult(task, conversations.require(actor.enterpriseId(), task.getConversationId())),
             runQuestions.selectList(new LambdaQueryWrapper<RunQuestionRow>()
                 .eq(RunQuestionRow::getEnterpriseId, actor.enterpriseId()).eq(RunQuestionRow::getUserId, actor.userId())
                 .eq(RunQuestionRow::getTaskId, id).eq(RunQuestionRow::getStatus, "pending")

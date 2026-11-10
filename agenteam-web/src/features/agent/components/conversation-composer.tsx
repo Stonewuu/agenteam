@@ -6,15 +6,15 @@ import {useT} from "@/lib/i18n/locale-provider";
 
 import {Button} from "@/components/ui/button";
 import {LoadingTransition} from "@/components/ui/loading-transition";
-import {Textarea} from "@/components/ui/textarea";
 import {EmployeePickerButton} from "@/features/employee/components/employee-picker-button";
 
-import {type RefObject, useImperativeHandle} from "react";
-import {composerCommand, type ComposerSelectionContext} from "../lib/composer-selection";
+import type {RefObject} from "react";
+import type {ComposerSelectionContext} from "../lib/composer-selection";
 import {useComposerLayout} from "../hooks/use-composer-layout";
-import {useComposerInputSize} from "../hooks/use-composer-input-size";
-import type {Run} from "../types/execution";
-import {IconMessages, IconPlayerStop, IconSend} from "@/components/ui/icons";
+import {ConversationComposerSurface} from "./conversation-composer-surface";
+import type {QueuedMessage, Run} from "../types/execution";
+import {ConversationMessageQueue} from "./conversation-message-queue";
+import {IconMessages, IconPlayerStop} from "@/components/ui/icons";
 import questionStyles from "./run-question.module.css";
 import styles from "./agent-workspace.module.css";
 import controls from "./conversation-controls.module.css";
@@ -24,8 +24,6 @@ import skillStyles from "@/features/skill/components/workspace-skills.module.css
 
 import type {DocumentOption} from "@/features/knowledge/types/knowledge";
 import type {useFileUploads} from "@/features/file/hooks/use-file-uploads";
-import {FileUploadSelection} from "@/features/file/components/file-upload-picker";
-import {pasteUpload} from "@/features/file/lib/paste-upload";
 import {ConversationApprovalPolicy} from "./conversation-approval-policy";
 import {ComposerExtraTools} from "./composer-extra-tools";
 import {ComposerTransition} from "./composer-transition";
@@ -44,6 +42,9 @@ export function ConversationComposer({
                                        onText,
                                        onSubmit,
                                        canSubmit,
+                                       canQueue,
+                                       queuedMessages = [],
+                                       onQueueChange,
                                        submitting,
                                        activeRun,
                                        canStop,
@@ -77,6 +78,9 @@ export function ConversationComposer({
   onText: (text: string) => void;
   onSubmit: () => void;
   canSubmit: boolean;
+  canQueue: boolean;
+  queuedMessages: QueuedMessage[];
+  onQueueChange: (run: string, prioritize: boolean) => Promise<void>;
   submitting: boolean;
   activeRun: Run | null;
   canStop: boolean;
@@ -103,16 +107,20 @@ export function ConversationComposer({
   project: ReturnType<typeof useConversationProject>;
 }) {
   const uiText = useT();
-  const input = useComposerInputSize(text);
   const container = useComposerLayout();
   const isStopping = stopping || activeRun?.status === "cancelling";
   const waitingForAnswer = activeRun?.status === "waiting_input";
-  useImperativeHandle(inputRef, () => input.current!, [input]);
+  const queue = <ConversationMessageQueue items={queuedMessages.map(item => ({id: item.runId, text: item.text}))} onChange={onQueueChange}/>;
+  const stopLabel = queuedMessages.length ? uiText("停止任务和队列") : uiText("停止");
+  const stopAction = canStop && <Button className={styles.sendButton} type="button"
+    data-composer-stop aria-label={stopLabel} title={isStopping ? uiText("正在停止") : stopLabel}
+    aria-busy={isStopping} disabled={isStopping} onClick={onStop}><IconPlayerStop size={19}/></Button>;
   return <div ref={container} className={styles.composerWrap}>
     {error && <p className={controls.composerNotice} role="alert">{localizeUiMessage(error ?? "", uiText)}</p>}
     {!activeRun && reason && <p className={controls.composerNotice}>{uiText(reason)}</p>}
     <LoadingTransition state={waitingForAnswer ? "waiting_input" : "composer"} layout="stack"
       className={questionStyles.composerTransition} contentClassName={questionStyles.composerStates}>
+      {waitingForAnswer && queue}
       {waitingForAnswer && <div className={questionStyles.waitingBar}>
         <IconMessages size={19}/><span className={questionStyles.waitingCopy}>{uiText("请先回答上方的问题")}</span>
         <div className={questionStyles.waitingActions}><Button type="button" className={questionStyles.locate} onClick={() => {
@@ -128,89 +136,44 @@ export function ConversationComposer({
           aria-label={uiText("停止任务")} title={uiText("停止任务")} onClick={onStop} disabled={isStopping}><IconPlayerStop size={17}/></Button>}</div>
       </div>}
       <div className={questionStyles.composerFull} hidden={waitingForAnswer}>
-    <ComposerProjectFrame state={project}><ComposerTransition part="surface">
-      <form className={styles.composer} data-composer-part="surface" data-composer-location="conversation"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (canSubmit && (text.trim() || files.fileIds.length)) {
-                onSubmit();
-              }
-            }}>
-        <div className={styles.composerBody}>
-          <FileUploadSelection uploads={files} disabled={submitting}/>
-          {documents.length > 0 &&
-            <div className={skillStyles.selections}>{documents.map((document) => <span className={skillStyles.selection}
-                                                                                       key={document.documentId}>{document.name}
-              <Button type="button" disabled={submitting} aria-label={uiText("移除资料“{0}”", [document.name])}
-                      onClick={() => onRemoveDocument(document.documentId)}>×</Button></span>)}</div>}
-          {skills.length > 0 &&
-            <div className={skillStyles.selections}>{skills.map((skill) => <span className={skillStyles.selection}
-                                                                                 key={skill.versionId}>{skill.name}
-              <Button type="button" disabled={submitting} aria-label={uiText("移除技能“{0}”", [skill.name])}
-                      onClick={() => onRemoveSkill(skill.versionId)}>×</Button></span>)}</div>}
-          <ComposerTransition part="text"><Textarea ref={input} className={styles.composerInput}
-                                                    data-composer-part="text" aria-label={uiText("输入消息")}
-                                                    placeholder={uiText("描述你希望完成的任务")} value={text} rows={2}
-                                                    maxLength={20000}
-                                                    disabled={submitting}
-                                                    onPaste={(event) => pasteUpload(event, files.add, !submitting && employeeReady && attachmentsEnabled)}
-                                                    onChange={(event) => {
-                                                      onText(event.target.value);
-                                                      if ((event.nativeEvent as InputEvent).isComposing) {
-                                                        return;
-                                                      }
-                                                      const command = composerCommand(event.currentTarget);
-                                                      if (command?.marker === "/" && canChooseSkills && employeeReady) {
-                                                        onChooseSkills(command.context);
-                                                      }
-                                                      if (command?.marker === "@") {
-                                                        if (canChooseDocuments && employeeReady) {
-                                                          onChooseDocuments(command.context);
-                                                        } else {
-                                                          onChooseEmployee(command.context);
-                                                        }
-                                                      }
-                                                    }} onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229 && canSubmit) {
-              event.preventDefault();
-              if (text.trim() || files.fileIds.length) {
-                onSubmit();
-              }
+    <ComposerProjectFrame state={project}>{!waitingForAnswer && queue}<ComposerTransition part="surface">
+      <ConversationComposerSurface text={text} onText={onText} onSubmit={onSubmit} canSubmit={canSubmit}
+        submitting={submitting} files={files} acceptsFiles={employeeReady && attachmentsEnabled} inputRef={inputRef}
+        placeholder={canQueue ? uiText("补充消息，当前步骤结束后处理") : undefined}
+        running={Boolean(activeRun)} onCommand={({marker, context}) => {
+          if (marker === "/" && canChooseSkills && employeeReady) {
+            onChooseSkills(context);
+          }
+          if (marker === "@") {
+            if (canChooseDocuments && employeeReady) {
+              onChooseDocuments(context);
+            } else {
+              onChooseEmployee(context);
             }
-          }}/></ComposerTransition>
-        </div>
-        <div className={styles.composerTools} data-running={Boolean(activeRun)}>
-          <div className={styles.composerMainTools}>
-            <ComposerTransition part="employee"><EmployeePickerButton name={employeeName} icon={employee?.icon}
-                                                                      color={employee?.color}
-                                                                      loading={employeeLoading && !employee}
-                                                                      disabled={submitting}
-                                                                      expanded={activePicker === "employee"}
-                                                                      onClick={(event) => onChooseEmployee({anchor: event.currentTarget})}/></ComposerTransition>
-            <ComposerExtraTools files={files} attachmentsEnabled={attachmentsEnabled} canChooseSkills={canChooseSkills}
-                                canChooseDocuments={canChooseDocuments}
-                                skillsLoading={skillsLoading} loading={employeeLoading && !employee}
-                                disabled={submitting || !employeeReady}
-                                onChooseSkills={onChooseSkills} onChooseDocuments={onChooseDocuments}/>
-          </div>
-          <div className={styles.composerSubmitTools}>
-            <ConversationModelControls state={model}/>
-            <ComposerTransition part="policy"><ConversationApprovalPolicy value={approvalPolicy.value}
-                                                                          onChange={(value) => void approvalPolicy.change(value)}
-                                                                          disabled={approvalPolicy.disabled || model.saving}
-                                                                          saving={approvalPolicy.saving}
-                                                                          running={Boolean(activeRun)}/></ComposerTransition>
-            <ComposerTransition part="submit">{activeRun ? canStop &&
-              <Button className={styles.sendButton} data-composer-part="submit" type="button" data-composer-stop
-                      aria-label={isStopping ? uiText("正在停止") : uiText("停止")}
-                      title={isStopping ? uiText("正在停止") : uiText("停止")} aria-busy={isStopping}
-                      disabled={isStopping} onClick={onStop}><IconPlayerStop size={19}/></Button>
-              : <Button className={styles.sendButton} data-composer-part="submit" type="submit"
-                        disabled={!canSubmit || (!text.trim() && !files.fileIds.length)} aria-label={uiText("发送消息")}
-                        title={uiText("发送消息（Enter）")}><IconSend size={19}/></Button>}</ComposerTransition>
-          </div>
-        </div>
-      </form>
+          }
+        }}
+        selections={<>
+          {documents.length > 0 && <div className={skillStyles.selections}>{documents.map(document =>
+            <span className={skillStyles.selection} key={document.documentId}>{document.name}
+              <Button type="button" disabled={submitting} aria-label={uiText("移除资料“{0}”", [document.name])}
+                onClick={() => onRemoveDocument(document.documentId)}>×</Button></span>)}</div>}
+          {skills.length > 0 && <div className={skillStyles.selections}>{skills.map(skill =>
+            <span className={skillStyles.selection} key={skill.versionId}>{skill.name}
+              <Button type="button" disabled={submitting} aria-label={uiText("移除技能“{0}”", [skill.name])}
+                onClick={() => onRemoveSkill(skill.versionId)}>×</Button></span>)}</div>}
+        </>}
+        mainTools={<>
+          <ComposerTransition part="employee"><EmployeePickerButton name={employeeName} icon={employee?.icon}
+            color={employee?.color} loading={employeeLoading && !employee} disabled={submitting} expanded={activePicker === "employee"}
+            onClick={event => onChooseEmployee({anchor: event.currentTarget})}/></ComposerTransition>
+          <ComposerExtraTools files={files} attachmentsEnabled={attachmentsEnabled} canChooseSkills={canChooseSkills}
+            canChooseDocuments={canChooseDocuments} skillsLoading={skillsLoading} loading={employeeLoading && !employee}
+            disabled={submitting || !employeeReady} onChooseSkills={onChooseSkills} onChooseDocuments={onChooseDocuments}/>
+        </>}
+        endTools={<><ConversationModelControls state={model}/>
+          <ComposerTransition part="policy"><ConversationApprovalPolicy value={approvalPolicy.value} onChange={value => void approvalPolicy.change(value)}
+            disabled={approvalPolicy.disabled || model.saving} saving={approvalPolicy.saving} running={Boolean(activeRun)}/></ComposerTransition>{canQueue && stopAction}</>}
+        submitAction={activeRun && !canQueue ? stopAction : undefined}/>
     </ComposerTransition><ConversationModelFeedback state={model}/></ComposerProjectFrame>
       </div>
     </LoadingTransition>

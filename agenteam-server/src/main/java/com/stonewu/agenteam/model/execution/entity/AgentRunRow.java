@@ -70,6 +70,9 @@ public class AgentRunRow {
     @TableField(value = "queued_at")
     private Instant queuedAt;
 
+    @TableField("queue_position")
+    private Long queuePosition;
+
     @TableField(value = "has_step_errors")
     private Integer hasStepErrors;
 

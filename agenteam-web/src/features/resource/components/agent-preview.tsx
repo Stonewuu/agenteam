@@ -34,6 +34,7 @@ import styles from "./agent-preview.module.css";
 import {type ReasoningEffort, reasoningEffortLabels} from "@/features/modelprofile/lib/reasoning-effort";
 
 const states: Record<RunStatus, string> = {
+  waiting_turn: "排队中",
   queued: "等待执行",
   running: "正在处理",
   waiting_approval: "等待确认",

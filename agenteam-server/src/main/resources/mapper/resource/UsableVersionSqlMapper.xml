@@ -18,6 +18,7 @@
       <property name="alias" value="r"/>
     </include>
     AND v.status = 'available' AND LOCATE(#{query}, v.name) > 0
+    AND (r.kind &lt;&gt; 'plugin' OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.builtinCode')), '') &lt;&gt; 'group_collaboration')
     <if test="resourceId == null">AND (r.kind &lt;&gt; 'plugin' OR r.source &lt;&gt; 'builtin' OR r.published_version_id
       = v.id)
     </if>

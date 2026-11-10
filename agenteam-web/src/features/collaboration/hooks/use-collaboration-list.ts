@@ -2,7 +2,8 @@
 
 import {useCallback, useState, useSyncExternalStore} from "react";
 import {useApiQuery, type ApiPage} from "@/lib/http/use-api-query";
-import {collaborationPath, type CollaborationTask} from "../types/collaboration";
+import type {CollaborationDirectoryEntry} from "../types/collaboration";
+import {roomApi} from "../types/web-room";
 import {changeListCriteria, emptyListState, listStateKey, readListState, type CollaborationListState} from "../lib/collaboration-list-state";
 
 const savedStates = new Map<string, CollaborationListState>();
@@ -55,7 +56,7 @@ export function useCollaborationList(enterprise: string, user: string) {
   if (state.cursor) {
     params.set("cursor", state.cursor);
   }
-  const query = useApiQuery<ApiPage<CollaborationTask>>(`${collaborationPath(enterprise)}?${params}`, refresh, 300, true);
+  const query = useApiQuery<ApiPage<CollaborationDirectoryEntry>>(`${roomApi(enterprise)}/directory?${params}`, refresh, 300, true);
   return {...query, state, previous: state.previous, filtered: Boolean(state.query || state.status),
     criteria: (values: Partial<Pick<CollaborationListState, "query" | "status">>) => remember(key, changeListCriteria(state, values)),
     clear: () => remember(key, emptyListState),

@@ -62,7 +62,10 @@ public class CollaborationUserOptionsService {
             .eq(CollaborationTaskRow::getId, task.getId());
         boolean changed = false;
         String visibility = options.path("outputVisibility").asText(null);
-        if (visibility == null && !Boolean.TRUE.equals(task.getReplyModeExplicit()) && !hasExplicitVisibility(objective) && "summary_link".equals(task.getOutputVisibility())) {
+        if (task.fromWebRoom() && (visibility != null || !options.path("messageReferences").isEmpty())) {
+            throw ApiException.invalidField("options", "此任务没有外部群聊消息。");
+        }
+        if (!task.fromWebRoom() && visibility == null && !Boolean.TRUE.equals(task.getReplyModeExplicit()) && !hasExplicitVisibility(objective) && "summary_link".equals(task.getOutputVisibility())) {
             var group = conversations.require(task.getEnterpriseId(), task.getConversationId());
             if ("chat_full".equals(ChatReplyPolicy.defaultOutputVisibility(group))) {
                 visibility = "chat_full";

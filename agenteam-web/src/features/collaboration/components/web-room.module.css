@@ -1,0 +1,65 @@
+@media (min-width: 601px) { .createDialog:global(.agenteam-dialog.modal) { width: 500px; } }
+.createForm { display: grid; gap: 22px; }
+.memberSection { display: grid; gap: 10px; min-width: 0; }
+.inviteHeader, .inviteHeader > div { display: flex; align-items: center; gap: 9px; }
+.inviteHeader { justify-content: space-between; min-height: 32px; }
+.inviteHeader h3 { margin: 0; font-size: 14px; font-weight: 650; color: var(--foreground); }
+.inviteHeader small { font-size: 12px; color: var(--secondary); }
+.selectedCount { padding: 4px 9px; border: 1px solid transparent; border-radius: 99px; background: var(--surface-soft); color: var(--secondary); font-size: 12px; font-weight: 550; cursor: pointer; }
+.selectedCount:disabled { cursor: default; }
+.selectedCount[aria-pressed=true] { color: var(--accent-text); border-color: var(--input-border-focus); }
+.memberPanel { min-width: 0; overflow: clip; border: 1px solid var(--border); border-radius: 16px; background: var(--card); }
+.memberPanel .memberSearch { width: 100%; border: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: transparent; }
+.memberPanel .memberSearch:focus-within { outline: 2px solid var(--input-border-focus); outline-offset: -2px; box-shadow: none; }
+.memberPanel .memberSearch input { box-shadow: none; }
+.picks { display: grid; gap: 1px; max-height: min(40dvh, 298px); overflow-y: auto; padding: 4px; }
+.pick { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 54px; padding: 8px 11px; border: 0; border-radius: 10px; background: transparent; color: var(--foreground); font: inherit; text-align: start; cursor: pointer; }
+.pick:hover, .pick:focus-within { background: var(--surface-soft); }
+.pick:disabled { cursor: default; opacity: .65; }
+.pick:focus-visible, .selectedCount:focus-visible { outline: 2px solid var(--input-border-focus); outline-offset: -2px; }
+.pickMark { --icon-context-color: currentColor; display: grid; place-items: center; flex: 0 0 20px; color: var(--secondary); }
+.pick[aria-pressed=true] .pickMark { color: var(--accent-text); }
+.pickText { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pickText strong, .pickText small { display: block; }
+.pickText strong { font-size: 14px; font-weight: 600; line-height: 1.45; }
+.pickText small { margin-top: 3px; font-size: 12px; line-height: 1.45; color: var(--secondary); }
+@media (max-width: 600px) { .createForm { gap: 16px; } .selectedCount { min-height: 44px; } }
+
+.headerTools { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.taskLink, .newTask { display: inline-flex; align-items: center; gap: 6px; border-radius: 9px; color: var(--secondary); }
+.taskLink { min-height: 36px; padding: 3px 6px; font-size: 12px; text-decoration: none; }
+.taskLink:hover, .newTask:hover { color: var(--text); background: var(--surface-hover); }
+.taskLink:focus-visible, .newTask:focus-visible, .progressTrigger:focus-visible { outline: 2px solid var(--input-border-focus); outline-offset: 2px; }
+.newTask, .progressTrigger { border: 0; background: transparent; cursor: pointer; font: inherit; }
+.newTask { padding: 5px 8px; font-size: 12px; white-space: nowrap; }
+.newTask[aria-pressed=true] { color: var(--accent-text); background: var(--accent-soft); }
+.welcomeIcon { display: inline-grid; place-items: center; color: var(--accent-text); background: var(--accent-soft); }
+.welcomeIcon { width: 54px; height: 54px; border-radius: 16px; margin-bottom: 20px; }
+.mentionSign { font-size: 16px; line-height: 1; font-weight: 650; color: var(--accent-text); }
+.mentionOptions { display: grid; gap: 2px; }
+.mentionOption { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--foreground); text-align: start; min-width: 0; min-height: 44px; font: inherit; font-size: 14px; cursor: pointer; }
+.mentionOption span { overflow-wrap: anywhere; }
+.mentionOption:hover, .mentionOption:focus-visible { background: var(--surface-soft); }
+.mentionOption:focus-visible { outline: 2px solid var(--input-border-focus); outline-offset: -2px; }
+.noMatch { color: var(--secondary); font-size: 13px; margin: 8px; }
+.entryLabel { padding-inline-start: 9px; border-inline-start: 1px solid var(--border); font-size: 11px; line-height: 1.2; color: var(--secondary); white-space: nowrap; }
+.turnBody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.progressGroup { min-width: 0; }
+.turnActions { display: flex; align-items: center; gap: 14px; min-height: 32px; }
+.progressTrigger { display: inline-flex; align-items: center; gap: 7px; width: fit-content; max-width: 100%; min-height: 32px; padding: 4px 0; border-radius: 5px; color: var(--secondary); font-size: 12px; line-height: 1.5; }
+.progressTrigger:hover { color: var(--text); }
+.progressTrigger svg { flex-shrink: 0; }
+.turnActions .replyActions { display: flex; align-items: center; margin: 0; }
+.disclosure { transition: transform 180ms var(--motion-ease); }
+.progressTrigger[aria-expanded=true] .disclosure { transform: rotate(180deg); }
+.progressPanel { height: var(--collapsible-panel-height); overflow: hidden; opacity: 1; transition: height 220ms var(--motion-ease), opacity 180ms ease-out; }
+.progressPanel[data-starting-style], .progressPanel[data-ending-style] { height: 0; opacity: 0; }
+.progressList { display: grid; gap: 8px; margin: 8px 0 4px 7px; padding: 2px 0 2px 16px; list-style: none; border-inline-start: 1px solid var(--border); }
+.progressList li { font-size: 12px; line-height: 1.65; color: var(--secondary); overflow-wrap: anywhere; }
+.load { padding: var(--shell-gutter, 16px); }
+@media (max-width: 680px) {
+  .pick, .taskLink, .newTask, .progressTrigger { min-height: 44px; }
+  .taskLink > span:last-child:not(:first-child) { display: none; }
+  .newTask { padding-inline: 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .pick, .disclosure, .progressPanel { transition: none; } }

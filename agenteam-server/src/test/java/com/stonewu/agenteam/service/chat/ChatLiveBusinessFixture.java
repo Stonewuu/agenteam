@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
-import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceDraftTableMapper;
@@ -46,7 +45,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -76,7 +74,6 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
     @Autowired private RunMapper runs;
     private ChatLiveEvidence evidence;
     private String initiatorId;
-    private String pluginResourceId;
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
@@ -106,7 +103,6 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
         Files.createDirectories(DIRECTORY);
         Files.deleteIfExists(DIRECTORY.resolve("stop"));
         UserEntity actor = users.findById(admin).orElseThrow();
-        String pluginVersion = createCollaborationPlugin();
         String model = prepareRealModel(input.path("model"));
         configureAgent(value -> {
             value.put("modelProfileId", model);
@@ -114,7 +110,7 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
             value.put("maxSteps", 500);
             value.put("timeoutSeconds", 240);
             value.put("attachmentsEnabled", true);
-            value.set("pluginVersionIds", json.valueToTree(List.of(pluginVersion)));
+            value.putArray("pluginVersionIds");
             value.put("instructions", hrInstructions());
         });
         String hrAgent = agent;
@@ -126,7 +122,7 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
             "业务验证发起人", List.of(permissions.builtinRoleId(enterprise, "enterprise-admin")));
         initiatorId = initiator.id();
         databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>()
-            .eq(ResourceRow::getEnterpriseId, enterprise).in(ResourceRow::getId, List.of(hrAgent, financeAgent, pluginResourceId))
+            .eq(ResourceRow::getEnterpriseId, enterprise).in(ResourceRow::getId, List.of(hrAgent, financeAgent))
             .set(ResourceRow::getOwnerUserId, initiatorId));
         hires.establish(enterprise, initiatorId, hrAgent, Instant.now());
         hires.establish(enterprise, initiatorId, financeAgent, Instant.now());
@@ -172,21 +168,6 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
         return models.saveProfiles(List.of(new ModelProfileFixture(enterprise, admin, "live-collaboration-model", 1,
             "真实联调模型", source.path("protocol").asText(), source.path("model").asText(), source.path("baseUrl").asText(),
             "LIVE_MODEL", capability, true)), name -> source.path("apiKey").asText()).getFirst();
-    }
-
-    private String createCollaborationPlugin() throws Exception {
-        var names = new ArrayList<>(CollaborationToolDefinitions.WRITES);
-        names.addAll(CollaborationToolDefinitions.READS);
-        var config = json.createObjectNode().put("icon", "Box").put("color", "teal").put("pluginType", "builtin")
-            .put("builtinCode", "group_collaboration").putNull("transport").putNull("endpoint").putNull("credentialId")
-            .put("timeoutSeconds", 30);
-        config.set("enabledToolNames", json.valueToTree(names));
-        String id = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "真实联调团队协作", "description",
-            "仅用于已授权合成任务", "tagIds", List.of(), "config", config), UUID.randomUUID().toString())
-            .andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
-        pluginResourceId = id;
-        return data(change(HttpMethod.POST, base() + "/resources/" + id + "/publish", Map.of("releaseNote", "真实协作联调"),
-            "1", UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
     }
 
     private String createFinanceAgent() throws Exception {

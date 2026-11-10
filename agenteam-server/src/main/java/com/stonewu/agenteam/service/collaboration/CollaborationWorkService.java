@@ -10,7 +10,6 @@ import com.stonewu.agenteam.model.collaboration.entity.CollaborationActionRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationExecutionContext;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationWorkItemRow;
-import com.stonewu.agenteam.service.chat.ChatOutboundService;
 import com.stonewu.agenteam.service.chat.ChatPayloadCipher;
 import com.stonewu.agenteam.service.chat.ChatRecords;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -36,14 +35,16 @@ public class CollaborationWorkService {
     private final CollaborationDependencyService dependencies;
     private final CollaborationArtifactService artifacts;
     private final ChatPayloadCipher cipher;
-    private final ChatOutboundService outbound;
+    private final CollaborationNotices outbound;
     private final ResourceJson json;
     private final Clock clock;
     private final CollaborationQuestionNoticeService questions;
+    private final WebRoomRoster webRoster;
 
     public CollaborationWorkService(CollaborationWorkItemMapper works, CollaborationTaskMapper tasks, CollaborationAccessService access,
             CollaborationDependencyService dependencies, CollaborationArtifactService artifacts, ChatPayloadCipher cipher,
-            ChatOutboundService outbound, ResourceJson json, Clock clock, CollaborationQuestionNoticeService questions) {
+            CollaborationNotices outbound, ResourceJson json, Clock clock, CollaborationQuestionNoticeService questions, WebRoomRoster webRoster) {
+        this.webRoster = webRoster;
         this.works = works;
         this.tasks = tasks;
         this.access = access;
@@ -86,6 +87,10 @@ public class CollaborationWorkService {
         String goal = text(input, handoff ? "nextGoal" : "goal", 4000);
         text(input, "acceptanceCriteria", 2000);
         var references = artifacts.references(task, input.path("artifactRefs"));
+        if (task.fromWebRoom() && references.stream().anyMatch(reference -> reference.getFileId() != null)
+            && !webRoster.acceptsFiles(task.getEnterpriseId(), target.getAgentId(), target.getAgentVersionId())) {
+            throw ApiException.invalidField("targetRoleId", "该岗位未启用接收附件。请选择其他岗位，或提供文字要求。");
+        }
         if (handoff) {
             text(input, "completedSummary", 2000);
             if (references.isEmpty()) {
@@ -124,6 +129,9 @@ public class CollaborationWorkService {
             .eq(CollaborationTaskRow::getId, task.getId()).eq(CollaborationTaskRow::getRevision, task.getRevision())
             .setIncrBy(CollaborationTaskRow::getWorkCount, 1).setIncrBy(CollaborationTaskRow::getRevision, 1)
             .set(CollaborationTaskRow::getUpdatedAt, clock.instant());
+        if (previous != null && dependencies.failureReplaced(task)) {
+            update.set(CollaborationTaskRow::getStatus, "active").set(CollaborationTaskRow::getErrorCode, null);
+        }
         if (handoff) {
             change(source, "handed_off");
             update.set(CollaborationTaskRow::getOwnerParticipantId, targetId).set(CollaborationTaskRow::getOwnerWorkId, next.getId())
@@ -132,8 +140,10 @@ public class CollaborationWorkService {
         if (tasks.update(update) != 1) {
             throw ApiException.versionConflict(task.getRevision());
         }
-        notify(context, action, handoff ? "handed_off" : "assigned", "任务 【" + task.getShortCode() + "】：【" + context.participant().getRoleName()
-            + "】已" + (handoff ? "移交给【" : "安排【") + target.getRoleName() + "】" + (handoff ? "继续负责。" : "协助处理。"));
+        String notice = task.fromWebRoom() ? (handoff ? "移交给" : "交给") + target.getRoleName() + "：" + goal
+            : "任务 【" + task.getShortCode() + "】：【" + context.participant().getRoleName()
+            + "】已" + (handoff ? "移交给【" : "安排【") + target.getRoleName() + "】" + (handoff ? "继续负责。" : "协助处理。");
+        notify(context, action, handoff ? "handed_off" : "assigned", notice);
         return Map.of("taskId", task.getId(), "workItemId", next.getId(), "inputRevision", task.getInputRevision(),
             "status", status, "goal", goal, "ownerWorkItemId", handoff ? next.getId() : task.getOwnerWorkId());
     }
@@ -208,8 +218,7 @@ public class CollaborationWorkService {
 
     public void notify(CollaborationExecutionContext context, CollaborationActionRow action, String kind, String text) {
         var task = context.task();
-        outbound.text(task.getEnterpriseId(), task.getConversationId(), context.participant().getBotBindingId(), task.getId(), action.getId(),
-            "action:" + action.getId(), kind, text, null);
+        outbound.send(task, context.participant(), action.getId(), "action:" + action.getId(), kind, text, false, null);
     }
 
     public static void requireOwner(CollaborationTaskRow task, CollaborationWorkItemRow work) {

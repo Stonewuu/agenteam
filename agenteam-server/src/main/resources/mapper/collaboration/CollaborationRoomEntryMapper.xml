@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.collaboration.CollaborationRoomEntryMapper">
+  <!-- 各成员独立取队首；某个成员等工具或审批时，不占其他成员的领取名额。 -->
+  <select id="readyHeads" resultType="com.stonewu.agenteam.model.collaboration.entity.CollaborationRoomEntryRow">
+    SELECT e.* FROM collaboration_room_entry e
+    WHERE e.delivery_state IN ('queued','selected')
+      AND NOT EXISTS (
+        SELECT 1 FROM collaboration_room_entry ahead
+        WHERE ahead.enterprise_id=e.enterprise_id AND ahead.room_id=e.room_id AND ahead.recipient_agent_id=e.recipient_agent_id
+          AND (ahead.delivery_state='selected' AND e.delivery_state='queued'
+            OR ahead.delivery_state=e.delivery_state AND ahead.queue_position &lt; e.queue_position))
+      AND NOT EXISTS (
+        SELECT 1 FROM collaboration_participant p JOIN collaboration_work_item w ON w.enterprise_id=p.enterprise_id AND w.participant_id=p.id
+        WHERE p.enterprise_id=e.enterprise_id AND p.web_room_id=e.room_id AND p.agent_id=e.recipient_agent_id AND w.active_run_id IS NOT NULL)
+      AND NOT EXISTS (
+        SELECT 1 FROM collaboration_room_entry s JOIN collaboration_task t ON t.enterprise_id=s.enterprise_id AND t.id=s.task_id
+        JOIN collaboration_work_item w ON w.enterprise_id=t.enterprise_id AND w.id=t.owner_work_id
+        WHERE s.enterprise_id=e.enterprise_id AND s.room_id=e.room_id AND s.recipient_agent_id=e.recipient_agent_id
+          AND s.delivery_state='starting' AND w.status='ready')
+      AND (e.delivery_state='selected' OR NOT EXISTS (
+        SELECT 1 FROM collaboration_task t JOIN collaboration_work_item w ON w.enterprise_id=t.enterprise_id AND w.id=t.owner_work_id
+        JOIN collaboration_participant p ON p.enterprise_id=t.enterprise_id AND p.id=w.participant_id
+        WHERE t.enterprise_id=e.enterprise_id AND t.id=e.task_id AND p.agent_id=e.recipient_agent_id AND w.status='ready'
+          AND w.run_round=0 AND t.status='active'))
+    ORDER BY e.updated_at,e.id LIMIT #{limit}
+  </select>
+</mapper>

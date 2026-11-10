@@ -13,6 +13,7 @@ import java.sql.Timestamp;
 public class ExecutionMessageQueryRow {
     private String id;
     private String runId;
+    private Long queuePosition;
     private Integer attemptNo = 0;
     private String role;
     private String content;

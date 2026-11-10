@@ -21,7 +21,11 @@ public final class CollaborationTaskViewMapper {
         String text = requirements.path("text").asText();
         int count = Math.min(100, text.codePointCount(0, text.length()));
         String title = text.substring(0, text.offsetByCodePoints(0, count));
-        return new CollaborationTaskSummary(task.getId(), task.getShortCode(), title, task.getConversationId(), task.getStatus(),
+        if (task.fromWebRoom() && source == null) {
+            source = new CollaborationTaskSummary.Source("web", "room", null);
+        }
+        return new CollaborationTaskSummary(task.getId(), task.getShortCode(), title,
+            task.fromWebRoom() ? task.getWebRoomId() : task.getConversationId(), task.getStatus(),
             task.getRevision(), task.getInputRevision(), task.getOutputVisibility(), time(task.getCreatedAt()), time(task.getUpdatedAt()),
             time(task.getDeadlineAt()), time(task.getFinishedAt()), task.getErrorCode(), source, roles, conversationId);
     }

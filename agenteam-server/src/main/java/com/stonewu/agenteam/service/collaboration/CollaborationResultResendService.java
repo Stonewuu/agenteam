@@ -52,6 +52,9 @@ public class CollaborationResultResendService {
     public Map<String, Object> send(AuthContext actor, String id, CollaborationResultResendRequest input) {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
         var task = access.owned(actor, id);
+        if (task.fromWebRoom()) {
+            throw ApiException.invalidField("taskId", "网页协作对话不向外部平台发送消息。");
+        }
         access.actor(task);
         if (!task.getRevision().equals(input.expectedRevision()) || input.expectedReplyModeRevision() == null
                 || input.expectedReplyModeRevision() != CollaborationReplyModeService.revision(task)) {

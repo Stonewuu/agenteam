@@ -5,6 +5,7 @@ import com.stonewu.agenteam.model.execution.entity.LiveConversationState;
 import com.stonewu.agenteam.model.execution.response.*;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,8 @@ public class LiveSnapshotMapper {
         }
         Map<String, MessageView> messages = new LinkedHashMap<>();
         base.messages().forEach(message -> messages.put(message.id(), message));
+        var queue = new HashMap<String, QueuedMessageView>();
+        base.queuedMessages().forEach(item -> queue.put(item.runId(), item));
         Map<String, RunView> runs = new LinkedHashMap<>();
         if (base.activeRun() != null) {
             runs.put(base.activeRun().id(), base.activeRun());
@@ -35,6 +38,13 @@ public class LiveSnapshotMapper {
             if (entry.getKey().startsWith("message:")) {
                 var message = json.convertValue(entry.getValue(), MessageView.class);
                 messages.putIfAbsent(message.id(), message);
+            } else if (entry.getKey().startsWith("queue:")) {
+                var item = json.convertValue(entry.getValue(), QueuedMessageView.class);
+                if (item.position() == null) {
+                    queue.remove(item.runId());
+                } else {
+                    queue.put(item.runId(), item);
+                }
             } else if (entry.getKey().startsWith("run:")) {
                 var run = json.convertValue(entry.getValue(), RunView.class);
                 runs.put(run.id(), run);
@@ -67,7 +77,7 @@ public class LiveSnapshotMapper {
         if (live.activeRunId() != null && active == null) {
             throw new IllegalStateException("累计内容中缺少当前执行状态");
         }
-        var ordered = new ArrayList<>(messages.values().stream().sorted(Comparator.comparing(MessageView::createdAt)
+        var ordered = new ArrayList<>(messages.values().stream().sorted(Comparator.comparing((MessageView message) -> Instant.parse(message.createdAt()))
             .thenComparing(message -> message.role().equals("user") ? 0 : 1).thenComparing(MessageView::id)).toList());
         boolean older = base.hasOlderMessages() || ordered.size() > 100;
         while (ordered.size() > 100) {
@@ -94,13 +104,14 @@ public class LiveSnapshotMapper {
         return new ConversationSnapshotView(conversation(base.conversation(), active), ordered, active,
             Long.toString(live.appliedDatabaseVersion()), older,
             older && !ordered.isEmpty() ? ordered.getFirst().id() : null,
-            base.attachmentsEnabled(), 2, live.cursor(), steps, approvals);
+            base.attachmentsEnabled(), 2, live.cursor(), steps, approvals,
+            queue.values().stream().sorted(Comparator.comparingLong(QueuedMessageView::position)).toList());
     }
 
     public ConversationSnapshotView unavailable(ConversationSnapshotView base) {
         return new ConversationSnapshotView(base.conversation(), base.messages(), base.activeRun(), base.lastSequence(),
             base.hasOlderMessages(), base.nextBeforeMessageId(), base.attachmentsEnabled(), 2, null, List.of(),
-            List.of());
+            List.of(), base.queuedMessages());
     }
 
     private MessageView mergeBlock(MessageView message, ContentBlock block) {

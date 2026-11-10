@@ -29,3 +29,7 @@ exports:
 data:
   query-recovery:
     enabled: "false"
+chat:
+  worker-enabled: "false"
+collaboration:
+  web-worker-enabled: "false"

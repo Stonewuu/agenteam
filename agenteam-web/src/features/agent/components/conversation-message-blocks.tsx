@@ -58,11 +58,13 @@ export const blockStatus: Record<BlockStatus, string> = {
   skipped: "已跳过"
 };
 
-export const ConversationMarkdown = memo(function ConversationMarkdown({content, animate = false}: {
+export const ConversationMarkdown = memo(function ConversationMarkdown({content, animate = false, mode, allowImages}: {
   content: string;
-  animate?: boolean
+  animate?: boolean;
+  mode?: "static" | "streaming";
+  allowImages?: boolean;
 }) {
-  return <MarkdownContent content={content} animate={animate} className={styles.markdown}/>;
+  return <MarkdownContent content={content} animate={animate} className={styles.markdown} mode={mode} allowImages={allowImages}/>;
 });
 
 type BlockContext = {

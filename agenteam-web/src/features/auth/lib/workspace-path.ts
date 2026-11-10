@@ -16,12 +16,17 @@ export function workspaceParts(pathname: string) {
   return parts.slice(1).map((value, index) => index === 0 && value === "organization" ? "management" : value);
 }
 
+export function isWebRoomDetail(pathname: string) {
+  const [section, directory, id] = workspaceParts(pathname);
+  return section === "collaboration" && directory === "rooms" && Boolean(id) && id !== "new";
+}
+
 export function validWorkspaceDestination(value: string) {
   if (!value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f]/.test(value)) {
     return false;
   }
   const path = value.split(/[?#]/, 1)[0];
-  return /^\/(?:workspace|new-task|employees|environment|memories(?:\/[^/]+)?|conversations(?:\/[^/]+)?|todos(?:\/[^/]+)?|schedules(?:\/[^/]+)?|notifications(?:\/[^/]+)?|collaboration\/tasks(?:\/[^/]+)?|capabilities(?:\/(?:agents|skills|plugins|workflows|knowledge|data)(?:\/[^/]+)?)?|organization(?:\/[a-z-]+)?|settings(?:\/channels)?)$/.test(path);
+  return /^\/(?:workspace|new-task|employees|environment|memories(?:\/[^/]+)?|conversations(?:\/[^/]+)?|todos(?:\/[^/]+)?|schedules(?:\/[^/]+)?|notifications(?:\/[^/]+)?|collaboration\/(?:tasks|rooms)(?:\/[^/]+)?|capabilities(?:\/(?:agents|skills|plugins|workflows|knowledge|data)(?:\/[^/]+)?)?|organization(?:\/[a-z-]+)?|settings(?:\/channels)?)$/.test(path);
 }
 
 export function resourceDestination(path: string): {type: string; id: string} | null {

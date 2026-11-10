@@ -11,6 +11,7 @@ import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.service.agent.EncryptedAgentStateStore;
 import com.stonewu.agenteam.service.agent.ExecutionPaths;
+import com.stonewu.agenteam.service.collaboration.WebRoomQueue;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.security.PayloadEncryption;
 import io.agentscope.core.state.AgentState;
@@ -44,12 +45,14 @@ public class RunCheckpointService {
     private final ExecutionPaths paths;
     private final Clock clock;
     private final TransactionTemplate transactions;
+    private final WebRoomQueue roomQueue;
 
     public RunCheckpointService(RunCheckpointMapper checkpoints, ConversationMapper conversations, RunMapper runs,
                                 RunLifecycleService lifecycle,
                                 ResourceJson json, ObjectMapper mapper, PayloadEncryption encryption,
                                 ExecutionPaths paths, Clock clock, PlatformTransactionManager transactions,
-                                RunActivityMapper activity) {
+                                RunActivityMapper activity, WebRoomQueue roomQueue) {
+        this.roomQueue = roomQueue;
         this.checkpoints = checkpoints;
         this.conversations = conversations;
         this.runs = runs;
@@ -102,6 +105,32 @@ public class RunCheckpointService {
             save(lease, prepared);
             activity.betweenSteps(run);
         });
+    }
+
+    public void continueIfWaiting(RunRecord run, JobLease lease, EncryptedAgentStateStore states, AgentState live, Runnable flush) {
+        boolean webRoom = WebRoomQueue.supports(run);
+        if (webRoom ? !roomQueue.waiting(run) : runs.waitingCount(run.enterpriseId(), run.conversationId()) == 0) {
+            return;
+        }
+        flush.run();
+        var prepared = prepare(run, states, live);
+        boolean continued = Boolean.TRUE.equals(transactions.execute(transaction -> {
+            var current = lifecycle.locked(run.enterpriseId(), run.id());
+            lifecycle.requireLease(current, lease);
+            if (!current.status().equals("running")) {
+                return false;
+            }
+            if (webRoom ? !roomQueue.selectAfterTools(current) : runs.waitingCount(run.enterpriseId(), run.conversationId()) == 0) {
+                return false;
+            }
+            // 工具结果与下一条消息同一次提交，服务重启后不会重新领取上一批工具。
+            save(lease, prepared);
+            lifecycle.continueAfterAction(current);
+            return true;
+        }));
+        if (continued) {
+            throw new ConversationRunQueue.Continued();
+        }
     }
 
     public void save(JobLease lease, Prepared prepared) {

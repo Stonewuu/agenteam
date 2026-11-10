@@ -66,8 +66,21 @@ public class ConversationApiController {
 
     @PostMapping("/conversations/{conversationId}/messages")
     public ResponseEntity<?> send(@PathVariable String enterpriseId, @PathVariable String conversationId,
-                                  @RequestBody MessageInput value, HttpServletRequest request) {
-        return responses.operation(mutations.send(enterpriseId, conversationId, value, request), request);
+                                  @RequestBody MessageInput value, @RequestParam(defaultValue = "false") boolean queue,
+                                  HttpServletRequest request) {
+        return responses.operation(mutations.send(enterpriseId, conversationId, value, queue, request), request);
+    }
+
+    @PostMapping("/conversations/{conversationId}/queue/{runId}/prioritize")
+    public ResponseEntity<?> prioritize(@PathVariable String enterpriseId, @PathVariable String conversationId,
+                                         @PathVariable String runId, HttpServletRequest request) {
+        return responses.operation(mutations.changeQueue(enterpriseId, conversationId, runId, true, request), request);
+    }
+
+    @DeleteMapping("/conversations/{conversationId}/queue/{runId}")
+    public ResponseEntity<?> withdraw(@PathVariable String enterpriseId, @PathVariable String conversationId,
+                                       @PathVariable String runId, HttpServletRequest request) {
+        return responses.operation(mutations.changeQueue(enterpriseId, conversationId, runId, false, request), request);
     }
 
     @GetMapping("/conversations")

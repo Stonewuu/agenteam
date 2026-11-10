@@ -43,12 +43,14 @@ public class CollaborationContextService {
     private final ObjectMapper mapper;
     private final CollaborationConfiguration configuration;
     private final Clock clock;
+    private final WebRoomTimeline webTimeline;
     private final CollaborationDependencyService dependencies;
 
     public CollaborationContextService(CollaborationContextMapper contexts, CollaborationArtifactMapper artifacts,
             CollaborationParticipantMapper participants, ChatMessageMapper messages, CollaborationAccessService access,
             CollaborationArtifactService results, ChatPayloadCipher cipher, ResourceJson json, ObjectMapper mapper,
-            CollaborationConfiguration configuration, Clock clock, CollaborationDependencyService dependencies) {
+            CollaborationConfiguration configuration, Clock clock, CollaborationDependencyService dependencies, WebRoomTimeline webTimeline) {
+        this.webTimeline = webTimeline;
         this.contexts = contexts;
         this.artifacts = artifacts;
         this.participants = participants;
@@ -125,19 +127,42 @@ public class CollaborationContextService {
         }
         var selected = root.putArray("messages");
         int omitted = 0;
-        for (var message : messages.selectList(new LambdaQueryWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, task.getEnterpriseId())
-            .eq(ChatMessageRow::getTaskId, task.getId()).eq(ChatMessageRow::getSenderUserId, task.getInitiatorUserId())
-            .orderByDesc(ChatMessageRow::getPlatformCreatedAt, ChatMessageRow::getId))) {
-            var content = cipher.decrypt(task.getEnterpriseId(), "message", message.getId(), message.getContentEncrypted());
-            var item = mapper.createObjectNode().put("messageId", message.getId()).put("text", ChatMessageText.withQuote(content))
-                .put("createdAt", message.getPlatformCreatedAt().toString());
-            if (selected.size() >= configuration.getMaxContextMessages() || characters(root) + characters(item) + 200 > configuration.getMaxContextCharacters()) {
-                omitted++;
-                continue;
+        if (task.fromWebRoom()) {
+            var recent = webTimeline.otherMessages(task, configuration.getMaxContextMessages());
+            omitted = Math.toIntExact(recent.getTotal() - recent.getRecords().size());
+            for (var row : recent.getRecords()) {
+                var body = webTimeline.content(row);
+                String value = body.path("text").asText();
+                int size = value.codePointCount(0, value.length());
+                int length = Math.min(2000, size);
+                var item = mapper.createObjectNode().put("author", row.getAuthorName()).put("kind", row.getKind())
+                    .put("text", value.substring(0, value.offsetByCodePoints(0, length))).put("truncated", length < size)
+                    .put("createdAt", row.getCreatedAt().toString());
+                if (body.hasNonNull("recipientName")) {
+                    item.put("recipient", body.path("recipientName").asText());
+                }
+                if (selected.size() >= configuration.getMaxContextMessages() || characters(root) + characters(item) + 200 > configuration.getMaxContextCharacters()) {
+                    omitted++;
+                } else {
+                    selected.add(item);
+                }
             }
-            selected.add(item);
+        } else {
+            for (var message : messages.selectList(new LambdaQueryWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, task.getEnterpriseId())
+                .eq(ChatMessageRow::getTaskId, task.getId()).eq(ChatMessageRow::getSenderUserId, task.getInitiatorUserId())
+                .orderByDesc(ChatMessageRow::getPlatformCreatedAt, ChatMessageRow::getId))) {
+                var content = cipher.decrypt(task.getEnterpriseId(), "message", message.getId(), message.getContentEncrypted());
+                var item = mapper.createObjectNode().put("messageId", message.getId()).put("text", ChatMessageText.withQuote(content))
+                    .put("createdAt", message.getPlatformCreatedAt().toString());
+                if (selected.size() >= configuration.getMaxContextMessages() || characters(root) + characters(item) + 200 > configuration.getMaxContextCharacters()) {
+                    omitted++;
+                    continue;
+                }
+                selected.add(item);
+            }
         }
-        root.putObject("sourceCoverage").put("receivedMentionMessages", true).put("fullGroupHistoryAvailable", false).put("omittedMessageCount", omitted);
+        root.putObject("sourceCoverage").put("source", task.fromWebRoom() ? "web" : "external_chat")
+            .put("receivedMentionMessages", !task.fromWebRoom()).put("fullGroupHistoryAvailable", false).put("omittedMessageCount", omitted);
         requireSize(root);
         var row = ChatRecords.initialize(new CollaborationContextRow(), task.getEnterpriseId(), clock.instant());
         row.setTaskId(task.getId());

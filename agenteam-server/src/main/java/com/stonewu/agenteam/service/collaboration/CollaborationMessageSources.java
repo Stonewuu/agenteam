@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageResourceMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationContextMapper;
+import com.stonewu.agenteam.mapper.collaboration.CollaborationRoomEntryFileMapper;
+import com.stonewu.agenteam.model.collaboration.entity.WebRoomFileView;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
 import com.stonewu.agenteam.mapper.execution.RunSqlMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageResourceRow;
@@ -34,10 +36,12 @@ public class CollaborationMessageSources {
     private final ChatMessageMapper messages;
     private final ChatMessageResourceMapper resources;
     private final ChatPayloadCipher cipher;
+    private final CollaborationRoomEntryFileMapper roomFiles;
 
     public CollaborationMessageSources(RunSqlMapper runs, CollaborationRunLinkMapper links,
             CollaborationContextMapper contexts, ChatMessageMapper messages, ChatMessageResourceMapper resources,
-            ChatPayloadCipher cipher) {
+            ChatPayloadCipher cipher, CollaborationRoomEntryFileMapper roomFiles) {
+        this.roomFiles = roomFiles;
         this.runs = runs;
         this.links = links;
         this.contexts = contexts;
@@ -84,6 +88,32 @@ public class CollaborationMessageSources {
     }
 
     private Map<String, Source> withFiles(String enterprise, String user, Map<String, Source> inputs) {
+        var webEntries = new HashMap<String, String>();
+        var platform = new LinkedHashMap<String, Source>();
+        inputs.forEach((key, source) -> {
+            String entry = latestInput(source.requirements()).path("roomEntryId").asText(null);
+            if (entry != null) {
+                webEntries.put(key, entry);
+            } else {
+                platform.put(key, source);
+            }
+        });
+        if (webEntries.isEmpty()) {
+            return withPlatformFiles(enterprise, user, inputs);
+        }
+        var files = roomFiles.forEntries(enterprise, user, webEntries.values()).stream()
+            .collect(Collectors.groupingBy(WebRoomFileView::getMessageId));
+        var result = new LinkedHashMap<>(withPlatformFiles(enterprise, user, platform));
+        webEntries.forEach((key, entry) -> {
+            var source = inputs.get(key);
+            var ids = files.getOrDefault(entry, List.of()).stream().filter(file -> source.taskId().equals(file.getTaskId()))
+                .map(WebRoomFileView::getId).toList();
+            result.put(key, new Source(source.taskId(), source.requirements(), ids));
+        });
+        return result;
+    }
+
+    private Map<String, Source> withPlatformFiles(String enterprise, String user, Map<String, Source> inputs) {
         var requested = new HashMap<String, Set<String>>();
         var ids = new LinkedHashSet<String>();
         inputs.forEach((id, source) -> {

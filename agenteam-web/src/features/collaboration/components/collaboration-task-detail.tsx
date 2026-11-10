@@ -45,7 +45,8 @@ export function CollaborationTaskDetail({enterpriseId, taskId, openReplyMode}: {
   return <div className={styles.page}>
     <PageHeader title={t("协作任务")} inlineMetadata icon={<IconCollaboration size={24} variant="Bulk"/>}
       metadata={detail ? <><CollaborationStatus status={detail.task.status}/><span className={styles.headerCode}>{detail.task.shortCode}</span></> : undefined}
-      actions={<div className={styles.actions}><Link className={ui.button} href={`${root}/collaboration/tasks`}><IconArrowLeft size={16}/>{t("任务列表")}</Link>
+      actions={<div className={styles.actions}>{detail?.task.source?.platformCode === "web" && <Link className={ui.button}
+        href={"/collaboration/rooms/" + encodeURIComponent(detail.task.conversationId)}>{t("返回协作对话")}</Link>}<Link className={ui.button} href={`${root}/collaboration/tasks`}><IconArrowLeft size={16}/>{t("任务列表")}</Link>
         <Button className={ui.button} onClick={changed} disabled={query.loading && (refresh.manual || !detail)}><IconRefresh size={16}/>{t("刷新")}</Button></div>}/>
     <QueryState {...query} loading={query.loading && !detail} hasData={Boolean(detail)} empty={t("任务暂时无法读取。")}>
       {detail && <div className={styles.body}>
@@ -69,7 +70,7 @@ export function CollaborationTaskDetail({enterpriseId, taskId, openReplyMode}: {
           </div>
           <aside className={styles.aside} aria-label={t("任务信息与回传")}>
             <CollaborationTaskInfo detail={detail} path={path} onChanged={changed} openReplyMode={openReplyMode}/>
-            <CollaborationDeliveries detail={detail}/>
+            {detail.task.source?.platformCode !== "web" && <CollaborationDeliveries detail={detail}/>}
           </aside>
         </div>
       </div>}

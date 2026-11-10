@@ -25,6 +25,7 @@ import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.support.DataAccessUtils;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MvcResult;
@@ -100,6 +101,92 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         assertEquals("queued", snapshot.at("/activeRun/status").asText());
         assertFalse(snapshot.toString().contains("内部指令"));
         assertFalse(snapshot.toString().contains("isolated-execution-secret"));
+    }
+
+    @Test
+    void waitingMessagesCanBePrioritizedAndWithdrawnWithoutStoppingTheRunningTask() throws Exception {
+        var initial = data(write(base() + "/conversations", body(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        String path = base() + "/conversations/" + initial.path("conversationId").asText();
+        String first = initial.path("runId").asText();
+        String messagesPath = path + "/messages?queue=true";
+        var second = data(write(messagesPath, input("等待甲"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        var third = data(write(messagesPath, input("等待乙"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        schemas.validate("RunAccepted", third);
+        String pending = path + "/queue/";
+        String priorityKey = UUID.randomUUID().toString();
+        write(pending + third.path("runId").asText() + "/prioritize", null, priorityKey).andExpect(status().isOk());
+        write(pending + third.path("runId").asText() + "/prioritize", null, priorityKey).andExpect(status().isOk());
+        var snapshot = data(mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals("等待乙", snapshot.at("/queuedMessages/0/text").asText());
+        assertEquals("等待甲", snapshot.at("/queuedMessages/1/text").asText());
+        assertEquals(2, snapshot.path("messages").size());
+        assertEquals(first, snapshot.at("/activeRun/id").asText());
+        change(HttpMethod.DELETE, pending + second.path("runId").asText(), null, null, UUID.randomUUID().toString())
+            .andExpect(status().isOk());
+        assertEquals(2, reserved());
+        change(HttpMethod.DELETE, pending + first, null, null, UUID.randomUUID().toString())
+            .andExpect(status().isConflict());
+        write(base() + "/runs/" + first + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
+        var stopped = data(mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertTrue(stopped.path("queuedMessages").isEmpty());
+        assertEquals(2, stopped.path("messages").size());
+        assertTrue(stopped.path("activeRun").isNull());
+        assertEquals(0, reserved());
+        assertTrue(lifecycle.claim("queue-cancel-test").isEmpty());
+    }
+
+    @Test
+    void sendingAtTheEndOfAReplyAlwaysStartsExactlyOneSuccessor() throws Exception {
+        var original = data(write(base() + "/conversations", body(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        String path = base() + "/conversations/" + original.path("conversationId").asText();
+        var lease = lifecycle.claim("finish-race").orElseThrow();
+        lifecycle.start(lease).orElseThrow();
+        var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var finish = pool.submit(() -> {
+                start.await();
+                lifecycle.finish(lease, "completed", null, null);
+                return true;
+            });
+            String key = UUID.randomUUID().toString();
+            var send = pool.submit(() -> {
+                start.await();
+                return data(write(path + "/messages?queue=true", input("下一条要求"), key)
+                    .andExpect(status().isAccepted()).andReturn());
+            });
+            start.countDown();
+            finish.get(10, TimeUnit.SECONDS);
+            var next = send.get(10, TimeUnit.SECONDS);
+            var replay = data(write(path + "/messages?queue=true", input("下一条要求"), key)
+                .andExpect(status().isAccepted()).andReturn());
+            assertEquals(next.path("runId"), replay.path("runId"));
+            var snapshot = data(mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk()).andReturn());
+            assertEquals(next.path("runId"), snapshot.at("/activeRun/id"));
+            assertEquals(4, snapshot.path("messages").size());
+            assertTrue(snapshot.path("queuedMessages").isEmpty());
+            assertEquals(2, count("agent_run"));
+        }
+    }
+
+    @Test
+    void keepsUnprocessedInputInHistoryWhenTheCurrentTaskFails() throws Exception {
+        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        String path = base() + "/conversations/" + accepted.path("conversationId").asText();
+        var lease = lifecycle.claim("queue-failure-test").orElseThrow();
+        lifecycle.start(lease).orElseThrow();
+        var pending = data(write(path + "/messages?queue=true", input("保留待核对的数据"), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        lifecycle.finish(lease, "failed", "MODEL_UNAVAILABLE", "模型暂时不可用。");
+        var snapshot = data(mvc.perform(get(path).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertTrue(snapshot.path("queuedMessages").isEmpty());
+        assertEquals(3, snapshot.path("messages").size());
+        assertEquals(pending.path("inputMessageId"), snapshot.at("/messages/2/id"));
+        assertEquals("cancelled", snapshot.at("/messages/2/status").asText());
+        assertEquals(0, reserved());
+        assertTrue(lifecycle.claim("queue-failure-test").isEmpty());
     }
 
     @Test

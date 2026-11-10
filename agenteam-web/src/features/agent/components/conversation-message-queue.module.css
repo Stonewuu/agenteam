@@ -1,0 +1,78 @@
+.panel {
+  margin: 0 10px -10px;
+  padding: 8px 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.heading, .row, .priority, .withdraw { display: flex; align-items: center; }
+.heading {
+  gap: 6px;
+  min-height: 24px;
+  padding-inline: 8px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+.heading span { font-variant-numeric: tabular-nums; }
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(30dvh, 216px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.row { gap: 6px; min-width: 0; min-height: 36px; padding-inline: 8px 2px; border-radius: 7px; }
+.row > svg { flex: none; color: var(--secondary); }
+.row:hover, .row:focus-within { background: var(--surface-hover); }
+.recipient {
+  max-width: min(22%, 9rem);
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+.preview {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 3px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.preview[data-expanded=true] { white-space: pre-wrap; overflow-wrap: anywhere; }
+.priority, .withdraw, .next {
+  flex: none;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 12px;
+}
+.withdraw { width: 32px; }
+.next { display: inline-flex; align-items: center; }
+.priority:hover, .withdraw:hover { background: var(--surface); color: var(--text); }
+.withdraw:hover { color: var(--red-text); }
+.panel button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+@media (max-width: 680px), (pointer: coarse) {
+  .panel { margin-inline: 4px; }
+  .row { gap: 3px; }
+  .priority, .withdraw, .preview { min-height: 44px; }
+  .withdraw { width: 44px; }
+}

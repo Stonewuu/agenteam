@@ -9,7 +9,14 @@ public record ConversationSnapshotView(ConversationView conversation, List<Messa
                                        RunView activeRun, String lastSequence, boolean hasOlderMessages,
                                        String nextBeforeMessageId, boolean attachmentsEnabled, int protocolVersion,
                                        StreamCursor streamCursor, List<LiveRunStepView> liveSteps,
-                                       List<RunApprovalView> approvals) {
+                                       List<RunApprovalView> approvals, List<QueuedMessageView> queuedMessages) {
+    public ConversationSnapshotView(ConversationView conversation, List<MessageView> messages, RunView activeRun,
+                                    String lastSequence, boolean hasOlderMessages, String nextBeforeMessageId,
+                                    boolean attachmentsEnabled, int protocolVersion, StreamCursor streamCursor,
+                                    List<LiveRunStepView> liveSteps, List<RunApprovalView> approvals) {
+        this(conversation, messages, activeRun, lastSequence, hasOlderMessages, nextBeforeMessageId, attachmentsEnabled,
+            protocolVersion, streamCursor, liveSteps, approvals, List.of());
+    }
     public ConversationSnapshotView(ConversationView conversation, List<MessageView> messages, RunView activeRun,
                                     String lastSequence, boolean hasOlderMessages, String nextBeforeMessageId,
                                     boolean attachmentsEnabled) {

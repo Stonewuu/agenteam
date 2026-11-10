@@ -13,11 +13,13 @@ import org.springframework.stereotype.Service;
 /** 只回传智能体明确提出的问题与选项，不附带内部上下文或业务审批内容。 */
 @Service
 public class CollaborationQuestionNoticeService {
+    private final WebRoomTimeline rooms;
     private final ChatMessageMapper messages;
     private final ChatConversationService conversations;
     private final ChatOutboundService outbound;
 
-    public CollaborationQuestionNoticeService(ChatMessageMapper messages, ChatConversationService conversations, ChatOutboundService outbound) {
+    public CollaborationQuestionNoticeService(ChatMessageMapper messages, ChatConversationService conversations, ChatOutboundService outbound, WebRoomTimeline rooms) {
+        this.rooms = rooms;
         this.messages = messages;
         this.conversations = conversations;
         this.outbound = outbound;
@@ -25,6 +27,13 @@ public class CollaborationQuestionNoticeService {
 
     public void send(CollaborationExecutionContext context, CollaborationActionRow action, String question, JsonNode options) {
         var task = context.task();
+        if (task.fromWebRoom()) {
+            var text = new StringBuilder(question);
+            options.forEach(option -> text.append("\n• ").append(option.asText()));
+            rooms.append(task.getEnterpriseId(), task.getWebRoomId(), task.getId(), context.participant().getId(),
+                context.participant().getRoleName(), "action:" + action.getId(), "waiting_input", text.toString());
+            return;
+        }
         var group = conversations.require(task.getEnterpriseId(), task.getConversationId());
         boolean direct = group.getConversationKind().equals("direct");
         var text = new StringBuilder();

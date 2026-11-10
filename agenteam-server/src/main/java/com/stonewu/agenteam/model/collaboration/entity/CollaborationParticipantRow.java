@@ -33,6 +33,9 @@ public class CollaborationParticipantRow implements EnterpriseScopedRecord {
     @TableField("task_id")
     private String taskId;
 
+    private String webRoomId;
+    private String webMemberId;
+
     @TableField("bot_binding_id")
     private String botBindingId;
 

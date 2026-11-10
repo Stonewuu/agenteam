@@ -63,7 +63,8 @@ public class ConversationSnapshotService {
                         queries.decorateMessages(actor, id, merged.messages()),
                         merged.activeRun(), merged.lastSequence(), merged.hasOlderMessages(),
                         merged.nextBeforeMessageId(),
-                        merged.attachmentsEnabled(), 2, merged.streamCursor(), merged.liveSteps(), merged.approvals());
+                        merged.attachmentsEnabled(), 2, merged.streamCursor(), merged.liveSteps(), merged.approvals(),
+                        merged.queuedMessages());
                 }
                 if (live.appliedDatabaseVersion() < base.conversation().lastSequence()) {
                     var active = base.run();

@@ -14,7 +14,6 @@ import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationArtifactMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
-import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepMapper;
@@ -98,33 +97,27 @@ abstract class CollaborationToolTestSupport extends CollaborationApiTestSupport 
 
     @BeforeEach
     void configureRoles() throws Exception {
-        var names = new ArrayList<>(CollaborationToolDefinitions.WRITES);
-        names.addAll(CollaborationToolDefinitions.READS);
-        ObjectNode config = json.createObjectNode().put("icon", "Box").put("color", "teal").put("pluginType", "builtin").put("builtinCode", "group_collaboration")
-            .putNull("transport").putNull("endpoint").putNull("credentialId").put("timeoutSeconds", 30);
-        config.set("enabledToolNames", json.valueToTree(names));
-        String plugin = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "协作测试插件", "description", "真实内部协作事务", "tagIds", List.of(), "config", config), UUID.randomUUID().toString())
-            .andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
-        String fixed = data(change(HttpMethod.POST, base() + "/resources/" + plugin + "/publish", Map.of("releaseNote", "发布测试协作插件"), "1", UUID.randomUUID().toString())
-            .andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
-        var pluginIds = new ArrayList<>(List.of(plugin));
-        var pluginVersions = new ArrayList<>(List.of(fixed));
+        var pluginVersions = new ArrayList<String>();
+        String businessPlugin = null;
         if (requiresBusinessTool()) {
-            config.put("builtinCode", "todo_management");
+            ObjectNode config = json.createObjectNode().put("icon", "Box").put("color", "teal").put("pluginType", "builtin")
+                .put("builtinCode", "todo_management").putNull("transport").putNull("endpoint").putNull("credentialId").put("timeoutSeconds", 30);
             config.set("enabledToolNames", json.valueToTree(List.of("todo_create")));
             String ordinary = data(write(base() + "/resources", Map.of("kind", "plugin", "name", "一般业务测试插件", "description", "验证业务写入仍需确认", "tagIds", List.of(), "config", config), UUID.randomUUID().toString())
                 .andExpect(status().isCreated()).andReturn()).at("/resource/id").asText();
             String ordinaryVersion = data(change(HttpMethod.POST, base() + "/resources/" + ordinary + "/publish", Map.of("releaseNote", "发布一般业务工具"), "1", UUID.randomUUID().toString())
                 .andExpect(status().isCreated()).andReturn()).at("/version/id").asText();
-            pluginIds.add(ordinary);
+            businessPlugin = ordinary;
             pluginVersions.add(ordinaryVersion);
         }
         configureAgent(value -> {
             value.set("pluginVersionIds", json.valueToTree(pluginVersions));
             value.put("attachmentsEnabled", true);
         });
-        databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().in(ResourceRow::getId, pluginIds)
-            .eq(ResourceRow::getEnterpriseId, enterprise).set(ResourceRow::getOwnerUserId, initiator.id()));
+        if (businessPlugin != null) {
+            databaseAccess.mapper(ResourceSqlMapper.class).update(new LambdaUpdateWrapper<ResourceRow>().eq(ResourceRow::getId, businessPlugin)
+                .eq(ResourceRow::getEnterpriseId, enterprise).set(ResourceRow::getOwnerUserId, initiator.id()));
+        }
         databaseAccess.mapper(ChatBotBindingMapper.class).update(new LambdaUpdateWrapper<ChatBotBindingRow>()
             .eq(ChatBotBindingRow::getId, bot.getId()).set(ChatBotBindingRow::getPinnedVersionId, version));
         finance = secondBot();

@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.yulichang.toolkit.JoinWrappers;
 import com.stonewu.agenteam.mapper.file.MessageAttachmentMapper;
 import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
@@ -9,6 +10,7 @@ import com.stonewu.agenteam.model.execution.entity.ExecutionMessageQueryRow;
 import com.stonewu.agenteam.model.execution.request.MessageInput;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
 import com.stonewu.agenteam.model.execution.response.MessageView;
+import com.stonewu.agenteam.model.execution.response.QueuedMessageView;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
 
@@ -59,6 +61,33 @@ public class ExecutionMessageMapper {
         return withAttachments(enterprise,
             statements.findAgentMessage(enterprise, conversation, id).stream().map(this::map).toList()).stream()
             .findFirst();
+    }
+
+    public List<QueuedMessageView> waiting(String enterprise, String conversation) {
+        var rows = statements.waitingMessages(enterprise, conversation);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        var files = attachments.forMessages(enterprise, rows.stream().filter(row -> row.getContent().isBlank())
+            .map(ExecutionMessageQueryRow::getId).toList());
+        return rows.stream().map(row -> {
+            String text = row.getContent();
+            if (text.isBlank()) {
+                text = String.join("、", files.getOrDefault(row.getId(), List.of()).stream()
+                    .map(file -> file.get("name").toString()).toList());
+            }
+            return new QueuedMessageView(row.getRunId(), row.getQueuePosition(), text);
+        }).toList();
+    }
+
+    public void startWaitingPair(String enterprise, String conversation, String run, Instant now) {
+        int changed = statements.update(new LambdaUpdateWrapper<AgentMessageRow>()
+            .eq(AgentMessageRow::getEnterpriseId, enterprise).eq(AgentMessageRow::getConversationId, conversation)
+            .eq(AgentMessageRow::getRunId, run).eq(AgentMessageRow::getStatus, "pending")
+            .set(AgentMessageRow::getCreatedAt, now).set(AgentMessageRow::getUpdatedAt, now));
+        if (changed != 2) {
+            throw new IllegalStateException("待处理消息的输入或回复记录已经变化。");
+        }
     }
 
     public Optional<ContentBlock> savedToolBlock(String enterprise, String conversation, String message, String step) {

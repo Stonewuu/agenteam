@@ -123,10 +123,10 @@ export function CollaborationTaskInfo({detail, path, onChanged, openReplyMode}: 
   const t = useT();
   return <DetailSection className={styles.section} icon={<IconFileText size={19}/>} title={t("任务信息")}>
     <dl className={styles.facts}>
-      <div className={styles.fact}><dt><IconUser size={15}/>{t("当前负责人")}</dt><dd>{detail.roles.find((role) => role.id === detail.ownerRoleId)?.name ?? "—"}</dd></div>
+      <div className={styles.fact}><dt><IconUser size={15}/>{t(detail.task.source?.platformCode === "web" ? "当前处理成员" : "当前负责人")}</dt><dd>{detail.roles.find((role) => role.id === detail.ownerRoleId)?.name ?? "—"}</dd></div>
       <div className={styles.fact}><dt><IconCalendar size={15}/>{t("创建时间")}</dt><dd><EnterpriseDateTime value={detail.task.createdAt}/></dd></div>
       <div className={styles.fact}><dt><IconClock size={15}/>{t(detail.task.finishedAt ? "结束时间" : "截止时间")}</dt><dd><EnterpriseDateTime value={detail.task.finishedAt ?? detail.task.deadlineAt}/></dd></div>
-      <CollaborationReplyControls path={path} detail={detail} onChanged={onChanged} initiallyOpen={openReplyMode}/>
+      {detail.task.source?.platformCode !== "web" && <CollaborationReplyControls path={path} detail={detail} onChanged={onChanged} initiallyOpen={openReplyMode}/>}
     </dl>
   </DetailSection>;
 }

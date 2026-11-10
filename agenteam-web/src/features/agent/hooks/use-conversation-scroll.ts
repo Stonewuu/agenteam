@@ -1,20 +1,20 @@
 "use client";
 
 import {useCallback, useLayoutEffect, useRef, useState} from "react";
-import type {ConversationMessage} from "../types/execution";
+import type {ConversationScrollItem} from "../lib/conversation-reading";
 import {conversationReadingPosition, hasNewConversationContent, rememberConversationPosition, type ConversationReadingPosition} from "../lib/conversation-reading";
 import type {LiveRunStep} from "../lib/conversation-steps";
 
-const emptyMessages: ConversationMessage[] = [];
+const emptyMessages: ConversationScrollItem[] = [];
 
 /** 保留阅读位置，只有正在底部阅读时才跟随；返回操作随最新内容平滑移动。 */
-export function useConversationScroll(scope: string, incoming?: readonly ConversationMessage[], steps?: ReadonlyMap<string, LiveRunStep>) {
+export function useConversationScroll(scope: string, incoming?: readonly ConversationScrollItem[], steps?: ReadonlyMap<string, LiveRunStep>) {
   const messages = incoming ?? emptyMessages;
   const conversationRef = useRef<HTMLDivElement>(null);
   const shouldStickToBottomRef = useRef(true);
   const previous = useRef<{
     scope: string;
-    messages: readonly ConversationMessage[];
+    messages: readonly ConversationScrollItem[];
     steps?: ReadonlyMap<string, LiveRunStep>
   }>({scope, messages: []});
   const unseen = useRef(false);

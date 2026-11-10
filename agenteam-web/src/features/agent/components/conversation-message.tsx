@@ -8,7 +8,7 @@ import {Button} from "@/components/ui/button";
 import {ResourceAvatar} from "@/components/ui/resource-avatar";
 import {toast} from "@/components/ui/toast";
 
-import {useEffect, useRef, useState} from "react";
+import {useRef, useState} from "react";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import type {DisplayMessage} from "../types/conversation-display";
@@ -16,9 +16,9 @@ import type {Run, RunApproval} from "../types/execution";
 import {ConversationBlocks, ConversationMarkdown} from "./conversation-message-blocks";
 import styles from "./assistant-message.module.css";
 import layout from "./conversation-controls.module.css";
-import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
+import {ConversationReplyAuthor, CopyReplyButton} from "./conversation-reply-parts";
 import type {Employee} from "@/features/employee/types/employee";
-import {IconBookmark, IconCheck, IconCopy, IconThumbDown, IconThumbUp, IconChartBar} from "@/components/ui/icons";
+import {IconBookmark, IconThumbDown, IconThumbUp, IconChartBar} from "@/components/ui/icons";
 import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {ConversationRunFeedback} from "./conversation-run-feedback";
 import {type LiveRunStep, mergeExecutionSteps, messageRunSteps, type RunStepHistory} from "../lib/conversation-steps";
@@ -56,14 +56,7 @@ export function ConversationMessage({
   const selectedRef = useRef("");
   const [feedbackMutation] = useState(() => new ApiMutation());
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [usageOpen, setUsageOpen] = useState(false);
-  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (copyTimer.current) {
-      clearTimeout(copyTimer.current);
-    }
-  }, []);
   const ended = ["completed", "failed", "cancelled"].includes(message.status);
   const blocks = mergeExecutionSteps(message.blocks, messageRunSteps(message, stepHistory, liveSteps));
   const run = latestRun?.id === message.runId ? latestRun : null;
@@ -94,30 +87,9 @@ export function ConversationMessage({
     }
   }
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      toast.success(uiText("回复已复制。"));
-      if (copyTimer.current) {
-        clearTimeout(copyTimer.current);
-      }
-      setCopied(true);
-      copyTimer.current = setTimeout(() => setCopied(false), 1800);
-    } catch (failure) {
-      console.error("复制对话回复失败", {messageId: message.id, error: failure});
-      setCopied(false);
-      toast.error(uiText("暂时无法复制，请选择文字后复制。"));
-    }
-  }
-
   return <div className={styles.assistantMessage}>
-    <div className={layout.messageMeta}>
-      <span className={layout.messageAvatar} aria-hidden="true">
-        {employee && <ResourceAvatar icon={employee.icon} color={employee.color} size="small"/>}
-      </span>
-      <span>{employeeName}</span>
-      <EnterpriseDateTime value={message.createdAt} compact/>
-    </div>
+    <ConversationReplyAuthor avatar={employee && <ResourceAvatar icon={employee.icon} color={employee.color} size="small"/>}
+      name={employeeName} createdAt={message.createdAt}/>
     {message.hasMultipleAttempts &&
       <p className={layout.resultNotice}>{uiText("第 ")}{message.attemptNo}{uiText(" 次尝试")}</p>}
     <div className={layout.messageBody} ref={contentRef}>{blocks.length ?
@@ -132,10 +104,7 @@ export function ConversationMessage({
       <ConversationRunFeedback enterprise={enterprise} message={message} latestRun={latestRun} busy={retrying}
                                error={retryError} onRetry={onRetry}/>}
     {ended && <div className={layout.messageActions} role="group" aria-label={uiText("回复操作")}>
-      {message.content &&
-        <Button type="button" aria-label={uiText("复制回复")} title={copied ? uiText("已复制") : uiText("复制回复")}
-                data-copied={copied} onClick={() => void copy()}>{copied ? <IconCheck size={18}/> :
-          <IconCopy size={18}/>}</Button>}
+      {message.content && <CopyReplyButton text={message.content} messageId={message.id}/>}
       <Button type="button" aria-label={message.feedback === "positive" ? uiText("取消赞同") : uiText("赞同")}
               title={message.feedback === "positive" ? uiText("取消赞同") : uiText("赞同")}
               aria-pressed={message.feedback === "positive"} disabled={busy}
