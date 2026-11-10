@@ -42,6 +42,7 @@ import {
   workspaceNavigation
 } from "../lib/navigation";
 import {PlatformManagementNavigation} from "./platform-management-navigation";
+import {ManagementVersion} from "./management-version";
 import {SidebarNavigation} from "./sidebar-navigation";
 import {NavigationLink} from "./navigation-link";
 import {usePageScroll} from "../hooks/use-page-scroll";
@@ -149,6 +150,7 @@ function ShellFrame({user, context, area, title, children, onNavigate, fullHeigh
                         href="/organization"><IconShield size={20}
                                                                 variant="Bulk"/><span>{uiText("管理端")}</span><IconArrowUpRight
           size={15}/></NavigationLink>}
+      {area === "management" && <ManagementVersion/>}
     </div>
   </>;
   return <div className="app-shell">

@@ -1,4 +1,8 @@
 const fieldLabels: Record<string, string> = {
+  workspaceMb: "工作空间容量",
+  fileMb: "单文件大小",
+  maximumFiles: "文件数量上限",
+  commandResultsMb: "命令输出容量",
   sources: "工具来源",
   tools: "工具选择",
   sourceId: "工具来源",

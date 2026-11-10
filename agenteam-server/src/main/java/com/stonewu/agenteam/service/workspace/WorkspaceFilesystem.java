@@ -80,9 +80,19 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                 "工作文件不存在，可能尚未创建或已被清理。");
         }
         try (var input = Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS)) {
-            byte[] bytes = input.readNBytes(settings.fileBytes() + 1);
+            long maximum = settings.fileBytes();
+            if (Files.size(file) > maximum) {
+                throw WorkspacePaths.capacity();
+            }
+            // Java 数组按整数索引；超过可完整载入的大小时仍可通过沙盒命令处理文件。
+            int readable = (int) Math.min(maximum, Integer.MAX_VALUE - 8L);
+            if (Files.size(file) > readable) {
+                throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "WORKSPACE_FILE_READ_TOO_LARGE",
+                    "文件太大，无法一次读取，请通过命令处理。");
+            }
+            byte[] bytes = input.readNBytes(readable);
             active.run();
-            if (bytes.length > settings.fileBytes()) {
+            if (input.read() != -1) {
                 throw WorkspacePaths.capacity();
             }
             return bytes;
@@ -117,7 +127,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
         }
         try (var paths = Files.walk(directory, recursive ? (project ? Integer.MAX_VALUE : 17) : 1)) {
             var iterator = paths.iterator();
-            int count = 0;
+            long count = 0;
             while (iterator.hasNext()) {
                 active.run();
                 Path item = iterator.next();
@@ -129,7 +139,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                     continue;
                 }
                 WorkspacePaths.requireInside(root, item);
-                if (++count > settings.maximumFiles() * 2) {
+                if (++count > settings.maximumFiles() * 2L) {
                     throw WorkspacePaths.capacity();
                 }
                 boolean folder = Files.isDirectory(item, LinkOption.NOFOLLOW_LINKS);
@@ -246,7 +256,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
         if (oldText == null || oldText.isEmpty() || oldText.equals(newText)) {
             return EditResult.fail("请提供非空原文和不同的新内容。");
         }
-        String original = document(path).window(0, settings.fileBytes(), false).content();
+        String original = document(path).window(0, (int) Math.min(Integer.MAX_VALUE, settings.fileBytes()), false).content();
         int count = 0, from = 0;
         while ((from = original.indexOf(oldText, from)) >= 0) {
             count++;

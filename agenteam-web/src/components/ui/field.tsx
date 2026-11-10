@@ -4,6 +4,8 @@ import {useT} from "@/lib/i18n/locale-provider";
 
 import {createContext, type ReactNode, useContext, useEffect, useId, useRef, useState,} from "react";
 import {FieldErrorFeedback} from "./error-feedback";
+import {focusFormError} from "./focus-form-error";
+import styles from "./field.module.css";
 import ui from "./surface.module.css";
 
 const FieldContext = createContext<{
@@ -23,6 +25,7 @@ export function Field({
                         hint,
                         error,
                         required,
+                        reserveFeedbackSpace = false,
                       }: {
   label: string;
   icon?: ReactNode;
@@ -30,6 +33,7 @@ export function Field({
   hint?: string;
   error?: string;
   required?: boolean;
+  reserveFeedbackSpace?: boolean;
 }) {
   const uiText = useT();
   const id = useId();
@@ -43,7 +47,7 @@ export function Field({
   }, []);
   const visibleError = error || validationError;
   const describedBy =
-    [hint && `${id}-hint`, visibleError && `${id}-error`]
+    [hint && (!reserveFeedbackSpace || !visibleError) && `${id}-hint`, visibleError && `${id}-error`]
       .filter(Boolean)
       .join(" ") || undefined;
 
@@ -74,11 +78,8 @@ export function Field({
           setValidationError(message);
           input.setAttribute("aria-invalid", "true");
           input.setAttribute("aria-describedby", `${id}-error`);
-          input.form
-            ?.querySelector<HTMLElement>(
-              "input:invalid, textarea:invalid, select:invalid",
-            )
-            ?.focus();
+          const first = input.form?.querySelector<HTMLElement>("input:invalid, textarea:invalid, select:invalid");
+          focusFormError(first ?? input);
         }}
         onInput={(event) => {
           setValidationError("");
@@ -102,12 +103,16 @@ export function Field({
           </span>
           {children}
         </label>
-        {hint && (
+        {reserveFeedbackSpace ? <div className={styles.feedbackSpace}>
+          {visibleError ? <FieldErrorFeedback id={`${id}-error`} messages={[visibleError]}/>
+            : hint ? <p id={`${id}-hint`} className="field-hint">{hint}</p> : null}
+        </div> : <>{hint && (
           <p id={`${id}-hint`} className="field-hint">
             {hint}
           </p>
         )}
         <FieldErrorFeedback id={`${id}-error`} messages={visibleError ? [visibleError] : []}/>
+        </>}
       </div>
     </FieldContext.Provider>
   );

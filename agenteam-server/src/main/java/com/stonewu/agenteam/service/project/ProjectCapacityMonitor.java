@@ -24,7 +24,7 @@ public final class ProjectCapacityMonitor {
         this.stopped = stopped;
     }
 
-    public record Usage(long bytes, long largest, int entries) {
+    public record Usage(long bytes, long largest, long entries) {
         public boolean increasedFrom(Usage before) {
             return bytes > before.bytes || largest > before.largest || entries > before.entries;
         }
@@ -55,10 +55,10 @@ public final class ProjectCapacityMonitor {
                 throw failure;
             }
         });
-        return new Usage(sizes[0], sizes[1], (int) Math.min(Integer.MAX_VALUE, sizes[2]));
+        return new Usage(sizes[0], sizes[1], sizes[2]);
     }
 
     public boolean exceeded(Usage usage) {
-        return usage.bytes > settings.workspaceBytes() || usage.largest > settings.fileBytes() || usage.entries > settings.maximumFiles() * 2;
+        return usage.bytes > settings.workspaceBytes() || usage.largest > settings.fileBytes() || usage.entries > settings.maximumFiles() * 2L;
     }
 }

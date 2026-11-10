@@ -27,7 +27,7 @@ public final class WorkspaceArchive {
         }
         Files.createDirectories(target);
         long total = 0;
-        int count = 0;
+        long count = 0;
         try (var archive = new TarArchiveInputStream(
             new BoundedInput(stream, settings.workspaceBytes() + settings.maximumFiles() * 16384L, control))) {
             var entry = archive.getNextEntry();
@@ -49,7 +49,7 @@ public final class WorkspaceArchive {
                     || !(entry.getLinkFlag() == TarConstants.LF_DIR || entry.getLinkFlag() == TarConstants.LF_NORMAL || entry.getLinkFlag() == TarConstants.LF_OLDNORM)) {
                     throw WorkspacePaths.invalid();
                 }
-                if (++count > settings.maximumFiles() * 2 || entry.getSize() < 0 || entry.getSize() > settings.fileBytes()) {
+                if (++count > settings.maximumFiles() * 2L || entry.getSize() < 0 || entry.getSize() > settings.fileBytes()) {
                     throw WorkspacePaths.capacity();
                 }
                 Path path = WorkspacePaths.resolve(target, logical, false);

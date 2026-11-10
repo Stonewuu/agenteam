@@ -39,7 +39,7 @@ public class FileContentStorage {
     }
 
     public Stored write(String enterprise, InputStream input, long limit) {
-        if (!enterprise.matches("[A-Za-z0-9_-]{1,100}") || limit < 1 || limit > 100L * 1024 * 1024) {
+        if (!enterprise.matches("[A-Za-z0-9_-]{1,100}") || limit < 1) {
             throw new IllegalArgumentException("文件存储范围不正确");
         }
         String key = enterprise + "/" + UUID.randomUUID() + ".data";
@@ -102,7 +102,7 @@ public class FileContentStorage {
             int read;
             while ((read = input.read(buffer)) >= 0) {
                 size += read;
-                if (size > 100L * 1024 * 1024) {
+                if (size > file.sizeBytes()) {
                     throw FileStorageKeys.unavailable();
                 }
                 digest.update(buffer, 0, read);

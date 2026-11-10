@@ -61,6 +61,9 @@ public class CommandResultCache {
         }
     }
 
+    private record Cleanup(int removed, long reservedBytes) {
+    }
+
     private final CommandResultSettings settings;
     private final WorkspaceSettings workspace;
     private final ObjectMapper json;
@@ -204,8 +207,8 @@ public class CommandResultCache {
             if (Files.exists(recordPath(area, call), LinkOption.NOFOLLOW_LINKS)) {
                 throw new ApiException(HttpStatus.CONFLICT, "COMMAND_RESULT_EXISTS", "此命令结果已经登记，请先核实原执行结果。");
             }
-            long reserved = 2L * workspace.fileBytes();
-            cleanLocked(area, protectedScopes, reserved, 1);
+            // 大文件设置不要求命令一定输出同样多的内容，实际输出仍由容量监控检查。
+            long reserved = cleanLocked(area, protectedScopes, 2L * workspace.fileBytes(), 1).reservedBytes();
             Path directory = area.files().resolve(PREFIX).resolve(call);
             WorkspacePaths.requireInside(area.data(), directory);
             Files.createDirectories(directory);
@@ -274,11 +277,11 @@ public class CommandResultCache {
             return 0;
         }
         try (var lock = lock(area, control)) {
-            return cleanLocked(area, protectedScopes, 0, 0);
+            return cleanLocked(area, protectedScopes, 0, 0).removed();
         }
     }
 
-    private int cleanLocked(Area area, Set<String> protectedScopes, long reserve, int additional) throws IOException {
+    private Cleanup cleanLocked(Area area, Set<String> protectedScopes, long reserve, int additional) throws IOException {
         var entries = new ArrayList<>(entries(area));
         entries.sort(Comparator.comparingLong(entry -> Math.max(entry.completedAt(), entry.accessedAt())));
         long used = diskBytes(area.data());
@@ -305,11 +308,11 @@ public class CommandResultCache {
             count--;
             removed++;
         }
-        if (reserve > 0 && (used + reserve > settings.maximumBytes() || count + additional > settings.maximumEntries())) {
+        if (reserve > 0 && (used >= settings.maximumBytes() || count + additional > settings.maximumEntries())) {
             throw new ApiException(HttpStatus.INSUFFICIENT_STORAGE, "COMMAND_RESULT_CAPACITY",
                 "命令结果缓存空间不足，现有任务仍在使用的输出已保留，请稍后重试或联系管理员调整容量。");
         }
-        return removed;
+        return new Cleanup(removed, Math.max(0, Math.min(reserve, settings.maximumBytes() - used)));
     }
 
     private long size(Area area, Entry entry) throws IOException {

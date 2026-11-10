@@ -72,7 +72,7 @@ public final class SandboxArchiveMapper {
             while ((entry = archive.getNextEntry()) != null) {
                 control.requireActive();
                 String name = entry.getName();
-                if (!names.add(name) || names.size() > settings.maximumFiles() * 2 + 10 || name.startsWith("/")
+                if (!names.add(name) || names.size() > settings.maximumFiles() * 2L + 10 || name.startsWith("/")
                     || name.contains("\\") || name.contains("\0")) {
                     throw WorkspacePaths.invalid();
                 }

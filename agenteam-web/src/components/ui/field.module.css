@@ -1,0 +1,9 @@
+.feedbackSpace {
+  min-block-size: 3.2em;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.feedbackSpace > p {
+  margin: 0;
+}

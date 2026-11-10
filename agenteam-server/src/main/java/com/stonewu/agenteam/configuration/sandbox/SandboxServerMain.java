@@ -23,6 +23,7 @@ import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceRunner;
 import com.stonewu.agenteam.service.workspace.SandboxCapacity;
 import com.stonewu.agenteam.service.workspace.CommandResultCache;
+import com.stonewu.agenteam.service.workspace.WorkspaceLimitsStore;
 import com.sun.net.httpserver.HttpServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,32 +53,33 @@ public final class SandboxServerMain {
             }
             Path root = Path.of(value("AGENTEAM_SANDBOX_SERVER_ROOT", ".agenteam/sandbox-server")).toAbsolutePath()
                 .normalize();
+            var userSettings = new UserWorkspaceSettings(
+                value("AGENTEAM_USER_WORKSPACES_ROOT", root.resolve("user-workspaces").toString()),
+                value("AGENTEAM_USER_WORKSPACES_HOST_ROOT", ""));
+            var json = new ObjectMapper();
+            var layout = new ProjectWorkspaceLayout(userSettings, json);
+            var limits = new WorkspaceLimitsStore(layout);
             var settings = new WorkspaceSettings(root.toString(),
                 value("AGENTEAM_SANDBOX_IMAGE", "agenteam/sandbox-office:local"), true,
                 number("AGENTEAM_SANDBOX_WORKSPACE_MB", 512), number("AGENTEAM_SANDBOX_FILE_MB", 20),
                 number("AGENTEAM_SANDBOX_MAXIMUM_FILES", 2000), number("AGENTEAM_SANDBOX_MEMORY_MB", 2048),
                 number("AGENTEAM_SANDBOX_CPUS", 1), number("AGENTEAM_SANDBOX_PROCESS_LIMIT", 128),
-                number("AGENTEAM_SANDBOX_TIMEOUT_SECONDS", 1800), value("AGENTEAM_SANDBOX_NETWORK", "none"));
+                number("AGENTEAM_SANDBOX_TIMEOUT_SECONDS", 1800), value("AGENTEAM_SANDBOX_NETWORK", "none"), limits);
             var runtime = new SandboxRuntimeSettings(number("AGENTEAM_SANDBOX_TEMPORARY_MB", 256),
                 number("AGENTEAM_SANDBOX_MAXIMUM_CONCURRENT", 2), value("AGENTEAM_SANDBOX_LOCAL_MOUNT_ROOT", ""),
                 value("AGENTEAM_SANDBOX_HOST_MOUNT_ROOT", ""), value("AGENTEAM_SANDBOX_CAPACITY_ROOT", ""),
                 value("AGENTEAM_SANDBOX_CGROUP_PARENT", ""));
-            var userSettings = new UserWorkspaceSettings(
-                value("AGENTEAM_USER_WORKSPACES_ROOT", root.resolve("user-workspaces").toString()),
-                value("AGENTEAM_USER_WORKSPACES_HOST_ROOT", ""));
             var docker = new DockerWorkspaceCommands(userSettings);
             docker.require(List.of("image", "inspect", settings.image()));
             var capacity = new SandboxCapacity(runtime);
             var executions = new SandboxExecutionService(new DockerWorkspaceRunner(settings, docker, runtime, capacity),
                 settings, new ObjectMapper(), root, runtime.maximumConcurrent() * 2);
-            var json = new ObjectMapper();
-            var layout = new ProjectWorkspaceLayout(userSettings, json);
             var idleSettings = new SandboxLifecycleSettings(number("AGENTEAM_SANDBOX_IDLE_SECONDS", 1800),
                 number("AGENTEAM_SANDBOX_IDLE_SCAN_SECONDS", 30), number("AGENTEAM_SANDBOX_USAGE_STALE_SECONDS", 60),
                 number("AGENTEAM_SANDBOX_STOP_SECONDS", 10), number("AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS", 4));
             var containers = new UserContainerRuntime(settings, runtime, layout, docker, idleSettings);
             var commandCache = new CommandResultCache(new CommandResultSettings(number("AGENTEAM_COMMAND_RESULTS_RETENTION_DAYS", 7),
-                number("AGENTEAM_COMMAND_RESULTS_MAXIMUM_MB", 256), number("AGENTEAM_COMMAND_RESULTS_MAXIMUM_ENTRIES", 1000)),
+                number("AGENTEAM_COMMAND_RESULTS_MAXIMUM_MB", 256), number("AGENTEAM_COMMAND_RESULTS_MAXIMUM_ENTRIES", 1000), limits),
                 settings, json, Clock.systemUTC());
             var commands = new ProjectCommandProcess(layout, docker, json, commandCache);
             var lifecycle = new UserSandboxLifecycle(layout, new UserSandboxRegistry(layout), containers, commands,

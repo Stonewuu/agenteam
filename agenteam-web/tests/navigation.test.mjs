@@ -49,6 +49,9 @@ test("个人设置重新登录后仍回到之前的分区", () => {
 });
 
 test("平台管理返回位置仅供系统超级管理员使用", () => {
+  const settings = navigation("?returnTo=%2Fmanagement%2Fworkspace-settings");
+  assert.equal(settings.requestedDestination({...user, superAdmin: true}), "/management/workspace-settings");
+  assert.equal(settings.requestedDestination({...user, superAdmin: false}), "/open?enterprise=team-two&path=%2Fworkspace");
   const routes = navigation("?returnTo=%2Fmanagement%2Fdemo");
   assert.equal(routes.requestedDestination({ ...user, superAdmin: true }), "/open?enterprise=team-two&path=%2Fworkspace");
   for (const item of extension.editionNavigationExtension.platform) {

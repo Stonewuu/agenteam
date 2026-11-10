@@ -6,6 +6,7 @@ import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {type RefObject, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {fieldErrorMessages, validationMessage} from "@/lib/form-errors";
 import {IconAlertCircle} from "./icons";
+import {focusFormError} from "./focus-form-error";
 import {Collapsible, CollapsibleContent} from "./shadcn/collapsible";
 import styles from "./surface.module.css";
 
@@ -67,11 +68,9 @@ export function ErrorFeedback({error, fieldErrors = {}, requestId, onFieldChange
         .find((element) => element.matches('input:not([type="hidden"]), textarea, select, button, [tabindex]')
           && !element.matches(':disabled, [aria-hidden="true"]') && element.getClientRects().length > 0);
       const target = invalid ?? feedback;
-      target?.focus({preventScroll: true});
-      target?.scrollIntoView({
-        block: "nearest",
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
-      });
+      if (target) {
+        focusFormError(target);
+      }
     });
     return () => cancelAnimationFrame(frame);
   }, [feedbackKey, requestId]);

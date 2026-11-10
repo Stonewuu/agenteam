@@ -22,6 +22,7 @@ export function requestedDestination(user: IdentityUser) {
     try {
       const destination = new URL(value, window.location.origin);
       const platformDestination = user.superAdmin && (destination.pathname === "/management/announcements"
+        || destination.pathname === "/management/workspace-settings"
         || editionNavigationExtension.platform.some((item) => item.path === destination.pathname
           && (!item.capability || user.capabilities.includes(item.capability))));
       if (destination.origin === window.location.origin && (platformDestination

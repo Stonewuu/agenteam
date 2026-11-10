@@ -367,6 +367,13 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>application-build-info</id>
+            <goals><goal>build-info</goal></goals>
+            <configuration><time>off</time></configuration>
+          </execution>
+        </executions>
         <configuration>
           <classifier>exec</classifier>
           <mainClass>com.stonewu.agenteam.AgenteamApplication</mainClass>

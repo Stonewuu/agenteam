@@ -1,0 +1,42 @@
+.page {
+  width: 100%;
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+.form {
+  display: grid;
+  gap: 28px;
+  padding: 8px 4px 28px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.note {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 16px 0 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.actions > button {
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}

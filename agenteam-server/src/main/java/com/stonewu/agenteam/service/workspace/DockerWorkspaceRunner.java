@@ -132,7 +132,7 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
             Files.writeString(privateDirectory.resolve("sandbox.pending"), scope, StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
             docker.require(List.of("volume", "create", "--driver=local", "--opt=type=tmpfs", "--opt=device=tmpfs",
-                    "--opt=o=rw,nosuid,nodev,size=" + settings.workspaceMb() + "m,uid=65534,gid=65534,mode=0700,nr_inodes=" + settings.maximumFiles() * 4,
+                    "--opt=o=rw,nosuid,nodev,size=" + settings.workspaceMb() + "m,uid=65534,gid=65534,mode=0700,nr_inodes=" + settings.maximumFiles() * 4L,
                     "--label=com.stonewu.agenteam.managed=true", "--label=com.stonewu.agenteam.workspace=" + scope, volume),
                 remaining(commandDeadline), control);
             Files.writeString(scripts.resolve("launch.sh"),

@@ -123,6 +123,20 @@ class CommandResultCacheTest {
             assertTrue(cache.contains(area, "running"));
             assertFalse(cache.contains(area, "first"));
             assertFalse(cache.contains(area, "second"));
+
+            var largeFiles = new WorkspaceSettings(root.toString(), "sandbox:test", true, 8192, 4096, 200,
+                512, 1, 32, 30, "none");
+            var smallCache = new CommandResultCache(new CommandResultSettings(7, 4, 100), largeFiles, json, clock);
+            var smallArea = new CommandResultCache.Area(root.resolve("small-cache"), root.resolve("small-control"), "project");
+            smallCache.prepare(smallArea, "small-output", Set.of("project"), control);
+            smallCache.capture(smallArea, "small-output", control, path -> {
+                Files.writeString(path.resolve("stdout.txt"), "短命令输出");
+                Files.writeString(path.resolve("stderr.txt"), "");
+            });
+            smallCache.prepare(smallArea, "next-output", Set.of("project"), control);
+            assertTrue(smallCache.contains(smallArea, "small-output"));
+            assertEquals("COMMAND_RESULT_CAPACITY", assertThrows(ApiException.class,
+                () -> smallCache.prepare(smallArea, "no-room", Set.of("project"), control)).code());
         }
     }
 

@@ -1,0 +1,31 @@
+.version {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  color: var(--muted-foreground);
+  background: var(--surface-soft);
+}
+
+.retry:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

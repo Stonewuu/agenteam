@@ -1,23 +1,67 @@
 package com.stonewu.agenteam.service.file;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.BeforeEach;
+import com.stonewu.agenteam.support.TestOutputPaths;
+import com.stonewu.agenteam.model.file.entity.FileRecord;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.UUID;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * 连续批次会继续检查后面的文件，不能总被前面的有效文件挡住。
  */
 class FileContentStorageTest {
-    @TempDir
     Path root;
+
+    @BeforeEach
+    void prepare() throws Exception {
+        root = Files.createDirectories(TestOutputPaths.path("file-content-storage", UUID.randomUUID().toString()));
+    }
+
+    @Test
+    void workspaceExportsCanUseLimitsAboveOneHundredMegabytes() throws Exception {
+        var storage = new FileContentStorage(root.resolve(".temporary").toString(), new LocalFileObjectStore(root.toString()));
+        var saved = storage.write("enterprise", new ByteArrayInputStream(new byte[]{1, 2, 3}), 4096L * 1024 * 1024);
+        assertEquals(3, saved.size());
+        var file = mock(FileRecord.class);
+        var objects = mock(FileObjectStore.class);
+        String key = "enterprise/" + UUID.randomUUID() + ".data";
+        long size = 101L * 1024 * 1024;
+        when(file.enterpriseId()).thenReturn("enterprise");
+        when(file.storageKey()).thenReturn(key);
+        when(file.sizeBytes()).thenReturn(size);
+        when(objects.open(key)).thenReturn(new InputStream() {
+            private long remaining = size;
+
+            @Override
+            public int read() {
+                return remaining-- > 0 ? 0 : -1;
+            }
+
+            @Override
+            public int read(byte[] bytes, int offset, int length) {
+                if (remaining == 0) {
+                    return -1;
+                }
+                int count = (int) Math.min(remaining, length);
+                Arrays.fill(bytes, offset, offset + count, (byte) 0);
+                remaining -= count;
+                return count;
+            }
+        });
+        assertEquals(size, new FileContentStorage(root.resolve(".temporary").toString(), objects).verify(file).size());
+    }
 
     @Test
     void referencedFilesDoNotPreventLaterOrphansFromBeingCleaned() throws Exception {
