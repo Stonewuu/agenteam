@@ -75,7 +75,7 @@ export function omitRepeatedPayloadFields(source: string, repeatedFields?: Paylo
 }
 
 /** 失败摘要只采用已公开的错误说明，完整内容继续保留在调用详情中。 */
-export function toolPayloadFailure(source: string): string | null {
+export function toolPayloadFailure(source: string, localize: (message: string) => string): string | null {
   const value = parseToolPayload(source);
   let message: string | null = null;
   if (typeof value === "string" && !/^[\s]*[\[{]/.test(value)) {
@@ -88,8 +88,10 @@ export function toolPayloadFailure(source: string): string | null {
   if (!message?.trim()) {
     return null;
   }
-  const characters = Array.from(message.trim());
-  return characters.length > 240 ? characters.slice(0, 240).join("") + "…" : message.trim();
+  // 先翻译完整提示，再限制卡片长度，避免截断后无法匹配包含参数的消息。
+  const translated = localize(message.trim());
+  const characters = Array.from(translated);
+  return characters.length > 240 ? characters.slice(0, 240).join("") + "…" : translated;
 }
 
 /** 只调整合法 JSON 的空白，保留数值、转义字符和重复字段的原文。 */

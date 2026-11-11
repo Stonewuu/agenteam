@@ -1,5 +1,6 @@
 "use client";
 
+import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {localizeSavedToolLabel} from "@/features/plugin/lib/tool-display-name";
 
 import {useT} from "@/lib/i18n/locale-provider";
@@ -252,7 +253,7 @@ function RenderBlock({block, context, grouped = false}: {
       subject={file?.file && <ConversationFileLink file={file.file} available={completed}/>}
       preview={file?.image && file.file && completed &&
         <ConversationFileImage file={file.file} width={file.width} height={file.height} revision={file.revision}/>}
-      notice={status === "failed" ? toolPayloadFailure(block.result) : null}
+      notice={status === "failed" ? toolPayloadFailure(block.result, (message) => localizeUiMessage(message, uiText)) : null}
       pendingIds={pendingToolConfirmationIds([block], context.approvals)}>
       <ToolCallDetails input={confirmations.length ? "" : block.input} result={block.result}
                        inputSource={contentUrl ? {

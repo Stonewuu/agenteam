@@ -14,6 +14,7 @@ import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {useApiPage, useApiQuery} from "@/lib/http/use-api-query";
 import {useT} from "@/lib/i18n/locale-provider";
+import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {channelDeliveryBase, deliveryInProgress, type ChannelDelivery, type ChannelDeliveryDetail} from "../types/channel-delivery";
 import styles from "./channel-delivery.module.css";
 import ui from "@/components/ui/surface.module.css";
@@ -52,7 +53,7 @@ export function ChannelDeliveryPanel({enterpriseId, system = false, connectionId
           <div className={styles.heading}><ChannelIdentity name={value.connectionName} providerName={value.providerName} compact/>
             <ChannelDeliveryStatus status={value.status}/></div>
           <p className={styles.meta}><span><IconUserCircle size={16}/>{value.recipientName}</span><span><IconClock size={15}/><EnterpriseDateTime value={value.createdAt}/></span></p>
-          {value.errorSummary && <p className={styles.reason}><IconAlertCircle size={16}/>{value.errorSummary}</p>}
+          {value.errorSummary && <p className={styles.reason}><IconAlertCircle size={16}/>{localizeUiMessage(value.errorSummary, t)}</p>}
           <div className={styles.recordFooter}><Button className={ui.button} onClick={() => setSelected(value.id)}>{t("查看发送详情")}<IconArrowRight size={15}/></Button></div>
         </article>)}</div>
       </QueryState>
@@ -88,7 +89,7 @@ export function ChannelDeliveryDetailView({base, id, onBack, onChanged, showHead
         <section className={styles.record}><div className={styles.heading}>
           <ChannelIdentity name={value.connectionName} providerName={value.providerName} detail={value.recipientName}/>
           <ChannelDeliveryStatus status={value.status}/></div>
-          {value.errorSummary && <p className={styles.reason}><IconAlertCircle size={16}/>{value.errorSummary}</p>}
+          {value.errorSummary && <p className={styles.reason}><IconAlertCircle size={16}/>{localizeUiMessage(value.errorSummary, t)}</p>}
           <dl className={styles.facts}><div><dt>{t("创建时间")}</dt><dd><EnterpriseDateTime value={value.createdAt}/></dd></div>
             {value.acceptedAt && <div><dt>{t("平台接受时间")}</dt><dd><EnterpriseDateTime value={value.acceptedAt}/></dd></div>}
             {value.nextAttemptAt && <div><dt>{t("下次尝试时间")}</dt><dd><EnterpriseDateTime value={value.nextAttemptAt}/></dd></div>}</dl>

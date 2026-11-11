@@ -62,6 +62,32 @@ test("后端历史错误随语言双向切换，动态输入中的中文和占�
   assert.equal(localizeUiMessage("用户自定义说明，未提供翻译。", english), "用户自定义说明，未提供翻译。");
 });
 
+test("工具失败卡片翻译完整错误后再截短，原始结果和普通文件正文保持原样", () => {
+  const {toolPayloadFailure} = loadSource("features/plugin/lib/tool-payload-format");
+  const {selectToolCallDetails} = loadSource("features/plugin/lib/tool-call-details");
+  for (const key of ["workspace.command.capacityExceeded", "workspace.command.timedOut"]) {
+    const original = chinese(key);
+    const saved = JSON.stringify({isError: true, content: original});
+    const summary = toolPayloadFailure(saved, message => localizeUiMessage(message, english));
+    assert.equal(summary, english(key));
+    assert.equal(toolPayloadFailure(JSON.stringify({isError: true, content: summary}),
+      message => localizeUiMessage(message, chinese)), original);
+    assert.equal(selectToolCallDetails("", saved).fields.find(field => field.key === "content").value, original);
+    assert.equal(JSON.parse(saved).content, original);
+  }
+  const name = "用户文件".repeat(90) + "{0} $1";
+  const source = `未找到版本 ${name} 的内容加密密钥，请检查 agenteam.security.encryption-keys 和 agenteam.security.active-encryption-key。`;
+  const translated = localizeUiMessage(source, english);
+  assert.ok(translated.startsWith(`Content encryption key version ${name}`));
+  assert.equal(toolPayloadFailure(JSON.stringify({error: {message: source}}),
+    message => localizeUiMessage(message, english)), Array.from(translated).slice(0, 240).join("") + "…");
+  assert.equal(toolPayloadFailure('{"isError":true,"content":"用户定义的具体失败原因"}',
+    message => localizeUiMessage(message, english)), "用户定义的具体失败原因");
+  assert.equal(toolPayloadFailure("{}", message => localizeUiMessage(message, english)), null);
+  const plain = selectToolCallDetails('{"path":"work/notes.txt"}', '{"content":"命令执行超时。"}').fields;
+  assert.equal(plain.find(field => field.key === "content" && field.part === "result").error, false);
+});
+
 test("请求优先沿用页面选择的语言，未选择时读取浏览器偏好", () => {
   const {localeFromHeaders} = loadSource("lib/i18n/locales");
   assert.equal(localeFromHeaders(new Headers({cookie: "SESSION=test; agenteam-locale=en", "accept-language": "zh-CN"})), "en");

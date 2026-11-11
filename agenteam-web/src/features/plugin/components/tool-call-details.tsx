@@ -154,7 +154,8 @@ function DetailField({field}: { field: ToolDetailField }) {
     <div className={styles.value}>{field.key === "stdout" && text === "" ?
       <span className={styles.notice}>{uiText("没有输出")}</span> : field.code && text !== undefined ? (
         <pre className={styles.code} tabIndex={0} aria-label={uiText(field.label)}>{text || uiText("（空内容）")}</pre>
-      ) : <ToolPayloadValue value={field.value} field={field.key} columns={field.columns} expandDetails/>}</div>
+      ) : <ToolPayloadValue value={field.error && text !== undefined ? localizeUiMessage(text, uiText) : field.value}
+                            field={field.key} columns={field.columns} expandDetails/>}</div>
   </section>;
 }
 

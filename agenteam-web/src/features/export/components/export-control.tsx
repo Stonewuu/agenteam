@@ -1,6 +1,7 @@
 "use client";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {localizeUiMessage} from "@/lib/i18n/ui-message";
 import {localizeCatalog} from "@/lib/i18n/translate";
 
 import {Button} from "@/components/ui/button";
@@ -127,7 +128,7 @@ function ExportResult({enterpriseId, id, onNew}: { enterpriseId: string; id: str
     {value?.kind === "export" &&
       <div className={ui.form}><p role="status">{localizeCatalog(statuses, uiText)[value.status]}</p>
         {waiting && <p className={ui.description}>{uiText("可以关闭此窗口，稍后查看上次导出。")}</p>}
-        {value.errorSummary && <p className={ui.error}>{value.errorSummary}</p>}
+        {value.errorSummary && <p className={ui.error}>{localizeUiMessage(value.errorSummary, uiText)}</p>}
         {value.status === "expired" && <p className={ui.description}>{uiText("如需文件，请重新导出。")}</p>}
         {value.rowCount !== null && <p
           className={ui.description}>{uiText("共 ")}{value.rowCount.toLocaleString(uiText.formatLocale)}{uiText(" 行")}</p>}

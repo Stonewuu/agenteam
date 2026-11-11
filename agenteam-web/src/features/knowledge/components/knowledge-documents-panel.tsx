@@ -1,6 +1,7 @@
 "use client";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {localizeUiMessage} from "@/lib/i18n/ui-message";
 
 import {Button} from "@/components/ui/button";
 
@@ -82,7 +83,7 @@ export function KnowledgeDocumentsPanel({enterpriseId, resourceId, editable, sea
             <div className={styles.document}>
               <strong>{doc.name}</strong><span>{formatFileSize(doc.sizeBytes, uiText)} · <EnterpriseDateTime
               value={doc.updatedAt} dateOnly/></span>{doc.errorSummary &&
-              <p className={ui.error}>{doc.errorSummary}</p>}</div>
+              <p className={ui.error}>{localizeUiMessage(doc.errorSummary, uiText)}</p>}</div>
             <span
               className={`badge ${doc.status === "failed" ? "red" : doc.status === "ready" ? "mint" : "amber"}`}>{uiText(documentStatus(doc))}</span>
             <div className={styles.documentActions}>

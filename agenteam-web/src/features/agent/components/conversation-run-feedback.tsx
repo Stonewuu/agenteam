@@ -33,7 +33,7 @@ export function ConversationRunFeedback({enterprise, message, latestRun, busy, e
   const reason = attempt?.errorSummary || (run?.currentAttemptNo === message.attemptNo ? run.errorMessage : null)
     || (message.status === "cancelled" ? uiText("已停止。") : message.status === "failed" ? uiText("本次执行未能完成，请稍后重试。") : "");
   return <div className={styles.recovery} aria-label={uiText("执行结果")}>
-    <p>{reason}</p>
+    <p>{localizeUiMessage(reason, uiText)}</p>
     {query.error && <p role="alert">{localizeUiMessage(query.error ?? "", uiText)}<Button type="button"
                                                                                           onClick={query.retry}>{uiText("重新加载")}</Button>
     </p>}
