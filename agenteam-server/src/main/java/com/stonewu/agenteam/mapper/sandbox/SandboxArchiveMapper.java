@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -116,7 +118,7 @@ public final class SandboxArchiveMapper {
             }
         }
         if (manifest == null) {
-            throw new IOException("执行数据缺少描述信息");
+            throw new IOException(Messages.text("error.sandbox.sandboxArchiveMapper.read.1"));
         }
         for (String area : areas) {
             Files.createDirectories(directory.resolve(area));

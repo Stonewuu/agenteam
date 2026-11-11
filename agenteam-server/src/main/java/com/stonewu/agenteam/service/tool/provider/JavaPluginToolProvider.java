@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool.provider;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.service.plugin.JavaPluginRegistry;
@@ -60,7 +62,7 @@ public class JavaPluginToolProvider implements ToolProvider {
         var fixed = registry.tools(installation).stream().filter(value -> value.name().equals(tool.name())
             && value.schemaHash().equals(tool.schemaHash())).findFirst();
         if (fixed.isEmpty()) {
-            throw new IllegalStateException("Java 插件工具与安装时的定义不一致");
+            throw new IllegalStateException(Messages.text("error.tool.javaPluginToolProvider.invoke.1"));
         }
         ObjectNode request = json.tree(Map.of("mode", "invoke", "tool", tool.name(), "arguments", arguments,
             "configuration", source.configuration().getOrDefault("configuration", Map.of()))).deepCopy();

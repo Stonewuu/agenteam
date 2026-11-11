@@ -1,0 +1,562 @@
+{
+  "error.tool.commandResultSettings.init.1": {
+    "zh-CN": "命令结果缓存的期限或容量配置超出允许范围",
+    "en": "Command result cache lifetime or capacity is outside the allowed range."
+  },
+  "error.tool.sandboxLifecycleSettings.init.1": {
+    "zh-CN": "沙盒空闲回收时间配置不正确",
+    "en": "The sandbox idle timeout is invalid."
+  },
+  "error.tool.sandboxRuntimeSettings.init.1": {
+    "zh-CN": "沙盒临时空间、并发数或主机目录映射不正确",
+    "en": "The sandbox temporary storage, concurrency, or host directory mapping is invalid."
+  },
+  "error.tool.sandboxRuntimeSettings.init.2": {
+    "zh-CN": "沙盒共享执行目录或主机资源分组不正确",
+    "en": "The shared sandbox execution directory or host resource group is invalid."
+  },
+  "error.tool.sandboxRuntimeSettings.hostPath.1": {
+    "zh-CN": "沙盒输入目录不在配置的主机挂载范围内",
+    "en": "The sandbox input directory is outside the configured host mounts."
+  },
+  "error.tool.toolResultSettings.init.1": {
+    "zh-CN": "工具结果容量配置不正确",
+    "en": "The tool result capacity configuration is invalid."
+  },
+  "error.tool.userWorkspaceSettings.init.1": {
+    "zh-CN": "用户工作空间目录配置不正确",
+    "en": "The user workspace directory configuration is invalid."
+  },
+  "error.tool.userWorkspaceSettings.hostPath.1": {
+    "zh-CN": "用户文件不在配置的挂载目录内",
+    "en": "User files are outside the configured mount directory."
+  },
+  "error.tool.workspaceSettings.init.1": {
+    "zh-CN": "工作空间或容器配置超出允许范围",
+    "en": "The workspace or container configuration is outside the allowed range."
+  },
+  "error.tool.toolCallMapper.forStep.1": {
+    "zh-CN": "同一步骤存在重复的工具调用记录",
+    "en": "The step contains duplicate tool call records."
+  },
+  "error.tool.toolCallMapper.resultsForConversation.1": {
+    "zh-CN": "结果文件查询数量不正确",
+    "en": "The result file query count is invalid."
+  },
+  "error.tool.toolCallMapper.waitingInput.1": {
+    "zh-CN": "本次问题已经不能等待回答",
+    "en": "This question can no longer wait for an answer."
+  },
+  "error.tool.toolCallMapper.retryRead.1": {
+    "zh-CN": "本次只读请求已经不能重新执行",
+    "en": "This read-only request can no longer be retried."
+  },
+  "error.tool.toolCallMapper.start.1": {
+    "zh-CN": "本次工具操作已经开始或结束",
+    "en": "This tool operation has already started or ended."
+  },
+  "error.tool.toolCallMapper.submitted.1": {
+    "zh-CN": "本次工具操作已失去执行资格",
+    "en": "This tool operation is no longer eligible to execute."
+  },
+  "error.tool.toolCallMapper.resumeQuery.1": {
+    "zh-CN": "工具结果查询已由其他执行处理",
+    "en": "Another execution has handled the tool result query."
+  },
+  "error.tool.toolCallMapper.queried.1": {
+    "zh-CN": "工具结果查询已达到上限或当前执行不能继续",
+    "en": "The tool result query limit was reached, or the current execution cannot continue."
+  },
+  "error.tool.toolLogMapper.list.1": {
+    "zh-CN": "调用日志读取必须指定当前权限范围",
+    "en": "Call log queries require the current permission scope."
+  },
+  "error.tool.executionToolCatalog.list.1": {
+    "zh-CN": "本次任务可用工具超过允许数量。",
+    "en": "The task has too many available tools."
+  },
+  "error.tool.executionToolCatalog.tool.1": {
+    "zh-CN": "此工具只在协作任务中可用。",
+    "en": "This tool is only available in collaboration tasks."
+  },
+  "error.tool.executionToolCatalog.tool.2": {
+    "zh-CN": "本次流程节点使用的工具已不可用。",
+    "en": "The tool used by this workflow step is unavailable."
+  },
+  "error.tool.executionToolCatalog.requireCurrent.1": {
+    "zh-CN": "本次任务使用的工具已不可用。",
+    "en": "The tool used by this task is unavailable."
+  },
+  "error.tool.nativeToolContentService.open.1": {
+    "zh-CN": "工具内容已经更新，请重新展开查看。",
+    "en": "The tool content has been updated. Reopen the details."
+  },
+  "error.tool.nativeToolContentService.unavailable.1": {
+    "zh-CN": "工具内容不存在或已不可读取。",
+    "en": "The tool content is missing or inaccessible."
+  },
+  "error.tool.builtinToolProvider.invoke.1": {
+    "zh-CN": "内置工具缺少已经验证的执行上下文",
+    "en": "The built-in tool is missing a verified execution context."
+  },
+  "error.tool.builtinToolProvider.query.1": {
+    "zh-CN": "工具查询缺少宿主上下文",
+    "en": "The tool query is missing its host context."
+  },
+  "error.tool.builtinToolProvider.unavailable.1": {
+    "zh-CN": "所选工具版本已不可用，请重新检查并发布插件。",
+    "en": "The selected tool version is unavailable. Check and publish the plugin again."
+  },
+  "error.tool.javaPluginToolProvider.invoke.1": {
+    "zh-CN": "Java 插件工具与安装时的定义不一致",
+    "en": "The Java plugin tool does not match its installed definition."
+  },
+  "error.tool.remoteMcpToolProvider.tools.1": {
+    "zh-CN": "远程工具清单包含不应公开的认证内容，无法保存，请检查服务配置。",
+    "en": "The remote tool list contains authentication information that must not be exposed. It cannot be saved. Check the service configuration."
+  },
+  "error.tool.remoteMcpToolProvider.invoke.1": {
+    "zh-CN": "远程工具缺少宿主取消范围",
+    "en": "The remote tool is missing a host cancellation scope."
+  },
+  "error.tool.remoteMcpToolProvider.invoke.2": {
+    "zh-CN": "远程工具结构已经变化，未发送操作，请重新检查并发布。",
+    "en": "The remote tool structure changed. No action was sent. Check and publish the plugin again."
+  },
+  "error.tool.toolProviderRegistry.init.1": {
+    "zh-CN": "工具来源类型重复登记",
+    "en": "Duplicate tool source type registration."
+  },
+  "error.tool.toolProviderRegistry.require.1": {
+    "zh-CN": "本次工具来源已不可用，请联系维护者检查。",
+    "en": "This tool source is unavailable. Ask its maintainer to check it."
+  },
+  "error.tool.sourceToolExecutionService.invoke.1": {
+    "zh-CN": "资料工具名称未登记",
+    "en": "The source tool name is not registered."
+  },
+  "error.tool.toolCallTransactions.prepare.1": {
+    "zh-CN": "工具调用没有有效的关联编号。",
+    "en": "The tool call has no valid reference identifier."
+  },
+  "error.tool.toolCallTransactions.retryRead.1": {
+    "zh-CN": "只有已验证的只读请求可以重新读取",
+    "en": "Only verified read-only requests can be read again."
+  },
+  "error.tool.toolCallTransactions.retryRead.2": {
+    "zh-CN": "当前失败不是可自动重试的临时连接故障",
+    "en": "This failure is not a temporary connection fault eligible for automatic retry."
+  },
+  "error.tool.toolCallTransactions.start.1": {
+    "zh-CN": "工具参数尚未固定保存",
+    "en": "The tool arguments have not been saved as fixed inputs."
+  },
+  "error.tool.toolCallTransactions.start.2": {
+    "zh-CN": "请先等待用户回答当前问题。",
+    "en": "Wait for the user to answer the current question first."
+  },
+  "error.tool.toolCallTransactions.recheckPluginCall.1": {
+    "zh-CN": "插件调用已经结束",
+    "en": "The plugin call has ended."
+  },
+  "error.tool.toolCallTransactions.answerQuestion.1": {
+    "zh-CN": "用户回答不属于当前等待的工具调用",
+    "en": "The user's answer does not belong to the waiting tool call."
+  },
+  "error.tool.toolCallTransactions.answerQuestion.2": {
+    "zh-CN": "未能保存当前问题的回答",
+    "en": "The answer to the current question could not be saved."
+  },
+  "error.tool.toolCallTransactions.verify.1": {
+    "zh-CN": "工具参数已经变化，不能沿用此前确认。",
+    "en": "The tool parameters changed. The previous approval cannot be reused."
+  },
+  "error.tool.toolCallTransactions.unapproved.1": {
+    "zh-CN": "本次外部操作尚未获得有效确认，未发送请求。",
+    "en": "This external action has not received valid approval. No request was sent."
+  },
+  "error.tool.toolCallTransactions.unknown.1": {
+    "zh-CN": "操作可能已经执行，但暂时无法确认结果。请先查询目标系统，不能重复提交相同操作；可以继续其他步骤并向用户说明未确认的部分。",
+    "en": "The operation may have executed, but its result is unconfirmed. Check the target system before submitting the same operation again. You can continue other steps and tell the user which result remains unconfirmed."
+  },
+  "error.tool.toolLogService.validate.1": {
+    "zh-CN": "请选择有效的发起成员。",
+    "en": "Select a valid initiating member."
+  },
+  "error.tool.toolLogService.option.1": {
+    "zh-CN": "请选择有效的筛选条件。",
+    "en": "Select valid filters."
+  },
+  "error.tool.toolPayloadContentService.document.1": {
+    "zh-CN": "内容类型或读取范围不正确。",
+    "en": "The content type or read range is invalid."
+  },
+  "error.tool.toolResultBudget.perCall.1": {
+    "zh-CN": "本轮工具调用过多，请分批处理。",
+    "en": "There are too many tool calls in this turn. Process them in batches."
+  },
+  "error.tool.toolResultDocumentService.open.1": {
+    "zh-CN": "工具尚未返回可读取的内容。",
+    "en": "The tool has not returned readable content yet."
+  },
+  "error.tool.toolResultDocumentService.loadResult.1": {
+    "zh-CN": "结果文件超过当前允许读取的大小。",
+    "en": "The result file exceeds the current read size limit."
+  },
+  "error.tool.toolResultDocumentService.loadResult.2": {
+    "zh-CN": "结果文件与保存时的内容不一致，暂时无法读取。",
+    "en": "The result file differs from its saved content and cannot be read right now."
+  },
+  "error.tool.toolResultDocumentService.loadResult.3": {
+    "zh-CN": "完整结果暂时无法读取，请稍后重试。",
+    "en": "The full results cannot be read right now. Try again later."
+  },
+  "error.tool.toolResultDocumentService.unavailable.1": {
+    "zh-CN": "工具结果不存在或已不能读取。",
+    "en": "The tool result is missing or inaccessible."
+  },
+  "error.tool.toolResultService.prepare.1": {
+    "zh-CN": "工具返回内容超过保存上限，请缩小查询范围或使用分页后继续。",
+    "en": "The tool response exceeds the storage limit. Narrow the query or use pagination before continuing."
+  },
+  "error.tool.toolResultService.prepare.2": {
+    "zh-CN": "文件工具的返回内容超过已分配的大小",
+    "en": "The file tool response exceeds its allocated size."
+  },
+  "error.tool.toolResultService.prepare.3": {
+    "zh-CN": "工具返回内容过多，请缩小查询范围后继续。",
+    "en": "The tool returned too much content. Narrow the query before continuing."
+  },
+  "error.tool.toolSchemaValidation.compile.1": {
+    "zh-CN": "本次执行未能完成，请稍后重试。",
+    "en": "This task did not complete. Please try again later."
+  },
+  "error.tool.toolSchemaValidation.arguments.1": {
+    "zh-CN": "工具参数不符合已发布的要求，未执行本次操作。",
+    "en": "The tool parameters do not meet the published requirements. The action was not executed."
+  },
+  "error.tool.toolSchemaValidation.result.1": {
+    "zh-CN": "工具返回的内容不符合已发布的结构。",
+    "en": "The tool response does not match the published structure."
+  },
+  "error.tool.toolCallTransactions.failed.1": {
+    "zh-CN": "{0} 此前已提交的外部操作结果无法确认，请先核对，勿重复执行。",
+    "en": "{0} A previously submitted external operation has an unconfirmed result. Verify it before running it again."
+  },
+  "text.tool.toolPayloadContentController.download.1": {
+    "zh-CN": "工具内容.txt",
+    "en": "tool-content.txt"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.1": {
+    "zh-CN": "文件",
+    "en": "Files"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.2": {
+    "zh-CN": "工作目录",
+    "en": "Working directory"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.3": {
+    "zh-CN": "收件人",
+    "en": "Recipient"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.4": {
+    "zh-CN": "地址",
+    "en": "URL"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.5": {
+    "zh-CN": "记录",
+    "en": "Record"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.6": {
+    "zh-CN": "目标",
+    "en": "Target"
+  },
+  "text.tool.toolApprovalSummaryMapper.map.7": {
+    "zh-CN": "确认后将修改平台中的待办或定时任务，请核对操作内容。",
+    "en": "This action will change to-dos or schedules. Review the details before approving."
+  },
+  "text.tool.toolApprovalSummaryMapper.map.8": {
+    "zh-CN": "此工具可能修改外部数据，请核对全部参数后再决定。",
+    "en": "This tool may change external data. Review all parameters before proceeding."
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.1": {
+    "zh-CN": "查看工作空间信息",
+    "en": "View workspace information"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.2": {
+    "zh-CN": "查询当前时间",
+    "en": "Get current time"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.3": {
+    "zh-CN": "搜索工作空间",
+    "en": "Search workspace"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.4": {
+    "zh-CN": "查询待办",
+    "en": "Find to-dos"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.5": {
+    "zh-CN": "查看待办详情",
+    "en": "View to-do details"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.6": {
+    "zh-CN": "查看待办历史",
+    "en": "View to-do history"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.7": {
+    "zh-CN": "查找待办负责人",
+    "en": "Find to-do assignee"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.8": {
+    "zh-CN": "查询待办团队",
+    "en": "Find to-do teams"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.9": {
+    "zh-CN": "创建待办",
+    "en": "Create to-do"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.10": {
+    "zh-CN": "修改待办",
+    "en": "Edit to-do"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.11": {
+    "zh-CN": "更新待办状态",
+    "en": "Update to-do status"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.12": {
+    "zh-CN": "转交待办",
+    "en": "Reassign to-do"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.13": {
+    "zh-CN": "删除待办",
+    "en": "Delete to-do"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.14": {
+    "zh-CN": "查询计划",
+    "en": "Find schedules"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.15": {
+    "zh-CN": "查看计划详情",
+    "en": "View schedule details"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.16": {
+    "zh-CN": "查看执行记录",
+    "en": "View run history"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.17": {
+    "zh-CN": "查询执行员工",
+    "en": "Find available AI employees"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.18": {
+    "zh-CN": "预览执行时间",
+    "en": "Preview run times"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.19": {
+    "zh-CN": "创建计划",
+    "en": "Create schedule"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.20": {
+    "zh-CN": "修改计划",
+    "en": "Edit schedule"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.21": {
+    "zh-CN": "查询定时操作",
+    "en": "List scheduled actions"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.22": {
+    "zh-CN": "查询通知接收人",
+    "en": "Find notification recipients"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.23": {
+    "zh-CN": "查看本次执行详情",
+    "en": "View occurrence details"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.24": {
+    "zh-CN": "创建定时操作",
+    "en": "Create scheduled action"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.25": {
+    "zh-CN": "修改定时操作",
+    "en": "Update scheduled action"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.26": {
+    "zh-CN": "停止本次执行",
+    "en": "Stop this run"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.27": {
+    "zh-CN": "启用或暂停计划",
+    "en": "Enable or pause schedule"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.28": {
+    "zh-CN": "更新计划员工版本",
+    "en": "Update scheduled AI employee version"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.29": {
+    "zh-CN": "立即执行计划",
+    "en": "Run schedule now"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.30": {
+    "zh-CN": "删除计划",
+    "en": "Delete schedule"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.31": {
+    "zh-CN": "读取网页",
+    "en": "Read webpage"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.32": {
+    "zh-CN": "查看工作流节点",
+    "en": "View workflow nodes"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.33": {
+    "zh-CN": "查询工作流",
+    "en": "Find workflows"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.34": {
+    "zh-CN": "读取工作流草稿",
+    "en": "Read workflow draft"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.35": {
+    "zh-CN": "查找可用能力",
+    "en": "Find available capabilities"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.36": {
+    "zh-CN": "查看节点能力",
+    "en": "View node capabilities"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.37": {
+    "zh-CN": "创建工作流",
+    "en": "Create workflow"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.38": {
+    "zh-CN": "保存工作流草稿",
+    "en": "Save workflow draft"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.39": {
+    "zh-CN": "修改工作流步骤",
+    "en": "Edit workflow steps"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.40": {
+    "zh-CN": "检查工作流",
+    "en": "Validate workflow"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.41": {
+    "zh-CN": "查看协作岗位",
+    "en": "View collaborating roles"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.42": {
+    "zh-CN": "查看任务背景",
+    "en": "View task context"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.43": {
+    "zh-CN": "读取协作成果",
+    "en": "Read shared results"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.44": {
+    "zh-CN": "保存协作成果",
+    "en": "Save shared results"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.45": {
+    "zh-CN": "委派岗位工作",
+    "en": "Delegate work"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.46": {
+    "zh-CN": "交接负责岗位",
+    "en": "Hand over responsibility"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.47": {
+    "zh-CN": "等待协作成果",
+    "en": "Waiting for other results"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.48": {
+    "zh-CN": "请求补充信息",
+    "en": "Ask for more information"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.49": {
+    "zh-CN": "提交岗位成果",
+    "en": "Submit role results"
+  },
+  "text.tool.toolDisplayNameMapper.BUILTINS.50": {
+    "zh-CN": "完成协作任务",
+    "en": "Complete collaboration task"
+  },
+  "text.tool.toolDisplayNameMapper.name.1": {
+    "zh-CN": "检索资料",
+    "en": "Search sources"
+  },
+  "text.tool.toolDisplayNameMapper.name.2": {
+    "zh-CN": "查看数据集合",
+    "en": "View data collections"
+  },
+  "text.tool.toolDisplayNameMapper.name.3": {
+    "zh-CN": "查询数据",
+    "en": "Query data"
+  },
+  "text.tool.toolPayloadMapper.redact.1": {
+    "zh-CN": "[已隐藏]",
+    "en": "[redacted]"
+  },
+  "text.tool.toolPayloadMapper.clean.1": {
+    "zh-CN": "$1[已隐藏]",
+    "en": "$1[redacted]"
+  },
+  "text.tool.delegatedToolResultService.save.1": {
+    "zh-CN": "委派任务返回失败结果。",
+    "en": "The delegated task returned a failure result."
+  },
+  "text.tool.sourceToolDefinitions.init.1": {
+    "zh-CN": "检索这份知识库中的真实资料，返回文档、处理版本、页码或章节及原文片段。只在找到资料时使用返回的来源作引用。",
+    "en": "Search this knowledge base and return documents, processing versions, pages or sections, and original excerpts. Cite returned sources only when material was found."
+  },
+  "text.tool.sourceToolDefinitions.init.2": {
+    "zh-CN": "列出本数据源当前可查询的集合、处理版本和允许字段。查询前先读取此列表，不要猜测字段或集合编号。",
+    "en": "List collections currently available for querying in this data source, including processing versions and allowed fields. Read this list before querying; do not invent fields or collection IDs."
+  },
+  "text.tool.sourceToolDefinitions.init.3": {
+    "zh-CN": "按照明确的集合编号、处理版本和允许字段读取数据。只允许结构化条件，不能提交 SQL、地址或请求头。大整数和小数保留为精确字符串。",
+    "en": "Read data using an explicit collection ID, processing version, and allowed fields. Only structured conditions are allowed; do not submit SQL, URLs, or request headers. Preserve large integers and decimals as exact strings."
+  },
+  "log.tool.toolCallTransactions.prepare.1": {
+    "zh-CN": "工具参数未通过校验，将错误返回助手修正，执行编号 {}，工具调用编号 {}",
+    "en": "Tool arguments failed validation; returning the error to the assistant for correction; executionId={}, toolCallId={}"
+  },
+  "text.tool.toolCallTransactions.prepare.1": {
+    "zh-CN": "工具参数不符合已发布的要求，本次操作没有执行。请按工具定义修正参数后继续。",
+    "en": "The tool arguments do not meet the published requirements. This operation did not execute. Correct the arguments using the tool definition before continuing."
+  },
+  "log.tool.toolExecutionService.invoke.1": {
+    "zh-CN": "重新读取已保存的图片调用失败，执行编号 {}，调用编号 {}",
+    "en": "Could not reread a saved image call; executionId={}, callId={}"
+  },
+  "text.tool.toolExecutionService.invoke.1": {
+    "zh-CN": "工具返回执行失败，请查看结果。",
+    "en": "The tool reported an execution failure. Check the result."
+  },
+  "log.tool.toolExecutionService.invoke.2": {
+    "zh-CN": "工具调用失败，执行编号 {}，调用编号 {}",
+    "en": "Tool call failed; executionId={}, callId={}"
+  },
+  "text.tool.toolExecutionService.invoke.2": {
+    "zh-CN": "工具调用未能完成，请检查参数或改用其他方法继续。",
+    "en": "The tool call did not complete. Check the arguments or continue using another method."
+  },
+  "log.tool.toolFailureDetails.clean.1": {
+    "zh-CN": "未提供具体原因",
+    "en": "No specific reason provided"
+  },
+  "log.tool.toolFailureDetails.clean.2": {
+    "zh-CN": "[地址已隐藏]",
+    "en": "[URL redacted]"
+  },
+  "log.tool.toolFailureDetails.clean.3": {
+    "zh-CN": "Bearer [已隐藏]",
+    "en": "Bearer [redacted]"
+  },
+  "log.tool.toolFailureDetails.safe.1": {
+    "zh-CN": "响应解析失败",
+    "en": "Response parsing failed"
+  },
+  "text.tool.toolLogService.details.1": {
+    "zh-CN": "查看脱敏工具调用详情",
+    "en": "View redacted tool call details"
+  }
+}

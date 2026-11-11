@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -29,7 +31,7 @@ public class IntegrationQrCode {
             ImageIO.write(image, "png", output);
             return output.toByteArray();
         } catch (WriterException | IOException failure) {
-            throw new IllegalStateException("创建二维码无法生成", failure);
+            throw new IllegalStateException(Messages.text("error.integration.integrationQrCode.render.1"), failure);
         }
     }
 }

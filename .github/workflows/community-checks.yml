@@ -101,6 +101,7 @@ jobs:
       - name: 检查、类型与生产构建
         working-directory: agenteam-web
         run: |
+          node ../scripts/i18n/sync-catalogs.mjs --check
           pnpm lint
           pnpm exec next typegen
           pnpm exec tsc --noEmit

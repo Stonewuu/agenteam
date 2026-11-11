@@ -1,0 +1,262 @@
+{
+  "error.notification.notificationDeliveryMapper.finish.1": {
+    "zh-CN": "通知工作状态已变化，当前写入未提交",
+    "en": "The notification job status changed. This write was not committed."
+  },
+  "error.notification.readNotificationCenterRequest.notificationThroughSequence.1": {
+    "zh-CN": "请重新读取通知。",
+    "en": "Reload the notification."
+  },
+  "error.notification.readNotificationCenterRequest.announcementThroughSequence.1": {
+    "zh-CN": "请重新读取公告。",
+    "en": "Reload the announcement."
+  },
+  "error.notification.channelDeliveryAccess.unavailable.1": {
+    "zh-CN": "发送记录不存在或无法访问。",
+    "en": "The delivery record does not exist or is inaccessible."
+  },
+  "error.notification.channelDeliveryCancellation.requireNoActive.1": {
+    "zh-CN": "此接入仍有正在处理的通知，请稍后再删除。",
+    "en": "This integration still has notifications being processed. Delete it later."
+  },
+  "error.notification.channelDeliveryManagement.retry.1": {
+    "zh-CN": "此发送记录不能再次尝试，请查看结果或创建新的通知。",
+    "en": "This delivery cannot be retried. Check its result or create a new notification."
+  },
+  "error.notification.channelDeliveryManagement.retry.2": {
+    "zh-CN": "此前请求可能已被平台接受，请确认能够接受重复通知后再试。",
+    "en": "The platform may have accepted the previous request. Only retry if duplicate notifications are acceptable."
+  },
+  "error.notification.channelDeliveryManagement.test.1": {
+    "zh-CN": "此成员尚未绑定所选应用，请先完成绑定。",
+    "en": "This member has not linked the selected application. Complete the binding first."
+  },
+  "error.notification.channelDeliveryManagement.test.2": {
+    "zh-CN": "请选择当前企业中的有效成员。",
+    "en": "Select an active member of the current organization."
+  },
+  "error.notification.channelDeliveryStore.save.1": {
+    "zh-CN": "通知发送记录在保存期间发生变化",
+    "en": "The notification delivery record changed while saving."
+  },
+  "error.notification.channelDeliveryTransactions.defer.1": {
+    "zh-CN": "已经开始的通知请求不能退回发送前等待",
+    "en": "A notification request that has started cannot return to the pre-send queue."
+  },
+  "error.notification.channelDeliveryTransactions.requireFinished.1": {
+    "zh-CN": "通知工作租约已变化，不能保存旧结果",
+    "en": "The notification job lease changed. The old result cannot be saved."
+  },
+  "error.notification.channelNotificationRouting.enqueue.1": {
+    "zh-CN": "通知所选的企业接入不存在",
+    "en": "The organization integration selected for the notification does not exist."
+  },
+  "error.notification.channelNotificationRouting.scheduled.1": {
+    "zh-CN": "同一批定时通知必须属于同一企业",
+    "en": "Scheduled notifications in one batch must belong to the same organization."
+  },
+  "error.notification.channelNotificationRouting.scheduled.2": {
+    "zh-CN": "定时通知的接入记录已丢失",
+    "en": "The scheduled notification integration record is missing."
+  },
+  "error.notification.channelPayloadCodec.encode.1": {
+    "zh-CN": "通知请求内容无法保存",
+    "en": "The notification request content could not be saved."
+  },
+  "error.notification.channelPayloadCodec.hash.1": {
+    "zh-CN": "通知请求内容无法校验",
+    "en": "The notification request content could not be verified."
+  },
+  "error.notification.channelPayloadCodec.decode.1": {
+    "zh-CN": "已保存的通知请求无法读取",
+    "en": "The saved notification request could not be read."
+  },
+  "error.notification.notificationCategoryCatalog.require.1": {
+    "zh-CN": "请选择已有的通知类别。",
+    "en": "Select an existing notification category."
+  },
+  "error.notification.notificationService.invalidSequence.1": {
+    "zh-CN": "请重新读取通知列表后再标记已读。",
+    "en": "Reload the notification list before marking items as read."
+  },
+  "error.notification.notificationService.invalidCursor.1": {
+    "zh-CN": "通知列表已变化，请重新打开列表。",
+    "en": "The notification list has changed. Reopen it."
+  },
+  "error.notification.notificationWriteService.writeLocked.1": {
+    "zh-CN": "通知接收成员的序号无法更新",
+    "en": "The notification recipient sequence could not be updated."
+  },
+  "error.notification.channelDeliveryStore.recoverStarted.1": {
+    "zh-CN": "上一次请求未保存最终结果，可能已被平台接受。",
+    "en": "The previous request has no saved final result and may have been accepted by the platform."
+  },
+  "error.notification.channelDeliveryTransactions.finish.1": {
+    "zh-CN": "此前请求可能已被平台接受；{0}",
+    "en": "The platform may have accepted the previous request; {0}"
+  },
+  "error.notification.channelDeliveryTransactions.finish.2": {
+    "zh-CN": "最终结果无法确认。",
+    "en": "The final result could not be confirmed."
+  },
+  "error.notification.channelDeliveryWorker.deferFailure.1": {
+    "zh-CN": "发送准备暂未完成，稍后会继续尝试。",
+    "en": "Delivery preparation is incomplete and will be retried later."
+  },
+  "error.notification.channelFailureNoticeService.enqueue.1": {
+    "zh-CN": "有一条渠道通知未能完成",
+    "en": "Channel delivery incomplete"
+  },
+  "error.notification.channelFailureNoticeService.enqueue.2": {
+    "zh-CN": "平台是否已接受该通知暂时无法确认，请查看发送记录后处理。",
+    "en": "We cannot confirm whether the platform accepted this notification. Check the delivery history before taking action."
+  },
+  "error.notification.channelFailureNoticeService.enqueue.3": {
+    "zh-CN": "通知未能通过外部应用发送，请查看发送记录中的原因。",
+    "en": "The notification could not be sent through the external app. Check the delivery history for the reason."
+  },
+  "log.notification.notificationScheduling.poll.1": {
+    "zh-CN": "通知暂未保存，下次继续处理：工作编号={}",
+    "en": "Notification was not saved; processing will resume; jobId={}"
+  },
+  "log.notification.notificationScheduling.poll.2": {
+    "zh-CN": "通知队列暂时无法读取",
+    "en": "The notification queue could not be read"
+  },
+  "text.notification.channelDeliveryManagement.retry.1": {
+    "zh-CN": "人工再次尝试发送通知",
+    "en": "Manually retry notification delivery"
+  },
+  "text.notification.channelDeliveryManagement.test.1": {
+    "zh-CN": "企业消息接入测试",
+    "en": "Integration test"
+  },
+  "text.notification.channelDeliveryManagement.test.2": {
+    "zh-CN": "管理员正在验证此应用的通知发送，请确认能够收到本条测试消息。",
+    "en": "An administrator is testing notifications from this app. Please confirm that you received this message."
+  },
+  "text.notification.channelDeliveryManagement.test.3": {
+    "zh-CN": "排入企业接入测试通知",
+    "en": "Queue organization integration test notification"
+  },
+  "text.notification.channelDeliveryPolicy.check.1": {
+    "zh-CN": "接收人已不在企业中或账号已停用。",
+    "en": "The recipient has left the organization or the account is disabled."
+  },
+  "text.notification.channelDeliveryPolicy.check.2": {
+    "zh-CN": "接收人已关闭此类自动通知。",
+    "en": "The recipient disabled this type of automatic notification."
+  },
+  "text.notification.channelDeliveryPolicy.check.3": {
+    "zh-CN": "发起人已无权向此成员发送通知。",
+    "en": "The initiator no longer has permission to notify this member."
+  },
+  "text.notification.channelDeliveryPolicy.sourceBlock.1": {
+    "zh-CN": "创建人已停止本次操作，不再继续发送。",
+    "en": "The creator stopped this operation. No further messages will be sent."
+  },
+  "text.notification.channelDeliveryPolicy.checkTarget.1": {
+    "zh-CN": "此接入已停止发送通知。",
+    "en": "Notification delivery is disabled for this integration."
+  },
+  "text.notification.channelDeliveryPolicy.checkTarget.2": {
+    "zh-CN": "应用密钥已更换，请重新创建通知。",
+    "en": "The application secret changed. Create a new notification."
+  },
+  "text.notification.channelDeliveryPolicy.checkTarget.3": {
+    "zh-CN": "接收人尚未绑定此应用账号。",
+    "en": "The recipient has not linked an account for this application."
+  },
+  "text.notification.channelDeliveryPolicy.checkTarget.4": {
+    "zh-CN": "接收人的账号绑定已变更，请重新创建通知。",
+    "en": "The recipient's account binding changed. Create a new notification."
+  },
+  "text.notification.channelDeliveryPolicy.checkTarget.5": {
+    "zh-CN": "接收人已关闭此渠道的通知。",
+    "en": "The recipient disabled notifications for this channel."
+  },
+  "text.notification.channelDeliveryStore.owned.1": {
+    "zh-CN": "此发送工作已被后续操作取代。",
+    "en": "This delivery job was replaced by a later operation."
+  },
+  "text.notification.channelDeliveryTransactions.complete.1": {
+    "zh-CN": "通知发送已用尽本次允许的尝试次数。",
+    "en": "Notification delivery exhausted its allowed attempts."
+  },
+  "text.notification.channelDeliveryTransactions.ready.1": {
+    "zh-CN": "通知发送或恢复次数已达到上限。",
+    "en": "The notification delivery or recovery attempt limit was reached."
+  },
+  "text.notification.channelDeliveryTransactions.ready.2": {
+    "zh-CN": "此通知已超过发送有效期。",
+    "en": "This notification's delivery window expired."
+  },
+  "text.notification.channelDeliveryTransactions.ready.3": {
+    "zh-CN": "此前请求可能已被接受，已停止自动重试。",
+    "en": "The previous request may have been accepted. Automatic retries were stopped."
+  },
+  "text.notification.channelDeliveryTransactions.ready.4": {
+    "zh-CN": "企业或通知当前不可用。",
+    "en": "The organization or notification is unavailable."
+  },
+  "text.notification.channelDeliveryTransactions.ready.5": {
+    "zh-CN": "原发送内容不可用，不能继续发送。",
+    "en": "The original message content is unavailable. Delivery cannot continue."
+  },
+  "text.notification.channelDeliveryTransactions.waitUntil.1": {
+    "zh-CN": "在通知有效期内无法继续等待发送。",
+    "en": "Delivery cannot wait any longer within this notification's validity period."
+  },
+  "log.notification.channelDeliveryWorker.runOnce.1": {
+    "zh-CN": "通知发送工作暂时无法领取",
+    "en": "Notification delivery work could not be claimed"
+  },
+  "text.notification.channelDeliveryWorker.runOnce.1": {
+    "zh-CN": "已达到此应用或接收人的发送频率，正在等待可发送时间。",
+    "en": "This application or recipient reached its sending rate limit. Waiting until delivery is allowed."
+  },
+  "log.notification.channelDeliveryWorker.runOnce.2": {
+    "zh-CN": "通知发送暂未完成，工作编号 {}",
+    "en": "Notification delivery did not complete; jobId={}"
+  },
+  "text.notification.channelDeliveryWorker.runOnce.2": {
+    "zh-CN": "请求可能已发出，尚未取得可确认的结果。",
+    "en": "The request may have been sent, but no result is confirmed."
+  },
+  "log.notification.channelDeliveryWorker.renew.1": {
+    "zh-CN": "通知发送工作无法续期，工作编号 {}",
+    "en": "Could not renew the notification delivery lease; jobId={}"
+  },
+  "log.notification.channelDeliveryWorker.deferFailure.1": {
+    "zh-CN": "通知等待结果暂时无法保存，工作编号 {}",
+    "en": "Could not save the notification waiting result; jobId={}"
+  },
+  "log.notification.channelDeliveryWorker.saveResult.1": {
+    "zh-CN": "通知平台结果第 {} 次保存失败，工作编号 {}",
+    "en": "Saving the notification platform result failed on attempt {}; jobId={}"
+  },
+  "text.notification.notificationCategoryCatalog.CATEGORIES.1": {
+    "zh-CN": "任务执行结果",
+    "en": "Task results"
+  },
+  "text.notification.notificationCategoryCatalog.CATEGORIES.2": {
+    "zh-CN": "待确认操作",
+    "en": "Pending approvals"
+  },
+  "text.notification.notificationCategoryCatalog.CATEGORIES.3": {
+    "zh-CN": "任务访问变化",
+    "en": "Task access changes"
+  },
+  "text.notification.notificationCategoryCatalog.CATEGORIES.4": {
+    "zh-CN": "员工申请结果",
+    "en": "Employee request results"
+  },
+  "text.notification.notificationCategoryCatalog.CATEGORIES.5": {
+    "zh-CN": "待办分配",
+    "en": "To-do assignments"
+  },
+  "text.notification.notificationCategoryCatalog.CATEGORIES.6": {
+    "zh-CN": "定时任务状态",
+    "en": "Schedule status"
+  }
+}

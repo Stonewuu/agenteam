@@ -1,0 +1,18 @@
+{
+  "error.background.backgroundJobMapper.claimFileWork.1": {
+    "zh-CN": "文件处理工作类型不正确",
+    "en": "The file processing job type is invalid."
+  },
+  "error.background.backgroundJobMapper.setAttemptLimit.1": {
+    "zh-CN": "后台任务尝试次数超出范围",
+    "en": "The background job attempt count is outside the allowed range."
+  },
+  "log.background.backgroundJobHeartbeat.timer.1": {
+    "zh-CN": "后台工作续期-",
+    "en": "background-job-heartbeat-"
+  },
+  "log.background.backgroundJobHeartbeat.start.1": {
+    "zh-CN": "后台工作续期失败，工作编号 {}",
+    "en": "Background job lease renewal failed; jobId={}"
+  }
+}

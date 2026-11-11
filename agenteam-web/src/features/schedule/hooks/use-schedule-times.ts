@@ -29,7 +29,7 @@ export function useScheduleTimes(enterpriseId: string, rule: ScheduleRule) {
         })
         .catch((failure) => {
           if (!controller.signal.aborted) {
-            console.error("读取计划执行时间失败", {enterpriseId}, failure);
+            console.error("Failed to read scheduled execution times", {enterpriseId}, failure);
             setResult({key: serialized, data: null, error: errorMessage(failure)});
           }
         });

@@ -318,7 +318,7 @@ export function ConversationToolBorderGlow({toolCallId, config = TOOL_BORDER_GLO
         container!.setAttribute("data-rendered", "");
         return true;
       } catch (error) {
-        console.error("工具边框泛光初始化失败，工具调用编号：", toolCallId, error);
+        console.error("Failed to initialize the tool border glow; tool call ID:", toolCallId, error);
         failed = true;
         release();
         return false;

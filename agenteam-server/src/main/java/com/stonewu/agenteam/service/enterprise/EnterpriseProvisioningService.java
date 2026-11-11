@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -78,14 +80,14 @@ public class EnterpriseProvisioningService {
     private EnterpriseSummary createVerified(String name, String description, String contactEmail, String timezone,
                                              String administratorId, UserEntity actor, Instant now, boolean initial) {
         UserEntity current = users.findById(actor.id())
-            .orElseThrow(() -> EnterpriseValidation.forbidden("无法创建企业"));
+            .orElseThrow(() -> EnterpriseValidation.forbidden(Messages.text("error.enterprise.createDenied")));
         if (!current.superAdmin() || !"active".equals(
             current.status()) || current.sessionVersion() != actor.sessionVersion()) {
-            throw EnterpriseValidation.forbidden("只有有效的系统超级管理员可以创建企业");
+            throw EnterpriseValidation.forbidden(Messages.text("error.enterprise.enterpriseProvisioningService.createVerified.1"));
         }
-        String normalizedName = EnterpriseValidation.name(name, "企业名称", 80);
+        String normalizedName = EnterpriseValidation.name(name, Messages.text("label.enterprise.name"), 80);
         UserEntity administrator = users.findById(administratorId).filter(user -> user.status().equals("active"))
-            .orElseThrow(() -> EnterpriseValidation.invalid("请选择有效账号作为初始管理员"));
+            .orElseThrow(() -> EnterpriseValidation.invalid(Messages.text("error.enterprise.enterpriseProvisioningService.createVerified.2")));
         behavior.requireOperation(administrator.id(), AccountOperation.SELECT_ENTERPRISE_ADMINISTRATOR);
         if (!initial) {
             edition.requireAdditionalCreation();
@@ -98,7 +100,7 @@ public class EnterpriseProvisioningService {
         permissions.replaceUserRoles(administrator.id(), id, Set.of(roles.get("enterprise-admin")), now);
         enterprises.createDefaultQuota(id, quotaPolicies.initialEnterpriseLimit(), now);
         builtinPlugins.initialize(id);
-        audit.record(id, current, "enterprise.create", "enterprise", id, "创建企业并设置初始管理员",
+        audit.record(id, current, "enterprise.create", "enterprise", id, Messages.text("text.enterprise.enterpriseProvisioningService.createVerified.1"),
             Map.of("name", normalizedName, "createdBy", current.id(), "administratorUserId", administrator.id()));
         return new EnterpriseSummary(id, normalizedName);
     }

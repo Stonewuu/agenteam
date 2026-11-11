@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 
 import java.io.IOException;
@@ -38,7 +40,7 @@ public interface WorkspaceSession extends AutoCloseable {
 
     default SandboxExecutor.Result execute(String callId, String command, String workingDirectory, Duration timeout,
                                            ToolCallControl control) {
-        throw new UnsupportedOperationException("临时工作目录应使用独立沙箱执行");
+        throw new UnsupportedOperationException(Messages.text("error.workspace.workspaceSession.execute.1"));
     }
 
     @Override

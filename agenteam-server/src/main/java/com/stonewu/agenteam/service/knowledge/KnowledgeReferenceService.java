@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeChunkMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeDocumentMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -44,7 +46,7 @@ public class KnowledgeReferenceService {
             .orElseThrow(ResourceAuthorizationService::unavailable);
         if (allowedResources != null && !allowedResources.contains(doc.resourceId())) {
             throw new ApiException(HttpStatus.CONFLICT, "KNOWLEDGE_REFERENCE_NOT_CONFIGURED",
-                "这个员工尚未配置所选资料，请选择可用资料或联系维护者。");
+                Messages.text("error.knowledge.knowledgeReferenceService.read.1"));
         }
         access.requireUse(actor, doc.resourceId(), "knowledge");
         if (generation < 1 || generation > doc.activeGeneration()) {
@@ -59,6 +61,6 @@ public class KnowledgeReferenceService {
 
     private ApiException unavailable() {
         return new ApiException(HttpStatus.CONFLICT, "KNOWLEDGE_REFERENCE_UNAVAILABLE",
-            "所选资料版本尚未完成或已不可读取，请重新选择。");
+            Messages.text("error.knowledge.knowledgeReferenceService.unavailable.1"));
     }
 }

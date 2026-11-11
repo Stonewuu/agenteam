@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +28,7 @@ public class ChannelPayloadCodec {
         try {
             return json.writeValueAsString(ordered(value));
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("通知请求内容无法保存", failure);
+            throw new IllegalStateException(Messages.text("error.notification.channelPayloadCodec.encode.1"), failure);
         }
     }
 
@@ -34,7 +36,7 @@ public class ChannelPayloadCodec {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(encode(value).getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("通知请求内容无法校验", failure);
+            throw new IllegalStateException(Messages.text("error.notification.channelPayloadCodec.hash.1"), failure);
         }
     }
 
@@ -42,7 +44,7 @@ public class ChannelPayloadCodec {
         try {
             return json.readTree(value);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("已保存的通知请求无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.notification.channelPayloadCodec.decode.1"), failure);
         }
     }
 

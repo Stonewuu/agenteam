@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
@@ -88,7 +90,7 @@ public class WorkspaceStore {
                 // 发布新版本后会清理旧目录，再读一次指针可避开这一瞬间的目录切换。
             }
             throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_FILES_MISSING",
-                "此对话的工作文件已不可读取，请刷新后重试。");
+                Messages.text("error.workspace.workspaceStore.snapshot.1"));
         } catch (IOException failure) {
             throw WorkspacePaths.io(failure);
         }
@@ -120,7 +122,7 @@ public class WorkspaceStore {
                 }
                 if (System.nanoTime() >= deadline) {
                     throw new ApiException(HttpStatus.CONFLICT, "WORKSPACE_BUSY",
-                        "工作文件仍被上一个操作占用，请稍后重试。");
+                        Messages.text("error.workspace.workspaceStore.open.1"));
                 }
                 control.pause(Duration.ofMillis(50));
             }
@@ -218,7 +220,7 @@ public class WorkspaceStore {
             long nanos = deadline - System.nanoTime();
             if (nanos <= 0) {
                 throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "WORKSPACE_TIMEOUT",
-                    "本次文件操作超过允许时间，请缩小处理范围。");
+                    Messages.text("error.workspace.workspaceStore.remaining.1"));
             }
             return Duration.ofNanos(nanos);
         }
@@ -232,7 +234,7 @@ public class WorkspaceStore {
                     initialize(path);
                 } else if (!Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
                     throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_FILES_MISSING",
-                        "本次对话的工作文件已不可读取，请重新提供需要处理的文件。");
+                        Messages.text("error.workspace.workspaceStore.current.1"));
                 }
             } catch (IOException cause) {
                 throw WorkspacePaths.io(cause);
@@ -242,7 +244,7 @@ public class WorkspaceStore {
 
         public WorkspaceFilesystem prepare() {
             if (pending != null) {
-                throw new IllegalStateException("当前操作已经准备了工作文件");
+                throw new IllegalStateException(Messages.text("error.workspace.workspaceStore.prepare.1"));
             }
             Path source = current().root();
             current().validate();
@@ -259,7 +261,7 @@ public class WorkspaceStore {
 
         public void commit(Set<String> sources, Set<String> inputs) {
             if (pending == null) {
-                throw new IllegalStateException("尚未准备工作文件");
+                throw new IllegalStateException(Messages.text("error.workspace.workspaceStore.commit.1"));
             }
             new WorkspaceFilesystem(pending, settings, this::requireActive, true).validate();
             if (sources.size() > 10000 || inputs.size() > settings.maximumFiles()) {
@@ -287,7 +289,7 @@ public class WorkspaceStore {
                 try {
                     Files.deleteIfExists(temporary);
                 } catch (IOException cause) {
-                    LOG.warn("工作文件临时记录清理失败，执行编号 {}", run.id(), cause);
+                    LOG.warn(Messages.log("log.workspace.workspaceStore.commit.1"), run.id(), cause);
                 }
             }
         }
@@ -301,7 +303,7 @@ public class WorkspaceStore {
                     }
                 }
             } catch (IOException cause) {
-                LOG.warn("旧工作文件清理失败，执行编号 {}", run.id(), cause);
+                LOG.warn(Messages.log("log.workspace.workspaceStore.cleanupVersions.1"), run.id(), cause);
             }
         }
 

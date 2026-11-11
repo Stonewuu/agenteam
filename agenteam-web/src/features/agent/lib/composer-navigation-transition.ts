@@ -47,14 +47,14 @@ export function createComposerNavigationTransition() {
         });
         // 浏览器可能因标签页切走而跳过动画，导航结果仍然有效。
         completed = active.finished.catch((error: unknown) => {
-          console.warn("输入框页面过渡未完成，继续显示目标页面", error);
+          console.warn("Composer view transition did not finish; displaying the destination page", error);
         });
         void active.ready.catch((error: unknown) => {
-          console.warn("输入框页面过渡未能播放", error);
+          console.warn("Failed to play the composer view transition", error);
         });
         await completed;
       } catch (error) {
-        console.warn("无法开始输入框页面过渡，继续打开对话", error);
+        console.warn("Failed to start the composer view transition; opening the conversation", error);
         navigate();
       } finally {
         release();

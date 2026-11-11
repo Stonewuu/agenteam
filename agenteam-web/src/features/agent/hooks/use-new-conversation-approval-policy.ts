@@ -22,7 +22,7 @@ function parsePolicy(value: string | null): ToolApprovalPolicy {
 function reportOnce(key: string, operation: "read" | "write", error: unknown) {
   if (!reported.has(`${key}:${operation}`)) {
     reported.add(`${key}:${operation}`);
-    console.error(operation === "read" ? "读取新对话权限模式偏好失败" : "保存新对话权限模式偏好失败", error);
+    console.error(operation === "read" ? "Failed to read the preferred approval policy for new conversations" : "Failed to save the preferred approval policy for new conversations", error);
   }
 }
 

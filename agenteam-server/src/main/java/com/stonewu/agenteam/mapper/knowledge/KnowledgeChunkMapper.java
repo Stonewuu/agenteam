@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -171,7 +173,7 @@ public class KnowledgeChunkMapper {
                 locator.path("page").canConvertToInt() ? locator.path("page").asInt() : null,
                 locator.path("section").isTextual() ? locator.path("section").asText() : null, row.getContentText());
         } catch (Exception invalid) {
-            throw new IllegalStateException("保存的资料位置无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.knowledge.knowledgeChunkMapper.citation.1"), invalid);
         }
     }
 }

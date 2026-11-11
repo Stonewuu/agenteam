@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file.parser;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.file.entity.CsvProfile;
 
@@ -23,7 +25,7 @@ public class DocumentParserMain {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(120);
         long parent = Long.getLong("agenteam.parser.parent", 0);
         var watchdog = Executors.newSingleThreadScheduledExecutor(
-            Thread.ofPlatform().daemon(true).name("解析进程期限检查").factory());
+            Thread.ofPlatform().daemon(true).name(Messages.log("log.file.documentParserMain.main.1")).factory());
         watchdog.scheduleWithFixedDelay(() -> {
             if (System.nanoTime() >= deadline || (parent > 0 && ProcessHandle.of(parent)
                 .map(handle -> !handle.isAlive()).orElse(true))) {

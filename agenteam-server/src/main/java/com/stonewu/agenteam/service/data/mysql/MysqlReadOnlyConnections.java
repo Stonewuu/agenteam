@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data.mysql;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.data.mysql.ExternalMysqlSessions;
 import com.stonewu.agenteam.mapper.data.mysql.ExternalMysqlSqlMapper;
@@ -39,7 +41,7 @@ public class MysqlReadOnlyConnections {
         boolean production = Arrays.asList(environment.getActiveProfiles()).contains("production");
         if (!Set.of("VERIFY_IDENTITY", "REQUIRED").contains(sslMode) || (production && !sslMode.equals(
             "VERIFY_IDENTITY"))) {
-            throw new IllegalArgumentException("生产数据库数据源必须验证服务端证书和主机身份");
+            throw new IllegalArgumentException(Messages.text("error.data.mysqlReadOnlyConnections.init.1"));
         }
     }
 
@@ -54,7 +56,7 @@ public class MysqlReadOnlyConnections {
         String database = connection.path("database").asText();
         if (database.isBlank() || database.codePointCount(0, database.length()) > 64 || database.codePoints()
             .anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("config.connection.database", "请填写完整的数据库名称。");
+            throw ApiException.invalidField("config.connection.database", Messages.text("error.data.mysqlReadOnlyConnections.open.1"));
         }
         var resolved = addresses.resolve(host, port, deadline);
         var secret = credentials.resolve(enterprise, config.path("credentialId").asText(null));
@@ -174,14 +176,14 @@ public class MysqlReadOnlyConnections {
     private static int remaining(long deadline) {
         long millis = (deadline - System.nanoTime()) / 1_000_000;
         if (millis <= 0 || Thread.currentThread().isInterrupted()) {
-            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "DATA_QUERY_TIMEOUT", "数据库连接已取消或超过允许时间。");
+            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "DATA_QUERY_TIMEOUT", Messages.text("error.data.mysqlReadOnlyConnections.remaining.1"));
         }
         return (int) Math.min(10000, millis);
     }
 
     private ApiException readOnlyRequired() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATABASE_READ_ONLY_REQUIRED",
-            "请为数据源配置仅能读取目标库表的专用账号。");
+            Messages.text("error.data.mysqlReadOnlyConnections.readOnlyRequired.1"));
     }
 
     private ApiException unavailable() {
@@ -190,6 +192,6 @@ public class MysqlReadOnlyConnections {
 
     private ApiException unavailable(Throwable cause) {
         return new ApiException(HttpStatus.BAD_GATEWAY, "DATA_CONNECTION_FAILED",
-            "数据库连接暂时不可用，请检查地址、证书和凭据。", cause);
+            Messages.text("error.data.mysqlReadOnlyConnections.unavailable.1"), cause);
     }
 }

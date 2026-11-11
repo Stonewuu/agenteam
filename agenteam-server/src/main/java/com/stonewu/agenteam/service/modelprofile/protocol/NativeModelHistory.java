@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelprofile.entity.NativeModelState;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.TextBlock;
@@ -27,7 +29,7 @@ public final class NativeModelHistory {
             return Optional.empty();
         }
         if (state.formatVersion() != 1) {
-            throw new IllegalStateException("保存的模型状态版本不受支持。");
+            throw new IllegalStateException(Messages.text("error.modelprofile.nativeModelHistory.state.1"));
         }
         return Optional.of(state);
     }
@@ -41,7 +43,7 @@ public final class NativeModelHistory {
         for (var span : item.spans()) {
             long end = (long) span.start() + span.length();
             if (end > content.length()) {
-                throw new IllegalStateException("保存的模型签名与对应内容不完整，不能继续发送。");
+                throw new IllegalStateException(Messages.text("error.modelprofile.nativeModelHistory.text.1"));
             }
             result.append(content, span.start(), (int) end);
         }

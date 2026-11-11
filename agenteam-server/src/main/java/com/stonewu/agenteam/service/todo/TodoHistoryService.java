@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.todo.TodoHistoryMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -53,16 +55,16 @@ public class TodoHistoryService {
 
     private String actionText(String action, TodoRecord before, TodoRecord value) {
         return switch (action) {
-            case "create" -> "创建待办“" + value.title() + "”";
+            case "create" -> Messages.text("text.todo.todoHistoryService.actionText.1", value.title());
             case "update" -> before != null && !before.ownerUserId()
-                .equals(value.ownerUserId()) ? "修改待办并转交给“" + value.ownerName() + "”" : "修改待办内容";
-            case "transfer" -> "将待办转交给“" + value.ownerName() + "”";
-            case "start" -> "开始处理待办";
-            case "complete" -> "完成待办";
-            case "cancel" -> "取消待办";
-            case "reopen" -> "重新打开待办";
-            case "delete" -> "删除待办";
-            default -> throw new IllegalArgumentException("待办历史动作不正确");
+                .equals(value.ownerUserId()) ? Messages.text("text.todo.todoHistoryService.actionText.2", value.ownerName()) : Messages.text("text.todo.todoApiService.record.1");
+            case "transfer" -> Messages.text("text.todo.todoHistoryService.actionText.3", value.ownerName());
+            case "start" -> Messages.text("text.todo.todoHistoryService.actionText.4");
+            case "complete" -> Messages.text("text.todo.todoHistoryService.actionText.5");
+            case "cancel" -> Messages.text("text.todo.todoHistoryService.actionText.6");
+            case "reopen" -> Messages.text("text.todo.todoHistoryService.actionText.7");
+            case "delete" -> Messages.text("text.tool.toolDisplayNameMapper.BUILTINS.13");
+            default -> throw new IllegalArgumentException(Messages.text("error.todo.todoHistoryService.actionText.1"));
         };
     }
 }

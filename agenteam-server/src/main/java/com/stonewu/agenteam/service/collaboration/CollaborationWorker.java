@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.configuration.collaboration.CollaborationConfiguration;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
@@ -59,7 +61,7 @@ public class CollaborationWorker {
                 }
             }
         } catch (RuntimeException failure) {
-            LOG.warn("协作后台工作本轮未能完成", new ChannelProviderException("COLLABORATION_WORKER_FAILED", "后台工作稍后继续。", failure));
+            LOG.warn(Messages.log("log.collaboration.collaborationWorker.poll.1"), new ChannelProviderException("COLLABORATION_WORKER_FAILED", Messages.text("error.collaboration.collaborationWorker.poll.1"), failure));
         }
     }
 
@@ -68,7 +70,7 @@ public class CollaborationWorker {
             try {
                 rooms.deliver(entry);
             } catch (RuntimeException failure) {
-                LOG.warn("协作补充消息暂未交付，企业={}，对话={}，消息={}", entry.getEnterpriseId(), entry.getRoomId(), entry.getId(), failure);
+                LOG.warn(Messages.log("log.collaboration.collaborationWorker.deliverWaiting.1"), entry.getEnterpriseId(), entry.getRoomId(), entry.getId(), failure);
                 if (failure instanceof ApiException api && api.getStatusCode().is4xxClientError() && api.getStatusCode().value() != 429) {
                     rooms.failQueued(entry);
                 }
@@ -89,8 +91,8 @@ public class CollaborationWorker {
             dispatch.submit(lease.get());
         } catch (RuntimeException failure) {
             String code = failure instanceof ApiException api ? api.code() : "COLLABORATION_SUBMISSION_FAILED";
-            LOG.warn("协作工作尚未提交，企业={}，工作={}", lease.get().enterpriseId(), lease.get().workId(),
-                new ChannelProviderException(code, "岗位工作暂时无法开始。", failure));
+            LOG.warn(Messages.log("log.collaboration.collaborationWorker.dispatchOnce.1"), lease.get().enterpriseId(), lease.get().workId(),
+                new ChannelProviderException(code, Messages.text("error.collaboration.collaborationWorker.dispatchOnce.1"), failure));
             dispatch.failed(lease.get(), code, Set.of("CONCURRENCY_LIMIT", "CONVERSATION_BUSY", "COLLABORATION_SUBMISSION_FAILED").contains(code));
         }
         return true;
@@ -112,8 +114,8 @@ public class CollaborationWorker {
                 }
                 observer.observe(link.getEnterpriseId(), link.getId(), generated.prepare(link));
             } catch (RuntimeException failure) {
-                LOG.warn("协作执行状态尚未归并，企业={}，执行={}", link.getEnterpriseId(), link.getRunId(),
-                    new ChannelProviderException("COLLABORATION_OBSERVATION_FAILED", "岗位执行状态稍后继续处理。", failure));
+                LOG.warn(Messages.log("log.collaboration.collaborationWorker.recover.1"), link.getEnterpriseId(), link.getRunId(),
+                    new ChannelProviderException("COLLABORATION_OBSERVATION_FAILED", Messages.text("error.collaboration.collaborationWorker.recover.1"), failure));
                 if (failure instanceof ApiException api) {
                     observer.failedObservation(link.getEnterpriseId(), link.getId(), api.code());
                 }

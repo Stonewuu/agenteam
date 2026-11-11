@@ -1,0 +1,102 @@
+{
+  "label.resource.agent": {
+    "zh-CN": "智能体",
+    "en": "agent"
+  },
+  "label.resource.skill": {
+    "zh-CN": "技能",
+    "en": "skill"
+  },
+  "label.resource.plugin": {
+    "zh-CN": "插件",
+    "en": "plugin"
+  },
+  "label.resource.workflow": {
+    "zh-CN": "工作流",
+    "en": "workflow"
+  },
+  "label.resource.knowledge": {
+    "zh-CN": "知识库",
+    "en": "knowledge base"
+  },
+  "label.resource.data": {
+    "zh-CN": "数据源",
+    "en": "data source"
+  },
+  "label.enterprise.name": {
+    "zh-CN": "企业名称",
+    "en": "Organization name"
+  },
+  "label.role.name": {
+    "zh-CN": "角色名称",
+    "en": "Role name"
+  },
+  "label.team.name": {
+    "zh-CN": "团队名称",
+    "en": "Team name"
+  },
+  "label.member.name": {
+    "zh-CN": "成员显示名",
+    "en": "Member display name"
+  },
+  "label.user.name": {
+    "zh-CN": "显示名",
+    "en": "Display name"
+  },
+  "label.description": {
+    "zh-CN": "简介",
+    "en": "Description"
+  },
+  "label.invitation.note": {
+    "zh-CN": "邀请说明",
+    "en": "Invitation note"
+  },
+  "label.team.members": {
+    "zh-CN": "团队成员",
+    "en": "Team members"
+  },
+  "label.role": {
+    "zh-CN": "角色",
+    "en": "Role"
+  },
+  "label.team": {
+    "zh-CN": "团队",
+    "en": "Team"
+  },
+  "error.enterprise.createDenied": {
+    "zh-CN": "无法创建企业",
+    "en": "The organization could not be created."
+  },
+  "error.permission.cannotDelegate": {
+    "zh-CN": "不能分配自己没有的权限",
+    "en": "You cannot assign permissions you do not hold."
+  },
+  "error.role.notFound": {
+    "zh-CN": "角色不存在",
+    "en": "The role does not exist."
+  },
+  "error.enterprise.notFound": {
+    "zh-CN": "企业不存在",
+    "en": "The organization does not exist."
+  },
+  "error.permission.denied": {
+    "zh-CN": "没有执行此操作的权限",
+    "en": "You do not have permission to perform this operation."
+  },
+  "validation.decimal.minInclusive": {
+    "zh-CN": "必须大于或等于 {0}。",
+    "en": "Must be greater than or equal to {0}."
+  },
+  "validation.decimal.minExclusive": {
+    "zh-CN": "必须大于 {0}。",
+    "en": "Must be greater than {0}."
+  },
+  "validation.decimal.maxInclusive": {
+    "zh-CN": "必须小于或等于 {0}。",
+    "en": "Must be less than or equal to {0}."
+  },
+  "validation.decimal.maxExclusive": {
+    "zh-CN": "必须小于 {0}。",
+    "en": "Must be less than {0}."
+  }
+}

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentHistoryMessageMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -72,7 +74,7 @@ public final class AgentHistoryContext {
             }
             var next = page.getLast();
             if (next.id().equals(before.id())) {
-                throw new IllegalStateException("读取历史消息时位置没有前移，无法继续恢复对话");
+                throw new IllegalStateException(Messages.text("error.agent.agentHistoryContext.restoreMissing.1"));
             }
             before = next;
         }

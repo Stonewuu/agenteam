@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol.openai;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,7 +62,7 @@ public final class ObservedChatTransport implements HttpTransport, AutoCloseable
             usage.accept(response.get("usage"));
             if (response.hasNonNull("error") && diagnostics != null) {
                 diagnostics.captureError(response.get("error"));
-                throw new IllegalStateException("模型在响应流中返回错误。");
+                throw new IllegalStateException(Messages.text("error.modelprofile.modelSseErrorInputStream.inspect.2"));
             }
             String reason = null;
             for (JsonNode choice : response.path("choices")) {
@@ -75,9 +77,9 @@ public final class ObservedChatTransport implements HttpTransport, AutoCloseable
             }
         } catch (JsonProcessingException failure) {
             // 原始解析异常可能包含模型文本，只记录位置堆栈，协议错误继续由官方模型处理。
-            var safe = new IllegalStateException("模型用量事件不是有效的 JSON。");
+            var safe = new IllegalStateException(Messages.text("error.modelprofile.observedChatTransport.observe.1"));
             safe.setStackTrace(failure.getStackTrace());
-            LOG.warn("模型用量事件无法解析，调用编号={}", callId, safe);
+            LOG.warn(Messages.log("log.modelprofile.observedChatTransport.observe.1"), callId, safe);
         }
     }
 

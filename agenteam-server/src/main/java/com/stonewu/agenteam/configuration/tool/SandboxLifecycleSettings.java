@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -22,7 +24,7 @@ public record SandboxLifecycleSettings(int idleSeconds, int scanSeconds, int sta
                                     @Value("${execution.sandbox.stop-seconds:10}") int stopSeconds,
                                     @Value("${execution.sandbox.maximum-running-containers:4}") int maximumRunning) {
         if (idleSeconds < 1 || scanSeconds < 1 || staleSeconds < 10 || stopSeconds < 1 || stopSeconds > 60 || maximumRunning < 1 || maximumRunning > 64) {
-            throw new IllegalArgumentException("沙盒空闲回收时间配置不正确");
+            throw new IllegalArgumentException(Messages.text("error.tool.sandboxLifecycleSettings.init.1"));
         }
         this.idleSeconds = idleSeconds;
         this.scanSeconds = scanSeconds;

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.workflow.entity.WorkflowGraph;
 import com.stonewu.agenteam.model.workflow.entity.WorkflowGraph.Edge;
@@ -35,7 +37,7 @@ public class WorkflowGraphValidator {
         for (var value : config.path("nodes")) {
             String id = value.path("nodeId").asText();
             if (nodes.containsKey(id)) {
-                throw invalid(id, null, "nodes[" + index + "].nodeId", "节点编号不能重复。");
+                throw invalid(id, null, "nodes[" + index + "].nodeId", Messages.text("error.resource.workflowConfigurationValidator.validateDraftGraph.1"));
             }
             nodes.put(id, new Node(id, value.path("type").asText(), value.path("name").asText(),
                 value.path("timeoutSeconds").asInt(),
@@ -57,7 +59,7 @@ public class WorkflowGraphValidator {
                 edge.target()) || edge.source().equals(edge.target())
                 || !connections.add(edge.source() + ":" + edge.target() + ":" + edge.branch())) {
                 throw invalid(null, edge.id(), "edges[" + index + "]",
-                    "连线编号重复，或引用了不存在的节点、自身或重复连接。");
+                    Messages.text("error.workflow.workflowGraphValidator.compile.1"));
             }
             edges.add(edge);
             outgoing.get(edge.source()).add(edge);
@@ -67,7 +69,7 @@ public class WorkflowGraphValidator {
         var starts = nodes.values().stream().filter(node -> node.type().equals("start")).toList();
         var ends = nodes.values().stream().filter(node -> node.type().equals("end")).toList();
         if (starts.size() != 1 || ends.size() != 1) {
-            throw invalid(null, null, "nodes", "工作流必须恰好有一个开始和一个结束节点。");
+            throw invalid(null, null, "nodes", Messages.text("error.workflow.workflowGraphValidator.compile.2"));
         }
         String start = starts.getFirst().id(), end = ends.getFirst().id();
         var next = neighbors(outgoing, false);
@@ -75,7 +77,7 @@ public class WorkflowGraphValidator {
         List<String> ordered = order(nodes.keySet(), previous, next);
         if (reachable(start, next, null).size() != nodes.size() || reachable(end, previous,
             null).size() != nodes.size()) {
-            throw invalid(null, null, "nodes", "每个节点都必须能从开始到达，并最终到达结束。");
+            throw invalid(null, null, "nodes", Messages.text("error.workflow.workflowGraphValidator.compile.3"));
         }
         var ancestors = ancestors(ordered, previous);
         var dominators = dominators(ordered, previous);
@@ -93,7 +95,7 @@ public class WorkflowGraphValidator {
                 if (parallel == null || !parallel.type().equals("parallel") || !parallel.config().path("joinNodeId")
                     .asText().equals(node.id())) {
                     throw invalid(node.id(), null, field + ".config.parallelNodeId",
-                        "汇合节点必须对应一个明确的并行节点。");
+                        Messages.text("error.workflow.workflowGraphValidator.compile.4"));
                 }
             }
             validateExpressions(node, ancestors.get(node.id()), field);
@@ -101,7 +103,7 @@ public class WorkflowGraphValidator {
                 try {
                     compile(node.config().path("body"));
                 } catch (ApiException invalid) {
-                    throw invalid(node.id(), null, field + ".config.body", "循环内部步骤：" + invalid.getReason());
+                    throw invalid(node.id(), null, field + ".config.body", Messages.text("error.workflow.workflowGraphValidator.compile.5", invalid.getReason()));
                 }
             }
         }
@@ -113,29 +115,29 @@ public class WorkflowGraphValidator {
     private void validateConnections(Node node, List<Edge> next, List<Edge> previous, String field) {
         String type = node.type();
         if (type.equals("start") && (!previous.isEmpty() || next.size() != 1)) {
-            throw invalid(node.id(), null, field, "开始节点不能有前置节点且只能有一条后续连线。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateConnections.1"));
         }
         if (type.equals("end") && !next.isEmpty()) {
-            throw invalid(node.id(), null, field, "结束节点不能有后续连线。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateConnections.2"));
         }
         var labels = next.stream().map(Edge::branch).toList();
         if (type.equals("condition") && !(labels.size() == 2 && Set.copyOf(labels).equals(Set.of("true", "false")))) {
-            throw invalid(node.id(), null, field, "条件节点必须分别连接成立和不成立两条分支。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateConnections.3"));
         }
         if (type.equals("approval") && !(labels.size() == 2 && Set.copyOf(labels)
             .equals(Set.of("approve", "reject")))) {
-            throw invalid(node.id(), null, field, "确认节点必须分别连接同意和拒绝两条分支。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateConnections.4"));
         }
         if (!Set.of("condition", "approval").contains(type) && labels.stream()
             .anyMatch(label -> !label.equals("default"))) {
-            throw invalid(node.id(), null, field, "当前节点不支持这类分支标记。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateConnections.5"));
         }
         if (!Set.of("start", "end", "condition", "approval", "parallel").contains(type) && next.size() != 1) {
-            throw invalid(node.id(), null, field, "当前节点必须有一条后续连线；需要同时执行多条分支时请使用并行节点。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateConnections.6"));
         }
         if (node.failurePolicy().equals("continue") && !Set.of("agent", "skill", "tool", "transform").contains(type)) {
             throw invalid(node.id(), null, field + ".failurePolicy",
-                "开始、结束、条件、确认和并行控制节点不能在失败后继续。");
+                Messages.text("error.workflow.workflowGraphValidator.validateConnections.7"));
         }
     }
 
@@ -149,24 +151,24 @@ public class WorkflowGraphValidator {
             .equals("join")
             || !target.config().path("parallelNodeId").asText().equals(node.id())) {
             throw invalid(node.id(), null, field + ".config.joinNodeId",
-                "并行节点必须有二至四条分支，并指定相互对应的汇合节点。");
+                Messages.text("error.workflow.workflowGraphValidator.validateParallel.1"));
         }
         if (!dominators.get(join).contains(node.id())) {
-            throw invalid(node.id(), null, field, "汇合节点存在绕过对应并行节点的路径。");
+            throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateParallel.2"));
         }
         Set<String> seen = new HashSet<>();
         for (String branch : next.get(node.id())) {
             if (!postdominators.get(branch).contains(join)) {
-                throw invalid(node.id(), null, field, "每条并行分支必须先经过对应汇合节点再继续。");
+                throw invalid(node.id(), null, field, Messages.text("error.workflow.workflowGraphValidator.validateParallel.3"));
             }
             var members = reachable(branch, next, join);
             for (String member : members) {
                 if (!seen.add(member)) {
-                    throw invalid(member, null, field, "并行分支不能在对应汇合节点之前合并。");
+                    throw invalid(member, null, field, Messages.text("error.workflow.workflowGraphValidator.validateParallel.4"));
                 }
                 if (previous.get(member).stream()
                     .anyMatch(parent -> !parent.equals(node.id()) && !members.contains(parent))) {
-                    throw invalid(member, null, field, "并行分支不能从其他分支或并行区域外进入。");
+                    throw invalid(member, null, field, Messages.text("error.workflow.workflowGraphValidator.validateParallel.5"));
                 }
             }
         }
@@ -191,7 +193,7 @@ public class WorkflowGraphValidator {
                 Set<String> targets = new HashSet<>();
                 for (var item : values.path("fields")) {
                     if (!targets.add(item.path("target").asText())) {
-                        throw WorkflowExpressions.syntax("数据整理的输出字段不能重复。");
+                        throw WorkflowExpressions.syntax(Messages.text("error.workflow.workflowGraphValidator.validateExpressions.1"));
                     }
                     if (item.has("source")) {
                         expressions.validateSelector(item.path("source").asText(), previous);
@@ -205,7 +207,7 @@ public class WorkflowGraphValidator {
                 try {
                     inputSchemas.compile(values.path("inputSchema"));
                 } catch (ApiException unsupported) {
-                    throw WorkflowExpressions.syntax("输入结构无法验证，请检查本地引用、结构深度和正则表达式。");
+                    throw WorkflowExpressions.syntax(Messages.text("error.workflow.workflowGraphValidator.validateExpressions.2"));
                 }
             }
         } catch (ApiException invalid) {
@@ -233,7 +235,7 @@ public class WorkflowGraphValidator {
             }
         }
         if (result.size() != nodes.size()) {
-            throw invalid(null, null, "edges", "工作流存在循环连接，不能执行。");
+            throw invalid(null, null, "edges", Messages.text("error.workflow.workflowGraphValidator.order.1"));
         }
         return result;
     }

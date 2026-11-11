@@ -38,12 +38,19 @@ public class UsableVersionMapper {
 
     public List<UsableVersionRecord> list(ResourceQueryScope scope, String query, PagePosition cursor, int limit,
                                           boolean subagentsOnly, String resourceId, boolean latestOnly) {
-        return statements.listVersions(scope, query, cursor, limit + 1, subagentsOnly, resourceId, latestOnly).stream()
+        return list(scope, query, cursor, limit, subagentsOnly, resourceId, latestOnly, List.of());
+    }
+
+    public List<UsableVersionRecord> list(ResourceQueryScope scope, String query, PagePosition cursor, int limit,
+                                          boolean subagentsOnly, String resourceId, boolean latestOnly,
+                                          List<String> builtinCodes) {
+        return statements.listVersions(scope, query, cursor, limit + 1, subagentsOnly, resourceId, latestOnly,
+            builtinCodes).stream()
             .map(rows ->
                 new UsableVersionRecord(
                     new UsableVersionView(rows.getResourceId(), rows.getVersionId(), rows.getVersionNo(),
                         rows.getKind(), rows.getName(), rows.getDescription(), rows.getIcon(), rows.getColor(),
-                        pluginTypes(rows.getPluginTypesJson())),
+                        pluginTypes(rows.getPluginTypesJson()), rows.getSource(), rows.getBuiltinCode()),
                     rows.getPublishedAt().toInstant())).toList();
     }
 
@@ -54,7 +61,7 @@ public class UsableVersionMapper {
         return statements.selectedVersions(scope, ids).stream().map(rows ->
             new UsableVersionView(rows.getResourceId(), rows.getVersionId(), rows.getVersionNo(), rows.getKind(),
                 rows.getName(), rows.getDescription(), rows.getIcon(), rows.getColor(),
-                pluginTypes(rows.getPluginTypesJson()))).toList();
+                pluginTypes(rows.getPluginTypesJson()), rows.getSource(), rows.getBuiltinCode())).toList();
     }
 
     private List<String> pluginTypes(String value) {

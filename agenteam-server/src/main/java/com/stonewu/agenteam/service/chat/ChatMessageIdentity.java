@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
@@ -19,7 +21,7 @@ public class ChatMessageIdentity {
     public String canonical(IntegrationApplication app, String bindingId, NormalizedChatEvent event,
                             boolean sharedIdentityVerified) {
         if (event.messageId() == null || event.externalChatId() == null) {
-            throw new IllegalArgumentException("普通消息必须包含真实消息编号和会话编号");
+            throw new IllegalArgumentException(Messages.text("error.chat.chatMessageIdentity.canonical.1"));
         }
         String scope = sharedIdentityVerified && app.externalTenantId() != null
             ? "tenant:" + app.externalTenantId() : "bot:" + bindingId;
@@ -28,7 +30,7 @@ public class ChatMessageIdentity {
 
     public String receipt(NormalizedChatEvent event) {
         if (event.deliveryId() == null || event.deliveryId().isBlank()) {
-            throw new IllegalArgumentException("需要保存的事件缺少稳定的投递编号");
+            throw new IllegalArgumentException(Messages.text("error.chat.chatMessageIdentity.receipt.1"));
         }
         return json.hash(json.tree(List.of(event.eventType(), event.deliveryId())));
     }

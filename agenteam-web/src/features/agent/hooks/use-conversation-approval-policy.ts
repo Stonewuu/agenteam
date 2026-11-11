@@ -57,7 +57,7 @@ export function useConversationApprovalPolicy({
       setSaved(result);
       onChanged();
     } catch (failed) {
-      console.error("保存对话权限模式失败", {
+      console.error("Failed to save the conversation approval policy", {
         method: "PATCH",
         path: conversationPath(enterprise, conversationId),
         conversationId

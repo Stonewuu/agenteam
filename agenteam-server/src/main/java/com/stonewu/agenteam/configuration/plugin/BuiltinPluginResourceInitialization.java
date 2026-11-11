@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.plugin.BuiltinPluginResourceMapper;
 import com.stonewu.agenteam.service.plugin.BuiltinPluginResourceService;
 import org.slf4j.Logger;
@@ -38,7 +40,7 @@ public class BuiltinPluginResourceInitialization implements ApplicationRunner {
                 try {
                     resources.initialize(enterprise);
                 } catch (RuntimeException failure) {
-                    LOG.error("初始化内置插件失败，企业编号 {}", enterprise, failure);
+                    LOG.error(Messages.log("log.plugin.builtinPluginResourceInitialization.run.1"), enterprise, failure);
                     throw failure;
                 }
             }

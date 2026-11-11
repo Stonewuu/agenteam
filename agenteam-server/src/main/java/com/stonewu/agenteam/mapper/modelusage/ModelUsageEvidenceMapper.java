@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,7 +33,7 @@ public class ModelUsageEvidenceMapper {
         int bytes = encoded.cacheDetails().getBytes(StandardCharsets.UTF_8).length
             + encoded.fieldStates().getBytes(StandardCharsets.UTF_8).length + encoded.evidence().getBytes(StandardCharsets.UTF_8).length;
         if (bytes > 16384) {
-            throw new IllegalStateException("模型用量证据超出 16 KiB 限制。");
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageEvidenceMapper.encode.1"));
         }
         return encoded;
     }
@@ -47,7 +49,7 @@ public class ModelUsageEvidenceMapper {
                 evidence.problems() == null ? List.of() : evidence.problems(),
                 evidence.unsupportedMeters() == null ? List.of() : evidence.unsupportedMeters());
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("已保存的模型用量无法解析。", failure);
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageEvidenceMapper.decode.1"), failure);
         }
     }
 
@@ -68,7 +70,7 @@ public class ModelUsageEvidenceMapper {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("模型用量无法编码。", failure);
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageEvidenceMapper.write.1"), failure);
         }
     }
 

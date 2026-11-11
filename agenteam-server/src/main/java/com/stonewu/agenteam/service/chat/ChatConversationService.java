@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -87,7 +89,7 @@ public class ChatConversationService {
             row.setPlatformScopeKey(scope);
             row.setExternalConversationId(externalId);
             row.setConversationKind(kind);
-            row.setName(name == null ? (kind.equals("direct") ? "机器人私聊" : "群聊") : name);
+            row.setName(name == null ? (kind.equals("direct") ? Messages.text("text.chat.chatConversationService.observe.1") : Messages.text("text.chat.chatConversationService.observe.2")) : name);
             row.setStatus(kind.equals("direct") ? "enabled" : "discovered");
             row.setIngressMode("single_bot");
             row.setIngressBotId(bot.getId());
@@ -156,17 +158,17 @@ public class ChatConversationService {
         if (input.status() == null || input.ingressMode() == null || input.triggerMode() == null || input.resultPolicy() == null
             || !Set.of("enabled", "disabled", "archived").contains(input.status()) || !Set.of("single_bot", "multi_bot").contains(input.ingressMode())
             || !Set.of("mention", "default_entry").contains(input.triggerMode()) || !Set.of("summary_link", "full_allowed").contains(input.resultPolicy())) {
-            throw ApiException.invalidField("status", "会话设置包含不支持的选项。");
+            throw ApiException.invalidField("status", Messages.text("error.chat.chatConversationService.update.1"));
         }
         Set<String> selected = input.allowedBotIds() == null ? Set.of() : new HashSet<>(input.allowedBotIds());
         if (selected.size() > 20 || (input.status().equals("enabled") && (selected.isEmpty() || !selected.contains(input.ingressBotId())))) {
-            throw ApiException.invalidField("allowedBotIds", "请选择已加入会话的参与岗位和接收任务的机器人，最多选择二十个岗位。");
+            throw ApiException.invalidField("allowedBotIds", Messages.text("error.chat.chatConversationService.update.2"));
         }
         var existing = members(enterprise, id);
         var available = existing.stream().filter(value -> value.getMembershipStatus().equals("present"))
             .map(ChatConversationBotRow::getBotBindingId).collect(Collectors.toSet());
         if (input.status().equals("enabled") && !available.containsAll(selected)) {
-            throw ApiException.invalidField("allowedBotIds", "有岗位尚未确认加入此群，请先在平台加入机器人并检查。");
+            throw ApiException.invalidField("allowedBotIds", Messages.text("error.chat.chatConversationService.update.3"));
         }
         var memberBotIds = existing.stream().map(ChatConversationBotRow::getBotBindingId).distinct().toList();
         var allBots = memberBotIds.isEmpty() ? List.<ChatBotBindingRow>of() : botRows.selectList(new LambdaQueryWrapper<ChatBotBindingRow>()
@@ -175,13 +177,13 @@ public class ChatConversationService {
         var verified = bots.capabilities(enterprise, allBots, "crossBotIdentity");
         if (input.status().equals("enabled") && input.ingressMode().equals("multi_bot") && (selectedBots.size() < 2
             || selectedBots.stream().anyMatch(bot -> !Boolean.TRUE.equals(verified.get(bot.getId()))))) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", "请至少选择两个岗位，并在机器人“连接检查”中完成共同接收测试，再启用多个机器人接收任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", Messages.text("error.chat.chatConversationService.update.4"));
         }
         if (input.status().equals("enabled") && input.ingressMode().equals("multi_bot") && !mentionIdentities.supportsGroup(selectedBots)) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", "部分机器人还不能共同接收消息，请在机器人“连接检查”中对所选机器人完成共同接收测试。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", Messages.text("error.chat.chatConversationService.update.5"));
         }
         if (input.triggerMode().equals("default_entry")) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", "请使用 @ 机器人发起任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", Messages.text("error.chat.chatConversationService.update.6"));
         }
         var limits = input.limits() == null ? Map.<String, Integer>of() : input.limits();
         validateLimits(limits);
@@ -206,7 +208,7 @@ public class ChatConversationService {
                 throw ApiException.versionConflict(membership.getRevision());
             }
         }
-        audit.record(enterprise, actor, "chat.conversation_update", "chat_conversation", id, "更新机器人会话设置", Map.of("status", input.status()));
+        audit.record(enterprise, actor, "chat.conversation_update", "chat_conversation", id, Messages.text("text.chat.chatConversationService.update.1"), Map.of("status", input.status()));
         return view(require(enterprise, id), members(enterprise, id), allBots.stream().collect(Collectors.toMap(ChatBotBindingRow::getId, Function.identity())), verified);
     }
 
@@ -238,7 +240,7 @@ public class ChatConversationService {
     public ChatConversationRow require(String enterprise, String id) {
         var row = conversations.selectOne(new LambdaQueryWrapper<ChatConversationRow>().eq(ChatConversationRow::getEnterpriseId, enterprise).eq(ChatConversationRow::getId, id));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_CONVERSATION_UNAVAILABLE", "会话不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_CONVERSATION_UNAVAILABLE", Messages.text("error.chat.chatConversationService.require.1"));
         }
         return row;
     }
@@ -256,7 +258,7 @@ public class ChatConversationService {
     private ChatConversationView view(ChatConversationRow row, List<ChatConversationBotRow> members, Map<String, ChatBotBindingRow> names, Map<String, Boolean> verified) {
         var mapped = members.stream().sorted(Comparator.comparing(ChatConversationBotRow::getCreatedAt)).map(value -> {
             var bot = names.get(value.getBotBindingId());
-            return new ChatConversationView.Bot(value.getBotBindingId(), bot == null ? "已停用岗位" : bot.getRoleName(), value.getMembershipStatus(),
+            return new ChatConversationView.Bot(value.getBotBindingId(), bot == null ? Messages.text("text.chat.chatConversationService.view.1") : bot.getRoleName(), value.getMembershipStatus(),
                 Boolean.TRUE.equals(value.getReceiveEnabled()), Boolean.TRUE.equals(value.getSendEnabled()), Boolean.TRUE.equals(value.getCollaborationEnabled()),
                 value.getVerifiedAt() == null ? null : value.getVerifiedAt().toString(), Boolean.TRUE.equals(verified.get(value.getBotBindingId())));
         }).toList();
@@ -271,7 +273,7 @@ public class ChatConversationService {
         for (var entry : limits.entrySet()) {
             if (entry.getKey() == null || !maximum.containsKey(entry.getKey()) || entry.getValue() == null
                 || entry.getValue() < (entry.getKey().equals("maxHandoffs") ? 0 : entry.getKey().equals("deadlineMinutes") ? 10 : 1) || entry.getValue() > maximum.get(entry.getKey())) {
-                throw ApiException.invalidField("limits", "任务限制超出服务端允许范围。");
+                throw ApiException.invalidField("limits", Messages.text("error.chat.chatConversationService.validateLimits.1"));
             }
         }
     }

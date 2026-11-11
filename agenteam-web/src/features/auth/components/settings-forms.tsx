@@ -157,7 +157,7 @@ export function PasswordSettings({onChange}: SettingsProps) {
         setPassword("");
         setConfirmation("");
         const latest = await loadIdentity().catch((failure) => {
-          console.error("更新密码后读取个人资料失败", failure);
+          console.error("Failed to read the profile after changing the password", failure);
           return null;
         });
         if (latest) {

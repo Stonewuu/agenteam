@@ -1,6 +1,7 @@
 package io.agentscope.extensions.model.openaiofficial;
 
 import com.openai.client.OpenAIClient;
+import com.stonewu.agenteam.service.i18n.Messages;
 import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.model.GenerateOptions;
 
@@ -17,11 +18,11 @@ public final class AgenTeamResponsesModelFactory {
 
     public static OpenAIResponsesChatModel create(OpenAIClient client, GenerateOptions options,
                                                   int contextWindowSize) {
-        Objects.requireNonNull(client, "模型客户端不能为空");
-        Objects.requireNonNull(options, "模型配置不能为空");
-        Objects.requireNonNull(options.getModelName(), "模型名称不能为空");
+        Objects.requireNonNull(client, Messages.text("model.clientRequired"));
+        Objects.requireNonNull(options, Messages.text("model.optionsRequired"));
+        Objects.requireNonNull(options.getModelName(), Messages.text("model.nameRequired"));
         if (options.getApiKey() == null || options.getApiKey().isBlank()) {
-            throw new IllegalArgumentException("模型密钥不能为空");
+            throw new IllegalArgumentException(Messages.text("model.apiKeyRequired"));
         }
         var controlled = GenerateOptions.mergeOptions(GenerateOptions.builder()
             .executionConfig(ExecutionConfig.builder().maxAttempts(1).build()).build(), options);

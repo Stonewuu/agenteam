@@ -1,5 +1,11 @@
 import {fieldErrorMessages} from "@/lib/form-errors";
 import {identityRequestRejected, requestIdentity} from "./request-identity";
+import {defaultLocale, isLocale} from "@/lib/i18n/locales";
+
+function requestLanguage() {
+  const language = typeof document === "undefined" ? null : document.documentElement.lang;
+  return isLocale(language) ? language : defaultLocale;
+}
 
 type ErrorBody = {
   code: string;
@@ -48,11 +54,11 @@ export function reportRequestFailure(error: unknown, method: string, path: strin
     causes.push(current.stack ?? `${current.name}: ${current.message}`);
     current = current.cause;
   }
-  console.error("接口请求失败", {
+  console.error("API request failed", {
     method,
     path: path.split(/[?#]/)[0],
     requestId: error instanceof ApiError ? error.requestId : undefined
-  }, causes.join("\n原因：\n"));
+  }, causes.join("\nCaused by:\n"));
 }
 
 type ApiOptions = {
@@ -79,7 +85,9 @@ async function csrfToken(): Promise<string> {
   }
   if (!csrfLoading) {
     csrfLoading = withTimeout(undefined, async (signal) => {
-      const response = await fetch("/api/v1/auth/csrf", {cache: "no-store", credentials: "same-origin", signal});
+      const response = await fetch("/api/v1/auth/csrf", {
+        cache: "no-store", credentials: "same-origin", signal, headers: {"Accept-Language": requestLanguage()},
+      });
       const token = (await parseApiResponse<{ token: string }>(response)).token;
       csrf = token;
       return token;
@@ -95,7 +103,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
     throw new Error("请求地址不属于当前应用。");
   }
   const method = options.method ?? "GET";
-  const headers = new Headers({Accept: "application/json"});
+  const headers = new Headers({Accept: "application/json", "Accept-Language": requestLanguage()});
   const identity = requestIdentity();
   if (identity && !["/api/v1/auth/me", "/api/v1/auth/csrf", "/api/v1/auth/impersonation",
     "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/bootstrap"].includes(path)) {

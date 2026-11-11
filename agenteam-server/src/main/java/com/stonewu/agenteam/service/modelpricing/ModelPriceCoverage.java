@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration.DateCondition;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration.Rule;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration.Time;
@@ -27,7 +29,7 @@ final class ModelPriceCoverage {
                 var b = rules.get(right);
                 if (a.priority() == b.priority() && a.serviceTier().equals(b.serviceTier())
                     && a.contextMinTokens() < upper(b) && b.contextMinTokens() < upper(a) && datesOverlap(a, b)) {
-                    throw ApiException.invalidField("rules", "同优先级规则“" + a.name() + "”与“" + b.name() + "”存在重叠。");
+                    throw ApiException.invalidField("rules", Messages.text("error.modelpricing.modelPriceCoverage.validate.1", a.name(), b.name()));
                 }
             }
         }
@@ -77,7 +79,7 @@ final class ModelPriceCoverage {
                 int weekday = day;
                 var regular = candidates.stream().filter(rule -> includes(rule).isEmpty()).toList();
                 if (!coversDay(regular, weekday)) {
-                    throw missing(tier, input, "星期" + day);
+                    throw missing(tier, input, Messages.text("error.modelpricing.modelPriceCoverage.requireCoverage.1", day));
                 }
             }
             for (var date : dates) {
@@ -103,7 +105,7 @@ final class ModelPriceCoverage {
     }
 
     private static ApiException missing(String tier, long input, String day) {
-        return ApiException.invalidField("rules", "服务档位 " + tier + " 在输入量 " + input + "、" + day + " 未覆盖全天价格。");
+        return ApiException.invalidField("rules", Messages.text("error.modelpricing.modelPriceCoverage.missing.1", tier, input, day));
     }
 
     private static boolean permitsDate(Rule rule, LocalDate date) {

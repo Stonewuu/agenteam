@@ -1,0 +1,598 @@
+{
+  "error.plugin.platformToolInputMapper.revision.1": {
+    "zh-CN": "请重新加载当前记录后再修改。",
+    "en": "Reload the current record before editing it."
+  },
+  "error.plugin.pluginConfigurationMapper.source.1": {
+    "zh-CN": "所选工具的来源不存在，请重新选择。",
+    "en": "The selected tool source does not exist. Select another source."
+  },
+  "error.plugin.pluginToolDefinitionMapper.invalid.1": {
+    "zh-CN": "工具清单包含不支持的名称、重复条目或执行方式。",
+    "en": "The tool list contains unsupported names, duplicates, or execution methods."
+  },
+  "error.plugin.toolQueryResult.init.1": {
+    "zh-CN": "工具查询结果不完整",
+    "en": "The tool query result is incomplete."
+  },
+  "error.plugin.pluginCollectionInput.icon.1": {
+    "zh-CN": "请选择支持的图标。",
+    "en": "Select a supported icon."
+  },
+  "error.plugin.pluginCollectionInput.color.1": {
+    "zh-CN": "请选择支持的颜色。",
+    "en": "Select a supported color."
+  },
+  "error.plugin.pluginCollectionInput.id.1": {
+    "zh-CN": "请填写此项内容。",
+    "en": "Enter a value for this field."
+  },
+  "error.plugin.pluginCollectionInput.type.1": {
+    "zh-CN": "请选择当前支持的工具来源。",
+    "en": "Select a currently supported tool source."
+  },
+  "error.plugin.pluginCollectionInput.transport.1": {
+    "zh-CN": "请选择支持的连接方式。",
+    "en": "Select a supported connection method."
+  },
+  "error.plugin.pluginCollectionInput.name.1": {
+    "zh-CN": "所选工具编号无效。",
+    "en": "The selected tool ID is invalid."
+  },
+  "error.plugin.pluginConfigurationInput.implementationVersion.1": {
+    "zh-CN": "实现版本过长。",
+    "en": "The implementation version is too long."
+  },
+  "error.plugin.builtinPluginRegistry.init.1": {
+    "zh-CN": "内置插件代码重复登记",
+    "en": "Duplicate built-in plugin code registration."
+  },
+  "error.plugin.builtinPluginRegistry.require.1": {
+    "zh-CN": "请选择当前支持的内置插件。",
+    "en": "Select a supported built-in plugin."
+  },
+  "error.plugin.builtinPluginResourceService.initialize.1": {
+    "zh-CN": "内置插件的固定编号与已有资源冲突",
+    "en": "A built-in plugin's fixed ID conflicts with an existing resource."
+  },
+  "error.plugin.javaPluginInstallationTransactions.activate.1": {
+    "zh-CN": "此插件版本已安装，请使用新的版本号。",
+    "en": "This plugin version is already installed. Use a new version number."
+  },
+  "error.plugin.javaPluginInstallationTransactions.conflict.1": {
+    "zh-CN": "插件安装状态已变化，请重新读取后操作。",
+    "en": "The plugin installation status changed. Reload it before continuing."
+  },
+  "error.plugin.javaPluginManagementService.authorize.1": {
+    "zh-CN": "只有平台管理员可以安装、升级或卸载扩展插件。",
+    "en": "Only platform administrators can install, upgrade, or uninstall extension plugins."
+  },
+  "error.plugin.javaPluginManagementService.prepare.1": {
+    "zh-CN": "无法计算插件包摘要",
+    "en": "The plugin package digest could not be calculated."
+  },
+  "error.plugin.javaPluginManagementService.prepare.2": {
+    "zh-CN": "同一次上传不能更换程序包，请重新选择文件。",
+    "en": "The package cannot change within the same upload. Select the file again."
+  },
+  "error.plugin.javaPluginManagementService.prepare.3": {
+    "zh-CN": "插件工具声明无法解析，请按平台接口规范重新构建。",
+    "en": "The plugin tool declarations could not be parsed. Rebuild according to the platform API specification."
+  },
+  "error.plugin.javaPluginManagementService.savePrepared.1": {
+    "zh-CN": "插件安装记录未能保存",
+    "en": "The plugin installation record could not be saved."
+  },
+  "error.plugin.javaPluginManagementService.savePrepared.2": {
+    "zh-CN": "同一次上传已提交其他程序包。",
+    "en": "A different package was already submitted for this upload."
+  },
+  "error.plugin.javaPluginManagementService.requireCapacity.1": {
+    "zh-CN": "已安装及待安装插件最多 100 个，请先移除不需要的程序包。",
+    "en": "Up to 100 installed or pending plugins are allowed. Remove unneeded packages first."
+  },
+  "error.plugin.javaPluginManagementService.validateTools.1": {
+    "zh-CN": "插件需要提供 1 至 100 个工具。",
+    "en": "A plugin must provide between 1 and 100 tools."
+  },
+  "error.plugin.javaPluginManagementService.validateTools.2": {
+    "zh-CN": "插件工具定义不符合规范，当前接口不支持结果查询和自动重试声明。",
+    "en": "The plugin tool definition is invalid. This API does not support result query or automatic retry declarations."
+  },
+  "error.plugin.javaPluginPackageReader.read.1": {
+    "zh-CN": "插件包不能为空且不得超过 20 MiB。",
+    "en": "The plugin package must not be empty or exceed 20 MiB."
+  },
+  "error.plugin.javaPluginPackageReader.read.2": {
+    "zh-CN": "请上传符合平台规范的普通插件 JAR，不要包含平台公共接口或 PF4J 的实现类。",
+    "en": "Upload a standard plugin JAR conforming to the platform specification, without platform API or PF4J implementation classes."
+  },
+  "error.plugin.javaPluginPackageReader.read.3": {
+    "zh-CN": "插件包展开内容或描述文件超过限制。",
+    "en": "The expanded plugin content or descriptor exceeds the limit."
+  },
+  "error.plugin.javaPluginPackageReader.read.4": {
+    "zh-CN": "插件包缺少清单、平台配置声明或 PF4J 扩展索引。",
+    "en": "The plugin package is missing its manifest, platform configuration declaration, or PF4J extension index."
+  },
+  "error.plugin.javaPluginPackageReader.read.5": {
+    "zh-CN": "插件标识、版本或公共接口版本不符合要求。",
+    "en": "The plugin identifier, version, or public API version is invalid."
+  },
+  "error.plugin.javaPluginPackageReader.read.6": {
+    "zh-CN": "当前插件包不能依赖其他已安装插件，请将私有依赖打入程序包。",
+    "en": "Plugin packages cannot depend on other installed plugins. Bundle private dependencies in the package."
+  },
+  "error.plugin.javaPluginPackageReader.read.7": {
+    "zh-CN": "插件包需要名称、简介和作者信息，且长度必须符合规范。",
+    "en": "The plugin package requires a name, description, and author within the specified lengths."
+  },
+  "error.plugin.javaPluginPackageReader.read.8": {
+    "zh-CN": "插件包无法读取，请重新构建后上传。",
+    "en": "The plugin package could not be read. Rebuild and upload it again."
+  },
+  "error.plugin.javaPluginPackageReader.validateConfigurationSchema.1": {
+    "zh-CN": "插件配置必须声明对象字段，最多 30 项，且不允许未声明的字段。",
+    "en": "Plugin configuration must declare an object with up to 30 fields and reject undeclared fields."
+  },
+  "error.plugin.javaPluginPackageReader.validateConfigurationSchema.2": {
+    "zh-CN": "配置项需要名称和标题，支持文本、数值及开关；凭据请通过独立凭据配置。",
+    "en": "Each configuration field requires a name and title. Text, numbers, and switches are supported; configure credentials separately."
+  },
+  "error.plugin.javaPluginReferenceService.notices.1": {
+    "zh-CN": "一次最多检查 100 个插件版本。",
+    "en": "Check up to 100 plugin versions at a time."
+  },
+  "error.plugin.javaPluginRegistry.require.1": {
+    "zh-CN": "插件已升级，旧版本已停止调用，请确认并更新插件配置。",
+    "en": "The plugin was upgraded and the old version is no longer callable. Review and update the plugin configuration."
+  },
+  "error.plugin.javaPluginRegistry.require.2": {
+    "zh-CN": "插件已卸载，已停止本次调用。",
+    "en": "The plugin was uninstalled. This call was stopped."
+  },
+  "error.plugin.javaPluginRegistry.artifact.1": {
+    "zh-CN": "插件程序包不可用，请重新安装。",
+    "en": "The plugin package is unavailable. Install it again."
+  },
+  "error.plugin.javaPluginRegistry.matchPlugin.1": {
+    "zh-CN": "插件版本与所选程序包不一致。",
+    "en": "The plugin version does not match the selected package."
+  },
+  "error.plugin.javaPluginSources.require.1": {
+    "zh-CN": "请填写插件配置。",
+    "en": "Enter the plugin configuration."
+  },
+  "error.plugin.javaPluginSources.require.2": {
+    "zh-CN": "插件配置不符合要求，请核对必填项及字段格式。",
+    "en": "The plugin configuration is invalid. Check required fields and formats."
+  },
+  "error.plugin.javaPluginSources.resolve.1": {
+    "zh-CN": "所选工具不在此插件版本中。",
+    "en": "The selected tool is not in this plugin version."
+  },
+  "error.plugin.javaPluginCommand.command.1": {
+    "zh-CN": "无法检查 Java 插件执行类路径",
+    "en": "The Java plugin execution classpath could not be checked."
+  },
+  "error.plugin.javaPluginProcesses.call.1": {
+    "zh-CN": "插件执行数量已达上限，请稍后重试。",
+    "en": "The plugin execution limit was reached. Try again later."
+  },
+  "error.plugin.javaPluginProcesses.call.2": {
+    "zh-CN": "插件执行超时，已停止本次调用。",
+    "en": "The plugin execution timed out. This call was stopped."
+  },
+  "error.plugin.javaPluginProcesses.call.3": {
+    "zh-CN": "插件执行失败，请联系插件维护者。",
+    "en": "The plugin execution failed. Contact the plugin maintainer."
+  },
+  "error.plugin.javaPluginProcesses.call.4": {
+    "zh-CN": "插件调用已取消。",
+    "en": "The plugin call was canceled."
+  },
+  "error.plugin.javaPluginProcesses.call.5": {
+    "zh-CN": "插件进程已退出，本次操作结果无法确认。",
+    "en": "The plugin process exited. The operation result could not be confirmed."
+  },
+  "error.plugin.javaPluginProcesses.call.6": {
+    "zh-CN": "插件进程未能完成本次调用。",
+    "en": "The plugin process did not complete this call."
+  },
+  "error.plugin.javaPluginProtocol.read.1": {
+    "zh-CN": "插件返回内容超过限制",
+    "en": "The plugin response exceeds the limit."
+  },
+  "error.plugin.javaPluginProtocol.read.2": {
+    "zh-CN": "插件进程提前结束",
+    "en": "The plugin process ended early."
+  },
+  "error.plugin.javaPluginProtocol.write.1": {
+    "zh-CN": "插件通信内容超过限制",
+    "en": "Plugin communication content exceeds the limit."
+  },
+  "error.plugin.javaPluginWorker.main.1": {
+    "zh-CN": "程序包必须提供一个 Java 工具扩展",
+    "en": "The package must provide one Java tool extension."
+  },
+  "error.plugin.javaPluginWorker.beforeSend.1": {
+    "zh-CN": "插件调用已取消",
+    "en": "The plugin call was canceled."
+  },
+  "error.plugin.javaPluginWorker.beforeSend.2": {
+    "zh-CN": "插件调用授权已失效",
+    "en": "The plugin call authorization expired."
+  },
+  "error.plugin.javaPluginWorker.requireActive.1": {
+    "zh-CN": "插件调用已取消或超时",
+    "en": "The plugin call was canceled or timed out."
+  },
+  "error.plugin.mcpEventReader.consume.1": {
+    "zh-CN": "远程服务返回的内容超过允许大小。",
+    "en": "The remote response exceeds the size limit."
+  },
+  "error.plugin.platformBuiltinInvocation.write.1": {
+    "zh-CN": "请在普通对话中确认并修改平台内容，预览和计划执行不能修改这些内容。",
+    "en": "Confirm and change platform content in a normal conversation. Previews and scheduled executions cannot change it."
+  },
+  "error.plugin.platformBuiltinInvocation.write.2": {
+    "zh-CN": "本次业务操作已经变化，请重新发起。",
+    "en": "This action has changed. Start it again."
+  },
+  "error.plugin.platformBuiltinInvocation.write.3": {
+    "zh-CN": "本次业务操作超时，修改未提交。",
+    "en": "This action timed out. No changes were submitted."
+  },
+  "error.plugin.platformBuiltinInvocation.write.4": {
+    "zh-CN": "本次业务操作返回内容过多，修改未提交。",
+    "en": "This action returned too much content. No changes were submitted."
+  },
+  "error.plugin.platformBuiltinPluginAdapter.call.1": {
+    "zh-CN": "平台业务工具必须由真实任务的执行入口调用",
+    "en": "Platform business tools must be called through a task execution entry point."
+  },
+  "error.plugin.platformBuiltinPluginAdapter.call.2": {
+    "zh-CN": "当前插件没有提供此业务工具",
+    "en": "The current plugin does not provide this business tool."
+  },
+  "error.plugin.platformBusinessTools.init.1": {
+    "zh-CN": "平台业务工具处理器重复登记：{0}",
+    "en": "Duplicate platform business tool handler registration: {0}"
+  },
+  "error.plugin.platformBusinessTools.call.1": {
+    "zh-CN": "平台业务工具没有登记",
+    "en": "The platform business tool is not registered."
+  },
+  "error.plugin.pluginCheckService.inspect.1": {
+    "zh-CN": "远程插件检查不能占用数据库事务",
+    "en": "Remote plugin checks must not hold a database transaction."
+  },
+  "error.plugin.pluginCheckService.save.1": {
+    "zh-CN": "已有更新的连接检查结果，请重新加载。",
+    "en": "Newer connection check results are available. Reload the page."
+  },
+  "error.plugin.pluginToolSources.resolve.1": {
+    "zh-CN": "所选版本已不再提供这个工具，请重新选择。",
+    "en": "This version no longer provides the selected tool. Select another tool."
+  },
+  "error.plugin.pluginToolSources.resolve.2": {
+    "zh-CN": "所选工具不在连接检查结果中，请重新检查。",
+    "en": "The selected tool is not in the connection check results. Check the connection again."
+  },
+  "error.plugin.remoteMcpSession.init.1": {
+    "zh-CN": "远程服务没有提供可用的工具协议，请检查服务配置。",
+    "en": "The remote service does not provide a usable tool protocol. Check its configuration."
+  },
+  "error.plugin.remoteMcpSession.remaining.1": {
+    "zh-CN": "远程连接超过允许时间，请稍后重试。",
+    "en": "The remote connection timed out. Try again later."
+  },
+  "error.plugin.remoteMcpSession.invalidTools.1": {
+    "zh-CN": "远程工具清单的格式或数量不符合要求。",
+    "en": "The remote tool list has an invalid format or item count."
+  },
+  "error.plugin.remoteMcpSession.safeFailure.1": {
+    "zh-CN": "无法完成远程工具连接，请检查服务配置或稍后重试。",
+    "en": "Unable to connect to the remote tools. Check the configuration or try again later."
+  },
+  "error.plugin.restrictedMcpTransport.init.1": {
+    "zh-CN": "请选择支持的远程连接方式。",
+    "en": "Select a supported remote connection method."
+  },
+  "error.plugin.restrictedMcpTransport.successful.1": {
+    "zh-CN": "远程服务未接受当前凭据，请检查后重试。",
+    "en": "The remote service rejected the credentials. Check them and try again."
+  },
+  "error.plugin.webReadPluginAdapter.call.1": {
+    "zh-CN": "未提供此工具。",
+    "en": "This tool is unavailable."
+  },
+  "error.plugin.webReadPluginAdapter.call.2": {
+    "zh-CN": "目标网站暂时无法完成读取。",
+    "en": "The website could not be read right now."
+  },
+  "error.plugin.webReadPluginAdapter.call.3": {
+    "zh-CN": "目标网站拒绝了本次读取。可尝试沙盒浏览器或其他公开来源；需要登录或验证时，请先确认已有访问权限。",
+    "en": "The website rejected this request. Try the sandbox browser or another public source. If sign-in or verification is required, confirm that you have access first."
+  },
+  "error.plugin.webReadPluginAdapter.call.4": {
+    "zh-CN": "该地址返回的不是可读取的文字内容。",
+    "en": "This address does not return readable text."
+  },
+  "error.plugin.webReadPluginAdapter.call.5": {
+    "zh-CN": "网页内容超过本次读取允许的大小。",
+    "en": "The webpage exceeds the size limit for this request."
+  },
+  "error.plugin.webReadPluginAdapter.call.6": {
+    "zh-CN": "网页的文字编码或内容类型无法解析。",
+    "en": "The page's text encoding or content type could not be parsed."
+  },
+  "error.plugin.webReadPluginAdapter.failed.1": {
+    "zh-CN": "无法读取该地址，请检查后重试。",
+    "en": "Unable to read this address. Check it and try again."
+  },
+  "error.plugin.javaPluginFailures.decode.1": {
+    "zh-CN": "插件未返回具体原因",
+    "en": "The plugin returned no specific reason."
+  },
+  "error.plugin.pluginCheckService.inspect.2": {
+    "zh-CN": "所选工具已移除或发生变化，请核对当前工具并保存草稿后重新检查。",
+    "en": "The selected tools were removed or changed. Review the current tools and save the draft before checking again."
+  },
+  "error.plugin.restrictedMcpTransport.receive.1": {
+    "zh-CN": "此客户端不支持该请求",
+    "en": "This client does not support the request."
+  },
+  "log.plugin.builtinPluginResourceInitialization.run.1": {
+    "zh-CN": "初始化内置插件失败，企业编号 {}",
+    "en": "Built-in plugin initialization failed; enterpriseId={}"
+  },
+  "text.plugin.platformToolDefinitions.basics.1": {
+    "zh-CN": "读取当前企业、本人和企业时区。",
+    "en": "Read the current organization, user, and organization time zone."
+  },
+  "text.plugin.platformToolDefinitions.basics.2": {
+    "zh-CN": "读取当前准确时间、日期及企业时区。安排日期前先读取，不猜测今天的日期。",
+    "en": "Read the current time, date, and organization time zone before planning dates."
+  },
+  "text.plugin.platformToolDefinitions.basics.3": {
+    "zh-CN": "在当前用户可见的工作空间中搜索，返回实际资源及页面入口。",
+    "en": "Search the workspace content available to you and return resources with links."
+  },
+  "text.plugin.platformToolDefinitions.todos.1": {
+    "zh-CN": "查询本人或有权查看的团队待办。截止日期不代表到点提醒。",
+    "en": "Find your to-dos or accessible team to-dos. Due dates do not create reminders."
+  },
+  "text.plugin.platformToolDefinitions.todos.2": {
+    "zh-CN": "读取一条有权查看的待办及当前修改版本，修改前先读取。",
+    "en": "Read an accessible to-do and its current revision before editing it."
+  },
+  "text.plugin.platformToolDefinitions.todos.3": {
+    "zh-CN": "查询待办的真实修改历史。",
+    "en": "View a to-do's change history."
+  },
+  "text.plugin.platformToolDefinitions.todos.4": {
+    "zh-CN": "查询当前待办可以选择的真实负责人，不要猜测成员编号。",
+    "en": "Find eligible assignees for a to-do using actual member records."
+  },
+  "text.plugin.platformToolDefinitions.todos.5": {
+    "zh-CN": "查询当前用户有权筛选或分配待办的团队。",
+    "en": "Find teams you can use to filter or assign to-dos."
+  },
+  "text.plugin.platformToolDefinitions.todos.6": {
+    "zh-CN": "创建待办。负责人省略时归本人；截止日期只是日期，不会产生定时提醒。确认后才保存。",
+    "en": "Create a to-do after confirmation. The assignee defaults to you. Due dates do not create reminders."
+  },
+  "text.plugin.platformToolDefinitions.todos.7": {
+    "zh-CN": "修改待办。先读取当前版本；未提交的内容保留原值，明确提交空值可清除团队和截止日期。",
+    "en": "Update a to-do after reading its current revision. Omitted fields stay unchanged; explicit empty values can clear the team and due date."
+  },
+  "text.plugin.platformToolDefinitions.todos.8": {
+    "zh-CN": "将待办标为待处理、进行中、完成或取消，确认后按当前版本修改。",
+    "en": "After confirmation, mark a to-do as pending, in progress, completed, or cancelled using its current revision."
+  },
+  "text.plugin.platformToolDefinitions.todos.9": {
+    "zh-CN": "转交待办负责人，不转交来源对话的访问权限。",
+    "en": "Transfer a to-do to another assignee without granting access to its source conversation."
+  },
+  "text.plugin.platformToolDefinitions.todos.10": {
+    "zh-CN": "删除指定待办，按当前版本执行。",
+    "en": "Delete the selected to-do using its current revision."
+  },
+  "text.plugin.platformToolDefinitions.schedules.1": {
+    "zh-CN": "查询本人定时任务，不能查询其他成员的私有计划。",
+    "en": "Find your schedules. Other members' private schedules are excluded."
+  },
+  "text.plugin.platformToolDefinitions.schedules.2": {
+    "zh-CN": "读取本人定时任务及当前修改版本，修改前先读取。",
+    "en": "Read your schedule and its current revision before editing it."
+  },
+  "text.plugin.platformToolDefinitions.schedules.3": {
+    "zh-CN": "查询本人定时任务的实际触发与执行记录。",
+    "en": "View the trigger and execution history of your schedules."
+  },
+  "text.plugin.platformToolDefinitions.schedules.4": {
+    "zh-CN": "查询本人已雇佣且可运行的员工，创建计划时使用返回的 hireId，不会自动雇佣员工。",
+    "en": "Find AI employees already available in your workspace for scheduled tasks. This does not add new AI employees."
+  },
+  "text.plugin.platformToolDefinitions.schedules.5": {
+    "zh-CN": "预览规则对应的未来五次实际执行时间，不创建计划。省略时区时使用企业时区。",
+    "en": "Preview the next five runs without creating a schedule. Uses the organization time zone unless specified."
+  },
+  "text.plugin.platformToolDefinitions.schedules.6": {
+    "zh-CN": "创建本人定时任务。先选择已雇佣员工并核对未来执行时间；enabled 明确决定是否启用。确认后保存。",
+    "en": "Choose an AI employee from your workspace, review upcoming run times, and confirm whether to enable the schedule before saving."
+  },
+  "text.plugin.platformToolDefinitions.schedules.7": {
+    "zh-CN": "修改本人定时任务的完整设置。先读取当前内容和修改版本，修改只影响未来执行。",
+    "en": "Update all schedule settings after reading the current revision. Changes affect future runs only."
+  },
+  "text.plugin.platformToolDefinitions.schedules.8": {
+    "zh-CN": "启用或暂停本人计划的未来触发，不停止已经开始的执行。",
+    "en": "Enable or pause future runs of your schedule. Active runs continue."
+  },
+  "text.plugin.platformToolDefinitions.schedules.9": {
+    "zh-CN": "将本人计划未来使用的员工更新为当前可用的发布版本。",
+    "en": "Update the AI employee version used by future schedule runs to the available published version."
+  },
+  "text.plugin.platformToolDefinitions.schedules.10": {
+    "zh-CN": "请求立即执行一次本人已有定时任务；结果以实际排队或阻止状态为准，不表示任务已经完成。",
+    "en": "Request an immediate run of your existing schedule. The result indicates whether it was queued or blocked, not completed."
+  },
+  "text.plugin.platformToolDefinitions.schedules.11": {
+    "zh-CN": "删除本人已暂停且没有活动执行的计划，不删除历史执行记录。",
+    "en": "Delete your paused schedule when it has no active runs. Execution history is retained."
+  },
+  "text.plugin.platformToolDefinitions.schedules.12": {
+    "zh-CN": "读取当前可用的定时操作及参数格式，创建通用操作前先读取。",
+    "en": "Read currently available scheduled actions and their parameter formats before creating a general action."
+  },
+  "text.plugin.platformToolDefinitions.schedules.13": {
+    "zh-CN": "查询可以选择的通知接收成员及其已绑定渠道，不要猜测成员或应用编号。",
+    "en": "Find eligible notification recipients and their linked channels. Do not invent member or application IDs."
+  },
+  "text.plugin.platformToolDefinitions.schedules.14": {
+    "zh-CN": "读取本人计划某次执行的固定内容及实际接收结果。",
+    "en": "Read the fixed content and delivery results of one occurrence in your schedule."
+  },
+  "text.plugin.platformToolDefinitions.schedules.15": {
+    "zh-CN": "创建本人定时操作。先读可用操作、真实接收人和未来时间；通知须明确标题、正文与接收人。通知 maxRetries 为零。确认后保存。",
+    "en": "Create your own scheduled action. First read available actions, recipients, and future times. Notifications require an explicit title, body, and recipients, with maxRetries set to zero. Save only after confirmation."
+  },
+  "text.plugin.platformToolDefinitions.schedules.16": {
+    "zh-CN": "完整修改本人定时操作，仅影响未来触发；先读当前计划、可用操作和接收人，使用当前版本并在确认后保存。",
+    "en": "Replace all settings of your scheduled action, affecting only future triggers. Read the current schedule, available actions, and recipients first. Use the current revision and save after confirmation."
+  },
+  "text.plugin.platformToolDefinitions.schedules.17": {
+    "zh-CN": "停止本人计划指定的一次执行。已保存的通知和平台已接受的消息保留；正在请求时等待真实结果。确认后操作。",
+    "en": "Stop a specified occurrence of your schedule. Retain saved notifications and messages accepted by the platform. Wait for the result of requests in progress. Confirm before proceeding."
+  },
+  "text.plugin.webPageContentMapper.read.1": {
+    "zh-CN": "网页没有可直接读取的正文。如有命令执行工具，可用 agenteam-browser read 网址 等待页面脚本加载后读取。",
+    "en": "This page has no directly readable body text. If a command tool is available, use agenteam-browser read URL to wait for page scripts and read the content."
+  },
+  "log.plugin.builtinPluginResourceService.initialize.1": {
+    "zh-CN": "企业 {} 暂无有效管理员，内置插件将在下次初始化时补充",
+    "en": "Organization {} has no active administrator; built-in plugins will be added during a later initialization"
+  },
+  "text.plugin.builtinPluginResourceService.initialize.1": {
+    "zh-CN": "更新平台内置插件",
+    "en": "Update platform built-in plugins"
+  },
+  "text.plugin.builtinPluginResourceService.initialize.2": {
+    "zh-CN": "系统",
+    "en": "System"
+  },
+  "text.plugin.builtinPluginResourceService.initialize.3": {
+    "zh-CN": "初始化平台内置插件版本",
+    "en": "Initialize built-in plugin version"
+  },
+  "text.plugin.builtinToolInvocation.invoke.1": {
+    "zh-CN": "目标系统已确认操作未执行，本次任务不再发送该操作。",
+    "en": "The target system confirmed that the operation did not execute. This task will not send it again."
+  },
+  "text.plugin.builtinToolInvocation.invoke.2": {
+    "zh-CN": "目标系统已确认操作未执行，剩余时间不足，本次任务不再发送。",
+    "en": "The target system confirmed that the operation did not execute. There is insufficient time to send it again in this task."
+  },
+  "text.plugin.javaPluginInstallationTransactions.activate.1": {
+    "zh-CN": "安装扩展插件",
+    "en": "Install extension plugin"
+  },
+  "text.plugin.javaPluginInstallationTransactions.uninstall.1": {
+    "zh-CN": "卸载扩展插件",
+    "en": "Uninstall extension plugin"
+  },
+  "log.plugin.javaPluginManagementService.savePrepared.1": {
+    "zh-CN": "并发上传已保存相同请求，安装编号 {}",
+    "en": "A concurrent upload already saved the same request; installationId={}"
+  },
+  "log.plugin.javaPluginProcesses.call.1": {
+    "zh-CN": "扩展插件调用失败，安装编号 {}，任务编号 {}，操作编号 {}",
+    "en": "Extension plugin call failed; installationId={}, taskId={}, operationId={}"
+  },
+  "log.plugin.javaPluginProcesses.call.2": {
+    "zh-CN": "扩展插件进程退出，安装编号 {}，任务编号 {}",
+    "en": "Extension plugin process exited; installationId={}, taskId={}"
+  },
+  "log.plugin.javaPluginProcesses.call.3": {
+    "zh-CN": "扩展插件进程调用失败，安装编号 {}，任务编号 {}",
+    "en": "Extension plugin process invocation failed; installationId={}, taskId={}"
+  },
+  "log.plugin.javaPluginProcesses.call.4": {
+    "zh-CN": "插件临时文件清理失败，安装编号 {}",
+    "en": "Plugin temporary file cleanup failed; installationId={}"
+  },
+  "text.plugin.platformBusinessTools.call.1": {
+    "zh-CN": "待办已创建。",
+    "en": "To-do created."
+  },
+  "text.plugin.platformBusinessTools.call.2": {
+    "zh-CN": "待办已修改。",
+    "en": "To-do updated."
+  },
+  "text.plugin.platformBusinessTools.call.3": {
+    "zh-CN": "待办状态已修改。",
+    "en": "To-do status updated."
+  },
+  "text.plugin.platformBusinessTools.call.4": {
+    "zh-CN": "待办已转交。",
+    "en": "To-do reassigned."
+  },
+  "text.plugin.platformBusinessTools.call.5": {
+    "zh-CN": "待办已删除。",
+    "en": "To-do deleted."
+  },
+  "text.plugin.platformBusinessTools.call.6": {
+    "zh-CN": "定时任务已创建。",
+    "en": "Schedule created."
+  },
+  "text.plugin.platformBusinessTools.call.7": {
+    "zh-CN": "定时任务已修改。",
+    "en": "Schedule updated."
+  },
+  "text.plugin.platformBusinessTools.call.8": {
+    "zh-CN": "定时任务启用状态已修改。",
+    "en": "Schedule enabled status updated."
+  },
+  "text.plugin.platformBusinessTools.call.9": {
+    "zh-CN": "计划的员工版本已更新。",
+    "en": "The schedule's employee version was updated."
+  },
+  "text.plugin.platformBusinessTools.call.10": {
+    "zh-CN": "定时任务已删除。",
+    "en": "Schedule deleted."
+  },
+  "text.plugin.pluginCheckService.inspect.1": {
+    "zh-CN": "已读取 {0} 个已选工具。",
+    "en": "Read {0} selected tools."
+  },
+  "text.plugin.pluginCheckService.inspect.2": {
+    "zh-CN": "连接检查通过，已读取 {0} 个工具。",
+    "en": "Connection check passed. Read {0} tools."
+  },
+  "log.plugin.pluginCheckService.inspect.1": {
+    "zh-CN": "插件连接检查失败，资源编号 {}",
+    "en": "Plugin connection check failed; resourceId={}"
+  },
+  "text.plugin.pluginCheckService.save.1": {
+    "zh-CN": "检查插件连接与工具清单",
+    "en": "Check plugin connection and tool list"
+  },
+  "log.plugin.restrictedMcpTransport.connect.1": {
+    "zh-CN": "插件事件读取",
+    "en": "Plugin event reading"
+  },
+  "text.plugin.webReadPluginAdapter.init.1": {
+    "zh-CN": "读取指定网页的正文和链接，或纯文本、JSON 内容。动态网页可通过命令工具使用 agenteam-browser read 网址。",
+    "en": "Read webpage text and links, or plain text and JSON content. For dynamic pages, use agenteam-browser read URL through the command tool."
+  },
+  "log.plugin.webReadPluginAdapter.call.1": {
+    "zh-CN": "网页读取失败，操作编号 {}，方法 GET，主机 {}，路径 {}，HTTP 状态 {}，错误码 {}，平台排障编号 {}",
+    "en": "Webpage reading failed; operationId={}, method=GET, host={}, path={}, httpStatus={}, errorCode={}, traceId={}"
+  },
+  "log.plugin.webReadPluginAdapter.call.2": {
+    "zh-CN": "无效地址",
+    "en": "Invalid URL"
+  }
+}

@@ -36,7 +36,7 @@ export function NoEnterprisePage() {
       }
     }).catch((failure) => {
       if (!controller.signal.aborted) {
-        console.error("读取企业资格失败", failure);
+        console.error("Failed to read organization eligibility", failure);
         setError("暂时无法读取账号信息，请重试。");
       }
     });

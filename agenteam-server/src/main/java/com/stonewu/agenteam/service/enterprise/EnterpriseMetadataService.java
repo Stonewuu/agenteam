@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.OrganizationMutationMapper;
 import com.stonewu.agenteam.mapper.enterprise.OrganizationViewMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -69,7 +71,7 @@ public class EnterpriseMetadataService {
         if (!before.revision().equals(Long.toString(revision))) {
             throw ApiException.versionConflict(Long.parseLong(before.revision()));
         }
-        String name = fields.contains("name") ? EnterpriseValidation.name(payload.name(), "企业名称",
+        String name = fields.contains("name") ? EnterpriseValidation.name(payload.name(), Messages.text("label.enterprise.name"),
             80) : before.name();
         String description = fields.contains("description") ? EnterpriseValidation.description(
             payload.description()) : before.description();
@@ -80,13 +82,13 @@ public class EnterpriseMetadataService {
             payload.timezone()) : before.timezone();
         int retention = fields.contains("retentionDays") ? payload.retentionDays() : before.retentionDays();
         if (retention < 90 || retention > 730) {
-            throw ApiException.invalidField("retentionDays", "保留时间需要在 90～730 天之间。");
+            throw ApiException.invalidField("retentionDays", Messages.text("error.enterprise.enterpriseMetadataService.update.1"));
         }
         String pending = timezone.equals(before.quotaTimezone()) ? null : timezone;
         mutations.enterprise(actor.enterpriseId(),
             new EnterpriseUpdatePayload(name, description, email, timezone, retention), pending, revision,
             clock.instant());
-        authorization.changed(actor, "enterprise.update", "enterprise", actor.enterpriseId(), "修改企业资料",
+        authorization.changed(actor, "enterprise.update", "enterprise", actor.enterpriseId(), Messages.text("text.enterprise.enterpriseMetadataService.update.1"),
             Map.of("beforeName", before.name(), "afterName", name,
                 "beforeTimezone", before.timezone(), "afterTimezone", timezone, "beforeRetentionDays",
                 before.retentionDays(), "afterRetentionDays", retention));
@@ -95,6 +97,6 @@ public class EnterpriseMetadataService {
 
     private EnterpriseView find(String id) {
         return views.enterprise(id)
-            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "企业不存在或无法访问。"));
+            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", Messages.text("error.enterprise.enterpriseMetadataService.find.1")));
     }
 }

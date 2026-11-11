@@ -38,7 +38,7 @@ export function useWorkflowPreview(enterprise: string, resource: string) {
         body: {draft: input.draft, input: input.input}
       }));
     } catch (failed) {
-      console.error("提交工作流预览失败", {resourceId: resource}, failed);
+      console.error("Failed to submit the workflow preview", {resourceId: resource}, failed);
       const fields = failed instanceof ApiError ? Array.from(new Set(Object.values(failed.fieldErrors).flat())).join(" ") : "";
       setError(fields || errorMessage(failed, uiText("测试未能开始，请检查输入后重试。")));
     } finally {
@@ -57,7 +57,7 @@ export function useWorkflowPreview(enterprise: string, resource: string) {
       await cancel.current.run(`${runPath(enterprise, accepted.runId)}/cancel`, {method: "POST"});
       stream.reload();
     } catch (failed) {
-      console.error("停止工作流预览失败", {runId: accepted.runId}, failed);
+      console.error("Failed to stop the workflow preview", {runId: accepted.runId}, failed);
       setError(errorMessage(failed, uiText("暂时无法停止，请重试。")));
     } finally {
       setStopping(false);

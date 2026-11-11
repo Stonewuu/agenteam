@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.permission.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 /**
  * 单项操作允许接触的数据范围；团队范围包含本人。
  */
@@ -28,7 +30,7 @@ public enum DataScope {
                 return scope;
             }
         }
-        throw new IllegalArgumentException("数据范围未定义");
+        throw new IllegalArgumentException(Messages.text("error.permission.dataScope.fromCode.1"));
     }
 
     public static DataScope fromRank(int rank) {

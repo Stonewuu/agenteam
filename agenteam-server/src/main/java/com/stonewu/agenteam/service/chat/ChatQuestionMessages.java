@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
@@ -40,7 +42,7 @@ public class ChatQuestionMessages {
             parts.forEach(part -> update(part, payload -> payload.putObject("questionReference").put("id", view.id()).put("revision", view.revision())));
         }
         var row = outbound.text(question.getEnterpriseId(), group.getId(), question.getBotBindingId(), question.getTaskId(), null,
-            "question-card:" + question.getId(), "user_question_card", "请选择或输入你的回答。", null);
+            "question-card:" + question.getId(), "user_question_card", Messages.text("text.chat.chatQuestionMessages.send.1"), null);
         update(row, payload -> {
             payload.set("userQuestion", json.tree(view));
             payload.put("questionCardId", row.getId()).put("questionDirect", "direct".equals(group.getConversationKind()));
@@ -58,7 +60,7 @@ public class ChatQuestionMessages {
                 .isNull(ChatOutboundMessageRow::getFirstSubmittedAt)
                 .set(ChatOutboundMessageRow::getPayloadEncrypted, cipher.encrypt(row.getEnterpriseId(), "outbound", row.getId(), payload))
                 .set(ChatOutboundMessageRow::getPayloadHash, json.hash(payload))) != 1) {
-            throw new IllegalStateException("提问消息保存失败");
+            throw new IllegalStateException(Messages.text("error.chat.chatQuestionMessages.update.1"));
         }
     }
 
@@ -68,13 +70,13 @@ public class ChatQuestionMessages {
         for (var option : question.options()) {
             text.append("\n\n").append(++index).append(". ").append(option.label());
             if (option.recommended()) {
-                text.append("（推荐）");
+                text.append(Messages.text("text.chat.chatQuestionMessages.text.1"));
             }
             if (option.description() != null && !option.description().isBlank()) {
                 text.append("\n").append(option.description());
             }
         }
-        return text.append(group ? "\n\n可以直接 @ 我输入回答；要回答其他问题时，先点该问题卡片的“自己输入”。"
-            : "\n\n可以直接输入回答；要回答其他问题时，先点该问题卡片的“自己输入”。").toString();
+        return text.append(group ? Messages.text("text.chat.chatQuestionMessages.text.2")
+            : Messages.text("text.chat.chatQuestionMessages.text.3")).toString();
     }
 }

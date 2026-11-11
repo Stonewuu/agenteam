@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
@@ -59,7 +61,7 @@ public class ExecutionMessageWriter {
         var applied = jobs.lastEventBatch(lease);
         if (batchId.equals(applied.id())) {
             if (!hash.equals(applied.hash())) {
-                throw new IllegalStateException("同一事件批次不能用于不同内容");
+                throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.1"));
             }
             return;
         }
@@ -83,17 +85,17 @@ public class ExecutionMessageWriter {
                     if (change.delta() != null || change.baseRevision() == null
                         || !change.baseRevision().equals(previous == null ? "0" : previous.revision())
                         || Long.parseLong(block.revision()) < expected) {
-                        throw new IllegalStateException("完整内容块与上次已保存版本不一致，不能覆盖历史内容");
+                        throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.2"));
                     }
                 } else if (Long.parseLong(block.revision()) != expected) {
-                    throw new IllegalStateException("待保存消息块与数据库版本不一致，不能继续追加");
+                    throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.3"));
                 }
                 if (previous != null && previous.displayOrder() != block.displayOrder()) {
-                    throw new IllegalStateException("待保存消息块与数据库版本不一致，不能继续追加");
+                    throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.3"));
                 }
                 if (change.delta() != null && (previous == null || !previous.revision()
                     .equals(change.baseRevision()))) {
-                    throw new IllegalStateException("待保存正文与数据库版本不一致，不能继续追加");
+                    throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.4"));
                 }
                 blocks.put(block.id(), block);
                 Object payload = change.delta() == null ? Map.of("messageId", output.id(), "block", block)
@@ -108,7 +110,7 @@ public class ExecutionMessageWriter {
         String text = ordered.stream().filter(block -> block.type().equals("text") && block.parentBlockId() == null)
             .map(ContentBlock::text).collect(Collectors.joining("\n\n"));
         if (text.length() > 1_000_000) {
-            throw new IllegalStateException("消息总长度超过允许范围");
+            throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.dispatch.1"));
         }
         messages.save(run.enterpriseId(), output.id(), text, ordered, "streaming", sequence, clock.instant());
         jobs.savedEventBatch(lease, batchId, hash);

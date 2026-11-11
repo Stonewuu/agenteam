@@ -1,11 +1,13 @@
 package com.stonewu.agenteam.model.todo.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 /**
  * 状态变化只表达用户明确的开始、完成、取消和重开，不根据日期自动结束。
  */
 public enum TodoStatus {
-    PENDING("pending", "待处理"), IN_PROGRESS("in_progress", "进行中"), COMPLETED("completed", "已完成"), CANCELLED(
-        "cancelled", "已取消");
+    PENDING("pending", Messages.source("text.todo.todoStatus.PENDING.1")), IN_PROGRESS("in_progress", Messages.source("text.todo.todoStatus.IN_PROGRESS.1")), COMPLETED("completed", Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.1")), CANCELLED(
+        "cancelled", Messages.source("text.todo.todoStatus.CANCELLED.1"));
     private final String code;
     private final String label;
 
@@ -43,6 +45,6 @@ public enum TodoStatus {
                 return value;
             }
         }
-        throw new IllegalArgumentException("待办状态不正确");
+        throw new IllegalArgumentException(Messages.text("error.todo.todoStatus.from.1"));
     }
 }

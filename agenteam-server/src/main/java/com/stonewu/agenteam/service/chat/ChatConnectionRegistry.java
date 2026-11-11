@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
 import org.springframework.stereotype.Component;
@@ -36,7 +38,7 @@ public class ChatConnectionRegistry {
     public Owned require(IntegrationApplication application) {
         var owned = live.get(application.id());
         if (owned == null || !owned.application().equals(application) || !owned.connection().ready()) {
-            throw new ChannelProviderException("CHAT_CONNECTION_UNAVAILABLE", "当前进程没有此机器人的有效长连接。");
+            throw new ChannelProviderException("CHAT_CONNECTION_UNAVAILABLE", Messages.text("error.chat.chatConnectionRegistry.require.1"));
         }
         return owned;
     }

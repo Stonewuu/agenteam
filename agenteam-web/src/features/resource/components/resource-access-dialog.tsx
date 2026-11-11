@@ -3,6 +3,7 @@
 import {localizeUiMessage} from "@/lib/i18n/ui-message";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {resourceDisplayName} from "../lib/resource-localization";
 
 import {Button} from "@/components/ui/button";
 import {Checkbox} from "@/components/ui/checkbox";
@@ -19,7 +20,7 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import type {Grant, ResourceSummary, SubjectOption} from "../types/resource";
-import {resourceLabel} from "../lib/resource-display";
+import {resourceSingularLabel} from "../lib/resource-display";
 import {SubjectPicker, useSubjectNames} from "./subject-picker";
 import {useConfirmClose} from "@/features/workspace/components/use-confirm-close";
 import {useEnterpriseIdentity} from "@/features/auth/components/enterprise-gate";
@@ -40,7 +41,7 @@ export function ResourceAccessDialog({enterpriseId, resource, mode, onClose, onC
     return <TransferForm enterpriseId={enterpriseId} resource={resource} onClose={onClose} onChanged={onChanged}/>;
   }
   if (!grants.data) {
-    return <Dialog title={uiText("管理{0}授权", [resourceLabel(resource.kind)])}
+    return <Dialog title={uiText("管理{0}授权", [resourceSingularLabel(resource.kind, uiText)])}
                    onClose={onClose}><QueryState {...grants} hasData={false}
                                                  empty={uiText("无法读取当前授权。")}/></Dialog>;
   }
@@ -126,7 +127,7 @@ function AccessForm({enterpriseId, resource, initial, onClose, onChanged}: {
   const action = useFormAction();
   const [grants, setGrants] = useState(initial);
   const closing = useConfirmClose(JSON.stringify(grants) !== JSON.stringify(initial), action.busy, onClose);
-  return <Dialog title={uiText("管理{0}“{1}”的使用范围", [resourceLabel(resource.kind), resource.name])}
+  return <Dialog title={uiText("管理{0}“{1}”的使用范围", [resourceSingularLabel(resource.kind, uiText), resourceDisplayName(resource, uiText)])}
                  onClose={onClose} dialogRef={closing.dialogRef} onRequestClose={closing.canClose}
                  busy={action.busy}><DialogForm className={ui.form} onSubmit={(event) => {
     event.preventDefault();
@@ -167,10 +168,10 @@ function TransferForm({enterpriseId, resource, onClose, onChanged}: {
   const action = useFormAction();
   const [selected, setSelected] = useState<SubjectOption | null>(null);
   const closing = useConfirmClose(Boolean(selected), action.busy, onClose);
-  return <Dialog title={uiText("转交{0}“{1}”", [resourceLabel(resource.kind), resource.name])} onClose={onClose}
+  return <Dialog title={uiText("转交{0}“{1}”", [resourceSingularLabel(resource.kind, uiText), resourceDisplayName(resource, uiText)])} onClose={onClose}
                  dialogRef={closing.dialogRef} onRequestClose={closing.canClose} busy={action.busy}>
     <div className={ui.form}><p
-      className={ui.description}>{uiText("当前所有者：")}{resource.owner.displayName}{uiText("。转交后，接收成员将负责维护“")}{resource.name}{uiText("”及其授权。")}</p>
+      className={ui.description}>{uiText("当前所有者：")}{resource.owner.displayName}{uiText("。转交后，接收成员将负责维护“")}{resourceDisplayName(resource, uiText)}{uiText("”及其授权。")}</p>
       {selected && <p>{uiText("接收成员：")}{selected.name}</p>}<SubjectPicker enterpriseId={enterpriseId}
                                                                               resourceId={resource.id} type="user"
                                                                               purpose="owner" onSelect={setSelected}/>

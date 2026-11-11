@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.edition;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -16,7 +18,7 @@ public final class SingleEnterprisePolicy implements EnterpriseEditionPolicy {
     @Override
     public void requireAdditionalCreation() {
         throw new ApiException(HttpStatus.FORBIDDEN, "COMMUNITY_SINGLE_ENTERPRISE",
-            "社区版只支持初始化时创建的企业。");
+            Messages.text("error.edition.singleEnterprisePolicy.requireAdditionalCreation.1"));
     }
 
     @Override
@@ -24,7 +26,7 @@ public final class SingleEnterprisePolicy implements EnterpriseEditionPolicy {
         var state = installation.current();
         if (state.getInstallationId() == null || enterpriseId == null
             || !Objects.equals(state.getInitialEnterpriseId(), enterpriseId)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", "当前企业无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", Messages.text("error.auth.authContextService.requireEnterprise.1"));
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityViewMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.model.enterprise.response.EnterpriseContextResponse;
@@ -40,10 +42,10 @@ public class EnterpriseContextService {
         var menus = new ArrayList<EnterpriseContextResponse.Menu>();
         String base = "/e/" + UriUtils.encodePathSegment(enterpriseId, StandardCharsets.UTF_8);
         if (actor.permissions().contains("workspace.view")) {
-            menus.add(new EnterpriseContextResponse.Menu("workspace", "工作台", "user", base));
+            menus.add(new EnterpriseContextResponse.Menu("workspace", Messages.text("text.enterprise.enterpriseContextService.get.1"), "user", base));
         }
         if (actor.permissions().contains("admin.view")) {
-            menus.add(new EnterpriseContextResponse.Menu("admin", "企业管理", "admin", base + "/admin"));
+            menus.add(new EnterpriseContextResponse.Menu("admin", Messages.text("text.enterprise.enterpriseContextService.get.2"), "admin", base + "/admin"));
         }
         return new EnterpriseContextResponse(views.enterprise(enterpriseId).orElseThrow(),
             views.member(enterpriseId, actor.userId()),

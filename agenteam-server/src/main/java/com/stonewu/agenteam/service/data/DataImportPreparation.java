@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.file.FileDataMapper;
 import com.stonewu.agenteam.model.data.entity.DataField;
@@ -44,7 +46,7 @@ public class DataImportPreparation {
         }
         for (var field : fields) {
             if (!positions.containsKey(field.name())) {
-                throw ApiException.invalidField("fields", "所选字段不在原始 CSV 表头中。");
+                throw ApiException.invalidField("fields", Messages.text("error.data.dataImportPreparation.prepare.1"));
             }
         }
         Path file = storage.prepareImportFile();
@@ -73,7 +75,7 @@ public class DataImportPreparation {
                         size += line.getBytes(StandardCharsets.UTF_8).length + 1;
                         if (size > 100L * 1024 * 1024) {
                             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "DATA_IMPORT_TOO_LARGE",
-                                "解析后的数据超过一百 MiB，请拆分文件后再导入。");
+                                Messages.text("error.data.dataImportPreparation.prepare.2"));
                         }
                         output.write(line);
                         output.newLine();

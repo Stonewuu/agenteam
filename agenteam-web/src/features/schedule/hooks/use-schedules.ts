@@ -48,7 +48,7 @@ export function useSchedules(enterpriseId: string, query: string) {
           if (controller.signal.aborted) {
             return;
           }
-          console.error("读取计划列表失败", {enterpriseId}, failure);
+          console.error("Failed to read schedules", {enterpriseId}, failure);
           if (failure instanceof ApiError && [401, 403, 404].includes(failure.status)) {
             setResult(null);
           }

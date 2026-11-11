@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.auth.OperationActorContext;
 import com.stonewu.agenteam.configuration.auth.AuthSessionAttributes;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
@@ -57,14 +59,14 @@ public class ImpersonationService {
         HttpSession session = request.getSession(false);
         UserEntity administrator = identity.authenticated(session);
         if (!administrator.superAdmin() || !"password".equals(session.getAttribute(AuthSessionAttributes.METHOD))) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "SUPER_ADMIN_REQUIRED", "只有系统超级管理员可以切换用户身份。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "SUPER_ADMIN_REQUIRED", Messages.text("error.auth.impersonationService.start.1"));
         }
         if (SessionIdentityService.state(session) != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "IMPERSONATION_ACTIVE", "请先返回管理员身份，再切换其他用户。");
+            throw new ApiException(HttpStatus.CONFLICT, "IMPERSONATION_ACTIVE", Messages.text("error.auth.impersonationService.start.2"));
         }
         if (input == null || input.userId() == null || input.enterpriseId() == null
             || input.userId().equals(administrator.id())) {
-            throw ApiException.invalidField("userId", "请选择其他有效用户。");
+            throw ApiException.invalidField("userId", Messages.text("error.auth.impersonationService.start.3"));
         }
         context.requirePermission(session, input.enterpriseId(), "enterprise.members.view");
         UserEntity target = users.findById(input.userId()).orElseThrow(ImpersonationService::unavailable);
@@ -75,13 +77,13 @@ public class ImpersonationService {
         }
         String returnPath = input.returnPath() == null ? "/organization/members" : input.returnPath();
         if (returnPath.length() > 2048 || !returnPath.matches("/organization/members(?:\\?[^#\\r\\n\\\\]*)?")) {
-            throw ApiException.invalidField("returnPath", "返回位置无效，请重新打开成员列表。");
+            throw ApiException.invalidField("returnPath", Messages.text("error.auth.impersonationService.start.4"));
         }
         var state = new ImpersonationState(UUID.randomUUID().toString(), target.id(), target.sessionVersion(),
             target.displayName(), target.username(), input.enterpriseId(), returnPath, clock.millis());
         // 审计写入失败时不切换；会话切换失败则本事务不提交该记录。
         audit.record(input.enterpriseId(), administrator, "auth.impersonation.start", "user", target.id(),
-            "以用户身份登录", Map.of("impersonationId", state.id(), "effectiveUserId", target.id()));
+            Messages.text("text.auth.impersonationService.start.1"), Map.of("impersonationId", state.id(), "effectiveUserId", target.id()));
         identity.switchTo(request, state);
         return status(session);
     }
@@ -96,13 +98,13 @@ public class ImpersonationService {
         }
         OperationActorContext.set(new OperationActor(administrator.id(), administrator.id(), state.id()));
         audit.record(null, administrator, "auth.impersonation.stop", "user", state.userId(),
-            "返回管理员身份", Map.of("impersonationId", state.id(), "effectiveUserId", state.userId(),
+            Messages.text("text.auth.impersonationService.stop.1"), Map.of("impersonationId", state.id(), "effectiveUserId", state.userId(),
                 "enterpriseId", state.enterpriseId()));
         identity.switchTo(request, null);
         return status(session);
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "IMPERSONATION_TARGET_UNAVAILABLE", "当前用户无法登录此企业。");
+        return new ApiException(HttpStatus.NOT_FOUND, "IMPERSONATION_TARGET_UNAVAILABLE", Messages.text("error.auth.impersonationService.unavailable.1"));
     }
 }

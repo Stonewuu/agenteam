@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.configuration.http.ApiRequestFilter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,13 +21,13 @@ public final class PatchFields {
         if (request.getAttribute(ApiRequestFilter.JSON_ATTRIBUTE) instanceof JsonNode body) {
             body.fields().forEachRemaining(entry -> {
                 if (entry.getValue().isNull() && !nullable.contains(entry.getKey())) {
-                    throw ApiException.invalidField(entry.getKey(), "此项不能设置为空值。");
+                    throw ApiException.invalidField(entry.getKey(), Messages.text("error.http.patchFields.read.1"));
                 }
                 fields.add(entry.getKey());
             });
         }
         if (fields.isEmpty()) {
-            throw ApiException.invalidField("body", "请至少修改一项内容。");
+            throw ApiException.invalidField("body", Messages.text("error.http.patchFields.read.2"));
         }
         return Set.copyOf(fields);
     }

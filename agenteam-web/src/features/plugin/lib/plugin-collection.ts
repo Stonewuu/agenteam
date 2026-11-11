@@ -10,7 +10,7 @@ export function collectionSource(value: ToolSource): PluginSource {
 }
 
 export function asUsableVersion(value: ToolSource): UsableVersion {
-  return {...value, kind: "plugin"};
+  return {...value, kind: "plugin", source: "builtin", builtinCode: value.code};
 }
 
 export function sourceTools(value: ToolSource): PluginToolSelection[] {

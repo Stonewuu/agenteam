@@ -58,7 +58,7 @@ public final class TestClassResourceCleanup implements AfterAllCallback, TestExe
         try (AutoCloseable cleanup = TestClassResourceCleanup::clearFrameworkReferences) {
             RESOURCES.close();
         }
-        LOGGER.info("测试类资源已释放：类={}，进程={}，当前堆内存={} MiB", context.getRequiredTestClass().getSimpleName(),
+        LOGGER.info("Test class resources released: class={}, process={}, current heap={} MiB", context.getRequiredTestClass().getSimpleName(),
             ProcessHandle.current().pid(), ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / 1024 / 1024);
     }
 

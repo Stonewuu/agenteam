@@ -96,7 +96,7 @@ export function SettingsPage() {
       setUser(identity);
     }).catch((failure) => {
       if (!controller.signal.aborted) {
-        console.error("读取个人设置失败", failure);
+        console.error("Failed to read personal settings", failure);
         setError(errorMessage(failure));
       }
     });

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.todo.TodoMapper;
 import com.stonewu.agenteam.mapper.todo.TodoRelationMapper;
@@ -70,9 +72,9 @@ public class TodoPolicy {
 
     public String assignee(AuthContext actor, String owner, String team) {
         String user = relations.activeMemberId(actor.enterpriseId(), owner)
-            .orElseThrow(() -> ApiException.invalidField("ownerUserId", "请选择当前企业的有效成员。"));
+            .orElseThrow(() -> ApiException.invalidField("ownerUserId", Messages.text("error.enterprise.memberRemovalService.validatePlan.7")));
         if (team != null && !relations.activeTeamMember(actor.enterpriseId(), team, owner)) {
-            throw ApiException.invalidField("ownerUserId", "负责人需要属于所选团队。");
+            throw ApiException.invalidField("ownerUserId", Messages.text("error.todo.todoPolicy.assignee.1"));
         }
         return user;
     }
@@ -90,7 +92,7 @@ public class TodoPolicy {
                 authorization.require(actor, "todo.team_manage");
             }
         } else if (before != null && before.teamId() != null && !related(actor, before)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "只有创建人或负责人可以把团队待办改为个人待办。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", Messages.text("error.todo.todoPolicy.destinationTeam.1"));
         }
         return team;
     }

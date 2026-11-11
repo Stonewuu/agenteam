@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,19 +27,19 @@ public class WorkflowValues {
 
     public String write(JsonNode value) {
         if (value == null || value.isMissingNode()) {
-            throw new IllegalArgumentException("工作流结果不能为空引用或缺失字段");
+            throw new IllegalArgumentException(Messages.text("error.workflow.workflowValues.write.1"));
         }
         try {
             byte[] bytes = json.writeValueAsBytes(value);
             if (bytes.length > WorkflowExpressions.MAX_VALUE_BYTES) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "WORKFLOW_OUTPUT_TOO_LARGE", "节点结果超过 1 MiB，请减少返回内容或使用附件。");
+                    "WORKFLOW_OUTPUT_TOO_LARGE", Messages.text("error.workflow.workflowValues.write.2"));
             }
             return new String(bytes, StandardCharsets.UTF_8);
         } catch (ApiException known) {
             throw known;
         } catch (Exception invalid) {
-            throw new IllegalStateException("工作流结果无法保存", invalid);
+            throw new IllegalStateException(Messages.text("error.workflow.workflowValues.write.3"), invalid);
         }
     }
 
@@ -45,7 +47,7 @@ public class WorkflowValues {
         try {
             return value == null ? null : reader.readValue(value);
         } catch (Exception invalid) {
-            throw new IllegalStateException("已保存的工作流内容无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.workflow.workflowValues.read.1"), invalid);
         }
     }
 

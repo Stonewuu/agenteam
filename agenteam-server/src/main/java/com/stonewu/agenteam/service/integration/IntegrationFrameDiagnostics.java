@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
@@ -34,6 +36,6 @@ public class IntegrationFrameDiagnostics {
     }
 
     public static void networkFailure(String connection, String operation, Throwable failure) {
-        LOG.warn("平台长连接网络操作失败，接入={}，操作={}", connection, operation, ChannelRequestDiagnostics.networkCause(failure));
+        LOG.warn(Messages.log("log.integration.integrationFrameDiagnostics.networkFailure.1"), connection, operation, ChannelRequestDiagnostics.networkCause(failure));
     }
 }

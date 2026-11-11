@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -26,7 +28,7 @@ public final class FileStorageKeys {
     }
 
     public static ApiException unavailable(Throwable cause) {
-        return new ApiException(HttpStatus.NOT_FOUND, "FILE_UNAVAILABLE", "文件不存在或已不可读取。", cause);
+        return new ApiException(HttpStatus.NOT_FOUND, "FILE_UNAVAILABLE", Messages.text("error.file.fileAccessService.unavailable.1"), cause);
     }
 
     public static ApiException storageUnavailable() {
@@ -35,6 +37,6 @@ public final class FileStorageKeys {
 
     public static ApiException storageUnavailable(Throwable cause) {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FILE_STORAGE_UNAVAILABLE",
-            "文件存储暂不可用，请稍后重试。", cause);
+            Messages.text("error.file.fileStorageKeys.storageUnavailable.1"), cause);
     }
 }

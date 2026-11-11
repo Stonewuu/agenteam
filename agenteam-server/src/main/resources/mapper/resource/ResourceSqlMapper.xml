@@ -18,7 +18,12 @@
       <property name="alias" value="r"/>
     </include>
     <if test="deletedAfter != null">AND r.deleted_at > #{deletedAfter}</if>
-    <if test="query != ''">AND LOCATE(#{query}, r.name) > 0</if>
+    <if test="query != ''">AND (LOCATE(#{query}, r.name) > 0
+      <if test="builtinCodes != null and !builtinCodes.isEmpty()">
+        OR (r.source = 'builtin' AND JSON_UNQUOTE(JSON_EXTRACT(d.config_json, '$.builtinCode')) IN
+        <foreach collection="builtinCodes" item="code" open="(" separator="," close=")">#{code}</foreach>)
+      </if>
+    )</if>
     <if test="source != null">AND r.source = #{source}</if>
     <if test="subtype != null">AND r.subtype = #{subtype}</if>
     <choose>

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
@@ -56,19 +58,19 @@ public class WorkflowToolCatalog {
 
     private final class ExternalWorkflow extends ToolBase {
         private ExternalWorkflow(Binding binding) {
-            super(ToolBase.builder().name(binding.alias()).description("执行工作流：" + binding.name())
+            super(ToolBase.builder().name(binding.alias()).description(Messages.source("text.workflow.workflowToolCatalog.init.1", binding.name()))
                 .inputSchema(json.object(binding.inputSchema())).externalTool(true).readOnly(false)
                 .concurrencySafe(true));
         }
 
         @Override
         public Mono<PermissionDecision> checkPermissions(Map<String, Object> input, PermissionContextState context) {
-            return Mono.just(PermissionDecision.allow("当前员工已绑定该流程；流程内的外部写入仍需单独确认。"));
+            return Mono.just(PermissionDecision.allow(Messages.source("text.workflow.workflowToolCatalog.checkPermissions.1")));
         }
 
         @Override
         public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
-            return Mono.error(new IllegalStateException("工作流必须通过框架外部工具暂停执行"));
+            return Mono.error(new IllegalStateException(Messages.text("error.workflow.workflowToolCatalog.callAsync.1")));
         }
     }
 }

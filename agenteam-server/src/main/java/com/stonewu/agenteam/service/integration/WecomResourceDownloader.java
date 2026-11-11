@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
@@ -44,7 +46,7 @@ public class WecomResourceDownloader {
                 var addresses = Dns.SYSTEM.lookup(host);
                 for (var address : addresses) {
                     if (!publicAddress(address)) {
-                        throw new UnknownHostException("平台资源地址不是允许的公网地址");
+                        throw new UnknownHostException(Messages.text("error.integration.wecomResourceDownloader.init.1"));
                     }
                 }
                 return addresses;
@@ -56,28 +58,28 @@ public class WecomResourceDownloader {
         try {
             address = HttpUrl.get(material.path("url").asText());
             if (!address.isHttps() || address.port() != 443 || !address.username().isEmpty() || !address.password().isEmpty() || address.fragment() != null) {
-                throw new IllegalArgumentException("资源地址必须使用公网加密连接");
+                throw new IllegalArgumentException(Messages.text("error.integration.wecomResourceDownloader.fetch.1"));
             }
         } catch (RuntimeException failure) {
-            throw new ChannelProviderException("CHAT_RESOURCE_URL_INVALID", "平台附件下载地址无效。", failure);
+            throw new ChannelProviderException("CHAT_RESOURCE_URL_INVALID", Messages.text("error.integration.wecomResourceDownloader.fetch.2"), failure);
         }
         var request = new Request.Builder().url(address).get().build();
         var diagnostics = new ChannelRequestDiagnostics(Map.of("url", address.toString()), material, null, json);
         try (var response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 diagnostics.response(app.id(), request, response.code(), null, null);
-                throw new ChannelProviderException("CHAT_RESOURCE_DOWNLOAD_REJECTED", "平台拒绝附件下载，请重新发送附件。");
+                throw new ChannelProviderException("CHAT_RESOURCE_DOWNLOAD_REJECTED", Messages.text("error.integration.wecomResourceDownloader.fetch.3"));
             }
             String disposition = response.header("Content-Disposition", "");
             if (disposition.length() > 2048) {
-                throw new IllegalArgumentException("平台文件名字段过长");
+                throw new IllegalArgumentException(Messages.text("error.integration.wecomResourceDownloader.fetch.4"));
             }
             boolean image = "image".equals(material.path("resourceType").asText());
             String name = image ? null : ContentDisposition.parse(disposition).getFilename();
             if (!image) ChatFilePolicy.mediaType(name, "file");
             byte[] content = response.body().byteStream().readNBytes(LIMIT + 33);
             if (content.length > LIMIT + 32) {
-                throw new ChannelProviderException("CHAT_RESOURCE_TOO_LARGE", "平台附件超过二十 MiB。");
+                throw new ChannelProviderException("CHAT_RESOURCE_TOO_LARGE", Messages.text("error.integration.wecomResourceDownloader.fetch.5"));
             }
             String key = material.path("aeskey").asText();
             byte[] plain = key.isEmpty() ? content : decrypt(content, key);
@@ -91,7 +93,7 @@ public class WecomResourceDownloader {
             if (failure instanceof ApiException api) {
                 throw api;
             }
-            throw new ChannelProviderException("CHAT_RESOURCE_DOWNLOAD_FAILED", "企微附件暂时无法下载或解密。", failure);
+            throw new ChannelProviderException("CHAT_RESOURCE_DOWNLOAD_FAILED", Messages.text("error.integration.wecomResourceDownloader.fetch.6"), failure);
         }
     }
 
@@ -100,18 +102,18 @@ public class WecomResourceDownloader {
         byte[] direct = encodedKey.getBytes(StandardCharsets.UTF_8);
         byte[] key = direct.length == 32 ? direct : Base64.getDecoder().decode(encodedKey);
         if (key.length != 32 || encrypted.length == 0 || encrypted.length % 16 != 0) {
-            throw new IllegalArgumentException("企微附件密钥或加密内容无效");
+            throw new IllegalArgumentException(Messages.text("error.integration.wecomResourceDownloader.decrypt.1"));
         }
         var cipher = Cipher.getInstance("AES/CBC/NoPadding");
         cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(Arrays.copyOf(key, 16)));
         byte[] plain = cipher.doFinal(encrypted);
         int padding = plain[plain.length - 1] & 255;
         if (padding < 1 || padding > 32 || padding > plain.length) {
-            throw new IllegalArgumentException("企微附件填充无效");
+            throw new IllegalArgumentException(Messages.text("error.integration.wecomResourceDownloader.decrypt.2"));
         }
         for (int index = plain.length - padding; index < plain.length; index++) {
             if ((plain[index] & 255) != padding) {
-                throw new IllegalArgumentException("企微附件填充不一致");
+                throw new IllegalArgumentException(Messages.text("error.integration.wecomResourceDownloader.decrypt.3"));
             }
         }
         return Arrays.copyOf(plain, plain.length - padding);

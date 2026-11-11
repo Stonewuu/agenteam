@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.modelprofile.ModelProviderMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.modelprofile.AgentModelSelectionService;
@@ -86,12 +88,12 @@ public class AgentModelFactory {
                         options == null ? null : options.getReasoningEffort());
                     if (!Boolean.TRUE.equals(current.capabilities().supportsTools()) && tools != null && !tools.isEmpty()) {
                         return Flux.error(new ApiException(HttpStatus.CONFLICT, "MODEL_TOOLS_UNAVAILABLE",
-                            "当前模型不支持工具调用，请更换模型或调整员工配置。"));
+                            Messages.text("error.agent.agentModelFactory.stream.1")));
                     }
                     var provider = providers.find(enterprise, current.providerId()).filter(value -> value.enabled())
-                        .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "MODEL_UNAVAILABLE", "模型提供方已停用或不可使用。"));
+                        .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "MODEL_UNAVAILABLE", Messages.text("error.agent.agentModelFactory.stream.2")));
                     if (!context.hasKey(ModelCallContext.class)) {
-                        return Flux.error(new IllegalStateException("模型调用缺少可信的执行归属。"));
+                        return Flux.error(new IllegalStateException(Messages.text("error.agent.agentModelFactory.stream.3")));
                     }
                     return protocols.stream(current, provider, context.get(ModelCallContext.class), messages,
                         tools == null ? List.of() : tools, options);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.LiveSnapshotMapper;
 import com.stonewu.agenteam.mapper.execution.RunAttemptMapper;
@@ -79,7 +81,7 @@ public class ConversationSnapshotService {
                     }
                 }
             }
-            throw new IllegalStateException("历史消息与累计输出正在更新，需要重新读取");
+            throw new IllegalStateException(Messages.text("error.execution.conversationSnapshotService.read.1"));
         } catch (ResponseStatusException denied) {
             throw denied;
         } catch (RuntimeException unavailable) {
@@ -92,11 +94,11 @@ public class ConversationSnapshotService {
     private void logUnavailable(String conversation, RuntimeException failure) {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
             var request = attributes.getRequest();
-            LOG.warn("累计输出暂时无法读取，会话编号 {}，请求编号 {}，请求方法 {}，请求路径 {}", conversation,
+            LOG.warn(Messages.log("log.execution.conversationSnapshotService.logUnavailable.1"), conversation,
                 request.getAttribute(AuditEventService.REQUEST_ID_ATTRIBUTE), request.getMethod(),
                 request.getRequestURI(), failure);
         } else {
-            LOG.warn("累计输出暂时无法读取，会话编号 {}", conversation, failure);
+            LOG.warn(Messages.log("log.execution.conversationSnapshotService.logUnavailable.2"), conversation, failure);
         }
     }
 }

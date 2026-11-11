@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -62,7 +64,7 @@ public class ResourceOwnershipService {
         enterprises.advancePermissionVersion(actor.enterpriseId());
         events.publishEvent(new EnterprisePermissionChanged(actor.enterpriseId()));
         audit.record(actor.enterpriseId(), actor.user(), "resource.owner.transfer", "resource", id,
-            "转交" + resource.kind().label() + "所有权",
+            Messages.text("text.resource.resourceOwnershipService.transfer.1", resource.kind().localizedLabel()),
             Map.of("kind", resource.kind().code(), "previousOwnerId", resource.ownerUserId(), "ownerUserId", ownerId));
         return resources.find(actor.enterpriseId(), id, false, false).orElseThrow();
     }

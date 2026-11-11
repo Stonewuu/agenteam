@@ -10,6 +10,7 @@ import {randomResourceAppearance} from "@/components/ui/resource-appearance";
 import {agentConfigInput} from "./agent-config-input";
 import {initialGraph} from "@/features/workflow/lib/workflow-graph";
 import {enterprisePath} from "@/features/auth/lib/identity-navigation";
+import type {Translator} from "@/lib/i18n/translate";
 
 export const resourceTypes: { kind: ResourceKind; path: string; label: string }[] = [
   {kind: "agent", path: "agents", label: "智能体"}, {kind: "skill", path: "skills", label: "技能"}, {
@@ -31,6 +32,11 @@ export const resourceSubtypes: Partial<Record<ResourceKind, [string, string][]>>
 
 export function resourceLabel(kind: ResourceKind) {
   return resourceTypes.find((value) => value.kind === kind)!.label;
+}
+
+/** 列表使用复数名称，操作单个资源时使用同一语言目录中的单数名称。 */
+export function resourceSingularLabel(kind: ResourceKind, text: Translator) {
+  return text(`label.resource.${kind}`);
 }
 
 export function resourcePage(enterpriseId: string, kind: ResourceKind, id?: string) {

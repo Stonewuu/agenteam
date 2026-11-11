@@ -10,7 +10,7 @@
   </parent>
   <groupId>com.stonewu</groupId>
   <artifactId>agenteam</artifactId>
-  <version>0.6.0</version>
+  <version>0.6.1</version>
   <name>AgenTeam</name>
   <description>AgenTeam 智能体工作平台</description>
   <url>https://github.com/Stonewuu/agenteam</url>
@@ -350,6 +350,10 @@
             </goals>
             <configuration>
               <resources>
+                <resource>
+                  <directory>${project.basedir}/agenteam-tool-api/src/main/resources</directory>
+                  <filtering>false</filtering>
+                </resource>
                 <resource>
                   <directory>${project.basedir}/..</directory>
                   <targetPath>META-INF</targetPath>

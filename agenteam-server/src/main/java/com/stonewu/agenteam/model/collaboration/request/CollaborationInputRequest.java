@@ -10,10 +10,10 @@ import java.util.List;
 
 /** 只有登录的原发起人可以补充要求或选择成果公开范围。 */
 public record CollaborationInputRequest(
-    @NotBlank(message = "请填写请求编号。") @Pattern(regexp = "[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}", message = "请求编号格式不正确。") String requestId,
-    @NotNull(message = "请提供当前版本。") @Positive(message = "版本必须为正整数。") Long expectedRevision,
-    @NotBlank(message = "请输入补充要求。") @Size(max = 32000, message = "补充要求过长，请拆分后发送。") String text,
-    @Size(max = 20, message = "最多引用二十条消息。") List<@NotBlank(message = "消息编号不能为空。") @Size(max = 100, message = "消息编号过长。") String> messageReferences,
-    @Pattern(regexp = "summary_link|chat_full", message = "请选择有效的成果公开范围。") String outputVisibility,
-    @Size(max = 20, message = "最多选择二十个岗位。") List<@NotBlank(message = "岗位编号不能为空。") @Size(max = 100, message = "岗位编号过长。") String> waivedRoleIds) {
+    @NotBlank(message = "{error.collaboration.collaborationActionRequest.requestId.1}") @Pattern(regexp = "[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}", message = "{error.collaboration.collaborationActionRequest.requestId.2}") String requestId,
+    @NotNull(message = "{error.collaboration.collaborationActionRequest.expectedRevision.1}") @Positive(message = "{error.collaboration.collaborationActionRequest.expectedRevision.2}") Long expectedRevision,
+    @NotBlank(message = "{error.collaboration.collaborationInputRequest.text.1}") @Size(max = 32000, message = "{error.collaboration.collaborationInputRequest.text.2}") String text,
+    @Size(max = 20, message = "{error.collaboration.collaborationInputRequest.messageReferences.1}") List<@NotBlank(message = "{validation.collaboration.collaborationInputRequest.messageReferences.1}") @Size(max = 100, message = "{validation.collaboration.collaborationInputRequest.messageReferences.2}") String> messageReferences,
+    @Pattern(regexp = "summary_link|chat_full", message = "{error.collaboration.collaborationInputRequest.outputVisibility.1}") String outputVisibility,
+    @Size(max = 20, message = "{error.collaboration.collaborationInputRequest.waivedRoleIds.1}") List<@NotBlank(message = "{validation.collaboration.collaborationInputRequest.waivedRoleIds.1}") @Size(max = 100, message = "{validation.collaboration.collaborationInputRequest.waivedRoleIds.2}") String> waivedRoleIds) {
 }

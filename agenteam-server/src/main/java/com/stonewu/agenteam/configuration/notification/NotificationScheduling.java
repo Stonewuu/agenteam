@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.notification.NotificationDeliveryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +31,11 @@ public class NotificationScheduling {
                 try {
                     notifications.deliver(candidate);
                 } catch (RuntimeException failure) {
-                    LOG.warn("通知暂未保存，下次继续处理：工作编号={}", candidate.id(), failure);
+                    LOG.warn(Messages.log("log.notification.notificationScheduling.poll.1"), candidate.id(), failure);
                 }
             }
         } catch (RuntimeException failure) {
-            LOG.warn("通知队列暂时无法读取", failure);
+            LOG.warn(Messages.log("log.notification.notificationScheduling.poll.2"), failure);
         }
     }
 }

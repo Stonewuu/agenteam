@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.plugin.PlatformToolInputMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -79,7 +81,7 @@ public class WorkflowAuthoringService implements PlatformToolHandler {
             case "workflow_capabilities" -> {
                 String kind = input.text(args, "kind");
                 if (!Set.of("agent", "plugin").contains(kind == null ? "" : kind)) {
-                    throw ApiException.invalidField("kind", "请选择智能体或插件。");
+                    throw ApiException.invalidField("kind", Messages.text("error.workflow.workflowAuthoringService.call.1"));
                 }
                 yield versions.list(actor, kind, input.text(args, "query"), input.text(args, "cursor"), 20, null, false, null, true);
             }
@@ -118,7 +120,7 @@ public class WorkflowAuthoringService implements PlatformToolHandler {
                 InputValidation.validate(request);
                 yield saved(actor.enterpriseId(), drafts.save(actor, id, input.revision(args), request));
             }
-            default -> throw new IllegalArgumentException("工作流工具未登记");
+            default -> throw new IllegalArgumentException(Messages.text("error.workflow.workflowAuthoringService.call.2"));
         };
         return json.tree(result);
     }
@@ -126,6 +128,6 @@ public class WorkflowAuthoringService implements PlatformToolHandler {
     private Object saved(String enterprise, ResourceDetailView detail) {
         var resource = detail.resource();
         return Map.of("workflowId", resource.id(), "revision", resource.revision(), "name", resource.name(),
-            "content", "工作流草稿已保存。", "url", "/enterprises/" + enterprise + "/capabilities/workflows/" + resource.id());
+            "content", Messages.text("text.workflow.workflowAuthoringService.saved.1"), "url", "/enterprises/" + enterprise + "/capabilities/workflows/" + resource.id());
     }
 }

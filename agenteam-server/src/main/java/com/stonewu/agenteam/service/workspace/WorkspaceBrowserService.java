@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.ConversationWorkspaceFileMapper;
 import com.stonewu.agenteam.mapper.file.FilePreviewMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -107,7 +109,7 @@ public class WorkspaceBrowserService {
                         metadata.size(), modified,
                         Utf8Text.revision(version, path + "|" + metadata.size() + "|" + modified)));
                 } catch (NoSuchFileException missing) {
-                    LOG.debug("会话关联的工作文件已不存在，对话编号 {}", conversation, missing);
+                    LOG.debug(Messages.log("log.workspace.workspaceBrowserService.contextFiles.1"), conversation, missing);
                 } catch (IOException failure) {
                     throw WorkspacePaths.io(failure);
                 }
@@ -129,7 +131,7 @@ public class WorkspaceBrowserService {
             if (snapshot.files() == null && !snapshot.cleared() && calls.hasConversationWorkspace(actor.enterpriseId(),
                 actor.userId(), conversation)) {
                 throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "WORKSPACE_STORAGE_UNAVAILABLE",
-                    "暂时无法读取此对话已保存的工作文件。");
+                    Messages.text("error.workspace.workspaceBrowserService.read.1"));
             }
             if (snapshot.manifest() != null) {
                 access.requireSources(actor, snapshot.manifest().sourceResultIds(), snapshot.manifest().inputFileIds());
@@ -145,10 +147,10 @@ public class WorkspaceBrowserService {
                 if (Objects.equals(snapshot.manifest(), latest.manifest())) {
                     throw failure;
                 }
-                LOG.debug("工作文件版本在读取期间更新，将重新读取，对话编号 {}", conversation, failure);
+                LOG.debug(Messages.log("log.workspace.workspaceBrowserService.read.1"), conversation, failure);
             }
         }
-        throw new IllegalStateException("工作文件读取未完成");
+        throw new IllegalStateException(Messages.text("error.workspace.workspaceBrowserService.read.2"));
     }
 
     private static String name(String path) {

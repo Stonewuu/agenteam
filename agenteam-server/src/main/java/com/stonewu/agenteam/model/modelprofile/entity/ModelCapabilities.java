@@ -12,13 +12,13 @@ import java.util.List;
  * 管理员明确填写的模型能力，不通过模型名称推断。
  */
 public record ModelCapabilities(
-    @NotNull(message = "请填写必填项。") Boolean supportsTools,
-    @NotNull(message = "请填写必填项。") Boolean supportsTemperature,
-    @NotNull(message = "请填写必填项。") @Min(value = 128L, message = "数值超出允许范围。") @Max(value = 1000000L, message = "数值超出允许范围。") Integer maxOutputTokens,
-    @NotNull(message = "请填写必填项。") @Min(value = 128L, message = "数值超出允许范围。") @Max(value = 10000000L, message = "数值超出允许范围。") Integer maxContextTokens,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 2, message = "条目数量超出允许范围。") @UniqueElements(message = "不能包含重复条目。") List<@NotNull(message = "请填写必填项。") @Size(min = 1, max = 20, message = "文字长度不符合要求。") @Pattern(regexp = "(?:text|image)", message = "请选择支持的选项或格式。") String> inputTypes,
-    @Size(max = 7, message = "思考等级数量超出允许范围。") @UniqueElements(message = "不能包含重复的思考等级。")
-    List<@NotNull(message = "请选择思考等级。") @Pattern(regexp = ReasoningEffort.PATTERN, message = "请选择支持的思考等级。") String> reasoningEfforts,
+    @NotNull(message = "{validation.required}") Boolean supportsTools,
+    @NotNull(message = "{validation.required}") Boolean supportsTemperature,
+    @NotNull(message = "{validation.required}") @Min(value = 128L, message = "{validation.range}") @Max(value = 1000000L, message = "{validation.range}") Integer maxOutputTokens,
+    @NotNull(message = "{validation.required}") @Min(value = 128L, message = "{validation.range}") @Max(value = 10000000L, message = "{validation.range}") Integer maxContextTokens,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 2, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") @UniqueElements(message = "{error.agent.agentConfigurationInput.skillVersionIds.1}") List<@NotNull(message = "{validation.required}") @Size(min = 1, max = 20, message = "{validation.textLength}") @Pattern(regexp = "(?:text|image)", message = "{validation.option}") String> inputTypes,
+    @Size(max = 7, message = "{error.modelprofile.modelCapabilities.reasoningEfforts.1}") @UniqueElements(message = "{error.modelprofile.modelCapabilities.reasoningEfforts.2}")
+    List<@NotNull(message = "{validation.modelprofile.modelCapabilities.reasoningEfforts.1}") @Pattern(regexp = ReasoningEffort.PATTERN, message = "{validation.modelprofile.modelCapabilities.reasoningEfforts.2}") String> reasoningEfforts,
     @Valid ModelProtocolOptions protocolOptions) {
     public ModelCapabilities {
         reasoningEfforts = reasoningEfforts == null ? List.of() : Collections.unmodifiableList(

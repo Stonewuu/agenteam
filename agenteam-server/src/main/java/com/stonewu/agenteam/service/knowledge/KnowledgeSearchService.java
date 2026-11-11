@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeChunkMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -39,11 +41,11 @@ public class KnowledgeSearchService {
         String query = input.query() == null ? "" : input.query().trim();
         int size = query.codePointCount(0, query.length());
         if (size < 2 || size > 500 || query.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("query", "请输入二至五百个字符的检索内容。");
+            throw ApiException.invalidField("query", Messages.text("error.knowledge.knowledgeSearchService.search.1"));
         }
         int requested = input.limit() == null ? 8 : input.limit();
         if (requested < 1 || requested > 8) {
-            throw ApiException.invalidField("limit", "每次最多读取八段资料。");
+            throw ApiException.invalidField("limit", Messages.text("error.knowledge.knowledgeSearchService.search.2"));
         }
         var config = fixedConfig == null ? resources.find(actor.enterpriseId(), resource, false, false)
             .orElseThrow(ResourceAuthorizationService::unavailable).config() : fixedConfig;

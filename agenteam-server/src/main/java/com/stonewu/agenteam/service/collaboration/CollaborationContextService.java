@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -73,7 +75,7 @@ public class CollaborationContextService {
             .eq(CollaborationContextRow::getWorkId, work.getId()).eq(CollaborationContextRow::getRunRound, round));
         if (existing != null) {
             if (!existing.getInputRevision().equals(task.getInputRevision())) {
-                throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", "已固定的上下文不能替换为另一版要求。");
+                throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", Messages.text("error.collaboration.collaborationContextService.freeze.1"));
             }
             return existing;
         }
@@ -183,7 +185,7 @@ public class CollaborationContextService {
         var row = contexts.selectOne(new LambdaQueryWrapper<CollaborationContextRow>().eq(CollaborationContextRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationContextRow::getTaskId, task.getId()).eq(CollaborationContextRow::getId, id));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "COLLABORATION_CONTEXT_REQUIRED", "当前岗位没有可读取的固定上下文。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "COLLABORATION_CONTEXT_REQUIRED", Messages.text("error.collaboration.collaborationContextService.read.1"));
         }
         access.actor(task);
         return cipher.decrypt(task.getEnterpriseId(), "context", id, row.getContentEncrypted());
@@ -191,7 +193,7 @@ public class CollaborationContextService {
 
     private void requireSize(ObjectNode node) {
         if (characters(node) > configuration.getMaxContextCharacters()) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_TOO_LARGE", "任务要求和交接内容过长，请拆分任务后继续。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_TOO_LARGE", Messages.text("error.collaboration.collaborationContextService.requireSize.1"));
         }
     }
 

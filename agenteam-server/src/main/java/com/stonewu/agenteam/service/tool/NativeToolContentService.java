@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -50,13 +52,13 @@ public class NativeToolContentService {
         String path = "tool-results/" + runId + "/" + step + "/" + part;
         String version = Utf8Text.revision(path, content);
         if (revision != null && !version.equals(revision)) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_CONTENT_CHANGED", "工具内容已经更新，请重新展开查看。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_CONTENT_CHANGED", Messages.text("error.tool.nativeToolContentService.open.1"));
         }
         return cache.get(actor.enterpriseId() + ":" + path + ":" + version,
             () -> new TextFileDocument(path, version, content));
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "TOOL_CONTENT_UNAVAILABLE", "工具内容不存在或已不可读取。");
+        return new ApiException(HttpStatus.NOT_FOUND, "TOOL_CONTENT_UNAVAILABLE", Messages.text("error.tool.nativeToolContentService.unavailable.1"));
     }
 }

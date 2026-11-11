@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
@@ -124,7 +126,7 @@ public class ChatIdentityService {
 
     private Optional<UserChannelBindingRow> select(List<UserChannelBindingRow> rows, String connection) {
         if (rows.stream().map(UserChannelBindingRow::getUserId).distinct().count() > 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHANNEL_IDENTITY_CONFLICT", "此平台账号关联了不同群策账号，请在个人设置中检查原绑定。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHANNEL_IDENTITY_CONFLICT", Messages.text("error.chat.chatIdentityService.select.1"));
         }
         // 同一身份的历史记录只要有一条关闭聊天，就不能通过另一个机器人绕过。
         return rows.stream().min(Comparator.comparing((UserChannelBindingRow row) -> Boolean.TRUE.equals(row.getChatEnabled()))
@@ -132,14 +134,14 @@ public class ChatIdentityService {
     }
 
     public String bindingNotice(String enterprise, String connection, String subjectType, String subject, String unionId, String platform) {
-        String account = "feishu".equals(platform) ? "飞书账号" : "企业微信账号";
+        String account = "feishu".equals(platform) ? Messages.text("text.chat.chatIdentityService.bindingNotice.1") : Messages.text("text.chat.chatIdentityService.bindingNotice.2");
         if ("wecom_aibot".equals(platform) && wecomEnterprises.verified(enterprise, connection).isEmpty()) {
-            return "机器人企业接入尚未完成，请联系管理员检查后重试。";
+            return Messages.text("text.chat.chatIdentityService.bindingNotice.3");
         }
         if (bound(enterprise, connection, subjectType, subject, unionId).isPresent()) {
-            return "你的" + account + "已绑定，但尚未允许使用智能体。请打开群策「个人设置 → 企业账号绑定」，开启「允许通过此账号使用智能体」，然后重新发送消息。";
+            return Messages.text("text.chat.chatIdentityService.bindingNotice.4", account);
         }
-        return "还未将你的" + account + "与群策账号绑定。请登录群策，打开「个人设置 → 企业账号绑定」，找到对应平台并点击「授权并绑定」。完成后回到这里重新发送消息。";
+        return Messages.text("text.chat.chatIdentityService.bindingNotice.5", account);
     }
 
     public AuthContext actor(String enterprise, String userId, String bindingId) {
@@ -170,6 +172,6 @@ public class ChatIdentityService {
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.FORBIDDEN, "CHANNEL_BINDING_REQUIRED", "请先绑定群策账号并开启聊天，或确认原账号仍可使用。");
+        return new ApiException(HttpStatus.FORBIDDEN, "CHANNEL_BINDING_REQUIRED", Messages.text("error.chat.chatIdentityService.unavailable.1"));
     }
 }

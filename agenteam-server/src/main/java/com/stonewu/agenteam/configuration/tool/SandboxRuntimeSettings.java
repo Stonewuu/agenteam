@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,11 +28,11 @@ public record SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, Str
                                   @Value("${execution.sandbox.cgroup-parent:}") String cgroupParent) {
         if (temporaryMb < 16 || temporaryMb > 2048 || maximumConcurrent < 1 || maximumConcurrent > 64 || localRoot == null || hostRoot == null || localRoot.isBlank() != hostRoot.isBlank() || localRoot.contains(
             ",") || hostRoot.contains(",")) {
-            throw new IllegalArgumentException("沙盒临时空间、并发数或主机目录映射不正确");
+            throw new IllegalArgumentException(Messages.text("error.tool.sandboxRuntimeSettings.init.1"));
         }
         if (capacityRoot == null || cgroupParent == null || !capacityRoot.isBlank() && !Path.of(capacityRoot).isAbsolute()
             || !cgroupParent.isBlank() && !cgroupParent.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")) {
-            throw new IllegalArgumentException("沙盒共享执行目录或主机资源分组不正确");
+            throw new IllegalArgumentException(Messages.text("error.tool.sandboxRuntimeSettings.init.2"));
         }
         this.temporaryMb = temporaryMb;
         this.maximumConcurrent = maximumConcurrent;
@@ -47,7 +49,7 @@ public record SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, Str
         }
         Path base = Path.of(localRoot).toAbsolutePath().normalize();
         if (!absolute.startsWith(base)) {
-            throw new IllegalArgumentException("沙盒输入目录不在配置的主机挂载范围内");
+            throw new IllegalArgumentException(Messages.text("error.tool.sandboxRuntimeSettings.hostPath.1"));
         }
         String relative = base.relativize(absolute).toString().replace('\\', '/');
         return hostRoot.replace('\\', '/').replaceAll("/+$", "") + (relative.isEmpty() ? "" : "/" + relative);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.file.entity.CsvProfile;
 import com.stonewu.agenteam.model.file.entity.CsvRow;
@@ -51,23 +53,23 @@ public class ParsedDocument implements AutoCloseable {
 
     public void forEachCsv(Consumer<CsvRow> consumer) {
         if (result.csv() == null) {
-            throw new IllegalStateException("文件没有 CSV 解析结果");
+            throw new IllegalStateException(Messages.text("error.file.parsedDocument.forEachCsv.1"));
         }
         try (var reader = Files.newBufferedReader(directory.resolve("rows.jsonl"))) {
             String line;
             long count = 0;
             while ((line = reader.readLine()) != null) {
                 if (line.length() > 20 * 1024 * 1024) {
-                    throw new IOException("数据行超过解析限制");
+                    throw new IOException(Messages.text("error.file.parsedDocument.forEachCsv.2"));
                 }
                 var row = json.readValue(line, CsvRow.class);
                 if (row.row() != ++count || row.values().size() != result.csv().columns().size()) {
-                    throw new IOException("解析后的数据行不完整");
+                    throw new IOException(Messages.text("error.file.parsedDocument.forEachCsv.3"));
                 }
                 consumer.accept(row);
             }
             if (count != result.csv().rowCount()) {
-                throw new IOException("解析后的数据行数不一致");
+                throw new IOException(Messages.text("error.file.parsedDocument.forEachCsv.4"));
             }
         } catch (IOException invalid) {
             throw DocumentParserProcess.failure("CSV_FORMAT_INVALID");
@@ -80,19 +82,19 @@ public class ParsedDocument implements AutoCloseable {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.length() > 16000) {
-                    throw new IOException("解析后的文本块超过限制");
+                    throw new IOException(Messages.text("error.file.parsedDocument.forEach.1"));
                 }
                 DocumentChunk chunk = json.readValue(line, DocumentChunk.class);
                 if (chunk.ordinal() != ++count || chunk.text().isBlank() || chunk.text()
                     .codePointCount(0, chunk.text().length()) > 1200
                     || chunk.overlapCharacters() < 0 || chunk.overlapCharacters() > 100
                     || chunk.overlapCharacters() >= chunk.text().codePointCount(0, chunk.text().length())) {
-                    throw new IOException("解析后的文本块不完整");
+                    throw new IOException(Messages.text("error.file.parsedDocument.forEach.2"));
                 }
                 consumer.accept(chunk);
             }
             if (count != result.chunkCount()) {
-                throw new IOException("解析后的文本块数量不一致");
+                throw new IOException(Messages.text("error.file.parsedDocument.forEach.3"));
             }
         } catch (IOException invalid) {
             throw DocumentParserProcess.failure("FILE_TYPE_INVALID");
@@ -118,7 +120,7 @@ public class ParsedDocument implements AutoCloseable {
                         throw occupied;
                     }
                     if (attempt == 0) {
-                        LOGGER.warn("解析临时目录暂未能清理，短暂等待后重试，目录={}", absolute, occupied);
+                        LOGGER.warn(Messages.log("log.file.parsedDocument.cleanup.1"), absolute, occupied);
                     }
                     try {
                         Thread.sleep(50);

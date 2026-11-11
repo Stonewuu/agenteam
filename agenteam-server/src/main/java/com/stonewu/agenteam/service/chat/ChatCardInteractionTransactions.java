@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -68,9 +70,9 @@ public class ChatCardInteractionTransactions {
     @Transactional(timeout = 2)
     public JsonNode accept(String enterprise, String botId, Long lease, long credentialRevision, long bindingRevision, JsonNode envelope,
             ChatCallbackTiming timing) {
-        timing.enter("等待企业锁");
+        timing.enter(Messages.log("log.chat.chatCardInteractionTransactions.accept.1"));
         enterprises.lockEnterprise(enterprise).orElseThrow();
-        timing.enter("核对身份和消息");
+        timing.enter(Messages.log("log.chat.chatCardInteractionTransactions.accept.2"));
         var bot = bots.require(enterprise, botId);
         var app = bots.application(bot);
         if (!"enabled".equals(bot.getStatus()) || !"feishu".equals(app.providerCode()) || bot.getRevision() != bindingRevision
@@ -87,9 +89,9 @@ public class ChatCardInteractionTransactions {
         var previous = receipts.selectOne(new LambdaQueryWrapper<ChatInboundReceiptRow>().eq(ChatInboundReceiptRow::getEnterpriseId, enterprise)
             .eq(ChatInboundReceiptRow::getBotBindingId, botId).eq(ChatInboundReceiptRow::getReceiptKey, key));
         if (previous != null) {
-            var response = previous.getPayloadPurgedAt() != null ? toast("info", "此操作已处理，请重新打开设置。")
+            var response = previous.getPayloadPurgedAt() != null ? toast("info", Messages.text("text.chat.chatCardInteractionTransactions.accept.1"))
                 : cipher.decrypt(enterprise, "receipt", previous.getId(), previous.getPayloadEncrypted()).path("response");
-            timing.enter("提交事务");
+            timing.enter(Messages.log("log.chat.chatCardInteractionTransactions.accept.3"));
             return response;
         }
         var event = envelope.path("event");
@@ -111,20 +113,20 @@ public class ChatCardInteractionTransactions {
         }
         var binding = identities.find(enterprise, bot.getConnectionId(), "feishu_open_id", event.path("operator").path("open_id").asText(),
             event.path("operator").path("union_id").asText(null)).orElseThrow(() ->
-                new ApiException(HttpStatus.FORBIDDEN, "CHANNEL_BINDING_REQUIRED", "请先在群策绑定当前飞书账号并开启机器人聊天。"));
+                new ApiException(HttpStatus.FORBIDDEN, "CHANNEL_BINDING_REQUIRED", Messages.text("error.chat.chatCardInteractionTransactions.accept.1")));
         var actor = identities.actor(enterprise, binding.getUserId(), binding.getId());
         String action = event.path("action").path("value").path("action").asText();
-        timing.enter("保存业务结果");
+        timing.enter(Messages.log("log.chat.chatCardInteractionTransactions.accept.4"));
         JsonNode response;
         if ("user_question_card".equals(source.getKind()) && source.getRenderedPayloadEncrypted() != null) {
             var payload = cipher.decrypt(enterprise, "outbound-rendered", source.getId(), source.getRenderedPayloadEncrypted());
             var answer = questions.card(actor, source, payload, action, event.path("action").path("form_value").path("answer").asText(null));
-            response = answer == null ? toast("info", "direct".equals(group.getConversationKind()) ? "请输入这个问题的回答。" : "请 @ 我输入这个问题的回答。")
-                : toast("success", "已收到你的回答。");
+            response = answer == null ? toast("info", "direct".equals(group.getConversationKind()) ? Messages.text("text.chat.chatCardInteractionTransactions.accept.2") : Messages.text("text.chat.chatCardInteractionTransactions.accept.3"))
+                : toast("success", Messages.text("text.chat.chatCardInteractionTransactions.accept.4"));
         } else if ("reply_mode_probe".equals(action) && "card_probe".equals(source.getKind()) && original.path("replyCardProbe").asBoolean()
                 && source.getCreatedAt().plusSeconds(600).isAfter(clock.instant())) {
             capabilities.evidence(bot, "cardInteraction", Map.of("status", "passed", "checkedAt", clock.instant().toString(), "outboundId", source.getId()));
-            response = toast("success", "卡片按钮已可以使用。");
+            response = toast("success", Messages.text("text.chat.chatCardInteractionTransactions.accept.5"));
         } else {
             if (source.getTaskId() == null || source.getRenderedPayloadEncrypted() == null
                     || !cipher.decrypt(enterprise, "outbound-rendered", source.getId(), source.getRenderedPayloadEncrypted()).hasNonNull("replySettingsUrl")) {
@@ -132,7 +134,7 @@ public class ChatCardInteractionTransactions {
             }
             var task = access.require(enterprise, source.getTaskId());
             if (!task.getInitiatorUserId().equals(actor.userId())) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "COLLABORATION_REPLY_OWNER_REQUIRED", "仅发起人可以修改此任务的回复方式。");
+                throw new ApiException(HttpStatus.FORBIDDEN, "COLLABORATION_REPLY_OWNER_REQUIRED", Messages.text("error.chat.chatCardInteractionTransactions.accept.2"));
             }
             access.owned(actor, task.getId());
             response = switch (action) {
@@ -148,12 +150,12 @@ public class ChatCardInteractionTransactions {
                     var saved = modes.save(actor, task.getId(), new CollaborationReplyModeRequest(value.path("outputVisibility").asText(),
                         value.path("expectedRevision").asLong(), event.path("action").path("form_value").path("saveDefault").asBoolean(false),
                         value.path("expectedDefaultRevision").asLong()));
-                    yield toast("success", "chat_full".equals(saved.outputVisibility()) ? "本任务将直接回复内容。" : "本任务将仅发送链接。");
+                    yield toast("success", "chat_full".equals(saved.outputVisibility()) ? Messages.text("text.chat.chatCardInteractionTransactions.accept.6") : Messages.text("text.chat.chatCardInteractionTransactions.accept.7"));
                 }
                 default -> throw unavailable();
             };
         }
-        timing.enter("保存操作记录");
+        timing.enter(Messages.log("log.chat.chatCardInteractionTransactions.accept.5"));
         var receipt = ChatRecords.initialize(new ChatInboundReceiptRow(), enterprise, clock.instant());
         receipt.setBotBindingId(botId);
         receipt.setConnectionRevision(credentialRevision);
@@ -168,7 +170,7 @@ public class ChatCardInteractionTransactions {
         receipt.setLeaseVersion(0L);
         receipt.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", receipt.getId(), Map.of("response", response)));
         receipts.insert(receipt);
-        timing.enter("提交事务");
+        timing.enter(Messages.log("log.chat.chatCardInteractionTransactions.accept.3"));
         return response;
     }
 
@@ -179,6 +181,6 @@ public class ChatCardInteractionTransactions {
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "CHAT_CARD_UNAVAILABLE", "此卡片暂时无法操作，请打开群策任务详情修改。");
+        return new ApiException(HttpStatus.CONFLICT, "CHAT_CARD_UNAVAILABLE", Messages.text("error.chat.chatCardInteractionTransactions.unavailable.1"));
     }
 }

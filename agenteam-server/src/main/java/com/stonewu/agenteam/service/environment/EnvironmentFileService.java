@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
@@ -35,7 +37,7 @@ public class EnvironmentFileService {
 
     public Directory list(AuthContext actor, String path, int offset, String query, String sort) {
         if (offset < 0 || offset > 100000) {
-            throw ApiException.invalidField("offset", "请重新加载文件列表。");
+            throw ApiException.invalidField("offset", Messages.text("error.environment.environmentFileService.list.1"));
         }
         String logical = WorkspacePaths.projectLogical(path);
         var files = workspaces.files(actor);
@@ -43,7 +45,7 @@ public class EnvironmentFileService {
             return new Directory("/workspace", List.of(), null, 0);
         }
         if (query.length() > 200) {
-            throw ApiException.invalidField("query", "搜索内容不能超过 200 个字符。");
+            throw ApiException.invalidField("query", Messages.text("error.environment.environmentFileService.list.2"));
         }
         Comparator<Entry> order = switch (sort) {
             case "modified" -> Comparator.comparing(Entry::modifiedAt).reversed();

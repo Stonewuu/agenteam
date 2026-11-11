@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.data.request.DataQueryRequest;
@@ -32,7 +34,7 @@ public class DataQueryLogService {
             return result;
         } catch (RuntimeException failed) {
             String code = failed instanceof ApiException known ? known.code() : "DATA_QUERY_FAILED";
-            String message = failed instanceof ApiException known ? known.getReason() : "数据查询未能完成，请稍后重试。";
+            String message = failed instanceof ApiException known ? known.getReason() : Messages.text("text.data.dataQueryLogService.query.1");
             logs.finish(call, json.tree(Map.of("isError", true, "message", message)), code, message);
             throw failed;
         }

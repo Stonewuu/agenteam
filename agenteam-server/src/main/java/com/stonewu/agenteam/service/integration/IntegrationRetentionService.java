@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -45,7 +47,7 @@ public class IntegrationRetentionService {
                                         @Value("${agenteam.integration.retention.attempt-days:90}") int attemptDays,
                                         @Value("${agenteam.integration.retention.result-days:180}") int resultDays) {
         if (oauthDays < 1 || payloadDays < 1 || attemptDays < payloadDays || resultDays < attemptDays || resultDays < 180) {
-            throw new IllegalStateException("渠道保留天数必须为正数，尝试记录不短于内容副本，发送结果至少保留一百八十天且不短于尝试记录");
+            throw new IllegalStateException(Messages.text("error.integration.integrationRetentionService.init.1"));
         }
         this.oauth = oauth;
         this.deliveries = deliveries;

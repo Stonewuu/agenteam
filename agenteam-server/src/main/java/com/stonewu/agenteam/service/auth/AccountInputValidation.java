@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
@@ -16,24 +18,24 @@ public final class AccountInputValidation {
     public static String email(String value, String field) {
         String email = value == null ? "" : value.trim();
         if (email.length() < 3 || email.length() > 254 || email.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField(field, "请输入有效的邮箱地址。");
+            throw ApiException.invalidField(field, Messages.text("error.auth.accountInputValidation.email.1"));
         }
         try {
             InternetAddress address = new InternetAddress(email, true);
             address.validate();
             if (address.getPersonal() != null || !email.equals(address.getAddress()) || !email.contains("@")) {
-                throw ApiException.invalidField(field, "请输入邮箱地址，不要包含姓名或其他文字。");
+                throw ApiException.invalidField(field, Messages.text("error.auth.accountInputValidation.email.2"));
             }
             return email;
         } catch (AddressException exception) {
-            throw ApiException.invalidField(field, "请输入有效的邮箱地址。");
+            throw ApiException.invalidField(field, Messages.text("error.auth.accountInputValidation.email.1"));
         }
     }
 
     public static String timezone(String value) {
         String zone = value == null ? "Asia/Shanghai" : value;
         if (zone.length() > 64 || !ZoneId.getAvailableZoneIds().contains(zone)) {
-            throw ApiException.invalidField("timezone", "请选择有效时区。");
+            throw ApiException.invalidField("timezone", Messages.text("error.auth.accountInputValidation.timezone.1"));
         }
         return zone;
     }

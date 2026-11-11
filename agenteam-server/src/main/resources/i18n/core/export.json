@@ -1,0 +1,190 @@
+{
+  "error.export.conversationExportMapper.append.1": {
+    "zh-CN": "导出超过十万条消息，请缩小范围。",
+    "en": "The export exceeds 100,000 messages. Narrow the selection."
+  },
+  "error.export.conversationExportMapper.append.2": {
+    "zh-CN": "会话时间跨度超过九十天，无法一次导出。",
+    "en": "The conversation spans more than 90 days and cannot be exported at once."
+  },
+  "error.export.csvExportMapper.row.1": {
+    "zh-CN": "导出超过十万行，请缩小范围。",
+    "en": "The export exceeds 100,000 rows. Narrow the selection."
+  },
+  "error.export.csvExportMapper.add.1": {
+    "zh-CN": "导出文件过大，请缩小范围。",
+    "en": "The export file is too large. Narrow the selection."
+  },
+  "error.export.csvExportMapper.requireActive.1": {
+    "zh-CN": "导出工作已失去执行资格",
+    "en": "The export job is no longer eligible to execute."
+  },
+  "error.export.exportDefinitionMapper.parameter.1": {
+    "zh-CN": "导出条件无效，请重新选择后导出。",
+    "en": "The export criteria are invalid. Select them again before exporting."
+  },
+  "error.export.exportJobMapper.result.1": {
+    "zh-CN": "导出工作资格已变化，结果未提交",
+    "en": "The export job eligibility changed. The result was not committed."
+  },
+  "error.export.exportPayloadMapper.read.1": {
+    "zh-CN": "导出任务的内部条件无法读取",
+    "en": "The export job's internal criteria could not be read."
+  },
+  "error.export.exportPayloadMapper.write.1": {
+    "zh-CN": "导出任务的内部条件无法保存",
+    "en": "The export job's internal criteria could not be saved."
+  },
+  "error.export.exportAccessService.unavailable.1": {
+    "zh-CN": "导出任务不存在或已无法读取，请按当前可访问的范围重新导出。",
+    "en": "The export is missing or inaccessible. Export again using your current access scope."
+  },
+  "error.export.exportFileService.write.1": {
+    "zh-CN": "导出文件写入不能占用数据库事务",
+    "en": "Export file writes must not hold a database transaction."
+  },
+  "error.export.exportFileService.write.2": {
+    "zh-CN": "导出文件无法保存",
+    "en": "The export file could not be saved."
+  },
+  "error.export.exportJobTransactions.create.1": {
+    "zh-CN": "已有一个导出正在处理，请等待完成后再导出。",
+    "en": "An export is already running. Wait for it to finish."
+  },
+  "error.export.exportJobTransactions.complete.1": {
+    "zh-CN": "导出结果归属或查询条件不正确",
+    "en": "The export result ownership or query criteria are invalid."
+  },
+  "error.export.exportJobTransactions.failed.1": {
+    "zh-CN": "工作类型不是导出",
+    "en": "The job type is not export."
+  },
+  "error.export.exportTypeRegistry.init.1": {
+    "zh-CN": "导出类型为空、无效或重复注册",
+    "en": "The export type is empty, invalid, or registered more than once."
+  },
+  "error.export.toolLogExportHandler.validate.1": {
+    "zh-CN": "请提供完整的导出起止时间。",
+    "en": "Provide both the start and end times for the export."
+  },
+  "error.export.exportWorker.process.1": {
+    "zh-CN": "导出执行多次中断，请重新发起。",
+    "en": "The export was interrupted repeatedly. Start a new export."
+  },
+  "error.export.exportWorker.process.2": {
+    "zh-CN": "当前已无法读取所选数据，请按现有权限重新导出。",
+    "en": "The selected data is no longer readable. Export again using your current permissions."
+  },
+  "error.export.exportWorker.process.3": {
+    "zh-CN": "导出暂未完成，正在等待重试。",
+    "en": "The export is incomplete and waiting to retry."
+  },
+  "error.export.exportWorker.process.4": {
+    "zh-CN": "导出暂未完成，请稍后重试。",
+    "en": "The export is incomplete. Try again later."
+  },
+  "text.export.conversationExportHandler.read.1": {
+    "zh-CN": "消息编号",
+    "en": "Message ID"
+  },
+  "text.export.conversationExportHandler.read.2": {
+    "zh-CN": "时间",
+    "en": "Time"
+  },
+  "text.export.conversationExportHandler.read.3": {
+    "zh-CN": "尝试",
+    "en": "Attempt"
+  },
+  "text.export.conversationExportHandler.read.4": {
+    "zh-CN": "消息状态",
+    "en": "Message status"
+  },
+  "text.export.conversationExportHandler.read.5": {
+    "zh-CN": "内容编号",
+    "en": "Content ID"
+  },
+  "text.export.conversationExportHandler.read.6": {
+    "zh-CN": "父内容编号",
+    "en": "Parent content ID"
+  },
+  "text.export.conversationExportHandler.read.7": {
+    "zh-CN": "内容类型",
+    "en": "Content type"
+  },
+  "text.export.conversationExportHandler.read.8": {
+    "zh-CN": "说明",
+    "en": "Description"
+  },
+  "text.export.conversationExportHandler.read.9": {
+    "zh-CN": "正文",
+    "en": "Body"
+  },
+  "text.export.conversationExportHandler.read.10": {
+    "zh-CN": "工具输入",
+    "en": "Tool input"
+  },
+  "text.export.conversationExportHandler.read.11": {
+    "zh-CN": "工具结果",
+    "en": "Tool result"
+  },
+  "text.export.conversationExportHandler.read.12": {
+    "zh-CN": "对话记录.csv",
+    "en": "conversation.csv"
+  },
+  "text.export.exportJobTransactions.create.1": {
+    "zh-CN": "创建数据导出任务",
+    "en": "Create data export job"
+  },
+  "text.export.exportJobTransactions.complete.1": {
+    "zh-CN": "完成数据导出",
+    "en": "Complete data export"
+  },
+  "log.export.exportWorker.executor.1": {
+    "zh-CN": "数据导出-",
+    "en": "data-export-"
+  },
+  "log.export.exportWorker.poll.1": {
+    "zh-CN": "导出领取暂未完成，下一轮将继续检查",
+    "en": "Export claiming did not complete; checking again next cycle"
+  },
+  "log.export.exportWorker.process.1": {
+    "zh-CN": "数据导出未完成，工作编号 {}",
+    "en": "Data export did not complete; jobId={}"
+  },
+  "log.export.exportWorker.process.2": {
+    "zh-CN": "数据导出失败，工作编号 {}",
+    "en": "Data export failed; jobId={}"
+  },
+  "log.export.exportWorker.process.3": {
+    "zh-CN": "未登记的导出文件暂未清理，后台文件清理将继续处理，工作编号 {}",
+    "en": "Unregistered export files were not cleared; background file cleanup will continue; jobId={}"
+  },
+  "text.export.toolLogExportHandler.read.1": {
+    "zh-CN": "发起成员",
+    "en": "Initiated by"
+  },
+  "text.export.toolLogExportHandler.read.2": {
+    "zh-CN": "运行来源",
+    "en": "Run source"
+  },
+  "text.export.toolLogExportHandler.read.3": {
+    "zh-CN": "调用状态",
+    "en": "Call status"
+  },
+  "text.export.toolLogExportHandler.read.4": {
+    "zh-CN": "操作类型",
+    "en": "Operation type"
+  },
+  "text.export.toolLogExportHandler.read.5": {
+    "zh-CN": "耗时毫秒",
+    "en": "Duration in milliseconds"
+  },
+  "text.export.toolLogExportHandler.read.6": {
+    "zh-CN": "错误摘要",
+    "en": "Error summary"
+  },
+  "text.export.toolLogExportHandler.read.7": {
+    "zh-CN": "调用记录.csv",
+    "en": "tool-calls.csv"
+  }
+}

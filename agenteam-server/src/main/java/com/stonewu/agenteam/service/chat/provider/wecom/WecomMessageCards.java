@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -27,27 +29,27 @@ public final class WecomMessageCards {
                 .put("task_id", payload.path("questionCardId").asText());
             boolean direct = payload.path("questionDirect").asBoolean();
             boolean hasOptions = !payload.path("userQuestion").path("options").isEmpty();
-            card.putObject("main_title").put("title", hasOptions ? "选择回答" : "填写回答")
-                .put("desc", hasOptions ? "完整选项见上方，也可自己输入" : direct ? "直接发送你的回答即可" : "直接 @ 我发送你的回答即可");
+            card.putObject("main_title").put("title", hasOptions ? Messages.text("text.chat.wecomMessageCards.body.1") : Messages.text("text.chat.wecomMessageCards.body.2"))
+                .put("desc", hasOptions ? Messages.text("text.chat.wecomMessageCards.body.3") : direct ? Messages.text("text.chat.wecomMessageCards.body.4") : Messages.text("text.chat.wecomMessageCards.body.5"));
             var buttons = card.putArray("button_list");
             int index = 0;
             for (var option : payload.path("userQuestion").path("options")) {
-                buttons.addObject().put("text", "选 " + ++index)
+                buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.6", ++index))
                     .put("style", option.path("recommended").asBoolean() ? 1 : 2).put("key", "question_" + option.path("id").asText());
             }
-            buttons.addObject().put("text", "自己输入").put("style", 2).put("key", "question_free_text");
+            buttons.addObject().put("text", Messages.text("text.chat.feishuQuestionCard.elements.6")).put("style", 2).put("key", "question_free_text");
         } else if (payload.path("historyChoices").isArray() && payload.hasNonNull("conversationCardId")) {
             body.put("msgtype", "template_card");
             var card = body.putObject("template_card").put("card_type", "button_interaction")
                 .put("task_id", payload.path("conversationCardId").asText());
-            card.putObject("main_title").put("title", "最近会话").put("desc", "选择后继续提问");
+            card.putObject("main_title").put("title", Messages.text("text.chat.wecomMessageCards.body.7")).put("desc", Messages.text("text.chat.wecomMessageCards.body.8"));
             if (payload.path("historyListLayout").asBoolean()) {
                 var titles = new StringBuilder();
                 for (var choice : payload.path("historyChoices")) {
                     if (!titles.isEmpty()) {
                         titles.append('\n');
                     }
-                    titles.append(choice.path("label").asText().replace("继续 ", "")).append(". ").append(choice.path("title").asText());
+                    titles.append(choice.path("label").asText().replace(Messages.source("text.chat.wecomMessageCards.body.9"), "")).append(". ").append(choice.path("title").asText());
                 }
                 card.put("sub_title_text", titles.toString());
             }
@@ -56,37 +58,37 @@ public final class WecomMessageCards {
                 buttons.addObject().put("text", choice.path("label").asText()).put("style", 2).put("key", choice.path("key").asText());
             }
             if (payload.path("historyPage").asInt() > 1) {
-                buttons.addObject().put("text", "上一页").put("style", 2).put("key", "history_previous");
+                buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.10")).put("style", 2).put("key", "history_previous");
             }
             if (payload.path("historyHasNext").asBoolean()) {
-                buttons.addObject().put("text", "下一页").put("style", 2).put("key", "history_next");
+                buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.11")).put("style", 2).put("key", "history_next");
             }
         } else if (!payload.path("replyResultUrl").asText().isBlank() && payload.hasNonNull("conversationCardId")) {
             body.put("msgtype", "template_card");
             var card = body.putObject("template_card").put("card_type", "button_interaction")
                 .put("task_id", payload.path("conversationCardId").asText()).put("sub_title_text", text);
-            var title = card.putObject("main_title").put("title", payload.path("replyNoticeTitle").asText("回复"));
+            var title = card.putObject("main_title").put("title", payload.path("replyNoticeTitle").asText(Messages.text("text.chat.wecomMessageCards.body.12")));
             if (!payload.path("replyFull").asBoolean()) {
-                title.put("desc", "点击卡片查看内容");
+                title.put("desc", Messages.text("text.chat.wecomMessageCards.body.13"));
             }
             card.putObject("card_action").put("type", 1).put("url", payload.path("replyResultUrl").asText());
             var buttons = card.putArray("button_list");
-            buttons.addObject().put("text", "新会话").put("style", 2).put("key", "conversation_new");
-            buttons.addObject().put("text", "继续该会话").put("style", 2).put("key", "conversation_resume");
+            buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.14")).put("style", 2).put("key", "conversation_new");
+            buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.15")).put("style", 2).put("key", "conversation_resume");
         } else if (!settings.isBlank() && "text".equals(payload.path("messageType").asText())) {
             body.put("msgtype", "template_card");
             var card = body.putObject("template_card").put("card_type", "text_notice");
             if (payload.hasNonNull("conversationCardId")) {
                 card.put("card_type", "button_interaction").put("task_id", payload.path("conversationCardId").asText());
                 var buttons = card.putArray("button_list");
-                buttons.addObject().put("text", "新对话").put("style", 2).put("key", "conversation_new");
-                buttons.addObject().put("text", "继续此对话").put("style", 2).put("key", "conversation_resume");
+                buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.16")).put("style", 2).put("key", "conversation_new");
+                buttons.addObject().put("text", Messages.text("text.chat.wecomMessageCards.body.17")).put("style", 2).put("key", "conversation_resume");
             }
-            card.putObject("main_title").put("title", payload.path("replyNoticeTitle").asText("回复方式"));
+            card.putObject("main_title").put("title", payload.path("replyNoticeTitle").asText(Messages.text("text.chat.chatReplyCommandService.handle.1")));
             card.put("sub_title_text", text);
-            card.putArray("horizontal_content_list").addObject().put("keyname", "回复方式")
-                .put("value", payload.path("replyFull").asBoolean() ? "直接回复内容" : "仅发送链接");
-            card.putArray("jump_list").addObject().put("type", 1).put("title", "修改回复方式").put("url", settings);
+            card.putArray("horizontal_content_list").addObject().put("keyname", Messages.text("text.chat.chatReplyCommandService.handle.1"))
+                .put("value", payload.path("replyFull").asBoolean() ? Messages.text("text.chat.chatReplyCommandService.label.1") : Messages.text("text.chat.chatReplyCommandService.label.2"));
+            card.putArray("jump_list").addObject().put("type", 1).put("title", Messages.text("text.chat.wecomMessageCards.body.18")).put("url", settings);
             card.putObject("card_action").put("type", 1).put("url", settings);
         } else {
             body.put("msgtype", "markdown").putObject("markdown").put("content", text);

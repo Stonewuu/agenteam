@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.announcement;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.announcement.response.AnnouncementLevel;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.stereotype.Component;
@@ -12,9 +14,9 @@ import java.util.List;
 @Component
 public class AnnouncementLevelCatalog {
     private static final List<AnnouncementLevel> LEVELS = List.of(
-        new AnnouncementLevel("urgent", "紧急", 300, "danger", true),
-        new AnnouncementLevel("important", "重要", 200, "info", true),
-        new AnnouncementLevel("general", "一般", 100, "neutral", false));
+        new AnnouncementLevel("urgent", Messages.source("text.announcement.announcementLevelCatalog.LEVELS.1"), 300, "danger", true),
+        new AnnouncementLevel("important", Messages.source("text.announcement.announcementLevelCatalog.LEVELS.2"), 200, "info", true),
+        new AnnouncementLevel("general", Messages.source("text.announcement.announcementLevelCatalog.LEVELS.3"), 100, "neutral", false));
 
     public List<AnnouncementLevel> levels() {
         return LEVELS;
@@ -22,7 +24,7 @@ public class AnnouncementLevelCatalog {
 
     public AnnouncementLevel require(String code) {
         return LEVELS.stream().filter(level -> level.code().equals(code)).findFirst()
-            .orElseThrow(() -> ApiException.invalidField("level", "请选择有效的提醒等级。"));
+            .orElseThrow(() -> ApiException.invalidField("level", Messages.text("error.announcement.announcementWriteRequest.level.2")));
     }
 
     public List<String> popupLevels() {

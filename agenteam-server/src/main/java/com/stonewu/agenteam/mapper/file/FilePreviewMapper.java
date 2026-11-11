@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.file.response.ConversationFileView;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
@@ -73,15 +75,15 @@ public final class FilePreviewMapper {
     public static String workspacePath(String id) {
         try {
             if (!id.startsWith("w.") || id.length() > 3000) {
-                throw new IllegalArgumentException("文件标识不正确");
+                throw new IllegalArgumentException(Messages.text("error.file.filePreviewMapper.workspacePath.1"));
             }
             String path = new String(Base64.getUrlDecoder().decode(id.substring(2)), StandardCharsets.UTF_8);
             if (!workspaceId(path).equals(id) || path.isBlank()) {
-                throw new IllegalArgumentException("文件标识不正确");
+                throw new IllegalArgumentException(Messages.text("error.file.filePreviewMapper.workspacePath.1"));
             }
             return WorkspacePaths.projectLogical(path);
         } catch (IllegalArgumentException failure) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_REFERENCE_INVALID", "文件标识不正确，请从列表重新选择。",
+            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_REFERENCE_INVALID", Messages.text("error.file.filePreviewMapper.workspacePath.2"),
                 failure);
         }
     }

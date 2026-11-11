@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
@@ -90,7 +92,7 @@ public class ToolResultDocumentService {
             throw unavailable();
         }
         if (call.resultRedacted() == null) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_NOT_READY", "工具尚未返回可读取的内容。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_NOT_READY", Messages.text("error.tool.toolResultDocumentService.open.1"));
         }
         requireStoredContent(actor, call, false);
         var original = call;
@@ -158,19 +160,19 @@ public class ToolResultDocumentService {
             }
             if (bytes.length > settings.maxFileBytes()) {
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE",
-                    "结果文件超过当前允许读取的大小。");
+                    Messages.text("error.tool.toolResultDocumentService.loadResult.1"));
             }
             if (bytes.length != file.sizeBytes() || !HexFormat.of()
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)).equals(file.sha256())) {
                 throw new ApiException(HttpStatus.CONFLICT, "FILE_CONTENT_CHANGED",
-                    "结果文件与保存时的内容不一致，暂时无法读取。");
+                    Messages.text("error.tool.toolResultDocumentService.loadResult.2"));
             }
             return mapper.readTree(bytes);
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FILE_READ_FAILED",
-                "完整结果暂时无法读取，请稍后重试。", failure);
+                Messages.text("error.tool.toolResultDocumentService.loadResult.3"), failure);
         } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", impossible);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), impossible);
         }
     }
 
@@ -199,12 +201,12 @@ public class ToolResultDocumentService {
             throw unavailable();
         }
         if (file.sizeBytes() > settings.maxFileBytes()) {
-            throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE", "结果文件超过当前允许读取的大小。");
+            throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE", Messages.text("error.tool.toolResultDocumentService.loadResult.1"));
         }
         return file;
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "TOOL_RESULT_UNAVAILABLE", "工具结果不存在或已不能读取。");
+        return new ApiException(HttpStatus.NOT_FOUND, "TOOL_RESULT_UNAVAILABLE", Messages.text("error.tool.toolResultDocumentService.unavailable.1"));
     }
 }

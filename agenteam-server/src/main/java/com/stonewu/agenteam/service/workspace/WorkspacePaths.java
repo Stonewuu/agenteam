@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -65,7 +67,7 @@ public final class WorkspacePaths {
         String value = logical(path);
         if (write && !(value.startsWith("work/") || value.startsWith("outputs/"))) {
             throw new ApiException(HttpStatus.FORBIDDEN, "WORKSPACE_READ_ONLY",
-                "只能修改 work 和 outputs 目录中的文件。");
+                Messages.text("error.workspace.workspacePaths.resolve.1"));
         }
         Path resolved = root.resolve(value).normalize();
         requireInside(root, resolved);
@@ -91,16 +93,16 @@ public final class WorkspacePaths {
 
     public static ApiException invalid() {
         return new ApiException(HttpStatus.BAD_REQUEST, "WORKSPACE_PATH_INVALID",
-            "文件路径不属于当前工作空间，或包含不支持的名称、目录链接。");
+            Messages.text("error.workspace.workspacePaths.invalid.1"));
     }
 
     public static ApiException io(IOException cause) {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "WORKSPACE_IO_FAILED",
-            "工作文件暂时无法读取或保存，请稍后重试。", cause);
+            Messages.text("error.workspace.workspacePaths.io.1"), cause);
     }
 
     public static ApiException capacity() {
         return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "WORKSPACE_CAPACITY_EXCEEDED",
-            "工作文件超过允许的大小或数量，请缩小本次处理范围。");
+            Messages.text("error.workspace.workspacePaths.capacity.1"));
     }
 }

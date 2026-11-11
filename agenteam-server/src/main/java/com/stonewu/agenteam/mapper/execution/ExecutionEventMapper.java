@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -44,7 +46,7 @@ public class ExecutionEventMapper {
 
     public ExecutionEvent append(RunRecord run, String type, Object payload, Instant now) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("事件和消息必须在同一事务保存");
+            throw new IllegalStateException(Messages.text("error.execution.executionEventMapper.append.1"));
         }
         var conversation = conversations.find(run.enterpriseId(), run.userId(), run.conversationId(), true)
             .orElseThrow();

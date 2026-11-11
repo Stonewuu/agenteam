@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.todo.TodoDefinitionMapper;
@@ -37,7 +39,7 @@ public class TodoSourceService {
 
     public TodoSource create(AuthContext actor, TodoWriteRequest value) {
         if (value.sourceType() == null || !Set.of("manual", "message", "workflow").contains(value.sourceType())) {
-            throw ApiException.invalidField("sourceType", "请选择有效的待办来源。");
+            throw ApiException.invalidField("sourceType", Messages.text("error.todo.todoSourceService.create.1"));
         }
         if (value.sourceType().equals("manual")) {
             if (value.sourceConversationId() != null || value.sourceMessageId() != null || value.sourceRunId() != null) {
@@ -51,7 +53,7 @@ public class TodoSourceService {
             "sourceMessageId");
         String runId = value.sourceRunId() == null ? null : input.identifier(value.sourceRunId(), "sourceRunId");
         if (value.sourceType().equals("message") && messageId == null) {
-            throw ApiException.invalidField("sourceMessageId", "请选择作为来源的消息。");
+            throw ApiException.invalidField("sourceMessageId", Messages.text("error.todo.todoSourceService.create.2"));
         }
         if (messageId != null) {
             var message = messages.find(actor.enterpriseId(), conversationId, messageId)
@@ -70,7 +72,7 @@ public class TodoSourceService {
         }
         if (value.sourceType().equals("workflow") && (runId == null || !relations.hasStartedWorkflow(
             actor.enterpriseId(), runId))) {
-            throw ApiException.invalidField("sourceRunId", "请选择已经实际执行的工作流作为来源。");
+            throw ApiException.invalidField("sourceRunId", Messages.text("error.todo.todoSourceService.create.3"));
         }
         return new TodoSource(value.sourceType(), conversationId, messageId, runId);
     }
@@ -87,6 +89,6 @@ public class TodoSourceService {
     }
 
     private ApiException immutable() {
-        return ApiException.invalidField("sourceType", "待办来源不能自行改写，请从原消息或工作流创建。");
+        return ApiException.invalidField("sourceType", Messages.text("error.todo.todoSourceService.immutable.1"));
     }
 }

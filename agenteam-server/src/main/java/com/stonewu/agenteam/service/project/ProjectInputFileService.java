@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.file.FileSqlMapper;
@@ -75,7 +77,7 @@ public class ProjectInputFileService {
                 .eq(FileObjectRow::getStatus, "ready").isNull(FileObjectRow::getDeletedAt)
                 .set(FileObjectRow::getExpiresAt, null).set(FileObjectRow::getUpdatedAt, now));
         if (changed != missing.size()) {
-            throw new IllegalStateException("项目资料保留记录未能完整保存");
+            throw new IllegalStateException(Messages.text("error.project.projectInputFileService.retain.1"));
         }
     }
 }

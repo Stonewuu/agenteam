@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule.action;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
@@ -67,7 +69,7 @@ public class NotificationScheduleDetailService {
             String status = notice != null ? "delivered" : blocked.containsKey(user) ? "blocked"
                 : "cancelled".equals(occurrence.getStatus()) ? "cancelled" : result.path("prepared").asBoolean(false) ? "blocked"
                 : "queued".equals(occurrence.getStatus()) ? "pending" : occurrence.getStatus();
-            return new ScheduleRecipientResult(user, names.getOrDefault(user, "已不可用成员"), status, blocked.get(user),
+            return new ScheduleRecipientResult(user, names.getOrDefault(user, Messages.text("text.schedule.notificationScheduleDetailService.details.1")), status, blocked.get(user),
                 notice == null ? List.of() : channels.getOrDefault(notice.getId(), List.of()));
         }).toList();
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionEventCache;
 import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
@@ -91,7 +93,7 @@ public class ConversationEventService {
     }
 
     private ApiException invalidAfter() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "暂时无法继续读取对话，请重新打开对话。");
+        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", Messages.text("error.execution.conversationEventService.invalidAfter.1"));
     }
 
     private record Batch(List<ServerSentEvent<Object>> events, boolean complete) {
@@ -141,7 +143,7 @@ public class ConversationEventService {
                 try {
                     batch = read(current.lastSequence());
                 } catch (IllegalStateException invalid) {
-                    LOG.warn("对话事件无法读取，将通知页面重新加载完整快照，会话编号 {}，上次事件编号 {}", conversation,
+                    LOG.warn(Messages.log("log.execution.conversationEventService.poll.1"), conversation,
                         cursor, invalid);
                     return reset("data_incomplete", current.lastSequence());
                 }
@@ -166,7 +168,7 @@ public class ConversationEventService {
                 }
             }
             if (now - heartbeatAt >= 15000) {
-                output.add(ServerSentEvent.builder().comment("保持连接").build());
+                output.add(ServerSentEvent.builder().comment(Messages.text("text.execution.conversationEventService.poll.1")).build());
                 heartbeatAt = now;
             }
             return new Batch(output, ready && cursor >= current.lastSequence() && current.activeRunId() == null);
@@ -185,7 +187,7 @@ public class ConversationEventService {
                 long now = clock.millis();
                 if (now >= nextCacheWarningAt) {
                     nextCacheWarningAt = now + 30000;
-                    LOG.warn("对话事件缓存读取失败，将继续读取数据库，会话编号 {}，上次事件编号 {}", conversation, cursor,
+                    LOG.warn(Messages.log("log.execution.conversationEventService.read.1"), conversation, cursor,
                         unavailable);
                 }
             }

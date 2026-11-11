@@ -79,7 +79,7 @@ class ApplicationSecretKeysTest {
         assertArrayEquals(saved, Files.readAllBytes(file));
         assertEquals(32, first.requestKey().getEncoded().length);
         assertFalse(Arrays.equals(first.requestKey().getEncoded(), first.encryptionKey("1").getEncoded()));
-        assertEquals(1, output.getOut().lines().filter(line -> line.contains("已自动生成应用密钥")).count());
+        assertEquals(1, output.getOut().lines().filter(line -> line.contains("Application keys were generated")).count());
         assertFalse(output.getOut().contains(Base64.getEncoder().encodeToString(first.requestKey().getEncoded())));
         assertFalse(output.getOut().contains(Base64.getEncoder().encodeToString(first.encryptionKey("1").getEncoded())));
     }

@@ -13,6 +13,7 @@ import {ResourceAvatar} from "@/components/ui/resource-avatar";
 import {IconArrowLeft, IconCopy, IconHistory} from "@/components/ui/icons";
 import {ResourceActions} from "@/features/resource/components/resource-actions";
 import {ResourceVersions} from "@/features/resource/components/resource-versions";
+import {resourceDisplayName, resourceDisplayDescription} from "@/features/resource/lib/resource-localization";
 import {resourcePage, resourceStatus} from "@/features/resource/lib/resource-display";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
@@ -37,11 +38,11 @@ export function BuiltinPluginDetails({enterpriseId, detail, onChanged}: {
   const tools = useApiQuery<PluginTool[]>(organizationPath(enterpriseId, `/plugins/${encodeURIComponent(resource.id)}/tools`), resource.revision);
   const copy = () => void action.execute(async () => {
     const result = await action.mutation.run<ResourceDetail>(organizationPath(enterpriseId, `/resources/${encodeURIComponent(resource.id)}/copy`),
-      {method: "POST", body: {name: uiText("{0} 自定义", [resource.name]).slice(0, 80)}});
+      {method: "POST", body: {name: uiText("{0} 自定义", [resourceDisplayName(resource, uiText)]).slice(0, 80)}});
     router.push(`${resourcePage(enterpriseId, "plugin", result.resource.id)}?section=connection`);
   }, uiText("已创建插件草稿。"));
   return <div className={styles.preset}>
-    <PageHeader title={uiText(resource.name)} size="small"
+    <PageHeader title={resourceDisplayName(resource, uiText)} size="small"
                 leading={<><Link className="icon-button" href={resourcePage(enterpriseId, "plugin")}
                                  aria-label={uiText("返回插件列表")}><IconArrowLeft size={20}/></Link><ResourceAvatar
                   icon={resource.icon} color={resource.color}/></>}
@@ -53,13 +54,13 @@ export function BuiltinPluginDetails({enterpriseId, detail, onChanged}: {
           size={16}/>{uiText("基于此创建插件")}</Button>}
       <ResourceActions enterpriseId={enterpriseId} resource={resource} dirty={action.busy} onChanged={onChanged}/>
     </>}/>
-    <p className={styles.presetIntro}>{uiText(resource.description)}</p>
+    <p className={styles.presetIntro}>{resourceDisplayDescription(resource, uiText)}</p>
     <div className={styles.presetTools}>
       <div className={styles.heading}><h3>{uiText("工具")}{tools.data && <small>{tools.data.length}</small>}</h3></div>
       <QueryState {...tools} hasData={Boolean(tools.data?.length)}
                   empty={uiText("当前没有可用工具。")}>{tools.data?.map((tool) => <div key={tool.id ?? tool.name}
                                                                                       className={styles.selectedTool}>
-        <span><strong>{toolDisplayName(tool, resource.name, uiText)}</strong><span>{toolDisplayDescription(tool, resource.name, uiText)}</span></span><span
+        <span><strong>{toolDisplayName(tool, resource.builtinCode, uiText)}</strong><span>{toolDisplayDescription(tool, resource.builtinCode, uiText)}</span></span><span
         className={`badge ${tool.operationClass === "read" ? "blue" : "amber"}`}>{uiText(toolOperationLabel(tool.operationClass))}</span>
       </div>)}</QueryState>
     </div>

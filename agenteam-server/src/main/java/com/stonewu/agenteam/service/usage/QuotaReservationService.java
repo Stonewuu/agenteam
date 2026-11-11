@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.usage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.usage.QuotaMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -34,7 +36,7 @@ public class QuotaReservationService {
 
     public void reserve(AuthContext actor, String run) {
         if (!tryReserve(actor, run)) {
-            throw new ApiException(HttpStatus.CONFLICT, "QUOTA_EXCEEDED", "当前适用的本月执行次数已用完，请联系管理员。");
+            throw new ApiException(HttpStatus.CONFLICT, "QUOTA_EXCEEDED", Messages.text("error.usage.quotaReservationService.reserve.1"));
         }
     }
 
@@ -52,7 +54,7 @@ public class QuotaReservationService {
         var pending = new ArrayList<String>();
         var applicable = policies.policies(actor.enterpriseId(), actor.userId());
         if (applicable.stream().noneMatch(policy -> policy.type().equals("enterprise"))) {
-            throw new IllegalStateException("企业缺少用于记录实际用量的次数规则");
+            throw new IllegalStateException(Messages.text("error.usage.enterpriseUsageMapper.policy.1"));
         }
         for (var policy : applicable) {
             var bucket = quotas.bucket(actor.enterpriseId(), policy, period, clock.instant());

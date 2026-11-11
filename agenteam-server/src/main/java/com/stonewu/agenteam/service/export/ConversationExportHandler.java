@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.export.ConversationExportMapper;
 import com.stonewu.agenteam.mapper.export.CsvExportMapper;
 import com.stonewu.agenteam.mapper.export.ExportDefinitionMapper;
@@ -57,10 +59,10 @@ public class ConversationExportHandler implements ExportTypeHandler {
 
     @Override
     public ExportSnapshot read(AuthContext actor, ExportDefinition definition, List<DataScope> scopes, Instant when) {
-        var output = csv.rows("消息编号", "时间", "角色", "尝试", "消息状态", "内容编号", "父内容编号",
-            "内容类型", "说明", "正文", "工具输入", "工具结果");
+        var output = csv.rows(Messages.text("text.export.conversationExportHandler.read.1"), Messages.text("text.export.conversationExportHandler.read.2"), Messages.text("label.role"), Messages.text("text.export.conversationExportHandler.read.3"), Messages.text("text.export.conversationExportHandler.read.4"), Messages.text("text.export.conversationExportHandler.read.5"), Messages.text("text.export.conversationExportHandler.read.6"),
+            Messages.text("text.export.conversationExportHandler.read.7"), Messages.text("text.export.conversationExportHandler.read.8"), Messages.text("text.export.conversationExportHandler.read.9"), Messages.text("text.export.conversationExportHandler.read.10"), Messages.text("text.export.conversationExportHandler.read.11"));
         records.append(actor.enterpriseId(), actor.userId(), conversationId(definition), output);
-        return output.finish(definition, when, "对话记录.csv");
+        return output.finish(definition, when, Messages.text("text.export.conversationExportHandler.read.12"));
     }
 
     private String conversationId(ExportDefinition definition) {

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageResourceMapper;
@@ -63,6 +65,6 @@ public class CollaborationFileAuthorization {
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", "文件不属于当前用户可读取的协作任务。");
+        return new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationFileAuthorization.unavailable.1"));
     }
 }

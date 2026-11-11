@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepMapper;
@@ -48,7 +50,7 @@ public class QuestionConversationWriter {
             blocks.stream().mapToInt(ContentBlock::displayOrder).max().orElse(0),
             steps.list(run.enterpriseId(), run.id()).stream().mapToInt(RunStepView::displayOrder).max().orElse(0)) + 1);
         var block = new ContentBlock(id, "question", parent, order, question.getRevision().toString(), "", status,
-            call.stepId(), null, null, null, "询问用户", null, null, null, content.view(question));
+            call.stepId(), null, null, null, Messages.text("text.execution.questionConversationWriter.save.1"), null, null, null, content.view(question));
         blocks.removeIf(value -> id.equals(value.id()));
         blocks.add(block);
         long sequence = Long.parseLong(events.append(run, "block.updated",

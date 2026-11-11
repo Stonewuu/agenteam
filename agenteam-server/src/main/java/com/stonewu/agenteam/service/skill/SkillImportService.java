@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.skill;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.skill.SkillNameMapper;
 import com.stonewu.agenteam.mapper.skill.SkillPackageMapper;
@@ -89,7 +91,7 @@ public class SkillImportService {
         var file = files.uploadOwner(actor, token.fileId(), mutation);
         if (!file.status().equals("ready") || !file.sha256().equals(token.sha256())) {
             throw new ApiException(HttpStatus.CONFLICT, "SKILL_IMPORT_CHANGED",
-                "文件内容或可用状态已经变化，请重新预览。");
+                Messages.text("error.skill.skillImportService.verifyPreview.1"));
         }
         return file;
     }
@@ -114,7 +116,7 @@ public class SkillImportService {
                 .count();
             if (config.path(kind + "VersionIds").size() < required) {
                 errors.put("config." + kind + "VersionIds", List.of(kind.equals("plugin")
-                    ? "导入的技能包含尚未匹配的插件，请选择需要的插件，或调整指令后保存草稿。" : "导入的技能包含尚未匹配的知识库，请选择需要的知识库，或调整指令后保存草稿。"));
+                    ? Messages.text("text.skill.skillImportService.confirm.1") : Messages.text("text.skill.skillImportService.confirm.2")));
             }
         }
         return drafts.importSkill(actor, input.name(), input.description(), config, errors);
@@ -130,7 +132,7 @@ public class SkillImportService {
             if (!names.ownNameExists(actor.enterpriseId(), actor.userId(), candidate)) {
                 return candidate;
             }
-            String suffix = index == 1 ? " 副本" : " 副本 " + index;
+            String suffix = index == 1 ? Messages.text("text.skill.skillImportService.suggestedName.1") : Messages.text("text.skill.skillImportService.suggestedName.2", index);
             int maximum = 80 - suffix.codePointCount(0, suffix.length());
             candidate = original.substring(0, original.offsetByCodePoints(0,
                 Math.min(maximum, original.codePointCount(0, original.length())))) + suffix;

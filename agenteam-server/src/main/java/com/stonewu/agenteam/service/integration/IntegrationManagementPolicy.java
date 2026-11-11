@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -31,7 +33,7 @@ public class IntegrationManagementPolicy {
     public void require(UserEntity actor, String enterprise, boolean system, String permission, boolean lock) {
         var current = users.findById(actor.id()).orElseThrow(this::denied);
         if (!current.status().equals("active") || current.sessionVersion() != actor.sessionVersion()) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", "登录状态已变化，请重新登录。");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", Messages.text("error.integration.integrationManagementPolicy.require.1"));
         }
         behavior.requireOperation(current.id(), AccountOperation.MANAGE_INTEGRATION);
         if (system) {
@@ -45,7 +47,7 @@ public class IntegrationManagementPolicy {
         String status = lock ? enterprises.lockEnterprise(enterprise).orElseThrow(this::missing)
             : enterprises.findById(enterprise).orElseThrow(this::missing).status();
         if (lock && !status.equals("active")) {
-            throw new ApiException(HttpStatus.CONFLICT, "ENTERPRISE_DISABLED", "企业已停用，请先恢复企业后再修改接入。");
+            throw new ApiException(HttpStatus.CONFLICT, "ENTERPRISE_DISABLED", Messages.text("error.integration.integrationManagementPolicy.require.2"));
         }
         // 锁等待期间成员或角色可能改变，写入前重新检查最新授权。
         if (lock && !system && (!users.isActiveMember(actor.id(), enterprise)
@@ -60,10 +62,10 @@ public class IntegrationManagementPolicy {
     }
 
     private ApiException denied() {
-        return new ApiException(HttpStatus.FORBIDDEN, "INTEGRATION_MANAGEMENT_DENIED", "只有企业管理员或系统超级管理员可以维护此接入。");
+        return new ApiException(HttpStatus.FORBIDDEN, "INTEGRATION_MANAGEMENT_DENIED", Messages.text("error.integration.integrationManagementPolicy.denied.1"));
     }
 
     private ApiException missing() {
-        return new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", "当前企业不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", Messages.text("error.integration.integrationManagementPolicy.missing.1"));
     }
 }

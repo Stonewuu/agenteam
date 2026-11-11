@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
@@ -34,7 +36,7 @@ public class AgentInputService {
         var input = messages.input(run.enterpriseId(), run.inputMessageId());
         String content = input.text() + run.executionConfig().path("sourceContext").asText("");
         if (!input.links().isEmpty()) {
-            content += "\n\n参考链接：\n" + String.join("\n", input.links());
+            content += Messages.text("text.agent.agentInputService.message.1", String.join("\n", input.links()));
         }
         var attachments = messages.find(run.enterpriseId(), run.conversationId(), run.inputMessageId()).orElseThrow()
             .attachments();
@@ -46,8 +48,8 @@ public class AgentInputService {
             }
         });
         if (!inputPaths.isEmpty()) {
-            content += "\n\n输入文件路径：\n" + String.join("\n", inputPaths.entrySet().stream()
-                .map(file -> WorkspaceInputs.inputPath(file.getKey(), file.getValue())).toList());
+            content += Messages.text("text.agent.agentInputService.message.2", String.join("\n", inputPaths.entrySet().stream()
+                .map(file -> WorkspaceInputs.inputPath(file.getKey(), file.getValue())).toList()));
         }
         content = prompts.append(content, skills.selected(run.executionConfig()));
         return UserMessage.builder().id(run.inputMessageId()).textContent(content).build();

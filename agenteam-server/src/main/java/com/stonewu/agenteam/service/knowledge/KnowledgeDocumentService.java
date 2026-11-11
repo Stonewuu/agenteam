@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeDocumentMapper;
@@ -57,7 +59,7 @@ public class KnowledgeDocumentService {
         if (mutation) {
             resources.editable(record);
             if (!record.status().equals("active")) {
-                throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", "知识库已停用，请先启用。");
+                throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", Messages.text("error.knowledge.knowledgeDocumentService.authorize.1"));
             }
         }
     }
@@ -66,10 +68,10 @@ public class KnowledgeDocumentService {
     public List<KnowledgeDocumentView> create(AuthContext actor, String resource, List<String> ids) {
         authorize(actor, resource, true);
         if (ids == null || ids.isEmpty() || ids.size() > 10 || new HashSet<>(ids).size() != ids.size()) {
-            throw ApiException.invalidField("fileIds", "一次请选择一至十份不同的资料。");
+            throw ApiException.invalidField("fileIds", Messages.text("error.knowledge.knowledgeDocumentService.create.1"));
         }
         if (documents.count(actor.enterpriseId(), resource) + ids.size() > 1000) {
-            throw new ApiException(HttpStatus.CONFLICT, "KNOWLEDGE_DOCUMENT_LIMIT", "每个知识库最多保存一千份资料。");
+            throw new ApiException(HttpStatus.CONFLICT, "KNOWLEDGE_DOCUMENT_LIMIT", Messages.text("error.knowledge.knowledgeDocumentService.create.2"));
         }
         List<KnowledgeDocumentView> result = new ArrayList<>();
         for (String id : ids) {
@@ -78,11 +80,11 @@ public class KnowledgeDocumentService {
                 throw FileAccessService.unavailable();
             }
             if (!file.status().equals("ready")) {
-                throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", "资料尚未通过检查，请等待文件检查完成。");
+                throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", Messages.text("error.knowledge.knowledgeDocumentService.create.3"));
             }
             if (documents.hasDocument(actor.enterpriseId(), resource, file.id())) {
                 throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_ALREADY_ADDED",
-                    "这份文件已在知识库中，请选择“重新处理”。");
+                    Messages.text("error.knowledge.knowledgeDocumentService.create.4"));
             }
             String document = UUID.randomUUID().toString();
             documents.create(document, file, clock.instant());
@@ -92,7 +94,7 @@ public class KnowledgeDocumentService {
                 KnowledgeDocumentMapper.view(documents.find(actor.enterpriseId(), document, false).orElseThrow()));
         }
         audit.record(actor.enterpriseId(), actor.user(), "knowledge.documents.add", "resource", resource,
-            "加入知识资料", Map.of("documentIds", result.stream().map(KnowledgeDocumentView::id).toList()));
+            Messages.text("text.knowledge.knowledgeDocumentService.create.1"), Map.of("documentIds", result.stream().map(KnowledgeDocumentView::id).toList()));
         return List.copyOf(result);
     }
 
@@ -109,7 +111,7 @@ public class KnowledgeDocumentService {
         documents.reprocess(doc, clock.instant());
         enqueue(actor, id, doc.lastGeneration() + 1);
         audit.record(actor.enterpriseId(), actor.user(), "knowledge.document.reprocess", "knowledge_document", id,
-            "重新处理知识资料", Map.of("generation", doc.lastGeneration() + 1));
+            Messages.text("text.knowledge.knowledgeDocumentService.reprocess.1"), Map.of("generation", doc.lastGeneration() + 1));
         return KnowledgeDocumentMapper.view(documents.find(actor.enterpriseId(), id, false).orElseThrow());
     }
 
@@ -125,11 +127,11 @@ public class KnowledgeDocumentService {
             throw FileAccessService.unavailable();
         }
         if (!file.status().equals("ready")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", "资料尚未通过检查，请等待文件检查完成。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", Messages.text("error.knowledge.knowledgeDocumentService.create.3"));
         }
         if (documents.hasDocument(actor.enterpriseId(), resource, fileId)) {
             throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_ALREADY_ADDED",
-                "这份文件已经加入知识库，请选择新的文件。");
+                Messages.text("error.knowledge.knowledgeDocumentService.replaceFile.1"));
         }
         documents.replaceFile(doc, file);
         documents.reprocess(doc, clock.instant());
@@ -137,7 +139,7 @@ public class KnowledgeDocumentService {
         retention.releaseUnreferencedFile(actor.enterpriseId(), doc.fileId(), clock.instant());
         enqueue(actor, id, doc.lastGeneration() + 1);
         audit.record(actor.enterpriseId(), actor.user(), "knowledge.document.replace", "knowledge_document", id,
-            "更新知识资料文件",
+            Messages.text("text.knowledge.knowledgeDocumentService.replaceFile.1"),
             Map.of("fileId", fileId, "generation", doc.lastGeneration() + 1));
         return KnowledgeDocumentMapper.view(documents.find(actor.enterpriseId(), id, false).orElseThrow());
     }
@@ -149,7 +151,7 @@ public class KnowledgeDocumentService {
         revision(doc, revision);
         documents.delete(doc, clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "knowledge.document.delete", "knowledge_document", id,
-            "删除知识资料", Map.of("resourceId", resource));
+            Messages.text("text.knowledge.knowledgeDocumentService.delete.1"), Map.of("resourceId", resource));
     }
 
     public KnowledgeDocumentRecord require(String enterprise, String resource, String id, boolean lock) {
@@ -177,11 +179,11 @@ public class KnowledgeDocumentService {
     private void requireProcessable(KnowledgeDocumentRecord doc) {
         if (doc.pendingGeneration() > 0) {
             throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_PROCESSING",
-                "资料正在排队或处理中，请等待处理完成。");
+                Messages.text("error.knowledge.knowledgeDocumentService.requireProcessable.1"));
         }
         if (doc.lastGeneration() == Integer.MAX_VALUE) {
             throw new ApiException(HttpStatus.CONFLICT, "DOCUMENT_GENERATION_LIMIT",
-                "资料处理次数已达到上限，请重新上传文件。");
+                Messages.text("error.knowledge.knowledgeDocumentService.requireProcessable.2"));
         }
     }
 }

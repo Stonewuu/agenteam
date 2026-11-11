@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.TagMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
@@ -63,9 +65,9 @@ public class TagService {
         try {
             tags.create(actor.enterpriseId(), id, normalized, key(normalized), clock.instant());
         } catch (DuplicateKeyException duplicate) {
-            throw ApiException.invalidField("name", "本企业已存在同名标签。");
+            throw ApiException.invalidField("name", Messages.text("error.resource.tagService.create.1"));
         }
-        audit.record(actor.enterpriseId(), actor.user(), "tag.create", "tag", id, "创建标签",
+        audit.record(actor.enterpriseId(), actor.user(), "tag.create", "tag", id, Messages.text("text.resource.tagService.create.1"),
             Map.of("name", normalized));
         return tags.find(actor.enterpriseId(), id).orElseThrow();
     }
@@ -78,9 +80,9 @@ public class TagService {
         try {
             tags.rename(actor.enterpriseId(), id, normalized, key(normalized), clock.instant());
         } catch (DuplicateKeyException duplicate) {
-            throw ApiException.invalidField("name", "本企业已存在同名标签。");
+            throw ApiException.invalidField("name", Messages.text("error.resource.tagService.create.1"));
         }
-        audit.record(actor.enterpriseId(), actor.user(), "tag.update", "tag", id, "修改标签",
+        audit.record(actor.enterpriseId(), actor.user(), "tag.update", "tag", id, Messages.text("text.resource.tagService.rename.1"),
             Map.of("name", normalized));
         return tags.find(actor.enterpriseId(), id).orElseThrow();
     }
@@ -90,7 +92,7 @@ public class TagService {
         authorize(actor);
         current(actor, id, revision);
         tags.delete(actor.enterpriseId(), id, clock.instant());
-        audit.record(actor.enterpriseId(), actor.user(), "tag.delete", "tag", id, "删除标签并解除资源标签关联",
+        audit.record(actor.enterpriseId(), actor.user(), "tag.delete", "tag", id, Messages.text("text.resource.tagService.delete.1"),
             Map.of());
     }
 
@@ -98,7 +100,7 @@ public class TagService {
         var ids = ResourceInput.tags(selected);
         for (String id : ids) {
             if (tags.find(enterprise, id).isEmpty()) {
-                throw ApiException.invalidField("tagIds", "请选择本企业仍有效的标签。");
+                throw ApiException.invalidField("tagIds", Messages.text("error.resource.tagService.validateSelection.1"));
             }
         }
         return ids;
@@ -114,7 +116,7 @@ public class TagService {
     private String key(String name) {
         String key = Normalizer.normalize(name, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
         if (key.codePointCount(0, key.length()) > 20) {
-            throw ApiException.invalidField("name", "标签名称过长，请缩短后保存。");
+            throw ApiException.invalidField("name", Messages.text("error.resource.tagService.key.1"));
         }
         return key;
     }

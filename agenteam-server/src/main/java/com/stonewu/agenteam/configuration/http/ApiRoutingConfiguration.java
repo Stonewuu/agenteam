@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +28,7 @@ public class ApiRoutingConfiguration implements WebMvcConfigurer {
                 if (pattern != null && pattern.toString().startsWith("/api/v1/") && !Boolean.TRUE.equals(
                     request.getAttribute(ApiRequestFilter.VERIFIED_ATTRIBUTE))) {
                     throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                        "请求地址格式无法识别，请从页面重新操作。");
+                        Messages.text("error.http.apiRoutingConfiguration.preHandle.1"));
                 }
                 return true;
             }

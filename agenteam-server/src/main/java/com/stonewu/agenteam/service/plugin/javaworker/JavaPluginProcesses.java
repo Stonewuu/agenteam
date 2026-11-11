@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin.javaworker;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -37,7 +39,7 @@ public class JavaPluginProcesses implements AutoCloseable {
     public JsonNode call(String installation, byte[] artifact, ObjectNode request, ToolContext context,
                          Runnable requireAvailable) {
         if (!capacity.tryAcquire()) {
-            throw unavailable("JAVA_PLUGIN_BUSY", "插件执行数量已达上限，请稍后重试。", null);
+            throw unavailable("JAVA_PLUGIN_BUSY", Messages.text("error.plugin.javaPluginProcesses.call.1"), null);
         }
         Path directory = null;
         Process process = null;
@@ -82,7 +84,7 @@ public class JavaPluginProcesses implements AutoCloseable {
                         requireAvailable.run();
                         context.cancellation().requireActive();
                         if (System.nanoTime() >= deadline) {
-                            throw unavailable("JAVA_PLUGIN_TIMEOUT", "插件执行超时，已停止本次调用。", null);
+                            throw unavailable("JAVA_PLUGIN_TIMEOUT", Messages.text("error.plugin.javaPluginProcesses.call.2"), null);
                         }
                         try {
                             message = incoming.get(200, TimeUnit.MILLISECONDS);
@@ -100,7 +102,7 @@ public class JavaPluginProcesses implements AutoCloseable {
                         return message.path("value");
                     } else {
                         var cause = JavaPluginFailures.safe(JavaPluginFailures.decode(message.path("error")), request);
-                        throw unavailable("JAVA_PLUGIN_EXECUTION_FAILED", "插件执行失败，请联系插件维护者。", cause);
+                        throw unavailable("JAVA_PLUGIN_EXECUTION_FAILED", Messages.text("error.plugin.javaPluginProcesses.call.3"), cause);
                     }
                 }
             } finally {
@@ -111,22 +113,22 @@ public class JavaPluginProcesses implements AutoCloseable {
             throw failure;
         } catch (ApiException failure) {
             if (failure.getCause() != null) {
-                LOG.warn("扩展插件调用失败，安装编号 {}，任务编号 {}，操作编号 {}", installation,
+                LOG.warn(Messages.log("log.plugin.javaPluginProcesses.call.1"), installation,
                     context.runId(), context.operationId(), failure);
             }
             throw failure;
         } catch (InterruptedException failure) {
             Thread.currentThread().interrupt();
-            throw unavailable("JAVA_PLUGIN_CANCELLED", "插件调用已取消。", failure);
+            throw unavailable("JAVA_PLUGIN_CANCELLED", Messages.text("error.plugin.javaPluginProcesses.call.4"), failure);
         } catch (ExecutionException failure) {
             requireAvailable.run();
             var safe = JavaPluginFailures.safe(failure.getCause(), request);
-            LOG.warn("扩展插件进程退出，安装编号 {}，任务编号 {}", installation, context.runId(), safe);
-            throw unavailable("JAVA_PLUGIN_PROCESS_FAILED", "插件进程已退出，本次操作结果无法确认。", safe);
+            LOG.warn(Messages.log("log.plugin.javaPluginProcesses.call.2"), installation, context.runId(), safe);
+            throw unavailable("JAVA_PLUGIN_PROCESS_FAILED", Messages.text("error.plugin.javaPluginProcesses.call.5"), safe);
         } catch (Exception failure) {
             var safe = JavaPluginFailures.safe(failure, request);
-            LOG.warn("扩展插件进程调用失败，安装编号 {}，任务编号 {}", installation, context.runId(), safe);
-            throw unavailable("JAVA_PLUGIN_PROCESS_FAILED", "插件进程未能完成本次调用。", safe);
+            LOG.warn(Messages.log("log.plugin.javaPluginProcesses.call.3"), installation, context.runId(), safe);
+            throw unavailable("JAVA_PLUGIN_PROCESS_FAILED", Messages.text("error.plugin.javaPluginProcesses.call.6"), safe);
         } finally {
             if (process != null) {
                 terminate(process);
@@ -145,7 +147,7 @@ public class JavaPluginProcesses implements AutoCloseable {
                         }
                     }
                 } catch (Exception failure) {
-                    LOG.warn("插件临时文件清理失败，安装编号 {}", installation, failure);
+                    LOG.warn(Messages.log("log.plugin.javaPluginProcesses.call.4"), installation, failure);
                 }
             }
             capacity.release();

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentStreamEventMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
@@ -121,13 +123,13 @@ public class AgentExecutionAdapter {
             var completion = invocation.stream().doOnNext(event -> {
                     if (event instanceof RequireUserConfirmEvent confirmation) {
                         if (event.getSource() != null) {
-                            throw new IllegalStateException("子任务不能申请外部写入确认");
+                            throw new IllegalStateException(Messages.text("error.agent.agentExecutionAdapter.completion.1"));
                         }
                         pending = confirmation.getToolCalls();
                     }
                     if (event instanceof RequireExternalExecutionEvent waiting) {
                         if (event.getSource() != null) {
-                            throw new IllegalStateException("子任务不能启动工作流");
+                            throw new IllegalStateException(Messages.text("error.agent.agentExecutionAdapter.completion.2"));
                         }
                         external = waiting.getToolCalls();
                     }
@@ -147,7 +149,7 @@ public class AgentExecutionAdapter {
                     if (ownsPersistence && !cancelled.get() && !waiting() && !collaborationFinished && messages.find(run.enterpriseId(),
                         run.conversationId(), run.outputMessageId()).orElseThrow().content().isBlank()) {
                         throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_EMPTY_RESULT",
-                            "员工没有返回可显示的回复，请稍后重试。");
+                            Messages.text("error.agent.agentExecutionAdapter.completion.3"));
                     }
                     completed.set(true);
                 });
@@ -210,14 +212,14 @@ public class AgentExecutionAdapter {
 
         public void saveCheckpoint() {
             if (!ownsPersistence) {
-                throw new IllegalStateException("流程节点的检查点必须随整个执行一起保存");
+                throw new IllegalStateException(Messages.text("error.agent.agentExecutionAdapter.saveCheckpoint.1"));
             }
             close();
             if (cancelled.get()) {
                 return;
             }
             if (!external.isEmpty()) {
-                throw new IllegalStateException("外部工作流必须由工作流执行器保存和继续");
+                throw new IllegalStateException(Messages.text("error.agent.agentExecutionAdapter.saveCheckpoint.2"));
             }
             if (waiting()) {
                 approvals.park(lease, checkpoints.prepare(run, execution.states(), null), pending);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.file.TextFileDocument;
 import com.stonewu.agenteam.service.file.Utf8Text;
@@ -52,7 +54,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
     public Path resolve(String path, boolean write) {
         active.run();
         if (write && !writable) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "WORKSPACE_READ_ONLY", "本次操作只能读取工作文件。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "WORKSPACE_READ_ONLY", Messages.text("error.workspace.workspaceFilesystem.resolve.1"));
         }
         try {
             if (project) {
@@ -61,7 +63,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                 if (write && (logical.isEmpty() || protectedPath.equals("inputs") || protectedPath.startsWith("inputs/")
                     || protectedPath.equals("tool-results") || protectedPath.startsWith("tool-results/"))) {
                     throw new ApiException(HttpStatus.FORBIDDEN, "WORKSPACE_READ_ONLY",
-                        "输入资料和工具结果只能读取，请另存到项目中的其他位置。");
+                        Messages.text("error.workspace.workspaceFilesystem.resolve.2"));
                 }
                 Path target = root.resolve(logical).normalize();
                 WorkspacePaths.requireInside(root, target);
@@ -77,7 +79,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
         Path file = resolve(path, false);
         if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_FILE_MISSING",
-                "工作文件不存在，可能尚未创建或已被清理。");
+                Messages.text("error.workspace.workspaceFilesystem.bytes.1"));
         }
         try (var input = Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS)) {
             long maximum = settings.fileBytes();
@@ -88,7 +90,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
             int readable = (int) Math.min(maximum, Integer.MAX_VALUE - 8L);
             if (Files.size(file) > readable) {
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "WORKSPACE_FILE_READ_TOO_LARGE",
-                    "文件太大，无法一次读取，请通过命令处理。");
+                    Messages.text("error.workspace.workspaceFilesystem.bytes.2"));
             }
             byte[] bytes = input.readNBytes(readable);
             active.run();
@@ -108,11 +110,11 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                 .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes(path))).toString();
         } catch (IOException cause) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKSPACE_BINARY_FILE",
-                "该文件不能按 UTF-8 文本读取，请在沙盒中使用对应程序处理。", cause);
+                Messages.text("error.workspace.workspaceFilesystem.document.1"), cause);
         }
         if (text.indexOf('\0') >= 0) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKSPACE_BINARY_FILE",
-                "该文件包含二进制内容，请在沙盒中使用对应程序处理。");
+                Messages.text("error.workspace.workspaceFilesystem.document.2"));
         }
         String logical = project ? WorkspacePaths.projectLogical(path) : WorkspacePaths.logical(path);
         return new TextFileDocument(logical, Utf8Text.revision(logical, text), text);
@@ -183,7 +185,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
     @Override
     public ReadResult read(RuntimeContext context, String path, int offset, int limit) {
         if (offset < 0 || limit <= 0 || limit > 2000) {
-            return ReadResult.fail("请使用有效的行号范围，每次最多读取 2000 行。");
+            return ReadResult.fail(Messages.text("error.workspace.workspaceFilesystem.read.1"));
         }
         return ReadResult.success(
             new FileData(document(path).read(offset + 1, offset + limit, null, limit, 8192).content(), "utf-8"));
@@ -203,7 +205,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
         try {
             if (!replace && Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
                 throw new ApiException(HttpStatus.CONFLICT, "WORKSPACE_FILE_EXISTS",
-                    "文件已经存在，请使用编辑文件工具修改。");
+                    Messages.text("error.workspace.workspaceFilesystem.writeBytes.1"));
             }
             if (project) {
                 writeProjectFile(file, bytes, replace);
@@ -254,7 +256,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
     public EditResult edit(RuntimeContext context, String path, String oldText, String newText, boolean all) {
         resolve(path, true);
         if (oldText == null || oldText.isEmpty() || oldText.equals(newText)) {
-            return EditResult.fail("请提供非空原文和不同的新内容。");
+            return EditResult.fail(Messages.text("error.workspace.workspaceFilesystem.edit.1"));
         }
         String original = document(path).window(0, (int) Math.min(Integer.MAX_VALUE, settings.fileBytes()), false).content();
         int count = 0, from = 0;
@@ -264,7 +266,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
         }
         if (count == 0 || !all && count != 1) {
             return EditResult.fail(
-                count == 0 ? "文件中没有找到指定原文，请重新读取后修改。" : "原文匹配多处，请提供更多上下文，或明确替换全部匹配。");
+                count == 0 ? Messages.text("error.workspace.workspaceFilesystem.edit.2") : Messages.text("error.workspace.workspaceFilesystem.edit.3"));
         }
         long size = Utf8Text.size(original) + (long) count * (Utf8Text.size(newText) - Utf8Text.size(oldText));
         if (size > settings.fileBytes()) {
@@ -287,7 +289,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                     matches.add(new GrepMatch(file.path(), match.line(), match.excerpt().content()));
                 }
                 if (!found.complete() || matches.size() > 100) {
-                    return GrepResult.fail("匹配内容较多，请缩小文件范围后使用搜索工具续读。");
+                    return GrepResult.fail(Messages.text("error.workspace.workspaceFilesystem.grep.1"));
                 }
             }
         }
@@ -338,7 +340,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
     public WriteResult move(RuntimeContext context, String from, String to) {
         Path source = resolve(from, true), target = resolve(to, true);
         if (!Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS)) {
-            return WriteResult.fail("只能移动当前工作空间中的普通文件。");
+            return WriteResult.fail(Messages.text("error.workspace.workspaceFilesystem.move.1"));
         }
         try {
             Files.createDirectories(target.getParent());

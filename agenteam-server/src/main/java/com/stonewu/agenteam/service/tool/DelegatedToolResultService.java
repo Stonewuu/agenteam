@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -100,7 +102,7 @@ public class DelegatedToolResultService {
             var saved = json.tree(Map.of("content", displayed, ToolResultContent.REFERENCE, reference));
             transactions.complete(lease, call.id(), new ToolResultService.Prepared(saved, stored, prepared.file()),
                 result.getState() == ToolResultState.ERROR ? "DELEGATED_RESULT_FAILED" : null,
-                result.getState() == ToolResultState.ERROR ? "委派任务返回失败结果。" : null);
+                result.getState() == ToolResultState.ERROR ? Messages.text("text.tool.delegatedToolResultService.save.1") : null);
         }
         metadata.put(REFERENCE, json.object(reference));
         metadata.put(HEADER, header);

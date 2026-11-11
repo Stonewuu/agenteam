@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.auth.IdentityViewMapper;
 import com.stonewu.agenteam.mapper.enterprise.MemberTeamMapper;
@@ -61,9 +63,9 @@ public class MemberCreationService {
         String username = IdentityValidation.username(request.username());
         IdentityValidation.newPassword(request.password());
         String name = request.displayName() == null || request.displayName().isBlank() ? username
-            : EnterpriseValidation.name(request.displayName(), "显示名", 50);
-        Set<String> roleIds = EnterpriseValidation.identifiers(request.roleIds(), 1, 10, "角色");
-        Set<String> teamIds = EnterpriseValidation.identifiers(request.teamIds(), 0, 10, "团队");
+            : EnterpriseValidation.name(request.displayName(), Messages.text("label.user.name"), 50);
+        Set<String> roleIds = EnterpriseValidation.identifiers(request.roleIds(), 1, 10, Messages.text("label.role"));
+        Set<String> teamIds = EnterpriseValidation.identifiers(request.teamIds(), 0, 10, Messages.text("label.team"));
         roles.validateAssignments(actor, roleIds);
         policy.validateTeams(actor.enterpriseId(), teamIds, null, true);
         var now = clock.instant();
@@ -71,13 +73,13 @@ public class MemberCreationService {
         try {
             users.insertUser(id, username, passwords.encode(request.password()), name, false, now);
         } catch (DuplicateKeyException failure) {
-            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS", "用户名已被使用，请使用其他用户名。", failure);
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS", Messages.text("error.enterprise.memberCreationService.create.1"), failure);
         }
         users.addMember(actor.enterpriseId(), id, name, now);
         permissions.replaceUserRoles(id, actor.enterpriseId(), roleIds, now);
         teams.replace(actor.enterpriseId(), id, teamIds, now);
         users.updateLastEnterprise(id, actor.enterpriseId(), now);
-        authorization.changed(actor, "member.create", "member", id, "管理员创建成员账号",
+        authorization.changed(actor, "member.create", "member", id, Messages.text("text.enterprise.memberCreationService.create.1"),
             Map.of("roleIds", roleIds, "teamIds", teamIds));
         return views.member(actor.enterpriseId(), id);
     }

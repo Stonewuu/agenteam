@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -52,7 +54,7 @@ public class CollaborationToolService {
                 case "collab_read_context" -> queries.context(context, args);
                 case "collab_read_artifact" -> artifacts.read(context.task(), CollaborationWorkService.text(args, "artifactId", 100),
                     args.path("version").asInt(), args.path("offset").asInt(0), args.path("limit").asInt(8000));
-                default -> throw ApiException.invalidField("tool", "当前协作插件未提供此工具。");
+                default -> throw ApiException.invalidField("tool", Messages.text("error.collaboration.collaborationToolService.call.1"));
             };
         }
         String operation = "tool:" + invocation.operationId();
@@ -62,7 +64,7 @@ public class CollaborationToolService {
         }
         context = access.require(invocation.run(), call.frameworkSessionId(), true);
         if (!args.path("expectedInputRevision").isIntegralNumber() || args.path("expectedInputRevision").asLong() != context.task().getInputRevision()) {
-            throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", "任务要求已更新，请读取当前要求后继续。");
+            throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", Messages.text("error.collaboration.collaborationToolService.call.2"));
         }
         var action = actions.begin(context.task(), context.work().getId(), invocation.run().id(), call.id(), operation,
             name.substring("collab_".length()), args);
@@ -77,7 +79,7 @@ public class CollaborationToolService {
                 CollaborationWorkService.text(args, "artifactKey", 100), CollaborationWorkService.text(args, "title", 160),
                 CollaborationWorkService.text(args, "summary", 2000), CollaborationWorkService.text(args, "kind", 20),
                 args.get("content"), args.path("fileId").asText(null), args.path("schemaName").asText(null)));
-            default -> throw ApiException.invalidField("tool", "当前协作插件未提供此工具。");
+            default -> throw ApiException.invalidField("tool", Messages.text("error.collaboration.collaborationToolService.call.1"));
         };
         return actions.finish(action, json.tree(result));
     }

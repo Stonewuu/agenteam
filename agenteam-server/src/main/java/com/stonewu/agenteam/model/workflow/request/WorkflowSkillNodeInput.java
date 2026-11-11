@@ -10,21 +10,21 @@ import java.util.Map;
  * 工作流技能节点的输入字段约束。
  */
 public record WorkflowSkillNodeInput(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 64, message = "文字长度不符合要求。") @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_-]*$", message = "请选择支持的选项或格式。") String nodeId,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 50, message = "文字长度不符合要求。") String name,
-    @NotNull(message = "请填写必填项。") @Valid Position position,
-    @NotNull(message = "请填写必填项。") @Min(value = 1L, message = "数值超出允许范围。") @Max(value = 1800L, message = "数值超出允许范围。") Integer timeoutSeconds,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 20, message = "文字长度不符合要求。") @Pattern(regexp = "(?:stop|continue)", message = "请选择支持的选项或格式。") String failurePolicy,
-    @NotNull(message = "请填写必填项。") @Pattern(regexp = "skill", message = "请选择支持的选项或格式。") String type,
-    @NotNull(message = "请填写必填项。") @Valid Config config) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 64, message = "{validation.textLength}") @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_-]*$", message = "{validation.option}") String nodeId,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 50, message = "{validation.textLength}") String name,
+    @NotNull(message = "{validation.required}") @Valid Position position,
+    @NotNull(message = "{validation.required}") @Min(value = 1L, message = "{validation.range}") @Max(value = 1800L, message = "{validation.range}") Integer timeoutSeconds,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 20, message = "{validation.textLength}") @Pattern(regexp = "(?:stop|continue)", message = "{validation.option}") String failurePolicy,
+    @NotNull(message = "{validation.required}") @Pattern(regexp = "skill", message = "{validation.option}") String type,
+    @NotNull(message = "{validation.required}") @Valid Config config) {
     public record Position(
-        @NotNull(message = "请填写必填项。") Double x,
-        @NotNull(message = "请填写必填项。") Double y) {
+        @NotNull(message = "{validation.required}") Double x,
+        @NotNull(message = "{validation.required}") Double y) {
     }
 
     public record Config(
-        @JsonProperty(value = "agentVersionId", required = true) @Size(min = 1, max = 100, message = "文字长度不符合要求。") String agentVersionId,
-        @JsonProperty(value = "skillVersionId", required = true) @Size(min = 1, max = 100, message = "文字长度不符合要求。") String skillVersionId,
-        @NotNull(message = "请填写必填项。") Map<String, Object> inputMapping) {
+        @JsonProperty(value = "agentVersionId", required = true) @Size(min = 1, max = 100, message = "{validation.textLength}") String agentVersionId,
+        @JsonProperty(value = "skillVersionId", required = true) @Size(min = 1, max = 100, message = "{validation.textLength}") String skillVersionId,
+        @NotNull(message = "{validation.required}") Map<String, Object> inputMapping) {
     }
 }

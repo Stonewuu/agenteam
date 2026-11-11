@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -16,22 +18,22 @@ public final class FeishuQuestionCard {
         }
         int index = 0;
         for (var option : question.path("options")) {
-            String title = ++index + ". " + safe(option.path("label").asText()) + (option.path("recommended").asBoolean() ? " · 推荐" : "");
+            String title = ++index + ". " + safe(option.path("label").asText()) + (option.path("recommended").asBoolean() ? Messages.text("text.chat.feishuQuestionCard.elements.1") : "");
             String description = option.path("description").asText();
             markdown(elements, "**" + title + "**" + (description.isBlank() ? "" : "\n" + safe(description)));
-            button(elements, "选择 " + index, option.path("recommended").asBoolean() ? "primary" : "default", "question_" + option.path("id").asText());
+            button(elements, Messages.text("text.chat.feishuQuestionCard.elements.2", index), option.path("recommended").asBoolean() ? "primary" : "default", "question_" + option.path("id").asText());
         }
         elements.addObject().put("tag", "hr");
         var controls = elements.addObject().put("tag", "form").put("name", "question_answer").putArray("elements");
         var input = controls.addObject().put("tag", "input").put("name", "answer").put("input_type", "multiline_text")
             .put("required", true).put("width", "fill").put("max_length", 1000).put("rows", 2)
             .put("auto_resize", true).put("max_rows", 6).put("label_position", "top");
-        input.putObject("label").put("tag", "plain_text").put("content", "自己填写");
-        input.putObject("placeholder").put("tag", "plain_text").put("content", "写下你的想法或具体要求，最多1000个字符");
-        button(controls, "发送回答", "primary", "question_submit").put("name", "submit_answer").put("form_action_type", "submit");
-        button(elements, "自己输入", "default", "question_free_text");
-        markdown(elements, direct ? "也可直接发送文字回答。长回答请在聊天中发送；回答其他问题时，请回复对应的问题消息。"
-            : "也可直接 @ 我发送文字回答。长回答请在聊天中发送；回答其他问题时，请回复对应的问题消息并 @ 我。").put("text_size", "notation");
+        input.putObject("label").put("tag", "plain_text").put("content", Messages.text("text.chat.feishuQuestionCard.elements.3"));
+        input.putObject("placeholder").put("tag", "plain_text").put("content", Messages.text("text.chat.feishuQuestionCard.elements.4"));
+        button(controls, Messages.text("text.chat.feishuQuestionCard.elements.5"), "primary", "question_submit").put("name", "submit_answer").put("form_action_type", "submit");
+        button(elements, Messages.text("text.chat.feishuQuestionCard.elements.6"), "default", "question_free_text");
+        markdown(elements, direct ? Messages.text("text.chat.feishuQuestionCard.elements.7")
+            : Messages.text("text.chat.feishuQuestionCard.elements.8")).put("text_size", "notation");
     }
 
     private static ObjectNode button(ArrayNode elements, String label, String type, String action) {

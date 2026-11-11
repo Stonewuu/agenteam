@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
 import com.stonewu.agenteam.mapper.schedule.ScheduleMapper;
@@ -47,15 +49,15 @@ public class ExecutionNotificationService {
         }
         // 先给正在查看对话的页面确认结果的机会，未收到确认时照常发送。
         var notice = new Notice("run:" + run.id() + ":" + run.status(), "execution",
-            name(run) + (completed ? "已完成" : "未完成"), "请打开任务查看本次执行结果。", "conversation",
+            name(run) + (completed ? Messages.text("text.agent.agentHistoryMessageMapper.toolStatus.1") : Messages.text("text.agent.agentHistoryMessageMapper.toolStatus.6")), Messages.text("text.execution.executionNotificationService.finished.1"), "conversation",
             run.conversationId());
         notifications.enqueue(run.enterpriseId(), run.userId(), notice,
             completed ? COMPLETION_NOTICE_DELAY : Duration.ZERO);
     }
 
     public void waiting(RunRecord run, String approvalId) {
-        enqueue(run, "approval:" + approvalId, "approval", name(run) + "需要确认",
-            "请打开任务查看具体操作并决定是否继续。");
+        enqueue(run, "approval:" + approvalId, "approval", Messages.text("text.execution.executionNotificationService.waiting.1", name(run)),
+            Messages.text("text.execution.executionNotificationService.waiting.2"));
     }
 
     public void accessRevoked(RunRecord run) {
@@ -69,8 +71,8 @@ public class ExecutionNotificationService {
         if (!run.mode().equals("interactive")) {
             return;
         }
-        enqueue(run, "run:" + run.id() + ":access-revoked", "permission", "任务已不能继续执行",
-            "任务所需的访问权限已变化，系统已请求停止任务。你仍可查看有权限访问的任务记录。");
+        enqueue(run, "run:" + run.id() + ":access-revoked", "permission", Messages.text("text.execution.executionNotificationService.revokedNotice.1"),
+            Messages.text("text.execution.executionNotificationService.revokedNotice.2"));
     }
 
     private void enqueue(RunRecord run, String event, String category, String title, String body) {
@@ -82,9 +84,9 @@ public class ExecutionNotificationService {
         if (run.mode().equals("scheduled") || run.mode().equals("manual_schedule")) {
             return "“" + schedules.find(run.enterpriseId(), run.userId(),
                     run.executionConfig().path("scheduleId").asText(), false, true)
-                .orElseThrow(() -> new IllegalStateException("计划执行对应的计划不存在")).name() + "”";
+                .orElseThrow(() -> new IllegalStateException(Messages.text("error.execution.executionNotificationService.name.1"))).name() + "”";
         }
-        return "“" + conversations.find(run.enterpriseId(), run.userId(), run.conversationId(), false)
-            .orElseThrow(() -> new IllegalStateException("执行对应的会话不存在")).agentName() + "”的任务";
+        return Messages.text("text.execution.executionNotificationService.name.1", conversations.find(run.enterpriseId(), run.userId(), run.conversationId(), false)
+            .orElseThrow(() -> new IllegalStateException(Messages.text("error.execution.executionNotificationService.name.2"))).agentName());
     }
 }

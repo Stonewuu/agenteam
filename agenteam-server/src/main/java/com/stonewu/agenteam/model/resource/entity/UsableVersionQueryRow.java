@@ -20,5 +20,7 @@ public class UsableVersionQueryRow {
     private String icon;
     private String color;
     private String pluginTypesJson;
+    private String source;
+    private String builtinCode;
     private Timestamp publishedAt;
 }

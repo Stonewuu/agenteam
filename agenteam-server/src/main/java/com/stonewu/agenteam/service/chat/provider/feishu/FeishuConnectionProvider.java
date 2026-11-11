@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lark.oapi.core.request.EventReq;
@@ -82,11 +84,11 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
             if (!"wss".equals(uri.getScheme()) || host == null || uri.getUserInfo() != null || uri.getFragment() != null
                 || uri.getPort() != -1 && uri.getPort() != 443
                 || !(host.endsWith(".feishu.cn") || host.endsWith(".larksuite.com"))) {
-                throw new IllegalArgumentException("飞书未返回允许的长连接地址");
+                throw new IllegalArgumentException(Messages.text("error.chat.feishuConnectionProvider.address.1"));
             }
             return uri;
         } catch (RuntimeException failure) {
-            throw ChatSocket.safe("CHAT_ENDPOINT_INVALID", "平台未返回有效的长连接地址。", failure);
+            throw ChatSocket.safe("CHAT_ENDPOINT_INVALID", Messages.text("error.chat.feishuConnectionProvider.address.2"), failure);
         }
     }
 
@@ -100,7 +102,7 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
                 }
             }
         }
-        throw new ChannelProviderException("CHAT_ENDPOINT_INVALID", "平台未返回长连接服务编号。");
+        throw new ChannelProviderException("CHAT_ENDPOINT_INVALID", Messages.text("error.chat.feishuConnectionProvider.serviceId.1"));
     }
 
     private final class Live implements Connection, ChatSocket.Receiver {
@@ -123,7 +125,7 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
 
         @Override
         public void text(String value) {
-            throw new IllegalArgumentException("飞书长连接返回了非二进制帧");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuConnectionProvider.text.1"));
         }
 
         @Override
@@ -151,14 +153,14 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
                 int code = 200;
                 byte[] response = null;
                 boolean card = type.equals("card");
-                String eventId = "无有效事件编号";
+                String eventId = Messages.text("text.chat.feishuConnectionProvider.binary.1");
                 try {
                     var event = json.readTree(payload);
                     card = card || ChatCardInteractionService.isCard(event);
                     eventId = ChatCallbackTiming.eventId(event.path("header").path("event_id").asText());
                     String eventType = event.path("header").path("event_type").asText();
                     if (eventType.isBlank() || eventType.length() > 191) {
-                        throw new IllegalArgumentException("飞书事件类型无效");
+                        throw new IllegalArgumentException(Messages.text("error.chat.feishuConnectionProvider.binary.1"));
                     }
                     if (ChatCardInteractionService.isCard(event)) {
                         var result = events.apply(event);
@@ -173,17 +175,17 @@ public class FeishuConnectionProvider implements ChatConnectionProvider {
                     }
                 } catch (Throwable failure) {
                     code = 500;
-                    LOG.warn("飞书事件未完成持久保存，接入={}", connectionId,
-                        ChatSocket.safe("CHAT_EVENT_RETRY", "等待平台重新投递消息。", failure));
+                    LOG.warn(Messages.log("log.chat.feishuConnectionProvider.binary.1"), connectionId,
+                        ChatSocket.safe("CHAT_EVENT_RETRY", Messages.text("text.chat.feishuConnectionProvider.binary.2"), failure));
                 }
                 long handled = System.nanoTime();
                 socket.binary(FeishuFrameCodec.acknowledge(frame, code, (handled - started) / 1_000_000, response));
                 if (card) {
-                    LOG.info("飞书卡片响应已写回连接，接入={}，事件={}，处理={}ms，写回={}ms，状态={}",
+                    LOG.info(Messages.log("log.chat.feishuConnectionProvider.binary.2"),
                         connectionId, eventId, (handled - started) / 1_000_000, (System.nanoTime() - handled) / 1_000_000, code);
                 }
             } catch (Exception failure) {
-                throw ChatSocket.safe("CHAT_FRAME_INVALID", "飞书长连接帧处理失败。", failure);
+                throw ChatSocket.safe("CHAT_FRAME_INVALID", Messages.text("error.chat.feishuConnectionProvider.binary.2"), failure);
             }
         }
 

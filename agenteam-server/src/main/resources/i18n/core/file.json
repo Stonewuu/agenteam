@@ -1,0 +1,538 @@
+{
+  "error.file.fileStorageConfiguration.fileObjectStore.1": {
+    "zh-CN": "对象存储地址必须是完整服务来源，生产环境必须使用 HTTPS",
+    "en": "The object storage address must be a complete service origin and must use HTTPS in production."
+  },
+  "error.file.fileStorageConfiguration.required.1": {
+    "zh-CN": "缺少文件存储配置：{0}",
+    "en": "Missing file storage configuration: {0}"
+  },
+  "error.file.fileStorageMode.resolve.1": {
+    "zh-CN": "文件存储类型只能选择 auto、local 或 s3",
+    "en": "File storage type must be auto, local, or s3."
+  },
+  "error.file.fileStorageMode.resolve.2": {
+    "zh-CN": "对象存储配置不完整，缺少 files.s3.{0}",
+    "en": "Object storage configuration is incomplete. Missing files.s3.{0}"
+  },
+  "error.file.filePreviewHttpResponse.write.1": {
+    "zh-CN": "空文件没有可读取的字节范围",
+    "en": "An empty file has no readable byte range."
+  },
+  "error.file.filePreviewHttpResponse.write.2": {
+    "zh-CN": "字节范围超出文件大小",
+    "en": "The byte range exceeds the file size."
+  },
+  "error.file.filePreviewHttpResponse.write.3": {
+    "zh-CN": "文件内容在传输结束前中断",
+    "en": "File content ended before the transfer completed."
+  },
+  "error.file.fileDataMapper.profile.1": {
+    "zh-CN": "已解析的数据字段无法读取",
+    "en": "The parsed data fields could not be read."
+  },
+  "error.file.fileDataMapper.rows.1": {
+    "zh-CN": "已解析的数据行无法读取",
+    "en": "The parsed data rows could not be read."
+  },
+  "error.file.filePreviewMapper.workspacePath.1": {
+    "zh-CN": "文件标识不正确",
+    "en": "The file identifier is invalid."
+  },
+  "error.file.filePreviewMapper.workspacePath.2": {
+    "zh-CN": "文件标识不正确，请从列表重新选择。",
+    "en": "The file identifier is invalid. Select the file again from the list."
+  },
+  "error.file.clamAvScanService.init.1": {
+    "zh-CN": "文件检查服务端口不正确",
+    "en": "The file scanning service port is invalid."
+  },
+  "error.file.clamAvScanService.scan.1": {
+    "zh-CN": "文件检查超过限制",
+    "en": "File scanning exceeded its limit."
+  },
+  "error.file.clamAvScanService.scan.2": {
+    "zh-CN": "文件内容发生变化",
+    "en": "The file content changed."
+  },
+  "error.file.clamAvScanService.scan.3": {
+    "zh-CN": "文件检查回复过大",
+    "en": "The file scanning response is too large."
+  },
+  "error.file.conversationFileService.list.1": {
+    "zh-CN": "请选择文件或上下文。",
+    "en": "Select Files or Context."
+  },
+  "error.file.conversationFileService.open.1": {
+    "zh-CN": "文件已不存在，请刷新列表后重试。",
+    "en": "The file no longer exists. Refresh the list and try again."
+  },
+  "error.file.conversationFileService.text.1": {
+    "zh-CN": "读取位置或范围不正确。",
+    "en": "The read position or range is invalid."
+  },
+  "error.file.conversationFileService.metadata.1": {
+    "zh-CN": "文件暂时无法读取，请稍后重试。",
+    "en": "The file cannot be read right now. Try again later."
+  },
+  "error.file.conversationFileService.document.1": {
+    "zh-CN": "此文件不支持文本预览，请切换预览方式或下载查看。",
+    "en": "This file does not support text preview. Switch preview modes or download it."
+  },
+  "error.file.conversationFileService.document.2": {
+    "zh-CN": "此文本文件较大，请下载后查看。",
+    "en": "This text file is large. Download it to view it."
+  },
+  "error.file.conversationFileService.document.3": {
+    "zh-CN": "此文件包含无法作为文本显示的内容，请下载后查看。",
+    "en": "This file contains content that cannot be displayed as text. Download it to view it."
+  },
+  "error.file.conversationFileService.document.4": {
+    "zh-CN": "此文件无法按 UTF-8 文本读取，请下载后查看。",
+    "en": "This file cannot be read as UTF-8 text. Download it to view it."
+  },
+  "error.file.conversationFileService.document.5": {
+    "zh-CN": "文件已经更新，请重新打开预览。",
+    "en": "The file has been updated. Reopen the preview."
+  },
+  "error.file.csvInspectionTransactions.append.1": {
+    "zh-CN": "CSV 写入批次不正确",
+    "en": "The CSV write batch is invalid."
+  },
+  "error.file.documentParserProcess.parse.1": {
+    "zh-CN": "解析工作目录不能为链接",
+    "en": "The parsing workspace must not be a symbolic link."
+  },
+  "error.file.documentParserProcess.copySource.1": {
+    "zh-CN": "运行环境缺少文件摘要算法",
+    "en": "The runtime lacks the file digest algorithm."
+  },
+  "error.file.documentSandboxService.render.1": {
+    "zh-CN": "此文件暂时无法生成预览，可下载原文件查看。",
+    "en": "A preview cannot be generated right now. Download the original file."
+  },
+  "error.file.documentSandboxService.execute.1": {
+    "zh-CN": "文档处理环境暂不可用，请稍后重试。",
+    "en": "Document processing is unavailable. Try again later."
+  },
+  "error.file.fileAccessService.ready.1": {
+    "zh-CN": "文件尚未通过检查，暂时无法使用。",
+    "en": "The file has not passed validation and cannot be used yet."
+  },
+  "error.file.fileAccessService.unavailable.1": {
+    "zh-CN": "文件不存在或已不可读取。",
+    "en": "The file is missing or inaccessible."
+  },
+  "error.file.fileApiService.complete.1": {
+    "zh-CN": "请先完成文件上传。",
+    "en": "Finish uploading the file first."
+  },
+  "error.file.fileContentStorage.write.1": {
+    "zh-CN": "文件存储范围不正确",
+    "en": "The file storage scope is invalid."
+  },
+  "error.file.fileContentStorage.write.2": {
+    "zh-CN": "临时文件目录不能为链接",
+    "en": "The temporary file directory must not be a symbolic link."
+  },
+  "error.file.fileContentStorage.write.3": {
+    "zh-CN": "文件写入已取消",
+    "en": "The file write was canceled."
+  },
+  "error.file.fileContentStorage.write.4": {
+    "zh-CN": "文件超过当前用途允许的大小。",
+    "en": "The file exceeds the size limit for this purpose."
+  },
+  "error.file.fileContentStorage.cleanOrphans.1": {
+    "zh-CN": "文件清理批次超出范围",
+    "en": "The file cleanup batch is outside the allowed range."
+  },
+  "error.file.fileDownloadTokenService.issue.1": {
+    "zh-CN": "无法生成文件下载地址",
+    "en": "A file download URL could not be generated."
+  },
+  "error.file.fileDownloadTokenService.invalid.1": {
+    "zh-CN": "下载地址已失效，请重新获取。",
+    "en": "The download link expired. Request a new link."
+  },
+  "error.file.fileInspectionTransactions.finish.1": {
+    "zh-CN": "对话附件未解析，不能标记可用",
+    "en": "The conversation attachment has not been parsed and cannot be marked available."
+  },
+  "error.file.fileInspectionTransactions.finish.2": {
+    "zh-CN": "只有已确认没有提取到文字的 PDF 附件可以保留空正文",
+    "en": "Only PDF attachments confirmed to contain no extractable text may retain an empty body."
+  },
+  "error.file.fileInspectionTransactions.finish.3": {
+    "zh-CN": "CSV 行未完整保存，不能标记可用",
+    "en": "CSV rows were not saved completely and cannot be marked available."
+  },
+  "error.file.fileRetentionService.removeRunFiles.1": {
+    "zh-CN": "不能清除未结束执行的文件",
+    "en": "Files from unfinished executions cannot be cleared."
+  },
+  "error.file.fileRetentionService.removeRunFiles.2": {
+    "zh-CN": "执行文件与原成员不一致",
+    "en": "The execution file does not match the original member."
+  },
+  "error.file.fileRetentionTransactions.delete.1": {
+    "zh-CN": "文件仍被资料或消息使用，请先在对应记录中移除。",
+    "en": "The file is still used by reference material or messages. Remove it from those records first."
+  },
+  "error.file.fileStorageKeys.storageUnavailable.1": {
+    "zh-CN": "文件存储暂不可用，请稍后重试。",
+    "en": "File storage is unavailable. Try again later."
+  },
+  "error.file.fileUploadPolicy.prepare.1": {
+    "zh-CN": "此类文件不能超过 {0} MiB。",
+    "en": "Files of this type must not exceed {0} MiB."
+  },
+  "error.file.fileUploadPolicy.prepare.2": {
+    "zh-CN": "请使用不含路径或控制字符的文件名。",
+    "en": "Use a filename without paths or control characters."
+  },
+  "error.file.fileUploadPolicy.prepare.3": {
+    "zh-CN": "文件摘要格式不正确，请重新选择文件。",
+    "en": "The file checksum is invalid. Select the file again."
+  },
+  "error.file.fileUploadPolicy.prepare.4": {
+    "zh-CN": "请先选择所属资料资源。",
+    "en": "Select the associated knowledge resource first."
+  },
+  "error.file.fileUploadPolicy.prepare.5": {
+    "zh-CN": "此类文件不直接关联资料资源。",
+    "en": "This file type is not linked directly to a knowledge resource."
+  },
+  "error.file.fileUploadPolicy.maxBytes.1": {
+    "zh-CN": "请选择支持的文件用途。",
+    "en": "Select a supported file purpose."
+  },
+  "error.file.fileUploadPolicy.mediaType.1": {
+    "zh-CN": "请选择 JSON、Markdown 或 TXT 技能文件。",
+    "en": "Select a JSON, Markdown, or TXT skill file."
+  },
+  "error.file.fileUploadPolicy.mediaType.2": {
+    "zh-CN": "请选择 UTF-8 编码的 CSV 文件。",
+    "en": "Select a UTF-8 encoded CSV file."
+  },
+  "error.file.fileUploadPolicy.mediaType.3": {
+    "zh-CN": "请选择图片、PDF、Word、Excel、PowerPoint 或文本文件。",
+    "en": "Select an image, PDF, Word, Excel, PowerPoint, or text file."
+  },
+  "error.file.fileUploadPolicy.mediaType.4": {
+    "zh-CN": "请选择有文字内容的 PDF、DOCX、TXT 或 Markdown 文件。",
+    "en": "Select a PDF, DOCX, TXT, or Markdown file containing text."
+  },
+  "error.file.fileUploadService.mismatch.1": {
+    "zh-CN": "上传内容与选择的文件不一致，请重新上传。",
+    "en": "The uploaded content does not match the selected file. Upload it again."
+  },
+  "error.file.fileUploadTransactions.claim.1": {
+    "zh-CN": "文件已上传，无需重复上传。请查看文件状态。",
+    "en": "The file has already been uploaded. Check its status instead of uploading it again."
+  },
+  "error.file.fileUploadTransactions.claim.2": {
+    "zh-CN": "上传地址已过期，请重新选择文件。",
+    "en": "The upload link expired. Select the file again."
+  },
+  "error.file.fileUploadTransactions.claim.3": {
+    "zh-CN": "文件正在上传，请等待当前上传结束。",
+    "en": "The file is uploading. Wait for it to finish."
+  },
+  "error.file.fileUploadTransactions.uploaded.1": {
+    "zh-CN": "本次上传已失效，请重新读取文件状态。",
+    "en": "This upload is no longer valid. Reload the file status."
+  },
+  "error.file.generatedFileService.skillExport.1": {
+    "zh-CN": "文件写入不能占用数据库事务",
+    "en": "File writes must not hold a database transaction."
+  },
+  "error.file.generatedFileService.skillExport.2": {
+    "zh-CN": "技能导出文件无法保存",
+    "en": "The skill export file could not be saved."
+  },
+  "error.file.generatedFileService.collaborationText.1": {
+    "zh-CN": "协作成果文件写入不能占用数据库事务",
+    "en": "Collaboration result file writes must not hold a database transaction."
+  },
+  "error.file.generatedFileService.collaborationText.2": {
+    "zh-CN": "岗位完整回答暂时无法保存为文件。",
+    "en": "The role's complete answer cannot be saved as a file right now."
+  },
+  "error.file.localFileObjectStore.verifyDirectories.1": {
+    "zh-CN": "文件根目录不能为链接",
+    "en": "The file root directory must not be a symbolic link."
+  },
+  "error.file.localFileObjectStore.verifyDirectories.2": {
+    "zh-CN": "文件目录不能为链接",
+    "en": "The file directory must not be a symbolic link."
+  },
+  "error.file.officePreviewService.open.1": {
+    "zh-CN": "此格式暂不支持在线预览，可下载原文件查看。",
+    "en": "Online preview is unavailable for this format. Download the original file."
+  },
+  "error.file.officePreviewService.convert.1": {
+    "zh-CN": "文档预览生成超时，请稍后重试或下载原文件。",
+    "en": "Preview generation timed out. Retry later or download the original file."
+  },
+  "error.file.officePreviewService.convert.2": {
+    "zh-CN": "文档预览请求已经取消",
+    "en": "The document preview request was canceled."
+  },
+  "error.file.parsedDocument.forEachCsv.1": {
+    "zh-CN": "文件没有 CSV 解析结果",
+    "en": "The file has no CSV parsing result."
+  },
+  "error.file.parsedDocument.forEachCsv.2": {
+    "zh-CN": "数据行超过解析限制",
+    "en": "The number of data rows exceeds the parsing limit."
+  },
+  "error.file.parsedDocument.forEachCsv.3": {
+    "zh-CN": "解析后的数据行不完整",
+    "en": "The parsed data rows are incomplete."
+  },
+  "error.file.parsedDocument.forEachCsv.4": {
+    "zh-CN": "解析后的数据行数不一致",
+    "en": "The parsed data row count is inconsistent."
+  },
+  "error.file.parsedDocument.forEach.1": {
+    "zh-CN": "解析后的文本块超过限制",
+    "en": "The parsed text blocks exceed the limit."
+  },
+  "error.file.parsedDocument.forEach.2": {
+    "zh-CN": "解析后的文本块不完整",
+    "en": "The parsed text blocks are incomplete."
+  },
+  "error.file.parsedDocument.forEach.3": {
+    "zh-CN": "解析后的文本块数量不一致",
+    "en": "The parsed text block count is inconsistent."
+  },
+  "error.file.docxTextExtractor.xml.1": {
+    "zh-CN": "禁止读取外部实体",
+    "en": "Reading external entities is prohibited."
+  },
+  "error.file.s3FileObjectStore.init.1": {
+    "zh-CN": "文件存储桶或目录配置不正确",
+    "en": "The file storage bucket or directory configuration is invalid."
+  },
+  "error.file.skillFileValidation.invalid.1": {
+    "zh-CN": "文件内容不是完整的 UTF-8 文字，请重新导出后上传。",
+    "en": "The file does not contain valid complete UTF-8 text. Export it again before uploading."
+  },
+  "error.file.textFileDocument.window.1": {
+    "zh-CN": "读取位置不正确。",
+    "en": "The read position is invalid."
+  },
+  "error.file.textFileDocument.read.1": {
+    "zh-CN": "读取范围不正确。",
+    "en": "The read range is invalid."
+  },
+  "error.file.textFileDocument.read.2": {
+    "zh-CN": "请使用从 1 开始且前后顺序正确的行号范围。",
+    "en": "Use line numbers starting at 1, with the start no greater than the end."
+  },
+  "error.file.textFileDocument.read.3": {
+    "zh-CN": "起始行号超出文件范围。",
+    "en": "The start line is beyond the end of the file."
+  },
+  "error.file.textFileDocument.read.4": {
+    "zh-CN": "续读位置超出请求范围。",
+    "en": "The continuation position is outside the requested range."
+  },
+  "error.file.textFileDocument.search.1": {
+    "zh-CN": "搜索内容或范围不正确。",
+    "en": "The search text or range is invalid."
+  },
+  "error.file.textFileDocument.search.2": {
+    "zh-CN": "正则表达式无效，或使用了不支持的环视、回溯引用。",
+    "en": "The regular expression is invalid or uses unsupported lookarounds or backreferences."
+  },
+  "error.file.textFileDocument.search.3": {
+    "zh-CN": "文件搜索已取消。",
+    "en": "File search was cancelled."
+  },
+  "error.file.textFileDocument.decode.1": {
+    "zh-CN": "续读位置不正确。",
+    "en": "The continuation position is invalid."
+  },
+  "error.file.textFileDocument.decode.2": {
+    "zh-CN": "文件已经变化，请重新读取所需范围。",
+    "en": "The file changed. Read the required range again."
+  },
+  "error.file.workspaceFileSnapshot.open.1": {
+    "zh-CN": "文件正在修改，请稍后重新打开。",
+    "en": "The file is being modified. Reopen it later."
+  },
+  "error.file.workspaceFileSnapshot.open.2": {
+    "zh-CN": "当前运行环境不支持文件摘要算法",
+    "en": "The runtime does not support the file digest algorithm."
+  },
+  "error.file.documentParserProcess.failure.1": {
+    "zh-CN": "文件中没有可读取的文字，请上传可以选中并复制文字的文档。",
+    "en": "No readable text was found. Upload a document with text that can be selected and copied."
+  },
+  "error.file.documentParserProcess.failure.2": {
+    "zh-CN": "文件已加密，请先导出不需要密码的副本。",
+    "en": "This file is encrypted. Please export a copy without a password."
+  },
+  "error.file.documentParserProcess.failure.3": {
+    "zh-CN": "文件包含宏或嵌入对象，请导出普通文字文档。",
+    "en": "This file contains macros or embedded objects. Please export a standard text document."
+  },
+  "error.file.documentParserProcess.failure.4": {
+    "zh-CN": "文件展开后的内容超过处理限制，请拆分后上传。",
+    "en": "The extracted contents exceed the processing limit. Please split the file and upload it again."
+  },
+  "error.file.documentParserProcess.failure.5": {
+    "zh-CN": "文件处理超时，请简化内容或拆分文件后重试。",
+    "en": "File processing timed out. Please simplify or split the file and try again."
+  },
+  "error.file.documentParserProcess.failure.6": {
+    "zh-CN": "文件处理已经取消。",
+    "en": "File processing was canceled."
+  },
+  "error.file.documentParserProcess.failure.7": {
+    "zh-CN": "文件内容与保存的摘要不一致，请重新上传。",
+    "en": "The file content does not match its saved digest. Upload it again."
+  },
+  "error.file.documentParserProcess.failure.8": {
+    "zh-CN": "数据文件必须包含一至一百列。",
+    "en": "The data file must contain between 1 and 100 columns."
+  },
+  "error.file.documentParserProcess.failure.9": {
+    "zh-CN": "数据文件不能超过十万行。",
+    "en": "The data file must not exceed 100,000 rows."
+  },
+  "error.file.documentParserProcess.failure.10": {
+    "zh-CN": "数据字段名不能为空、重复或包含控制字符，最长一百二十八个字符。",
+    "en": "Data field names must be unique, nonempty, free of control characters, and no longer than 128 characters."
+  },
+  "error.file.documentParserProcess.failure.11": {
+    "zh-CN": "数据行的列数与表头不一致，请检查文件。",
+    "en": "A data row's column count does not match the header. Check the file."
+  },
+  "error.file.documentParserProcess.failure.12": {
+    "zh-CN": "CSV 格式或文字编码不正确，请导出完整的 UTF-8 文件。",
+    "en": "The CSV format or encoding is invalid. Export a complete UTF-8 file."
+  },
+  "error.file.documentParserProcess.failure.13": {
+    "zh-CN": "文件格式与内容不符，或文件已损坏，请重新导出后上传。",
+    "en": "The file format does not match its contents, or the file is damaged. Please export it again and upload the new copy."
+  },
+  "error.file.documentParseFailure.init.1": {
+    "zh-CN": "文件无法完成解析",
+    "en": "The file could not be parsed."
+  },
+  "log.file.filePreviewHttpResponse.write.1": {
+    "zh-CN": "文件预览的读取范围无效，请求编号 {}，方法 {}，路径 {}",
+    "en": "Invalid file preview byte range; requestId={}, method={}, path={}"
+  },
+  "log.file.clamAvScanService.init.1": {
+    "zh-CN": "病毒扫描已关闭，上传文件继续进行完整性校验和文档处理。",
+    "en": "Virus scanning is disabled; uploaded files still undergo integrity checks and document processing"
+  },
+  "log.file.clamAvScanService.init.2": {
+    "zh-CN": "未配置病毒扫描服务，上传文件将跳过病毒扫描，继续进行文件校验和解析。",
+    "en": "No virus scanning service is configured; uploaded files skip virus scanning and continue validation and parsing"
+  },
+  "log.file.clamAvScanService.scan.1": {
+    "zh-CN": "文件内容检查",
+    "en": "File content scan"
+  },
+  "log.file.clamAvScanService.scan.2": {
+    "zh-CN": "文件内容检查已中断，文件编号 {}",
+    "en": "File content scanning was interrupted; fileId={}"
+  },
+  "log.file.clamAvScanService.scan.3": {
+    "zh-CN": "文件内容检查失败，文件编号 {}",
+    "en": "File content scanning failed; fileId={}"
+  },
+  "log.file.clamAvScanService.scan.4": {
+    "zh-CN": "文件内容检查连接失败，文件编号 {}",
+    "en": "File content scanning connection failed; fileId={}"
+  },
+  "text.file.conversationFileService.downloaded.1": {
+    "zh-CN": "下载会话文件",
+    "en": "Download conversation file"
+  },
+  "log.file.documentSandboxService.execute.1": {
+    "zh-CN": "文档处理取消检查",
+    "en": "Document processing cancellation check"
+  },
+  "log.file.documentSandboxService.execute.2": {
+    "zh-CN": "检查文档处理是否仍有效失败，调用编号 {}",
+    "en": "Could not check whether document processing is still active; callId={}"
+  },
+  "log.file.documentSandboxWorkspaces.cleanupUnused.1": {
+    "zh-CN": "检查文档临时目录失败，目录编号 {}",
+    "en": "Could not inspect the temporary document directory; directoryId={}"
+  },
+  "log.file.documentSandboxWorkspaces.cleanupUnused.2": {
+    "zh-CN": "读取文档临时目录失败，工作编号 document-cleanup",
+    "en": "Could not read temporary document directories; job=document-cleanup"
+  },
+  "log.file.documentSandboxWorkspaces.cleanup.1": {
+    "zh-CN": "文档容器清理未完成，保留目录等待重试，目录编号 {}",
+    "en": "Document container cleanup did not complete; retaining its directory for retry; directoryId={}"
+  },
+  "log.file.documentSandboxWorkspaces.cleanup.2": {
+    "zh-CN": "文档临时文件清理失败，目录编号 {}",
+    "en": "Temporary document file cleanup failed; directoryId={}"
+  },
+  "text.file.fileDownloadService.issue.1": {
+    "zh-CN": "获取文件下载地址",
+    "en": "Get file download URL"
+  },
+  "text.file.fileInspectionTransactions.finish.1": {
+    "zh-CN": "文件检查服务暂时不可用，等待重试。",
+    "en": "The file inspection service is temporarily unavailable. Waiting to retry."
+  },
+  "text.file.fileInspectionTransactions.finish.2": {
+    "zh-CN": "文件未通过检查。",
+    "en": "The file did not pass inspection."
+  },
+  "log.file.fileInspectionWorker.executor.1": {
+    "zh-CN": "文件检查工作-",
+    "en": "file-inspection-"
+  },
+  "log.file.fileInspectionWorker.inspect.1": {
+    "zh-CN": "文件检查未完成，工作编号 {}，错误代码 {}",
+    "en": "File inspection did not complete; jobId={}, errorCode={}"
+  },
+  "log.file.fileInspectionWorker.inspect.2": {
+    "zh-CN": "文件检查失败，工作编号 {}",
+    "en": "File inspection failed; jobId={}"
+  },
+  "log.file.fileRetentionService.poll.1": {
+    "zh-CN": "文件清理暂未完成，稍后重试",
+    "en": "File cleanup did not complete; retrying later"
+  },
+  "text.file.generatedFileService.collaborationText.1": {
+    "zh-CN": "岗位完整回答.txt",
+    "en": "role-complete-answer.txt"
+  },
+  "log.file.generatedFileService.collaborationText.1": {
+    "zh-CN": "协作成果文件保存失败，企业={}，执行={}",
+    "en": "Could not save the collaboration result file; enterpriseId={}, executionId={}"
+  },
+  "text.file.imageFileContent.name.1": {
+    "zh-CN": "图片.{0}",
+    "en": "image.{0}"
+  },
+  "log.file.officePreviewService.cleanup.1": {
+    "zh-CN": "清理文档预览缓存失败，工作编号 office-preview-cleanup",
+    "en": "Document preview cache cleanup failed; job=office-preview-cleanup"
+  },
+  "log.file.parsedDocument.cleanup.1": {
+    "zh-CN": "解析临时目录暂未能清理，短暂等待后重试，目录={}",
+    "en": "Temporary parsing directory cleanup did not complete; retrying shortly; directory={}"
+  },
+  "log.file.documentParserMain.main.1": {
+    "zh-CN": "解析进程期限检查",
+    "en": "Parser process deadline check"
+  },
+  "text.file.docxTextExtractor.read.1": {
+    "zh-CN": "第 {0} 段起",
+    "en": "From paragraph {0}"
+  }
+}

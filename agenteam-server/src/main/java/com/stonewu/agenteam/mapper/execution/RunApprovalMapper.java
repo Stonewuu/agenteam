@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.RunApprovalQueryRow;
@@ -70,7 +72,7 @@ public class RunApprovalMapper {
         int changed = statements.decideRunApproval(status, note, timestamp(now), approval.enterpriseId(), approval.id(),
             approval.revision());
         if (changed != 1) {
-            throw new IllegalStateException("操作确认已经处理，不能覆盖决定");
+            throw new IllegalStateException(Messages.text("error.execution.runApprovalMapper.decide.1"));
         }
     }
 

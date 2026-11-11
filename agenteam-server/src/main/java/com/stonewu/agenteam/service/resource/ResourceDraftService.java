@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.*;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -106,7 +108,7 @@ public class ResourceDraftService {
         }
         tags.replace(actor.enterpriseId(), id, selected);
         audit.record(actor.enterpriseId(), actor.user(), "resource.draft.save", "resource", id,
-            "保存" + resource.kind().label() + "草稿", Map.of("kind", resource.kind().code()));
+            Messages.text("text.resource.resourceDraftService.save.1", resource.kind().localizedLabel()), Map.of("kind", resource.kind().code()));
         return views.detail(actor, resources.find(actor.enterpriseId(), id, false, false).orElseThrow());
     }
 
@@ -133,7 +135,7 @@ public class ResourceDraftService {
         resources.draft(resource, version.name(), version.description(),
             configurations.subtype(resource.kind(), config), config, actor.userId(), clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "resource.draft.load_version", "resource", id,
-            "将历史版本内容保存为新草稿", Map.of("versionId", versionId));
+            Messages.text("text.resource.resourceDraftService.loadVersion.1"), Map.of("versionId", versionId));
         return views.detail(actor, resources.find(actor.enterpriseId(), id, false, false).orElseThrow());
     }
 
@@ -160,8 +162,8 @@ public class ResourceDraftService {
         audit.record(actor.enterpriseId(), actor.user(),
             copiedFrom != null ? "resource.copy" : source.equals("imported") ? "skill.import" : "resource.create",
             "resource", id,
-            copiedFrom != null ? "复制" + kind.label() + "为新草稿" : source.equals(
-                "imported") ? "导入技能为新草稿" : "创建" + kind.label() + "草稿",
+            copiedFrom != null ? Messages.text("text.resource.resourceDraftService.create.1", kind.localizedLabel()) : source.equals(
+                "imported") ? Messages.text("text.resource.resourceDraftService.create.2") : Messages.text("text.resource.resourceDraftService.create.3", kind.localizedLabel()),
             copiedFrom == null ? Map.of("kind", kind.code()) : Map.of("kind", kind.code(), "copiedFrom", copiedFrom));
         return views.detail(actor, resources.find(actor.enterpriseId(), id, false, false).orElseThrow());
     }

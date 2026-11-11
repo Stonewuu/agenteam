@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -78,8 +80,8 @@ public class CollaborationRecoveryService {
             try {
                 access.requireRole(task, access.participant(task, link.getParticipantId()));
             } catch (ApiException revoked) {
-                LOG.warn("协作执行权限已失效，企业={}，任务={}，执行={}", enterprise, task.getId(), run.id(),
-                    new ChannelProviderException("COLLABORATION_ACCESS_REVOKED", "原账号或岗位已不能继续执行。", revoked));
+                LOG.warn(Messages.log("log.collaboration.collaborationRecoveryService.recheck.1"), enterprise, task.getId(), run.id(),
+                    new ChannelProviderException("COLLABORATION_ACCESS_REVOKED", Messages.text("error.collaboration.collaborationRecoveryService.recheck.1"), revoked));
                 reason = "access_revoked";
             }
         }
@@ -132,8 +134,7 @@ public class CollaborationRecoveryService {
         }
         if (active == 0) {
             outbound.send(task, null, null, "task-ended:" + taskId, "cancelled",
-                "任务 【" + task.getShortCode() + "】：" + (expired ? "已到截止时间，未继续执行。已保存的成果仍可在群策查看。" : "已取消。已完成的业务操作与成果保留。")
-                    + ("TOOL_RESULT_UNKNOWN".equals(task.getErrorCode()) ? "仍有操作结果尚未确认，请先在群策核实。" : ""), false, null);
+                Messages.text("text.collaboration.collaborationRecoveryService.settle.1", task.getShortCode(), (expired ? Messages.text("text.collaboration.collaborationRecoveryService.settle.2") : Messages.text("text.collaboration.collaborationRecoveryService.settle.3")), ("TOOL_RESULT_UNKNOWN".equals(task.getErrorCode()) ? Messages.text("error.collaboration.collaborationInputService.cancel.2") : "")), false, null);
         }
     }
 

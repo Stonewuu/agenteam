@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.slf4j.Logger;
@@ -30,7 +32,7 @@ public class SetupCredentialVerifier implements ApplicationRunner {
         AuthMapper users) {
         this.users = users;
         if (!credential.isBlank() && (credential.length() < 16 || credential.length() > 256)) {
-            throw new IllegalArgumentException("初始化部署凭据长度不符合要求");
+            throw new IllegalArgumentException(Messages.text("error.auth.setupCredentialVerifier.init.1"));
         }
         expected = credential.isBlank() ? null : digest(credential);
     }
@@ -44,18 +46,18 @@ public class SetupCredentialVerifier implements ApplicationRunner {
         new SecureRandom().nextBytes(random);
         String generated = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
         expected = digest(generated);
-        log.info("系统尚未初始化，本次启动的初始化凭据：{}", generated);
-        log.info("请在初始化页面填写上述凭据；完成初始化前重启后端会生成新凭据。");
+        log.info(Messages.log("log.auth.setupCredentialVerifier.run.1"), generated);
+        log.info(Messages.log("log.auth.setupCredentialVerifier.run.2"));
     }
 
     public void verify(String provided) {
         if (expected == null) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
-                "暂时无法初始化，请联系部署人员。");
+                Messages.text("error.auth.setupCredentialVerifier.verify.1"));
         }
         if (provided == null || provided.length() < 16 || provided.length() > 256 || !MessageDigest.isEqual(expected,
             digest(provided))) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", "初始化凭据不正确。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", Messages.text("error.auth.setupCredentialVerifier.verify.2"));
         }
     }
 
@@ -63,7 +65,7 @@ public class SetupCredentialVerifier implements ApplicationRunner {
         try {
             return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("运行环境缺少必要的摘要算法", exception);
+            throw new IllegalStateException(Messages.text("error.auth.passwordResetSourceMapper.check.2"), exception);
         }
     }
 }

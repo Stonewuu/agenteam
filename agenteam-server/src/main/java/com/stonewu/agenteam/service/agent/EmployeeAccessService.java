@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentListingMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -58,7 +60,7 @@ public class EmployeeAccessService {
             .filter(value -> value.resourceId().equals(resource.id()) && value.status().equals("available"))
             .orElse(null);
         if (version == null) {
-            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", "该员工暂时没有可用的发布版本。");
+            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", Messages.text("error.agent.employeeAccessService.requireAvailable.1"));
         }
         configurations.use(actor, ResourceKind.AGENT, version.config());
         return new EmployeeSource(resource, version, listing);

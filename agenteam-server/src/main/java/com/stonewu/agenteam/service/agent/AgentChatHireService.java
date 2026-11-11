@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentHireApplicationMapper;
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -39,7 +41,7 @@ public class AgentChatHireService {
     public void requireActive(AuthContext actor, String agent) {
         if (hires.forAgent(actor.enterpriseId(), actor.userId(), agent, false)
             .filter(hire -> "active".equals(hire.status())).isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", "请先雇佣或恢复这位智能体。");
+            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", Messages.text("error.agent.agentChatHireService.requireActive.1"));
         }
     }
 
@@ -50,16 +52,16 @@ public class AgentChatHireService {
                 case "active" -> {
                     return;
                 }
-                case "paused" -> throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_HIRE_PAUSED", "你已暂停使用这位员工，请在群策「数字员工 → 我的员工」恢复后再发送任务。");
-                case "terminated" -> throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_HIRE_TERMINATED", "你已解除这位员工的雇佣，请在群策「数字员工」重新启用后再发送任务。");
-                default -> throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_HIRE_UNAVAILABLE", "当前员工使用关系不可用，请在群策「数字员工」检查。");
+                case "paused" -> throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_HIRE_PAUSED", Messages.text("error.agent.agentChatHireService.requireUsable.1"));
+                case "terminated" -> throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_HIRE_TERMINATED", Messages.text("error.agent.agentChatHireService.requireUsable.2"));
+                default -> throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_HIRE_UNAVAILABLE", Messages.text("error.agent.agentChatHireService.requireUsable.3"));
             }
         }
         authorization.require(actor, "agent.hire");
         // 群里已配置的岗位不要求再次到员工广场发现，但仍检查本人资源、版本及依赖权限。
         var source = employees.requireAvailable(actor, agent, "agent.hire", false);
         if (source.listing().hirePolicy().equals("approval")) {
-            throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_APPROVAL_REQUIRED", "这位员工需要审批后才能使用，请在群策「数字员工」提交申请。");
+            throw new ApiException(HttpStatus.CONFLICT, "AGENT_CHAT_APPROVAL_REQUIRED", Messages.text("error.agent.agentChatHireService.requireUsable.4"));
         }
     }
 
@@ -74,10 +76,10 @@ public class AgentChatHireService {
         var hire = hires.establish(actor.enterpriseId(), actor.userId(), agent, now);
         applications.expireFor(actor.enterpriseId(), actor.userId(), agent, now);
         applications.pending(actor.enterpriseId(), actor.userId(), agent).ifPresent(pending -> {
-            applications.finish(pending, "approved", actor.userId(), "当前设置允许直接使用，首次机器人任务已建立使用关系。", now);
+            applications.finish(pending, "approved", actor.userId(), Messages.text("text.agent.agentChatHireService.ensure.1"), now);
             notifications.decided(pending, true);
         });
         audit.record(actor.enterpriseId(), actor.user(), "agent.hire.chat", "agent_hire", hire.id(),
-            "首次通过机器人使用数字员工", Map.of("agentId", agent));
+            Messages.text("text.agent.agentChatHireService.ensure.2"), Map.of("agentId", agent));
     }
 }

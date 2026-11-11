@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
@@ -53,7 +55,7 @@ public class ChannelDeliveryStore {
             return null;
         }
         if (row == null || !lease.id().equals(row.getActiveJobId()) || row.getDispatchGeneration() != payload.path("generation").asInt()) {
-            jobs.finish(lease, "cancelled", "CHANNEL_WORK_SUPERSEDED", "此发送工作已被后续操作取代。", clock.instant(), clock.instant());
+            jobs.finish(lease, "cancelled", "CHANNEL_WORK_SUPERSEDED", Messages.text("text.notification.channelDeliveryStore.owned.1"), clock.instant(), clock.instant());
             return null;
         }
         var notice = notifications.selectOne(new LambdaQueryWrapper<NotificationRow>()
@@ -75,7 +77,7 @@ public class ChannelDeliveryStore {
             .set(NotificationChannelDeliveryRow::getLastErrorSummary, row.getLastErrorSummary()).set(NotificationChannelDeliveryRow::getUpdatedAt, clock.instant())
             .set(NotificationChannelDeliveryRow::getRevision, row.getRevision() + 1);
         if (deliveries.update(changes) != 1) {
-            throw new IllegalStateException("通知发送记录在保存期间发生变化");
+            throw new IllegalStateException(Messages.text("error.notification.channelDeliveryStore.save.1"));
         }
         row.setRevision(row.getRevision() + 1);
     }
@@ -94,7 +96,7 @@ public class ChannelDeliveryStore {
             .eq(NotificationChannelAttemptRow::getEnterpriseId, row.getEnterpriseId()).eq(NotificationChannelAttemptRow::getDeliveryId, row.getId())
             .eq(NotificationChannelAttemptRow::getOutcome, "started").set(NotificationChannelAttemptRow::getOutcome, "unknown")
             .set(NotificationChannelAttemptRow::getErrorCode, "CHANNEL_LEASE_EXPIRED")
-            .set(NotificationChannelAttemptRow::getErrorSummary, "上一次请求未保存最终结果，可能已被平台接受。")
+            .set(NotificationChannelAttemptRow::getErrorSummary, Messages.text("error.notification.channelDeliveryStore.recoverStarted.1"))
             .set(NotificationChannelAttemptRow::getFinishedAt, clock.instant()));
     }
 

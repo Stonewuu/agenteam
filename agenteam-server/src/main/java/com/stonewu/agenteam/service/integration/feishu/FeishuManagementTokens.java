@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.integration.entity.EnterpriseIntegrationRow;
 import com.stonewu.agenteam.service.integration.IntegrationSecretService;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
@@ -39,9 +41,9 @@ public class FeishuManagementTokens {
             grants.refreshed(claimed, result);
             return grants.tokens(claimed).accessToken();
         } catch (RuntimeException failure) {
-            LOG.warn("飞书管理授权刷新失败，授权记录={}，接入={}", row.getId(), connection.getId(), failure);
+            LOG.warn(Messages.log("log.integration.feishuManagementTokens.get.1"), row.getId(), connection.getId(), failure);
             grants.invalidate(claimed, false);
-            throw new ChannelProviderException("FEISHU_AUTHORIZATION_REQUIRED", "飞书管理授权无法刷新，请重新授权后继续。", failure);
+            throw new ChannelProviderException("FEISHU_AUTHORIZATION_REQUIRED", Messages.text("error.integration.feishuManagementTokens.get.1"), failure);
         }
     }
 }

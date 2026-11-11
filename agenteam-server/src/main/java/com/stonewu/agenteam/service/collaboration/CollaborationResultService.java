@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,7 +68,7 @@ public class CollaborationResultService {
             requireComplete(context, input.path("acceptedPriorResults"));
         }
         var result = artifacts.publish(context.task(), context.work(), context.link().getRunId(), "result:" + context.work().getId(),
-            context.participant().getRoleName() + "工作成果", summary, "json", input, null, "collaboration_result_v1");
+            Messages.text("text.collaboration.collaborationResultService.submit.1", context.participant().getRoleName()), summary, "json", input, null, "collaboration_result_v1");
         var work = context.work();
         if (workRows.update(new LambdaUpdateWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, work.getEnterpriseId())
             .eq(CollaborationWorkItemRow::getId, work.getId()).eq(CollaborationWorkItemRow::getRevision, work.getRevision())
@@ -81,7 +83,7 @@ public class CollaborationResultService {
             works.change(work, "completed");
             String submitted = replyText == null || replyText.isBlank() ? summary : replyText;
             works.notify(context, action, "work_completed", context.task().fromWebRoom() ? submitted
-                : "任务 【" + context.task().getShortCode() + "】：【" + context.participant().getRoleName() + "】已提交协助成果。");
+                : Messages.text("text.collaboration.collaborationResultService.submit.2", context.task().getShortCode(), context.participant().getRoleName()));
         } else {
             var required = unfinished(context.task(), work.getId());
             if (required.isEmpty() && missingRoles(context.task()).isEmpty()) {
@@ -100,7 +102,7 @@ public class CollaborationResultService {
                     tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, context.task().getEnterpriseId())
                         .eq(CollaborationTaskRow::getId, context.task().getId()).set(CollaborationTaskRow::getStatus, "waiting_input")
                         .set(CollaborationTaskRow::getErrorCode, "COLLABORATION_ROLE_ASSIGNMENT_REQUIRED").setIncrBy(CollaborationTaskRow::getRevision, 1));
-                    works.notify(context, action, "waiting_input", "任务 【" + context.task().getShortCode() + "】：部分指定岗位尚未分工，请补充明确分工后继续。");
+                    works.notify(context, action, "waiting_input", Messages.text("text.collaboration.collaborationResultService.submit.3", context.task().getShortCode()));
                 }
             }
         }
@@ -109,10 +111,10 @@ public class CollaborationResultService {
 
     private void requireComplete(CollaborationExecutionContext context, JsonNode accepted) {
         if (!missingRoles(context.task()).isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_ROLE_ASSIGNMENT_REQUIRED", "原发起人明确指定的岗位还没有安排工作，不能结束任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_ROLE_ASSIGNMENT_REQUIRED", Messages.text("error.collaboration.collaborationResultService.requireComplete.1"));
         }
         if (!unfinished(context.task(), context.work().getId()).isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_REQUIRED_WORK_PENDING", "仍有必须完成的协作工作，请等待或替换失败工作。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_REQUIRED_WORK_PENDING", Messages.text("error.collaboration.collaborationResultService.requireComplete.2"));
         }
         requirePriorResults(context, accepted);
     }
@@ -148,7 +150,7 @@ public class CollaborationResultService {
                 }
             }
             if (!confirmed) {
-                throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", "有成果依据旧要求生成，请逐项核对并说明仍可使用的理由，或安排新的工作。");
+                throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", Messages.text("error.collaboration.collaborationResultService.requirePriorResults.1"));
             }
         }
     }
@@ -175,7 +177,7 @@ public class CollaborationResultService {
             return;
         }
         if (message.codePointCount(0, message.length()) > 32000) {
-            message = "完整回复较长，已整理为文件，请查看附件。";
+            message = Messages.text("text.collaboration.collaborationResultService.finishTask.1");
         }
         works.notify(context, action, "completed", message);
         var sentFiles = new HashSet<String>();

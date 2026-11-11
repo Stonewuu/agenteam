@@ -87,6 +87,7 @@ export type ResourceSummary = {
   owner: { id: string; displayName: string };
   subtype: string;
   source: "created" | "imported" | "builtin";
+  builtinCode?: string | null;
   status: "active" | "disabled" | "deleted";
   publishedVersion: VersionSummary | null;
   hasUnpublishedChanges: boolean;
@@ -102,7 +103,8 @@ export type DraftWrite = { name: string; description: string; tagIds: string[]; 
 export type ResourceVersion = {
   version: VersionSummary;
   config: ResourceConfig;
-  dependencies: { resourceId: string; versionId: string; kind: ResourceKind; name: string; bindingKey: string }[]
+  dependencies: { resourceId: string; versionId: string; kind: ResourceKind; name: string; bindingKey: string;
+    source?: "created" | "imported" | "builtin"; builtinCode?: string | null }[]
 };
 export type UsableVersion = {
   resourceId: string;
@@ -113,7 +115,9 @@ export type UsableVersion = {
   description: string;
   icon: string;
   color: string;
-  pluginTypes?: Array<"builtin" | "mcp" | "java">
+  pluginTypes?: Array<"builtin" | "mcp" | "java">;
+  source?: "created" | "imported" | "builtin";
+  builtinCode?: string | null;
 };
 export type ModelProfile = {
   id: string;

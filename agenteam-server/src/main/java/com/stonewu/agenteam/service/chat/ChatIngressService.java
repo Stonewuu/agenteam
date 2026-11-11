@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
@@ -60,7 +62,7 @@ public class ChatIngressService {
         var bot = bots.require(enterprise, botId);
         var app = bots.application(bot);
         if (!bot.getTransport().equals(transport) || app.credentialRevision() != credentialRevision || bot.getRevision() != bindingRevision) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_EXPIRED", "当前机器人接收配置已发生变化。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_EXPIRED", Messages.text("error.chat.chatIngressService.acceptVerified.1"));
         }
         return accept(enterprise, botId, connectionLease, envelope);
     }
@@ -71,14 +73,14 @@ public class ChatIngressService {
         var bot = bots.require(enterprise, botId);
         var app = bots.application(bot);
         if (!ChatPlatformRegistry.supportsProvider(app.providerCode()) || !bot.getStatus().equals("enabled")) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_DISABLED", "机器人消息接收已关闭。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_DISABLED", Messages.text("error.chat.chatIngressService.accept.1"));
         }
         if (bot.getTransport().equals("websocket") && connectionLease == null) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_REQUIRED", "长连接接收必须提供当前连接凭据。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_REQUIRED", Messages.text("error.chat.chatIngressService.accept.2"));
         }
         if (connectionLease != null && (bot.getLeaseVersion() != connectionLease.longValue() || bot.getLeaseUntil() == null
             || !bot.getLeaseUntil().isAfter(clock.instant()))) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_EXPIRED", "当前机器人连接已由其他进程接管。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_EXPIRED", Messages.text("error.chat.chatIngressService.accept.3"));
         }
         var event = platforms.normalizer(app.providerCode()).normalize(app, bot.getPlatformBotId(), envelope, clock.instant());
         if (event.humanMessage() && event.externalChatId() != null) {
@@ -110,7 +112,7 @@ public class ChatIngressService {
         row.setLeaseVersion(0L);
         if (capabilities.consume(bot, event)) {
             row.setStatus("ignored");
-            row.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", row.getId(), Map.of("reason", "能力验证消息不触发任务")));
+            row.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", row.getId(), Map.of("reason", Messages.text("text.chat.chatIngressService.accept.1"))));
             row.setPayloadPurgedAt(clock.instant());
             receipts.insert(row);
             return row.getId();
@@ -123,7 +125,7 @@ public class ChatIngressService {
                 .eq(ChatConversationRow::getExternalConversationId, event.externalChatId()).eq(ChatConversationRow::getStatus, "enabled")) > 0;
         }
         row.setStatus(keep ? "received" : "ignored");
-        row.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", row.getId(), keep ? envelope : Map.of("reason", "不在允许的接收范围")));
+        row.setPayloadEncrypted(cipher.encrypt(enterprise, "receipt", row.getId(), keep ? envelope : Map.of("reason", Messages.text("text.chat.chatIngressService.accept.2"))));
         receipts.insert(row);
         if (keep) {
             events.publishEvent(new ChatWorkRequested(Stage.RECEIVE));

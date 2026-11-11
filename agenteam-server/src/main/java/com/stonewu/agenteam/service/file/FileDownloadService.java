@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import com.stonewu.agenteam.model.file.response.FileDownloadView;
@@ -36,7 +38,7 @@ public class FileDownloadService {
     public FileDownloadView issue(AuthContext actor, String id) {
         var file = access.ready(actor, id);
         var token = tokens.issue(actor, file);
-        audit.record(actor.enterpriseId(), actor.user(), "file.download", "file", file.id(), "获取文件下载地址",
+        audit.record(actor.enterpriseId(), actor.user(), "file.download", "file", file.id(), Messages.text("text.file.fileDownloadService.issue.1"),
             Map.of("purpose", file.purpose()));
         return new FileDownloadView(
             origin + "/api/v1/enterprises/" + file.enterpriseId() + "/files/" + file.id() + "/content?token=" + token.value(),

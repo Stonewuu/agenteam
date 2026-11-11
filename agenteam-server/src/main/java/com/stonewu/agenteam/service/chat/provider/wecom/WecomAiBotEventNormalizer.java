@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent;
@@ -38,7 +40,7 @@ public class WecomAiBotEventNormalizer implements ChatEventNormalizer {
         var body = frame.path("body");
         String receiver = body.path("aibotid").asText(body.path("botid").asText(""));
         if (!receiver.isBlank() && !receiver.equals(app.externalAppId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_APPLICATION_MISMATCH", "平台消息不属于当前机器人。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_APPLICATION_MISMATCH", Messages.text("error.chat.wecomAiBotEventNormalizer.normalize.1"));
         }
         String command = frame.path("cmd").asText();
         String eventType = body.path("event").path("eventtype").asText("unknown");
@@ -57,7 +59,7 @@ public class WecomAiBotEventNormalizer implements ChatEventNormalizer {
                 String chatKind = body.path("chattype").asText(
                     ChatInputValidation.optional(body, "chatid") == null ? "single" : "group");
                 if (!Set.of("group", "single").contains(chatKind)) {
-                    throw ApiException.invalidField("event", "企微卡片的会话类型无法识别。");
+                    throw ApiException.invalidField("event", Messages.text("error.chat.wecomAiBotEventNormalizer.normalize.2"));
                 }
                 String chat = "group".equals(chatKind) ? ChatInputValidation.required(body, "chatid") : sender;
                 return new NormalizedChatEvent(providerCode(), eventType, kind,
@@ -74,7 +76,7 @@ public class WecomAiBotEventNormalizer implements ChatEventNormalizer {
         String sender = ChatInputValidation.required(body.path("from"), "userid");
         String chatKind = body.path("chattype").asText();
         if (!Set.of("group", "single").contains(chatKind)) {
-            throw ApiException.invalidField("message", "企微消息的会话类型无法识别。");
+            throw ApiException.invalidField("message", Messages.text("error.chat.wecomAiBotEventNormalizer.normalize.3"));
         }
         String chat = chatKind.equals("single") ? sender : ChatInputValidation.required(body, "chatid");
         String senderType = body.path("from").path("type").asText("user");

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,7 +17,7 @@ public record CommandResultSettings(int retentionDays, int maximumMb, int maximu
         @Value("${execution.command-results.maximum-entries:1000}") int maximumEntries, WorkspaceLimitsStore limits) {
         if (retentionDays < 1 || retentionDays > 365 || maximumMb < 1
             || maximumEntries < 1 || maximumEntries > 100000) {
-            throw new IllegalArgumentException("命令结果缓存的期限或容量配置超出允许范围");
+            throw new IllegalArgumentException(Messages.text("error.tool.commandResultSettings.init.1"));
         }
         this.retentionDays = retentionDays;
         this.maximumMb = maximumMb;

@@ -1,4 +1,7 @@
 {
+  "查询、创建和编辑已授权的工作流草稿，选择真实插件与智能体并检查流程。": "Find, create, and edit authorized workflow drafts, choose available plugins and agents, and validate the workflow.",
+  "团队协作": "Collaboration",
+  "在当前协作任务中分配岗位工作、移交负责人、共享成果并等待其他岗位。": "Assign work, transfer responsibility, share results, and wait for other roles in the current collaboration task.",
   "读取文件": "Read file",
   "查看图片": "View image",
   "搜索文件内容": "Search file contents",

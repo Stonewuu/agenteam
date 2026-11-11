@@ -58907,6 +58907,12 @@
                 "type": "null"
               }
             ]
+          },
+          "builtinCode": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": false,
@@ -59026,6 +59032,20 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 100
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "created",
+                    "imported",
+                    "builtin"
+                  ]
+                },
+                "builtinCode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "additionalProperties": false,
@@ -60059,6 +60079,12 @@
               "type": "string"
             },
             "description": "已登记的实际工具名称。"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
           }
         },
         "additionalProperties": false,
@@ -65519,6 +65545,20 @@
               "indigo",
               "plum",
               "slate"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "created",
+              "imported",
+              "builtin"
+            ]
+          },
+          "builtinCode": {
+            "type": [
+              "string",
+              "null"
             ]
           }
         },

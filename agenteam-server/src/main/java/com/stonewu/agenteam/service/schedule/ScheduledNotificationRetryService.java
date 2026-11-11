@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.schedule.ScheduleMapper;
@@ -35,11 +37,11 @@ public class ScheduledNotificationRetryService {
         var reference = store.find(notice.getEnterpriseId(), notice.getSourceOccurrenceId());
         var plan = reference == null ? null : store.lockPlan(notice.getEnterpriseId(), reference.getScheduleId());
         if (plan == null || plan.deletedAt() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_RETRY_UNAVAILABLE", "原计划已删除，不能再次发送本次通知。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_RETRY_UNAVAILABLE", Messages.text("error.schedule.scheduledNotificationRetryService.reserve.1"));
         }
         var row = store.lock(notice.getEnterpriseId(), plan.id(), reference.getId());
         if (plan.activeOccurrenceId() != null && !plan.activeOccurrenceId().equals(row.getId())) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_BUSY", "此计划正在执行另一次任务，请等待完成后再试。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_BUSY", Messages.text("error.schedule.scheduledNotificationRetryService.reserve.2"));
         }
         var result = (ObjectNode) json.read(row.getActionResultJson()).deepCopy();
         result.put("cancelRequested", false);

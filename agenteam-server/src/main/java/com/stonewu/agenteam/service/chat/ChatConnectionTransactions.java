@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -78,7 +80,7 @@ public class ChatConnectionTransactions {
         var bot = bot(lease.enterprise(), lease.botId());
         var app = app(bot);
         if (!owned(bot, lease) || !enabled(bot, app) || !application(app).equals(lease.application())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_EXPIRED", "当前机器人连接已失效。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONNECTION_EXPIRED", Messages.text("error.chat.chatConnectionTransactions.require.1"));
         }
     }
 
@@ -118,7 +120,7 @@ public class ChatConnectionTransactions {
     private ChatBotBindingRow bot(String enterprise, String id) {
         var bot = bots.selectOne(new LambdaQueryWrapper<ChatBotBindingRow>().eq(ChatBotBindingRow::getEnterpriseId, enterprise).eq(ChatBotBindingRow::getId, id));
         if (bot == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_BOT_UNAVAILABLE", "机器人绑定不存在。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_BOT_UNAVAILABLE", Messages.text("error.chat.chatConnectionTransactions.bot.1"));
         }
         return bot;
     }

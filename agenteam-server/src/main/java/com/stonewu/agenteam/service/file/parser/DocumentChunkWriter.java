@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file.parser;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.file.entity.DocumentChunk;
 
@@ -129,7 +131,7 @@ public class DocumentChunkWriter extends Writer {
             return HexFormat.of()
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", missing);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), missing);
         }
     }
 }

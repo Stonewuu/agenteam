@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -42,11 +44,11 @@ public class PasswordResetSourceMapper {
             Long result = redis.execute(CHECK, List.of("agenteam:auth:reset-source:" + hash),
                 UUID.randomUUID().toString());
             if (result == null) {
-                throw new DataAccessResourceFailureException("找回密码次数检查未取得结果");
+                throw new DataAccessResourceFailureException(Messages.text("error.auth.passwordResetSourceMapper.check.1"));
             }
             return result;
         } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("运行环境缺少必要的摘要算法", exception);
+            throw new IllegalStateException(Messages.text("error.auth.passwordResetSourceMapper.check.2"), exception);
         }
     }
 }

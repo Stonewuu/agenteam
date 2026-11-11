@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.service.integration.IntegrationSecretService;
 import jakarta.annotation.PreDestroy;
@@ -76,7 +78,7 @@ public class ChatConnectionManager {
                     advance(slot);
                 }
             } catch (RuntimeException failure) {
-                LOG.warn("机器人连接续约失败，机器人={}", slot.lease.botId(), ChatSocket.safe("CHAT_LEASE_FAILED", "旧连接停止工作。", failure));
+                LOG.warn(Messages.log("log.chat.chatConnectionManager.poll.1"), slot.lease.botId(), ChatSocket.safe("CHAT_LEASE_FAILED", Messages.text("text.chat.chatConnectionManager.poll.1"), failure));
                 stop(slot, false);
             }
         }
@@ -97,7 +99,7 @@ public class ChatConnectionManager {
                 }
             }
         } catch (RuntimeException failure) {
-            LOG.warn("机器人连接领取失败", ChatSocket.safe("CHAT_CONNECT_POLL_FAILED", "稍后再次领取连接。", failure));
+            LOG.warn(Messages.log("log.chat.chatConnectionManager.poll.2"), ChatSocket.safe("CHAT_CONNECT_POLL_FAILED", Messages.text("text.chat.chatConnectionManager.poll.2"), failure));
         }
     }
 
@@ -157,7 +159,7 @@ public class ChatConnectionManager {
             } catch (RuntimeException failure) {
                 disconnect(slot);
                 slot.retryAt = clock.instant().plusSeconds(Math.min(60, 1L << Math.min(6, ++slot.failures)) + ThreadLocalRandom.current().nextLong(1, 5));
-                LOG.warn("机器人连接暂时不可用，机器人={}", slot.lease.botId(), ChatSocket.safe("CHAT_CONNECT_RETRY", "连接将在退避后重试。", failure));
+                LOG.warn(Messages.log("log.chat.chatConnectionManager.advance.1"), slot.lease.botId(), ChatSocket.safe("CHAT_CONNECT_RETRY", Messages.text("text.chat.chatConnectionManager.advance.1"), failure));
             } finally {
                 slot.working.set(false);
             }
@@ -182,7 +184,7 @@ public class ChatConnectionManager {
         try {
             transactions.release(slot.lease, replaced);
         } catch (RuntimeException failure) {
-            LOG.warn("机器人连接释放失败，机器人={}", slot.lease.botId(), ChatSocket.safe("CHAT_RELEASE_FAILED", "连接租约到期后由其他进程处理。", failure));
+            LOG.warn(Messages.log("log.chat.chatConnectionManager.stop.1"), slot.lease.botId(), ChatSocket.safe("CHAT_RELEASE_FAILED", Messages.text("text.chat.chatConnectionManager.stop.1"), failure));
         }
     }
 

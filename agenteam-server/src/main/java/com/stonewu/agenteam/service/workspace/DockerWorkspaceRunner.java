@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.file.Utf8Text;
@@ -69,12 +71,12 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
                                   String workingDirectory,
                                   Duration timeout, ToolCallControl control) {
         if (!settings.executeEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", "当前部署未启用沙盒执行。");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", Messages.text("error.project.dockerProjectCommandExecutor.execute.1"));
         }
         if (!callId.matches("[A-Za-z0-9_-]{1,100}") || command == null || command.isBlank() || Utf8Text.size(
             command) > 64 * 1024 || command.indexOf('\0') >= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_COMMAND_INVALID",
-                "请提供有效的命令，命令内容不能超过 64 KB。");
+                Messages.text("error.project.dockerProjectCommandExecutor.execute.2"));
         }
         String directory = WorkspacePaths.logical(workingDirectory == null ? "work" : workingDirectory);
         if (!directory.isEmpty() && !directory.equals("work") && !directory.startsWith("work/")
@@ -161,7 +163,7 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
                 }
                 exit = 124;
                 timedOut = true;
-                LOG.warn("沙盒命令超过允许时间，调用编号 {}", callId, failure);
+                LOG.warn(Messages.log("log.workspace.dockerWorkspaceRunner.executeCommand.1"), callId, failure);
             }
             control.requireActive();
             // 先冻结全部进程，再读取工作文件，防止后台进程在保存期间继续修改。
@@ -217,7 +219,7 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
             docker.remove(container, remaining(deadline));
             return true;
         } catch (RuntimeException failure) {
-            LOG.warn("沙盒容器清理未完成，将根据保留记录继续清理，调用编号 {}", callId, failure);
+            LOG.warn(Messages.log("log.workspace.dockerWorkspaceRunner.removeContainer.1"), callId, failure);
             return false;
         }
     }
@@ -230,19 +232,19 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
             docker.removeVolume(volume, remaining(deadline));
         } catch (RuntimeException failure) {
             cleaned = false;
-            LOG.warn("沙盒临时卷清理未完成，将根据保留记录继续清理，调用编号 {}", callId, failure);
+            LOG.warn(Messages.log("log.workspace.dockerWorkspaceRunner.cleanup.1"), callId, failure);
         }
         if (cleaned) {
             try {
                 Files.deleteIfExists(directory.resolve("sandbox.pending"));
             } catch (IOException failure) {
-                LOG.warn("沙盒清理记录删除失败，调用编号 {}", callId, failure);
+                LOG.warn(Messages.log("log.workspace.dockerWorkspaceRunner.cleanup.2"), callId, failure);
             }
         }
         try {
             WorkspaceStore.deleteTree(directory, scripts);
         } catch (IOException failure) {
-            LOG.warn("沙盒命令临时文件清理失败，调用编号 {}", callId, failure);
+            LOG.warn(Messages.log("log.workspace.dockerWorkspaceRunner.cleanup.3"), callId, failure);
         }
     }
 

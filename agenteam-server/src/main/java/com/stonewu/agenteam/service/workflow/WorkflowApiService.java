@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.configuration.http.ApiRequestFilter;
 import com.stonewu.agenteam.mapper.workflow.WorkflowValidationMapper;
@@ -51,7 +53,7 @@ public class WorkflowApiService {
             throw ResourceAuthorizationService.unavailable();
         }
         if (!(request.getAttribute(ApiRequestFilter.JSON_ATTRIBUTE) instanceof JsonNode config)) {
-            throw ApiException.invalidField("body", "请提交完整的工作流配置。");
+            throw ApiException.invalidField("body", Messages.text("error.workflow.workflowApiService.validate.1"));
         }
         try {
             preparation.prepare(actor, resource, config);

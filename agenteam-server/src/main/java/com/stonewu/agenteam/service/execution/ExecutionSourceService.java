@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -59,7 +61,7 @@ public class ExecutionSourceService {
         sourceIds.addAll(shared.keySet());
         if (!sourceIds.isEmpty() && !fixed.path("config").path("attachmentsEnabled").asBoolean()) {
             throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENTS_DISABLED",
-                "这个员工暂不接收附件，请移除附件后再发送。");
+                Messages.text("error.execution.executionSourceService.freeze.1"));
         }
         long bytes = 0;
         int remaining = 50000;
@@ -75,7 +77,7 @@ public class ExecutionSourceService {
             }
             bytes += file.sizeBytes();
             if (file.sizeBytes() > 20L * 1024 * 1024 || bytes > 50L * 1024 * 1024) {
-                throw ApiException.invalidField("attachmentIds", "单个附件不能超过二十 MiB，全部附件不能超过五十 MiB。");
+                throw ApiException.invalidField("attachmentIds", Messages.text("error.execution.executionSourceService.freeze.2"));
             }
             selected.addObject().put("id", file.id()).put("sha256", file.sha256()).put("name", file.originalName());
             if (ImageFileContent.supports(file.mediaType())) {
@@ -89,12 +91,12 @@ public class ExecutionSourceService {
             });
             String part = take(text.text(), remaining);
             remaining -= part.codePointCount(0, part.length());
-            content.append("\n\n附件：").append(file.originalName()).append('\n').append(part);
+            content.append(Messages.text("text.execution.executionSourceService.freeze.1")).append(file.originalName()).append('\n').append(part);
             if (text.text().isBlank()) {
-                content.append("（此附件未提取到文字。请先读取原文件，不能根据文件名推测或编造内容。）");
+                content.append(Messages.text("text.execution.executionSourceService.freeze.2"));
             }
             if (part.length() < text.text().length() || text.truncated()) {
-                content.append("\n（附件文字只提供了受限部分。）");
+                content.append(Messages.text("text.execution.executionSourceService.freeze.3"));
             }
         }
         var chosen = fixed.putArray("inputKnowledgeReferences");
@@ -109,7 +111,7 @@ public class ExecutionSourceService {
         }
         for (var reference : input.knowledgeReferences()) {
             if (!unique.add(reference.documentId() + ":" + reference.generation())) {
-                throw ApiException.invalidField("knowledgeReferences", "同一资料版本不能重复选择。");
+                throw ApiException.invalidField("knowledgeReferences", Messages.text("error.execution.executionSourceService.freeze.3"));
             }
             var citations = references.read(actor, reference.documentId(), reference.generation(), allowedKnowledge);
             chosen.addObject().put("documentId", reference.documentId()).put("generation", reference.generation());
@@ -121,11 +123,11 @@ public class ExecutionSourceService {
                 knowledgeRemaining -= part.codePointCount(0, part.length());
                 var citation = new CitationView(source.chunkId(), source.documentId(), source.fileId(),
                     source.generation(), source.name(), source.page(), source.section(), part);
-                content.append("\n\n知识资料：").append(source.name());
+                content.append(Messages.text("text.execution.executionSourceService.freeze.4")).append(source.name());
                 if (source.page() != null) {
-                    content.append("，第 ").append(source.page()).append(" 页");
+                    content.append(Messages.text("execution.source.page", source.page()));
                 } else if (source.section() != null) {
-                    content.append("，").append(source.section());
+                    content.append(Messages.text("execution.source.section", source.section()));
                 }
                 content.append('\n').append(part);
                 blocks.add(new ContentBlock(UUID.randomUUID().toString(), "citation", null, blocks.size(), "1", "",
@@ -170,6 +172,6 @@ public class ExecutionSourceService {
 
     private static ApiException notReady() {
         return new ApiException(HttpStatus.CONFLICT, "ATTACHMENT_NOT_READY",
-            "所选附件尚未完成检查和解析，请等待完成或移除后重试。");
+            Messages.text("error.execution.executionSourceService.notReady.1"));
     }
 }

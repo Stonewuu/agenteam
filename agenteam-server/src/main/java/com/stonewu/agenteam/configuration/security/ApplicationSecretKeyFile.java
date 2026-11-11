@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.security;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +28,7 @@ final class ApplicationSecretKeyFile {
 
     static synchronized Keys loadOrCreate(String configuredPath, String activeVersion) {
         if (configuredPath == null || configuredPath.isBlank()) {
-            throw new IllegalArgumentException("应用密钥文件路径不能为空");
+            throw new IllegalArgumentException(Messages.text("error.security.applicationSecretKeyFile.loadOrCreate.1"));
         }
         Path path = Path.of(configuredPath).toAbsolutePath().normalize();
         try {
@@ -42,17 +44,17 @@ final class ApplicationSecretKeyFile {
                 var keys = new Keys(generate(random),
                     new ObjectMapper().writeValueAsString(Map.of(activeVersion, generate(random))));
                 write(path, keys);
-                LOG.info("已自动生成应用密钥并保存到 {}，后续启动将复用此文件。", path);
+                LOG.info(Messages.log("log.security.applicationSecretKeyFile.loadOrCreate.1"), path);
                 return keys;
             }
         } catch (IOException failure) {
-            throw new IllegalStateException("应用密钥文件无法读取或创建，请检查目录权限：" + path, failure);
+            throw new IllegalStateException(Messages.text("error.security.applicationSecretKeyFile.loadOrCreate.2", path), failure);
         }
     }
 
     private static Keys read(Path path) throws IOException {
         if (Files.size(path) > 16384) {
-            throw new IOException("应用密钥文件内容超出允许大小");
+            throw new IOException(Messages.text("error.security.applicationSecretKeyFile.read.1"));
         }
         var values = new Properties();
         try (var input = Files.newInputStream(path)) {
@@ -61,7 +63,7 @@ final class ApplicationSecretKeyFile {
         String signing = values.getProperty("request-signing-key", ""), encryption = values.getProperty(
             "encryption-keys", "");
         if (signing.isBlank() || encryption.isBlank()) {
-            throw new IOException("应用密钥文件不完整，请恢复原文件，不能用新密钥覆盖");
+            throw new IOException(Messages.text("error.security.applicationSecretKeyFile.read.2"));
         }
         return new Keys(signing, encryption);
     }
@@ -74,7 +76,7 @@ final class ApplicationSecretKeyFile {
             values.setProperty("request-signing-key", keys.signingKey());
             values.setProperty("encryption-keys", keys.encryptionKeys());
             try (var output = Files.newOutputStream(temporary)) {
-                values.store(output, "应用自动生成的密钥，请与运行数据一起保留");
+                values.store(output, Messages.text("text.security.applicationSecretKeyFile.write.1"));
             }
             try (var channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
                 channel.force(true);
@@ -88,7 +90,7 @@ final class ApplicationSecretKeyFile {
             try {
                 Files.deleteIfExists(temporary);
             } catch (IOException failure) {
-                LOG.warn("应用密钥临时文件暂未删除，文件位置 {}", temporary, failure);
+                LOG.warn(Messages.log("log.security.applicationSecretKeyFile.write.1"), temporary, failure);
             }
         }
     }

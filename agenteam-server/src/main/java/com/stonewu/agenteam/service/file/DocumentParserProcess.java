@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.AgenteamApplication;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
@@ -70,7 +72,7 @@ public class DocumentParserProcess {
             }
             Files.createDirectories(root);
             if (Files.isSymbolicLink(root)) {
-                throw new IOException("解析工作目录不能为链接");
+                throw new IOException(Messages.text("error.file.documentParserProcess.parse.1"));
             }
             directory = Files.createTempDirectory(root, "parse-");
             if (Files.getFileStore(directory).supportsFileAttributeView("posix")) {
@@ -184,7 +186,7 @@ public class DocumentParserProcess {
                 throw failure("FILE_CONTENT_MISMATCH");
             }
         } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", missing);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), missing);
         }
     }
 
@@ -235,19 +237,19 @@ public class DocumentParserProcess {
     public static ApiException failure(String code) {
         String actual = code == null ? "FILE_TYPE_INVALID" : code;
         String message = switch (actual) {
-            case "FILE_NO_TEXT" -> "文件中没有可读取的文字，请上传可以选中并复制文字的文档。";
-            case "FILE_ENCRYPTED" -> "文件已加密，请先导出不需要密码的副本。";
-            case "FILE_ACTIVE_CONTENT" -> "文件包含宏或嵌入对象，请导出普通文字文档。";
-            case "FILE_EXPANDED_TOO_LARGE" -> "文件展开后的内容超过处理限制，请拆分后上传。";
-            case "FILE_PROCESSING_TIMEOUT" -> "文件处理超时，请简化内容或拆分文件后重试。";
-            case "FILE_PROCESSING_CANCELLED" -> "文件处理已经取消。";
-            case "FILE_CONTENT_MISMATCH" -> "文件内容与保存的摘要不一致，请重新上传。";
-            case "CSV_COLUMN_LIMIT" -> "数据文件必须包含一至一百列。";
-            case "CSV_ROW_LIMIT" -> "数据文件不能超过十万行。";
-            case "CSV_HEADER_INVALID" -> "数据字段名不能为空、重复或包含控制字符，最长一百二十八个字符。";
-            case "CSV_COLUMN_COUNT_MISMATCH" -> "数据行的列数与表头不一致，请检查文件。";
-            case "CSV_FORMAT_INVALID" -> "CSV 格式或文字编码不正确，请导出完整的 UTF-8 文件。";
-            default -> "文件格式与内容不符，或文件已损坏，请重新导出后上传。";
+            case "FILE_NO_TEXT" -> Messages.text("error.file.documentParserProcess.failure.1");
+            case "FILE_ENCRYPTED" -> Messages.text("error.file.documentParserProcess.failure.2");
+            case "FILE_ACTIVE_CONTENT" -> Messages.text("error.file.documentParserProcess.failure.3");
+            case "FILE_EXPANDED_TOO_LARGE" -> Messages.text("error.file.documentParserProcess.failure.4");
+            case "FILE_PROCESSING_TIMEOUT" -> Messages.text("error.file.documentParserProcess.failure.5");
+            case "FILE_PROCESSING_CANCELLED" -> Messages.text("error.file.documentParserProcess.failure.6");
+            case "FILE_CONTENT_MISMATCH" -> Messages.text("error.file.documentParserProcess.failure.7");
+            case "CSV_COLUMN_LIMIT" -> Messages.text("error.file.documentParserProcess.failure.8");
+            case "CSV_ROW_LIMIT" -> Messages.text("error.file.documentParserProcess.failure.9");
+            case "CSV_HEADER_INVALID" -> Messages.text("error.file.documentParserProcess.failure.10");
+            case "CSV_COLUMN_COUNT_MISMATCH" -> Messages.text("error.file.documentParserProcess.failure.11");
+            case "CSV_FORMAT_INVALID" -> Messages.text("error.file.documentParserProcess.failure.12");
+            default -> Messages.text("error.file.documentParserProcess.failure.13");
         };
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, actual, message);
     }

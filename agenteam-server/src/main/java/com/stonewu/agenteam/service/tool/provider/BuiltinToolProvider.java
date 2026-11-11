@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool.provider;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolProviderMapper;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -58,7 +60,7 @@ public class BuiltinToolProvider implements ToolProvider {
     public Map<String, Object> invoke(ToolSource source, ToolSpec tool, Map<String, Object> arguments,
                                       ToolContext context) {
         if (!(context instanceof ToolProviderContext execution) || execution.run() == null) {
-            throw new IllegalArgumentException("内置工具缺少已经验证的执行上下文");
+            throw new IllegalArgumentException(Messages.text("error.tool.builtinToolProvider.invoke.1"));
         }
         if (tools(source, context).stream()
             .noneMatch(actual -> actual.name().equals(tool.name()) && actual.schemaHash().equals(tool.schemaHash()))) {
@@ -96,7 +98,7 @@ public class BuiltinToolProvider implements ToolProvider {
         }
         var adapter = builtins.require((String) source.configuration().get("builtinCode"));
         if (!(context instanceof ToolProviderContext execution)) {
-            throw new IllegalArgumentException("工具查询缺少宿主上下文");
+            throw new IllegalArgumentException(Messages.text("error.tool.builtinToolProvider.query.1"));
         }
         var result = adapter.query(tool.name(), context.operationId(), context.timeout(), execution.cancellation());
         return new ToolQuery(ToolQuery.Status.valueOf(result.status().name()),
@@ -105,6 +107,6 @@ public class BuiltinToolProvider implements ToolProvider {
 
     private static ApiException unavailable() {
         return new ApiException(HttpStatus.CONFLICT, "PLUGIN_TOOL_CHANGED",
-            "所选工具版本已不可用，请重新检查并发布插件。");
+            Messages.text("error.tool.builtinToolProvider.unavailable.1"));
     }
 }

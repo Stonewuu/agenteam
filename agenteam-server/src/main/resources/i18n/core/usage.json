@@ -1,0 +1,38 @@
+{
+  "error.usage.enterpriseUsageMapper.policy.1": {
+    "zh-CN": "企业缺少用于记录实际用量的次数规则",
+    "en": "The organization has no count rule for recording actual usage."
+  },
+  "error.usage.enterpriseUsageMapper.usage.1": {
+    "zh-CN": "无法读取不存在企业的实际用量",
+    "en": "Actual usage cannot be read for an organization that does not exist."
+  },
+  "error.usage.quotaReconciliationMapper.repair.1": {
+    "zh-CN": "次数记录在核对期间发生变化，当前修正未提交",
+    "en": "The count record changed during verification. This correction was not committed."
+  },
+  "error.usage.quotaPeriod.init.1": {
+    "zh-CN": "次数周期的结束时间必须晚于起点",
+    "en": "The count period must end after it starts."
+  },
+  "error.usage.quotaPeriodCalculator.current.1": {
+    "zh-CN": "次数周期起点晚于当前服务时间，不能重新解释已保存的用量",
+    "en": "The count period starts after the current service time. Saved usage cannot be reinterpreted."
+  },
+  "error.usage.quotaReservationService.reserve.1": {
+    "zh-CN": "当前适用的本月执行次数已用完，请联系管理员。",
+    "en": "The applicable monthly execution quota is exhausted. Contact the administrator."
+  },
+  "log.usage.quotaMaintenanceScheduling.poll.1": {
+    "zh-CN": "企业 {} 的用量记录 {} 与执行条目不一致，已修正已用次数 {} 为 {}、预留次数 {} 为 {}",
+    "en": "Organization {} usage record {} differs from execution entries; corrected used count from {} to {} and reserved count from {} to {}"
+  },
+  "log.usage.quotaMaintenanceScheduling.poll.2": {
+    "zh-CN": "企业 {} 的用量暂时无法核对，稍后重试",
+    "en": "Usage could not be checked for organization {}; retrying later"
+  },
+  "log.usage.quotaMaintenanceScheduling.poll.3": {
+    "zh-CN": "用量核对暂时无法开始，稍后重试",
+    "en": "Usage verification could not start; retrying later"
+  }
+}

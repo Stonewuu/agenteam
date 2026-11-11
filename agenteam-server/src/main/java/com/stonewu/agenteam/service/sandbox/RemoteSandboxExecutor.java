@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.mapper.sandbox.SandboxArchiveMapper;
@@ -52,7 +54,7 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
             || !(endpoint.getScheme().equals("https") || endpoint.getScheme().equals("http") && loopback)
             || token == null || token.length() < 32 || token.contains("\n") || token.contains("\r")) {
             throw new IllegalArgumentException(
-                "独立沙盒需要有效的加密服务地址和至少三十二字符的访问凭据；本机地址可使用 HTTP");
+                Messages.text("error.sandbox.remoteProjectCommandExecutor.init.1"));
         }
         this.token = token;
         this.settings = settings;
@@ -64,7 +66,7 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
                           String workingDirectory,
                           Duration timeout, ToolCallControl control) {
         if (!settings.executeEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", "当前部署未启用沙盒执行。");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", Messages.text("error.project.dockerProjectCommandExecutor.execute.1"));
         }
         String id = UUID.randomUUID().toString();
         URI address = endpoint.resolve("executions/" + id);
@@ -93,7 +95,7 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
                     throw new ApiException(
                         response.statusCode() == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.SERVICE_UNAVAILABLE,
                         "SANDBOX_REMOTE_UNAVAILABLE",
-                        response.statusCode() == 429 ? "执行环境正在处理其他任务，请稍后重试。" : "独立执行服务暂不可用，请稍后重试。");
+                        response.statusCode() == 429 ? Messages.text("error.sandbox.remoteSandboxExecutor.execute.1") : Messages.text("error.sandbox.remoteSandboxExecutor.execute.2"));
                 }
                 var result = archives.read(body, destination, Set.of("work", "outputs"), Result.class, control);
                 new WorkspaceFilesystem(destination, settings, control::requireActive, false).validate();
@@ -109,13 +111,13 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
                 throw known;
             }
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SANDBOX_REMOTE_UNAVAILABLE",
-                "独立执行服务未能完成本次操作。", failure);
+                Messages.text("error.sandbox.remoteSandboxExecutor.execute.3"), failure);
         } finally {
             if (transfer != null) {
                 try {
                     Files.deleteIfExists(transfer);
                 } catch (IOException failure) {
-                    LOG.warn("独立执行的传输文件清理失败，调用编号 {}", callId, failure);
+                    LOG.warn(Messages.log("log.sandbox.remoteSandboxExecutor.execute.1"), callId, failure);
                 }
             }
         }
@@ -131,14 +133,14 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
                     HttpResponse.BodyHandlers.discarding())
                 .orTimeout(5, TimeUnit.SECONDS).join();
         } catch (RuntimeException failure) {
-            LOG.warn("通知独立执行服务停止任务失败，执行编号 {}", id, failure);
+            LOG.warn(Messages.log("log.sandbox.remoteSandboxExecutor.cancel.1"), id, failure);
         }
     }
 
     private Duration remaining(long deadline) {
         long remaining = deadline - System.nanoTime();
         if (remaining <= 0) {
-            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "SANDBOX_TIMEOUT", "本次命令执行已经超时。");
+            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "SANDBOX_TIMEOUT", Messages.text("error.sandbox.remoteSandboxExecutor.remaining.1"));
         }
         return Duration.ofNanos(remaining);
     }

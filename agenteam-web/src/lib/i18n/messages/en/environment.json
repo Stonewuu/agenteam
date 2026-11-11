@@ -2,7 +2,7 @@
   "当前版本": "Version",
   "重新读取版本": "Reload version",
   "读取失败": "Failed to load",
-  "工作空间设置": "Workspace limits",
+  "工作空间设置": "Workspace",
   "设置每位用户的工作文件和命令输出上限。": "Set limits for each user's files and command output.",
   "暂时无法读取工作空间设置。": "Workspace settings could not be loaded.",
   "工作空间设置已保存。": "Workspace settings saved.",

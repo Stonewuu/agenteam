@@ -141,7 +141,7 @@ function WorkflowEditorView({enterprise, value, permissions, readOnly, resource,
         setFitKey((key) => key + 1);
       }
     } catch (failed) {
-      console.error("整理工作流布局失败", {resourceId: resource?.id}, failed);
+      console.error("Failed to arrange the workflow layout", {resourceId: resource?.id}, failed);
       setError(uiText("整理布局失败，请重试。"));
     } finally {
       setArranging(false);
@@ -176,7 +176,7 @@ function WorkflowEditorView({enterprise, value, permissions, readOnly, resource,
         select(first.nodeId ?? value.edges.find((edge) => edge.edgeId === first.edgeId)?.source ?? "");
       }
     } catch (failed) {
-      console.error("校验工作流失败", {resourceId: resource.id}, failed);
+      console.error("Failed to validate the workflow", {resourceId: resource.id}, failed);
       setError(errorMessage(failed));
     } finally {
       setChecking(false);

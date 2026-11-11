@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -63,7 +65,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
             var reading = threads.submit(() -> drain(active.getInputStream()));
             if (!process.waitFor(remaining(deadline).toNanos(), TimeUnit.NANOSECONDS)) {
                 process.destroyForcibly();
-                throw new TimeoutException("沙盒操作超过本次允许时间");
+                throw new TimeoutException(Messages.text("error.workspace.dockerWorkspaceCommands.run.1"));
             }
             if (control != null) {
                 control.requireActive();
@@ -102,7 +104,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
         var result = run(arguments, timeout, control);
         if (result.exitCode() != 0) {
             throw unavailable(
-                new IOException("Docker 管理命令执行失败，退出码 " + result.exitCode() + "：" + result.output()));
+                new IOException(Messages.text("error.workspace.dockerWorkspaceCommands.require.1", result.exitCode(), result.output())));
         }
         return result;
     }
@@ -124,7 +126,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
                     return;
                 }
                 if (inspection.exitCode() != 0) {
-                    throw unavailable(new IOException("无法确认容器清理结果：" + inspection.output()));
+                    throw unavailable(new IOException(Messages.text("error.workspace.dockerWorkspaceCommands.remove.1", inspection.output())));
                 }
                 try {
                     Thread.sleep(Math.min(50, Math.max(1, remaining(deadline).toMillis())));
@@ -135,7 +137,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
             }
         }
         if (result.exitCode() != 0 && !result.output().contains("No such container")) {
-            throw unavailable(new IOException("容器移除失败：" + result.output()));
+            throw unavailable(new IOException(Messages.text("error.workspace.dockerWorkspaceCommands.remove.2", result.output())));
         }
     }
 
@@ -166,7 +168,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
         var result = run(List.of("ps", "-aq", "--filter", "label=com.stonewu.agenteam.workspace=" + scope),
             remaining(deadline), control);
         if (result.exitCode() != 0) {
-            throw unavailable(new IOException("无法读取工作空间容器记录：" + result.output()));
+            throw unavailable(new IOException(Messages.text("error.workspace.dockerWorkspaceCommands.removeForWorkspace.1", result.output())));
         }
         for (String id : result.output().split("\\R")) {
             if (!id.isBlank()) {
@@ -179,7 +181,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
         var volumes = run(List.of("volume", "ls", "-q", "--filter", "label=com.stonewu.agenteam.workspace=" + scope),
             remaining(deadline), control);
         if (volumes.exitCode() != 0) {
-            throw unavailable(new IOException("无法读取工作空间临时卷记录：" + volumes.output()));
+            throw unavailable(new IOException(Messages.text("error.workspace.dockerWorkspaceCommands.removeForWorkspace.2", volumes.output())));
         }
         for (String name : volumes.output().split("\\R")) {
             if (!name.isBlank()) {
@@ -201,7 +203,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
         }
         var result = run(List.of("volume", "rm", name), timeout);
         if (result.exitCode() != 0 && !result.output().contains("no such volume")) {
-            throw unavailable(new IOException("临时工作卷移除失败：" + result.output()));
+            throw unavailable(new IOException(Messages.text("error.workspace.dockerWorkspaceCommands.removeVolume.1", result.output())));
         }
     }
 
@@ -238,11 +240,11 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
                 throw failure;
             }
             if (!process.waitFor(remaining(deadline).toNanos(), TimeUnit.NANOSECONDS)) {
-                throw new TimeoutException("沙盒文件读取超过本次允许时间");
+                throw new TimeoutException(Messages.text("error.workspace.dockerWorkspaceCommands.extract.1"));
             }
             if (process.exitValue() != 0) {
                 throw new IOException(
-                    "容器文件无法完整读取：" + stderr.get(remaining(deadline).toNanos(), TimeUnit.NANOSECONDS));
+                    Messages.text("error.workspace.dockerWorkspaceCommands.extract.2", stderr.get(remaining(deadline).toNanos(), TimeUnit.NANOSECONDS)));
             }
         } catch (Exception cause) {
             if (process != null) {
@@ -291,19 +293,19 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
 
     public static ApiException unavailable(Throwable cause) {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SANDBOX_UNAVAILABLE",
-            "沙盒暂时无法使用，请确认容器服务和执行镜像可用。", cause);
+            Messages.text("error.workspace.dockerWorkspaceCommands.unavailable.1"), cause);
     }
 
     public static Duration remaining(long deadline) {
         long nanos = deadline - System.nanoTime();
         if (nanos <= 0) {
-            throw timedOut(new TimeoutException("沙盒本次操作的剩余时间已用完"));
+            throw timedOut(new TimeoutException(Messages.text("error.workspace.dockerWorkspaceCommands.remaining.1")));
         }
         return Duration.ofNanos(nanos);
     }
 
     private static ApiException timedOut(Throwable cause) {
         return new ApiException(HttpStatus.GATEWAY_TIMEOUT, "SANDBOX_TIMEOUT",
-            "本次沙盒操作超过允许时间，请缩小处理范围或改用其他方法。", cause);
+            Messages.text("error.workspace.dockerWorkspaceCommands.timedOut.1"), cause);
     }
 }

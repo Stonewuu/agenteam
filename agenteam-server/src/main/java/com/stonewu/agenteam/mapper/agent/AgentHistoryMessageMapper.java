@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.tool.ToolPayloadPreview;
 import com.stonewu.agenteam.mapper.tool.ToolResultContent;
@@ -54,7 +56,7 @@ public final class AgentHistoryMessageMapper {
                     } else {
                         var parent = blocks.get(block.parentBlockId());
                         fragments.add(
-                            (parent == null || parent.label() == null ? "子任务内容" : parent.label()) + "：\n" + block.text());
+                            (parent == null || parent.label() == null ? Messages.source("text.agent.agentHistoryMessageMapper.map.1") : parent.label()) + "：\n" + block.text());
                     }
                 } else if (block.tool() != null) {
                     fragments.add(toolHistory(block, block.stepId() == null ? null : callsByStep.get(block.stepId()),
@@ -62,9 +64,9 @@ public final class AgentHistoryMessageMapper {
                 }
             }
             if (message.status().equals("cancelled")) {
-                fragments.add("（本轮回复已停止。）");
+                fragments.add(Messages.source("text.agent.agentHistoryMessageMapper.map.2"));
             } else if (message.status().equals("failed")) {
-                fragments.add("（本轮回复未完成。）");
+                fragments.add(Messages.source("text.agent.agentHistoryMessageMapper.map.3"));
             }
             content = String.join("\n\n", fragments);
         }
@@ -77,30 +79,30 @@ public final class AgentHistoryMessageMapper {
         String label = block.label() == null || block.label().isBlank() ? tool.name() : block.label();
         String state = call == null ? tool.resultStatus() : call.status();
         var parts = new ArrayList<String>();
-        parts.add("历史工具记录：" + label + "\n状态：" + toolStatus(state, messageStatus));
+        parts.add(Messages.source("text.agent.agentHistoryMessageMapper.toolHistory.1", label, toolStatus(state, messageStatus)));
         String input = call == null || call.requestRedacted() == null ? ToolPayloadPreview.text(
             tool.input()) : ToolPayloadPreview.value(call.requestRedacted());
         if (input != null && !input.isBlank()) {
-            parts.add("调用参数：\n" + input);
+            parts.add(Messages.source("text.agent.agentHistoryMessageMapper.toolHistory.2", input));
         }
         String result = historyResult(call, tool.result());
         if (result != null && !result.isBlank()) {
-            parts.add("已保存的返回内容：\n" + result);
+            parts.add(Messages.source("text.agent.agentHistoryMessageMapper.toolHistory.3", result));
         }
         if (call != null && call.errorSummary() != null && !call.errorSummary().isBlank()) {
-            parts.add("调用说明：" + call.errorSummary());
+            parts.add(Messages.source("text.agent.agentHistoryMessageMapper.toolHistory.4", call.errorSummary()));
         }
         return String.join("\n", parts);
     }
 
     private static String toolStatus(String state, String messageStatus) {
         return switch (state == null ? "" : state) {
-            case "succeeded", "completed" -> "已完成";
-            case "cancelled" -> "已停止";
-            case "failed" -> "失败";
-            case "unknown" -> "结果尚未确认";
-            case "skipped" -> "已跳过";
-            default -> messageStatus.equals("cancelled") ? "已停止" : "未完成";
+            case "succeeded", "completed" -> Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.1");
+            case "cancelled" -> Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.2");
+            case "failed" -> Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.3");
+            case "unknown" -> Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.4");
+            case "skipped" -> Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.5");
+            default -> messageStatus.equals("cancelled") ? Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.2") : Messages.source("text.agent.agentHistoryMessageMapper.toolStatus.6");
         };
     }
 

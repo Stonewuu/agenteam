@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.service.agent.EncryptedAgentStateStore;
@@ -43,7 +45,7 @@ public class WorkspaceRetentionService {
                                      @Value("${execution.workspace.retention-enabled:true}") boolean enabled,
                                      @Value("${execution.workspace.retention-days:30}") int days) {
         if (days < 1 || days > 3650) {
-            throw new IllegalArgumentException("工作文件保留时间超出允许范围");
+            throw new IllegalArgumentException(Messages.text("error.workspace.workspaceRetentionService.init.1"));
         }
         this.store = store;
         this.conversations = conversations;
@@ -62,7 +64,7 @@ public class WorkspaceRetentionService {
         try {
             clean();
         } catch (RuntimeException failure) {
-            LOG.warn("工作文件清理暂未完成，稍后重试", failure);
+            LOG.warn(Messages.log("log.workspace.workspaceRetentionService.poll.1"), failure);
         }
     }
 
@@ -85,7 +87,7 @@ public class WorkspaceRetentionService {
                         removed++;
                     }
                 } catch (RuntimeException | IOException failure) {
-                    LOG.warn("工作文件目录清理失败，目录编号 {}", Utf8Text.revision("workspace", key), failure);
+                    LOG.warn(Messages.log("log.workspace.workspaceRetentionService.clean.1"), Utf8Text.revision("workspace", key), failure);
                 }
             }
             if (candidates.size() < 100) {
@@ -212,7 +214,7 @@ public class WorkspaceRetentionService {
                 return false;
             }
             Files.write(directory.resolve("cleared.json"), json.writeValueAsBytes(
-                    Map.of("clearedAt", clock.instant().toString(), "reason", "工作文件超过保留时间")),
+                    Map.of("clearedAt", clock.instant().toString(), "reason", Messages.text("text.workspace.workspaceRetentionService.expireFiles.1"))),
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE,
                 LinkOption.NOFOLLOW_LINKS);
             Files.deleteIfExists(directory.resolve("current.json"));

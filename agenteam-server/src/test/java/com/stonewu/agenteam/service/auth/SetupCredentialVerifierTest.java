@@ -78,7 +78,7 @@ class SetupCredentialVerifierTest {
         var verifier = new SetupCredentialVerifier("", users);
         verifier.run(ARGUMENTS);
         assertEquals(List.of(), generatedCredentials(output));
-        assertFalse(output.getAll().contains("系统尚未初始化"));
+        assertFalse(output.getAll().contains("The system is not initialized"));
     }
 
     private ApplicationContextRunner context() {
@@ -87,7 +87,7 @@ class SetupCredentialVerifierTest {
     }
 
     private List<String> generatedCredentials(CapturedOutput output) {
-        return Pattern.compile("本次启动的初始化凭据：([A-Za-z0-9_-]{43})").matcher(output.getAll())
+        return Pattern.compile("setup credential for this start: ([A-Za-z0-9_-]{43})").matcher(output.getAll())
             .results().map(match -> match.group(1)).toList();
     }
 }

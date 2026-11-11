@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -38,7 +40,7 @@ public class ExecutionAccessService {
 
     public AuthContext actor(RunRecord run) {
         var user = users.findById(run.userId()).filter(value -> value.status().equals("active"))
-            .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前账号无法继续执行任务，请联系企业管理员。"));
+            .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", Messages.text("error.execution.executionAccessService.actor.1")));
         var actor = new AuthContext(user, run.enterpriseId(),
             Set.copyOf(permissions.listPermissionCodes(user.id(), run.enterpriseId())));
         if (collaboration.applies(run)) {

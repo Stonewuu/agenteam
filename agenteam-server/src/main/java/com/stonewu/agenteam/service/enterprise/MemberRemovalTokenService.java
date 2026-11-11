@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -46,7 +48,7 @@ public class MemberRemovalTokenService {
             return new Issued(Base64.getUrlEncoder().withoutPadding().encodeToString(json.writeValueAsBytes(encrypted)),
                 expires);
         } catch (Exception failed) {
-            throw new IllegalStateException("成员移除影响暂时无法确认", failed);
+            throw new IllegalStateException(Messages.text("error.enterprise.memberRemovalTokenService.issue.1"), failed);
         }
     }
 
@@ -76,6 +78,6 @@ public class MemberRemovalTokenService {
 
     private ApiException changed() {
         return new ApiException(HttpStatus.CONFLICT, "DEPENDENCIES_CHANGED",
-            "成员或关联内容已变化，或影响预览已过期，请重新查看移除影响。");
+            Messages.text("error.enterprise.memberRemovalTokenService.changed.1"));
     }
 }

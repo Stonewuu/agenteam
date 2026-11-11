@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,7 +32,7 @@ public final class Utf8Text {
             digest.update((byte) 0);
             return HexFormat.of().formatHex(digest.digest(text.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", impossible);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), impossible);
         }
     }
 

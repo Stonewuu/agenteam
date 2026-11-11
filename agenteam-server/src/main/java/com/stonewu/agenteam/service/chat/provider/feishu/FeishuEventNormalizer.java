@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.chat.entity.NormalizedChatEvent;
@@ -60,7 +62,7 @@ public class FeishuEventNormalizer implements ChatEventNormalizer {
         String chatId = ChatInputValidation.required(message, "chat_id");
         String chatKind = message.path("chat_type").asText();
         if (!Set.of("group", "p2p").contains(chatKind)) {
-            throw ApiException.invalidField("message", "平台消息的会话类型无法识别。");
+            throw ApiException.invalidField("message", Messages.text("error.chat.feishuEventNormalizer.normalize.1"));
         }
         String senderId = ChatInputValidation.optional(sender.path("sender_id"), "open_id");
         String senderKind = switch (sender.path("sender_type").asText()) {
@@ -144,7 +146,7 @@ public class FeishuEventNormalizer implements ChatEventNormalizer {
         String tenant = source.path("tenant_key").asText("");
         if ((!appId.isBlank() && !appId.equals(app.externalAppId())) || (!tenant.isBlank()
             && app.externalTenantId() != null && !tenant.equals(app.externalTenantId()))) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_APPLICATION_MISMATCH", "平台消息不属于当前应用或企业。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_APPLICATION_MISMATCH", Messages.text("error.chat.feishuEventNormalizer.verifyScope.1"));
         }
     }
 }

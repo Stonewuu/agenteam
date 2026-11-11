@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
 import com.stonewu.agenteam.mapper.execution.RunSqlMapper;
 import com.stonewu.agenteam.mapper.permission.MemberRoleQueryMapper;
@@ -116,7 +118,7 @@ public class MemberRemovalMapper {
 
     private void changed(int actual, int expected) {
         if (actual != expected) {
-            throw new IllegalStateException("成员关联内容已变化，本次交接未提交");
+            throw new IllegalStateException(Messages.text("error.enterprise.memberRemovalMapper.changed.1"));
         }
     }
 }

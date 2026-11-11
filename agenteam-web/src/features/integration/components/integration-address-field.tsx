@@ -16,7 +16,7 @@ export function IntegrationAddressField({label, value}: {label: string; value: s
       await navigator.clipboard.writeText(value);
       toast.success(t("已复制"));
     } catch (error) {
-      console.error("复制接入地址失败", error);
+      console.error("Failed to copy the connection URL", error);
       toast.error(t("复制失败，请选中地址后手动复制。"));
     }
   }

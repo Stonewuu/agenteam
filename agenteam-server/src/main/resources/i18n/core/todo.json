@@ -1,0 +1,166 @@
+{
+  "error.todo.todoDefinitionMapper.definition.1": {
+    "zh-CN": "待办标题不能包含换行或控制字符。",
+    "en": "A to-do title cannot contain line breaks or control characters."
+  },
+  "error.todo.todoDefinitionMapper.definition.2": {
+    "zh-CN": "请选择普通或重要。",
+    "en": "Select Normal or Important."
+  },
+  "error.todo.todoDefinitionMapper.definition.3": {
+    "zh-CN": "截止日期格式不正确",
+    "en": "The due date format is invalid."
+  },
+  "error.todo.todoDefinitionMapper.definition.4": {
+    "zh-CN": "截止日期超出范围",
+    "en": "The due date is outside the allowed range."
+  },
+  "error.todo.todoDefinitionMapper.definition.5": {
+    "zh-CN": "请填写有效的截止日期，或留空。",
+    "en": "Enter a valid due date or leave it blank."
+  },
+  "error.todo.todoDefinitionMapper.identifier.1": {
+    "zh-CN": "请选择有效的对象。",
+    "en": "Select a valid item."
+  },
+  "error.todo.todoDefinitionMapper.status.1": {
+    "zh-CN": "请选择有效的待办状态。",
+    "en": "Select a valid to-do status."
+  },
+  "error.todo.todoStatus.from.1": {
+    "zh-CN": "待办状态不正确",
+    "en": "The to-do status is invalid."
+  },
+  "error.todo.todoApiService.record.1": {
+    "zh-CN": "待办活动类型不正确",
+    "en": "The to-do activity type is invalid."
+  },
+  "error.todo.todoHistoryService.actionText.1": {
+    "zh-CN": "待办历史动作不正确",
+    "en": "The to-do history action is invalid."
+  },
+  "error.todo.todoManagementService.status.1": {
+    "zh-CN": "当前状态不能执行该操作，请重新加载待办。",
+    "en": "This action is unavailable in the current state. Reload the to-do."
+  },
+  "error.todo.todoManagementService.current.1": {
+    "zh-CN": "待办修改后无法读取",
+    "en": "The to-do could not be read after updating."
+  },
+  "error.todo.todoMemberRemovalService.process.1": {
+    "zh-CN": "未结束待办已变化，请重新查看移除影响。",
+    "en": "Unfinished to-dos have changed. Review the removal impact again."
+  },
+  "error.todo.todoMemberRemovalService.process.2": {
+    "zh-CN": "请选择仍可查看和处理本人待办的有效成员。",
+    "en": "Select an active member who can view and manage their own to-dos."
+  },
+  "error.todo.todoOrganizationService.requireTeamOwnersIncluded.1": {
+    "zh-CN": "待移出的成员仍负责 {0} 项未结束待办，请先转交、完成或取消这些待办。",
+    "en": "This member is responsible for {0} unfinished to-dos. Reassign, complete, or cancel them before removing the member."
+  },
+  "error.todo.todoOrganizationService.requireMemberTeamsIncluded.1": {
+    "zh-CN": "该成员仍负责 {0} 项未结束的团队待办，请先转交、完成或取消后再移出团队。",
+    "en": "This member is responsible for {0} unfinished team to-dos. Reassign, complete, or cancel them before removing the member from the team."
+  },
+  "error.todo.todoPolicy.assignee.1": {
+    "zh-CN": "负责人需要属于所选团队。",
+    "en": "The assignee must belong to the selected team."
+  },
+  "error.todo.todoPolicy.destinationTeam.1": {
+    "zh-CN": "只有创建人或负责人可以把团队待办改为个人待办。",
+    "en": "Only the creator or assignee can change a team to-do to a personal one."
+  },
+  "error.todo.todoQueryService.list.1": {
+    "zh-CN": "请选择我的待办或团队待办。",
+    "en": "Select My to-dos or Team to-dos."
+  },
+  "error.todo.todoSelectionService.teams.1": {
+    "zh-CN": "请选择团队筛选或分配。",
+    "en": "Select a team to filter or assign."
+  },
+  "error.todo.todoSourceService.create.1": {
+    "zh-CN": "请选择有效的待办来源。",
+    "en": "Select a valid to-do source."
+  },
+  "error.todo.todoSourceService.create.2": {
+    "zh-CN": "请选择作为来源的消息。",
+    "en": "Select a source message."
+  },
+  "error.todo.todoSourceService.create.3": {
+    "zh-CN": "请选择已经实际执行的工作流作为来源。",
+    "en": "Select a workflow that has actually run as the source."
+  },
+  "error.todo.todoSourceService.immutable.1": {
+    "zh-CN": "待办来源不能自行改写，请从原消息或工作流创建。",
+    "en": "The to-do source cannot be changed manually. Create it from the original message or workflow."
+  },
+  "text.todo.todoStatus.PENDING.1": {
+    "zh-CN": "待处理",
+    "en": "Pending"
+  },
+  "text.todo.todoStatus.IN_PROGRESS.1": {
+    "zh-CN": "进行中",
+    "en": "In progress"
+  },
+  "text.todo.todoStatus.CANCELLED.1": {
+    "zh-CN": "已取消",
+    "en": "Canceled"
+  },
+  "text.todo.todoApiService.record.1": {
+    "zh-CN": "修改待办内容",
+    "en": "Update to-do content"
+  },
+  "text.todo.todoApiService.record.2": {
+    "zh-CN": "修改待办状态",
+    "en": "Update to-do status"
+  },
+  "text.todo.todoAssignmentNotificationService.assigned.1": {
+    "zh-CN": "有新的待办",
+    "en": "New to-do"
+  },
+  "text.todo.todoAssignmentNotificationService.assigned.2": {
+    "zh-CN": "有待办转交给你",
+    "en": "To-do reassigned to you"
+  },
+  "text.todo.todoAssignmentNotificationService.assigned.3": {
+    "zh-CN": "“{0}”已交给你处理。",
+    "en": "“{0}” has been assigned to you."
+  },
+  "text.todo.todoHistoryService.actionText.1": {
+    "zh-CN": "创建待办“{0}”",
+    "en": "Create to-do “{0}”"
+  },
+  "text.todo.todoHistoryService.actionText.2": {
+    "zh-CN": "修改待办并转交给“{0}”",
+    "en": "Update to-do and reassign it to “{0}”"
+  },
+  "text.todo.todoHistoryService.actionText.3": {
+    "zh-CN": "将待办转交给“{0}”",
+    "en": "Reassign to-do to “{0}”"
+  },
+  "text.todo.todoHistoryService.actionText.4": {
+    "zh-CN": "开始处理待办",
+    "en": "Start to-do"
+  },
+  "text.todo.todoHistoryService.actionText.5": {
+    "zh-CN": "完成待办",
+    "en": "Complete to-do"
+  },
+  "text.todo.todoHistoryService.actionText.6": {
+    "zh-CN": "取消待办",
+    "en": "Cancel to-do"
+  },
+  "text.todo.todoHistoryService.actionText.7": {
+    "zh-CN": "重新打开待办",
+    "en": "Reopen to-do"
+  },
+  "text.todo.todoMemberRemovalService.process.1": {
+    "zh-CN": "成员移除时取消未结束待办",
+    "en": "Cancel unfinished to-dos during member removal"
+  },
+  "text.todo.todoMemberRemovalService.process.2": {
+    "zh-CN": "成员移除时转交待办",
+    "en": "Reassign to-dos during member removal"
+  }
+}

@@ -66,7 +66,7 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
         if (failure instanceof ApiError && [401, 403].includes(failure.status)) {
           setStatus(null);
         } else {
-          console.error("检查当前登录身份失败", failure);
+          console.error("Failed to check the current signed-in identity", failure);
         }
       }
     }
@@ -112,7 +112,7 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
       broadcastIdentityChange();
       window.location.replace(enterpriseEntryPath(previous.enterpriseId, previous.returnPath));
     } catch (failure) {
-      console.error("返回管理员身份失败", failure);
+      console.error("Failed to return to the administrator identity", failure);
       setError(errorMessage(failure));
       setBusy(false);
     }

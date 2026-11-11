@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
 import com.stonewu.agenteam.service.integration.wecom.WecomMemberAliases;
@@ -50,11 +52,11 @@ public class ChatNormalizationWorker {
         } catch (RuntimeException failure) {
             if (failure instanceof ApiException api && api.getStatusCode().is4xxClientError() && api.getStatusCode().value() != 429) {
                 transactions.rejected(lease, api.code());
-                LOG.info("聊天操作已结束，不再重试，企业={}，接收记录={}，原因={}", lease.enterpriseId(), lease.receiptId(), api.code());
+                LOG.info(Messages.log("log.chat.chatNormalizationWorker.runOnce.1"), lease.enterpriseId(), lease.receiptId(), api.code());
                 return true;
             }
-            var safe = new ChannelProviderException("CHAT_NORMALIZATION_FAILED", "聊天消息暂时无法处理。", failure);
-            LOG.warn("聊天消息处理失败，企业={}，接收记录={}", lease.enterpriseId(), lease.receiptId(), safe);
+            var safe = new ChannelProviderException("CHAT_NORMALIZATION_FAILED", Messages.text("error.chat.chatNormalizationWorker.runOnce.1"), failure);
+            LOG.warn(Messages.log("log.chat.chatNormalizationWorker.runOnce.2"), lease.enterpriseId(), lease.receiptId(), safe);
             transactions.failed(lease, safe.code());
         }
         return true;

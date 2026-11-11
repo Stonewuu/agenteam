@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationArtifactMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -53,7 +55,7 @@ public class CollaborationResultResendService {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
         var task = access.owned(actor, id);
         if (task.fromWebRoom()) {
-            throw ApiException.invalidField("taskId", "网页协作对话不向外部平台发送消息。");
+            throw ApiException.invalidField("taskId", Messages.text("error.collaboration.collaborationReplyModeService.get.1"));
         }
         access.actor(task);
         if (!task.getRevision().equals(input.expectedRevision()) || input.expectedReplyModeRevision() == null
@@ -61,13 +63,13 @@ public class CollaborationResultResendService {
             throw ApiException.versionConflict(task.getRevision());
         }
         if (!"completed".equals(task.getStatus()) || task.getFinalArtifactId() == null) {
-            throw ApiException.invalidField("taskId", "任务完成后才能发送已有结果。");
+            throw ApiException.invalidField("taskId", Messages.text("error.collaboration.collaborationResultResendService.send.1"));
         }
         var result = artifactRows.selectOne(new LambdaQueryWrapper<CollaborationArtifactRow>()
             .eq(CollaborationArtifactRow::getEnterpriseId, actor.enterpriseId()).eq(CollaborationArtifactRow::getTaskId, id)
             .eq(CollaborationArtifactRow::getId, task.getFinalArtifactId()));
         if (result == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", "当前成果已无法读取。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationResultResendService.send.2"));
         }
         artifacts.require(task, result.getId(), result.getArtifactVersion());
         var owner = access.participant(task, task.getOwnerParticipantId());
@@ -78,13 +80,13 @@ public class CollaborationResultResendService {
             ? artifacts.references(task, content.path("artifactRefs")) : List.of();
         String text = answer(task, result);
         if (text.codePointCount(0, text.length()) > 32000) {
-            text = selected.stream().anyMatch(file -> file.getFileId() != null) ? "完整回复较长，请查看成果附件。"
-                : "完整回复较长，请打开任务查看。\n" + links.task(actor.enterpriseId(), id);
+            text = selected.stream().anyMatch(file -> file.getFileId() != null) ? Messages.text("text.collaboration.collaborationResultResendService.send.1")
+                : Messages.text("text.collaboration.collaborationResultResendService.send.2", links.task(actor.enterpriseId(), id));
         }
         String key = "resend:" + actor.userId() + ":" + input.requestId();
         var message = outbound.text(actor.enterpriseId(), task.getConversationId(), owner.getBotBindingId(), id, null, key, "completed", text, null);
         if ("cancelled".equals(message.getStatus())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_FORBIDDEN", "原会话暂时无法接收消息，请检查机器人是否仍在会话中。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_FORBIDDEN", Messages.text("error.collaboration.collaborationResultResendService.send.3"));
         }
         var sent = new HashSet<String>();
         for (var file : selected) {

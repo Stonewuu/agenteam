@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Size;
  * 保存公告标题、正文和提醒等级，范围由请求入口确定。
  */
 public record AnnouncementWriteRequest(
-    @NotBlank(message = "请填写公告标题。") @Size(max = 160, message = "标题最多160个字符。") String title,
-    @NotBlank(message = "请填写公告正文。") @Size(max = 200000, message = "正文格式过于复杂，请减少排版样式后重试。") String content,
-    @NotBlank(message = "请选择提醒等级。") @Size(max = 32, message = "请选择有效的提醒等级。") String level,
-    @Size(max = 20, message = "请选择有效的正文格式。") String contentFormat) {
+    @NotBlank(message = "{error.announcement.announcementWriteRequest.title.1}") @Size(max = 160, message = "{error.announcement.announcementWriteRequest.title.2}") String title,
+    @NotBlank(message = "{error.announcement.announcementWriteRequest.content.1}") @Size(max = 200000, message = "{error.announcement.announcementWriteRequest.content.2}") String content,
+    @NotBlank(message = "{error.announcement.announcementWriteRequest.level.1}") @Size(max = 32, message = "{error.announcement.announcementWriteRequest.level.2}") String level,
+    @Size(max = 20, message = "{error.announcement.announcementWriteRequest.contentFormat.1}") String contentFormat) {
 }

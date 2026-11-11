@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.auth.entity.AccountOperation;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.permission.entity.DataScope;
@@ -47,7 +49,7 @@ public class AccountBehaviorService {
             if (!Objects.equals(granted.enterpriseId(), current.enterpriseId())
                 || !Objects.equals(granted.userId(), current.userId()) || !Objects.equals(granted.kind(), current.kind())
                 || !Objects.equals(granted.capability(), current.capability()) || granted.includeDeleted() != current.includeDeleted()) {
-                throw new IllegalStateException("账号扩展不能改变资源查询的企业、成员、类型或操作");
+                throw new IllegalStateException(Messages.text("error.auth.accountBehaviorService.resourceScope.1"));
             }
         }
         return current;
@@ -76,7 +78,7 @@ public class AccountBehaviorService {
             if (value.isPresent()) {
                 if (!value.get().matches("[a-z0-9][a-z0-9_-]{0,63}")
                     || (partition != null && !partition.equals(value.get()))) {
-                    throw new IllegalStateException("账号工作文件目录名称无效或存在冲突");
+                    throw new IllegalStateException(Messages.text("error.auth.accountBehaviorService.workspaceRoot.1"));
                 }
                 partition = value.get();
             }

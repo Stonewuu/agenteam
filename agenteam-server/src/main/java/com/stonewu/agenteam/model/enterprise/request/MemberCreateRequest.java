@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.enterprise.request;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.List;
 
 /**
@@ -9,6 +11,6 @@ public record MemberCreateRequest(String username, String password, String displ
                                   List<String> teamIds) {
     @Override
     public String toString() {
-        return "MemberCreateRequest[账号凭据已隐藏]";
+        return Messages.log("log.enterprise.memberCreateRequest.toString.1");
     }
 }

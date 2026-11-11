@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.network;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 public class RestrictedHttpClient {
     private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor(
-        Thread.ofPlatform().daemon(true).name("外部网页连接期限").factory());
+        Thread.ofPlatform().daemon(true).name(Messages.log("log.network.restrictedHttpClient.TIMER.1")).factory());
     private final OutboundAddressPolicy policy;
     private final OkHttpClient prototype;
 
@@ -54,7 +56,7 @@ public class RestrictedHttpClient {
 
         private Scope(HttpUrl endpoint, Map<String, String> credentials, Duration timeout) {
             if (timeout.isNegative() || timeout.isZero() || timeout.compareTo(Duration.ofSeconds(120)) > 0) {
-                throw new IllegalArgumentException("连接超时必须在一百二十秒以内");
+                throw new IllegalArgumentException(Messages.text("error.network.restrictedHttpClient.init.1"));
             }
             this.endpoint = endpoint;
             this.credentials = Map.copyOf(credentials);
@@ -69,7 +71,7 @@ public class RestrictedHttpClient {
         public long remainingMillis() {
             long remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
             if (closed.get() || remaining <= 0) {
-                throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "REMOTE_TIMEOUT", "连接已取消或超过允许时间。");
+                throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "REMOTE_TIMEOUT", Messages.text("error.network.restrictedHttpClient.remainingMillis.1"));
             }
             return remaining;
         }
@@ -108,7 +110,7 @@ public class RestrictedHttpClient {
                     })
                     .dns(requested -> {
                         if (!requested.equals(host)) {
-                            throw new UnknownHostException("请求主机发生变化");
+                            throw new UnknownHostException(Messages.text("error.network.restrictedHttpClient.execute.1"));
                         }
                         return addresses;
                     }).build();
@@ -131,7 +133,7 @@ public class RestrictedHttpClient {
                 if (closed.get()) {
                     call.cancel();
                     calls.remove(call);
-                    throw new IOException("连接已取消");
+                    throw new IOException(Messages.text("error.network.restrictedHttpClient.execute.2"));
                 }
                 Response response;
                 try {
@@ -152,12 +154,12 @@ public class RestrictedHttpClient {
                 HttpUrl next = location == null ? null : url.resolve(location);
                 if (redirects >= 3 || next == null || (url.isHttps() && !next.isHttps())) {
                     throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_REDIRECT_DENIED",
-                        "连接返回了不支持的跳转，请检查插件地址。");
+                        Messages.text("error.network.restrictedHttpClient.execute.3"));
                 }
                 // POST 只接受明确保留方法和正文的跳转，不能把外部写入悄悄改成其他请求。
                 if (!method.equals("GET") && !method.equals("HEAD") && status != 307 && status != 308) {
                     throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_REDIRECT_DENIED",
-                        "连接跳转不能保留本次请求，请填写最终服务地址。");
+                        Messages.text("error.network.restrictedHttpClient.execute.4"));
                 }
                 forwardCredentials &= OutboundAddressPolicy.sameOrigin(url, next);
                 url = policy.validateUrl(next.toString());

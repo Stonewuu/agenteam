@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.permission;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -32,7 +34,7 @@ public class BuiltinRoleCatalog {
             String code = role.required("code").asText();
             var template = new Template(code, role.required("name").asText(), codes(role.required("permissionCodes")));
             if (code.isBlank() || roles.putIfAbsent(code, template) != null) {
-                throw new IllegalStateException("内置角色模板包含空白或重复的角色编号");
+                throw new IllegalStateException(Messages.text("error.permission.builtinRoleCatalog.init.1"));
             }
         }
         var protectedCodes = new HashSet<>(codes(base.required("protectedPermissionCodes")));
@@ -40,14 +42,14 @@ public class BuiltinRoleCatalog {
         for (var extension : extensions) {
             String path = extension.resourcePath();
             if (path == null || path.isBlank() || !paths.add(path)) {
-                throw new IllegalStateException("内置角色扩展资源名称为空或重复");
+                throw new IllegalStateException(Messages.text("error.permission.builtinRoleCatalog.init.2"));
             }
             var additional = read(path);
             for (var role : additional.required("roles")) {
                 String code = role.required("code").asText();
                 var existing = roles.get(code);
                 if (existing == null) {
-                    throw new IllegalStateException("内置角色扩展引用了不存在的角色编号");
+                    throw new IllegalStateException(Messages.text("error.permission.builtinRoleCatalog.init.3"));
                 }
                 var merged = new HashSet<>(existing.permissions());
                 merged.addAll(codes(role.required("permissionCodes")));
@@ -59,7 +61,7 @@ public class BuiltinRoleCatalog {
         var available = new HashSet<String>();
         templates.forEach(template -> available.addAll(template.permissions()));
         if (!available.containsAll(protectedCodes)) {
-            throw new IllegalStateException("受保护权限未包含在当前内置角色模板中");
+            throw new IllegalStateException(Messages.text("error.permission.builtinRoleCatalog.init.4"));
         }
         protectedPermissions = Set.copyOf(protectedCodes);
         availablePermissions = Set.copyOf(available);
@@ -88,18 +90,18 @@ public class BuiltinRoleCatalog {
         try (InputStream input = new ClassPathResource(resource).getInputStream()) {
             return new ObjectMapper().readTree(input);
         } catch (IOException exception) {
-            throw new UncheckedIOException("无法读取内置角色模板", exception);
+            throw new UncheckedIOException(Messages.text("error.permission.builtinRoleCatalog.read.1"), exception);
         }
     }
 
     private Set<String> codes(JsonNode values) {
         if (!values.isArray()) {
-            throw new IllegalStateException("内置角色权限必须使用数组");
+            throw new IllegalStateException(Messages.text("error.permission.builtinRoleCatalog.codes.1"));
         }
         var result = new HashSet<String>();
         for (var value : values) {
             if (!value.isTextual() || value.asText().isBlank() || !result.add(value.asText())) {
-                throw new IllegalStateException("内置角色模板包含无效或重复的权限编号");
+                throw new IllegalStateException(Messages.text("error.permission.builtinRoleCatalog.codes.2"));
             }
         }
         return Set.copyOf(result);

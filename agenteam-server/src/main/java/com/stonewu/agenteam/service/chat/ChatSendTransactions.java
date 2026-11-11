@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -138,7 +140,7 @@ public class ChatSendTransactions {
             attempts.update(new LambdaUpdateWrapper<ChatOutboundAttemptRow>().eq(ChatOutboundAttemptRow::getEnterpriseId, row.getEnterpriseId())
                 .eq(ChatOutboundAttemptRow::getOutboundId, row.getId()).isNull(ChatOutboundAttemptRow::getFinishedAt)
                 .set(ChatOutboundAttemptRow::getOutcome, "UNKNOWN").set(ChatOutboundAttemptRow::getFinishedAt, now)
-                .set(ChatOutboundAttemptRow::getErrorSummary, "发送进程失去连接，平台结果尚未确认"));
+                .set(ChatOutboundAttemptRow::getErrorSummary, Messages.text("text.chat.chatSendTransactions.claim.1")));
         }
         return Optional.of(new ChatSendLease(row.getEnterpriseId(), row.getId(), row.getLeaseVersion() + 1, owner));
     }
@@ -177,7 +179,7 @@ public class ChatSendTransactions {
             throw expired();
         }
         if (key == null || !key.matches("[A-Za-z0-9_./=-]{1,512}")) {
-            throw new IllegalArgumentException("平台文件编号无效");
+            throw new IllegalArgumentException(Messages.text("error.chat.chatSendTransactions.uploaded.1"));
         }
         var payload = (ObjectNode) cipher.decrypt(row.getEnterpriseId(), "outbound", row.getId(), row.getPayloadEncrypted());
         files.file(row, payload);
@@ -202,7 +204,7 @@ public class ChatSendTransactions {
         var app = authorize(row);
         replyPolicy.verify(row, preparedPayload);
         if (row.getFirstSubmittedAt() != null && !canRepeat(row, platforms.adapter(app.providerCode()).deduplicationWindow())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_UNKNOWN", "消息可能已经发送，不能再次发送。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_UNKNOWN", Messages.text("error.chat.chatSendTransactions.begin.1"));
         }
         var now = clock.instant();
         var rendered = row.getFirstSubmittedAt() == null
@@ -290,7 +292,7 @@ public class ChatSendTransactions {
             attempt.setFinishedAt(clock.instant());
             attempt.setOutcome("RETRYABLE_FAILURE");
             attempt.setPlatformCode(error);
-            attempt.setErrorSummary("消息未能发送，请重试。");
+            attempt.setErrorSummary(Messages.text("error.chat.chatSendTransactions.defer.1"));
             attempts.insert(attempt);
         }
         if (terminal || exhausted || error.equals("CHAT_SEND_UNKNOWN")) {
@@ -320,7 +322,7 @@ public class ChatSendTransactions {
             || member == null || !member.getMembershipStatus().equals("present") || !Boolean.TRUE.equals(member.getSendEnabled())
             || !member.getExternalChatId().equals(payload.path("receiveId").asText())
             || app.credentialRevision() != payload.path("credentialRevision").asLong()) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_FORBIDDEN", "机器人或原会话的发送设置已发生变化。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_FORBIDDEN", Messages.text("error.chat.chatSendTransactions.authorize.1"));
         }
         if (row.getTaskId() != null) {
             var task = access.require(row.getEnterpriseId(), row.getTaskId());
@@ -328,7 +330,7 @@ public class ChatSendTransactions {
             if (!ChatReplyPolicy.recipientMatches(task, group) || task.getStatus().equals("cancelling")
                 || task.getStatus().equals("cancelled") && !row.getKind().equals("cancelled")
                 || !task.getInputRevision().equals(row.getInputRevision())) {
-                throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_CANCELLED", "任务或要求已发生变化，旧消息不再发送。");
+                throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_CANCELLED", Messages.text("error.chat.chatSendTransactions.authorize.2"));
             }
             var role = participants.selectOne(new LambdaQueryWrapper<CollaborationParticipantRow>().eq(CollaborationParticipantRow::getEnterpriseId, row.getEnterpriseId())
                 .eq(CollaborationParticipantRow::getTaskId, row.getTaskId()).eq(CollaborationParticipantRow::getBotBindingId, row.getBotBindingId()));
@@ -339,7 +341,7 @@ public class ChatSendTransactions {
         }
         if (payload.path("messageType").asText().equals("file")) {
             if (row.getPreparedAt() != null && row.getPreparedAt().plusSeconds(172800).isBefore(clock.instant())) {
-                throw new ApiException(HttpStatus.CONFLICT, "CHAT_FILE_EXPIRED", "平台临时文件已过期，请从群策查看完整成果。");
+                throw new ApiException(HttpStatus.CONFLICT, "CHAT_FILE_EXPIRED", Messages.text("error.chat.chatSendTransactions.authorize.3"));
             }
             files.file(row, payload);
         }
@@ -378,7 +380,7 @@ public class ChatSendTransactions {
     }
 
     private static ApiException expired() {
-        return new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_LEASE_EXPIRED", "发送工作已由其他进程接管。");
+        return new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_LEASE_EXPIRED", Messages.text("error.chat.chatSendTransactions.expired.1"));
     }
 
     public record Prepared(IntegrationApplication application, JsonNode payload, String platformScope, String conversation) {

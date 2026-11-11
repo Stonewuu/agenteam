@@ -9,10 +9,10 @@ import jakarta.validation.constraints.Size;
  * 第一次发送时选择员工，会话版本由服务端固定。
  */
 public record NewConversationInput(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 100, message = "文字长度不符合要求。") String agentId,
-    @NotNull(message = "请填写必填项。") @Valid MessageInput input,
-    @Pattern(regexp = "default|auto_approve|full_access", message = "请选择有效的工具审批策略。") String approvalPolicy,
-    @Size(min = 1, max = 100, message = "请选择有效的项目。") String projectId) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 100, message = "{validation.textLength}") String agentId,
+    @NotNull(message = "{validation.required}") @Valid MessageInput input,
+    @Pattern(regexp = "default|auto_approve|full_access", message = "{error.execution.conversationUpdateInput.approvalPolicy.1}") String approvalPolicy,
+    @Size(min = 1, max = 100, message = "{error.execution.newConversationInput.projectId.1}") String projectId) {
     public NewConversationInput(String agentId, MessageInput input, String approvalPolicy) {
         this(agentId, input, approvalPolicy, null);
     }

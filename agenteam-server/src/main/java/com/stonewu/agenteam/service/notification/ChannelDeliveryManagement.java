@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationChannelDeliveryMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
@@ -81,10 +83,10 @@ public class ChannelDeliveryManagement {
         }
         if (!Set.of("failed", "unknown").contains(row.getStatus()) || row.getManualRetryCount() >= 3
             || row.getPayloadJson() == null || !row.getExpiresAt().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "NOTIFICATION_RETRY_UNAVAILABLE", "此发送记录不能再次尝试，请查看结果或创建新的通知。");
+            throw new ApiException(HttpStatus.CONFLICT, "NOTIFICATION_RETRY_UNAVAILABLE", Messages.text("error.notification.channelDeliveryManagement.retry.1"));
         }
         if ("unknown".equals(row.getStatus()) && !Boolean.TRUE.equals(input.confirmMayDuplicate())) {
-            throw ApiException.invalidField("confirmMayDuplicate", "此前请求可能已被平台接受，请确认能够接受重复通知后再试。");
+            throw ApiException.invalidField("confirmMayDuplicate", Messages.text("error.notification.channelDeliveryManagement.retry.2"));
         }
         var target = new ChannelDeliveryTarget(row.getConnectionId(), row.getCredentialRevision(), row.getBindingId(), row.getBindingRevision());
         var blocked = policy.check(queries.notification(enterprise, row.getNotificationId()), target, row.getDeliveryReason(),
@@ -100,7 +102,7 @@ public class ChannelDeliveryManagement {
         row.setLastErrorSummary(null);
         routing.createJob(row);
         store.save(row);
-        audit.record(enterprise, actor, "notification.delivery_retry", "notification_delivery", id, "人工再次尝试发送通知",
+        audit.record(enterprise, actor, "notification.delivery_retry", "notification_delivery", id, Messages.text("text.notification.channelDeliveryManagement.retry.1"),
             Map.of("manualRetryCount", row.getManualRetryCount(), "confirmedPossibleDuplicate", Boolean.TRUE.equals(input.confirmMayDuplicate())));
         return queries.detail(actor, enterprise, system, id);
     }
@@ -115,17 +117,17 @@ public class ChannelDeliveryManagement {
         String recipient = ResourceInput.text(input.recipientUserId(), "recipientUserId", 100, true);
         var target = policy.capture(enterprise, recipient, app);
         if (target.bindingId() == null) {
-            throw ApiException.invalidField("recipientUserId", "此成员尚未绑定所选应用，请先完成绑定。");
+            throw ApiException.invalidField("recipientUserId", Messages.text("error.notification.channelDeliveryManagement.test.1"));
         }
-        var notice = new Notice("channel-test:" + UUID.randomUUID(), "integration", "企业消息接入测试", "管理员正在验证此应用的通知发送，请确认能够收到本条测试消息。", null, null);
+        var notice = new Notice("channel-test:" + UUID.randomUUID(), "integration", Messages.text("text.notification.channelDeliveryManagement.test.1"), Messages.text("text.notification.channelDeliveryManagement.test.2"), null, null);
         var written = writer.write(enterprise, recipient, notice, null, actor.id())
-            .orElseThrow(() -> ApiException.invalidField("recipientUserId", "请选择当前企业中的有效成员。"));
+            .orElseThrow(() -> ApiException.invalidField("recipientUserId", Messages.text("error.notification.channelDeliveryManagement.test.2")));
         var blocked = policy.check(written.notification(), target, "test", app, policy.binding(enterprise, connection, recipient, target.bindingId()));
         if (blocked != null) {
             throw new ApiException(HttpStatus.CONFLICT, blocked.code(), blocked.summary());
         }
         var delivery = routing.enqueue(written.notification(), target, "test", clock.instant().plusSeconds(3600));
-        audit.record(enterprise, actor, "integration.test_message", "integration", connection, "排入企业接入测试通知",
+        audit.record(enterprise, actor, "integration.test_message", "integration", connection, Messages.text("text.notification.channelDeliveryManagement.test.3"),
             Map.of("recipientUserId", recipient, "deliveryId", delivery.getId()));
         return queries.detail(actor, enterprise, system, delivery.getId());
     }

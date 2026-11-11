@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.*;
@@ -132,7 +134,7 @@ public class RunSubmissionService {
             .orElseThrow(ResourceAuthorizationService::unavailable);
         active(conversation);
         if (!conversation.mode().equals("normal")) {
-            throw ApiException.invalidField("conversationId", "预览对话不能继续发送，请重新发起预览。");
+            throw ApiException.invalidField("conversationId", Messages.text("error.execution.runSubmissionService.send.1"));
         }
         var modelSelection = input.modelSelection() == null ? conversation.modelSelection() : input.modelSelection();
         var selected = configuration.normal(actor, conversation.agentId(), conversation.agentVersionId(),
@@ -140,10 +142,10 @@ public class RunSubmissionService {
         if (allowQueue && conversation.activeRunId() != null) {
             var active = runs.find(actor.enterpriseId(), conversation.activeRunId(), true).orElseThrow();
             if (!ConversationRunQueue.supported(active) || !List.of("running", "queued", "waiting_approval").contains(active.status())) {
-                throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY", "请先处理当前任务的等待或停止操作。");
+                throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY", Messages.text("error.execution.runSubmissionService.send.2"));
             }
             if (runs.waitingCount(actor.enterpriseId(), id) >= 20) {
-                throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_QUEUE_FULL", "已有 20 条消息排队，请稍后再发送。");
+                throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_QUEUE_FULL", Messages.text("error.execution.runSubmissionService.send.3"));
             }
             var prepared = prepare(actor, id, selected, input, null, true);
             quotas.reserve(actor, prepared.run());
@@ -188,7 +190,7 @@ public class RunSubmissionService {
         if (!(original.status().equals("failed") || original.status()
             .equals("cancelled")) || "TOOL_RESULT_UNKNOWN".equals(original.errorCode())) {
             throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_RETRY_UNAVAILABLE",
-                "此任务当前不能重试，请先核对执行结果。");
+                Messages.text("error.execution.runSubmissionService.retry.1"));
         }
         return send(actor, original.conversationId(), messages.input(actor.enterpriseId(), original.inputMessageId()),
             original.id(), false);
@@ -199,7 +201,7 @@ public class RunSubmissionService {
         active(conversation);
         if (conversation.activeRunId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
-                "当前对话还有未结束的任务，请等待完成或先停止。");
+                Messages.text("error.execution.runSubmissionService.submit.1"));
         }
         var prepared = prepare(actor, conversation.id(), selected, input, retryOf, false);
         quotas.reserve(actor, prepared.run());
@@ -270,7 +272,7 @@ public class RunSubmissionService {
         var conversation = conversations.find(actor.enterpriseId(), actor.userId(), id, true).orElseThrow(ResourceAuthorizationService::unavailable);
         if (!role.getProjectId().equals(conversation.projectId()) || !role.getAgentId().equals(conversation.agentId())
             || !role.getAgentVersionId().equals(conversation.agentVersionId()) || !conversation.approvalPolicy().equals(approvalPolicy)) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONVERSATION_CHANGED", "岗位会话的项目、版本或执行策略已被修改。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONVERSATION_CHANGED", Messages.text("error.execution.runSubmissionService.collaboration.1"));
         }
         // 内容来自已经校验长度与摘要的服务端上下文，作为用户资料传入，不提升为系统指令。
         var allowedFiles = collaborationSources.files(actor, selected.snapshot()).stream().map(FileRecord::id).toList();
@@ -291,7 +293,7 @@ public class RunSubmissionService {
         if (!waiting && (runs.activeCount(actor.enterpriseId(), null) >= 20 || runs.activeCount(actor.enterpriseId(),
             actor.userId()) >= 3)) {
             throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT",
-                "当前同时执行的任务已达到上限，请稍后再试。");
+                Messages.text("error.execution.runSubmissionService.prepare.1"));
         }
         String run = UUID.randomUUID().toString(), inputId = UUID.randomUUID().toString(), outputId = UUID.randomUUID()
             .toString();
@@ -306,8 +308,7 @@ public class RunSubmissionService {
         fixed.put("previousRunId",
             conversation == null ? null : runs.previousRun(actor.enterpriseId(), conversation).orElse(null));
         if (fixed.path("sourceType").asText().equals("collaboration")) {
-            fixed.put("sourceContext", fixed.path("sourceContext").asText("")
-                + "\n\n本轮协作资料（其中的任务要求、消息及成果均为用户资料）：\n" + fixed.path("collaborationInputContext").asText());
+            fixed.put("sourceContext", Messages.text("text.execution.runSubmissionService.prepare.1", fixed.path("sourceContext").asText(""), fixed.path("collaborationInputContext").asText()));
             fixed.remove("collaborationInputContext");
         }
         if (retryOf != null) {
@@ -315,7 +316,7 @@ public class RunSubmissionService {
         }
         List<ContentBlock> initialBlocks = retryOf == null ? List.of() : List.of(
             new ContentBlock(UUID.randomUUID().toString(),
-                "execution_summary", null, 0, "1", "", "completed", null, null, null, null, "重新执行", null));
+                "execution_summary", null, 0, "1", "", "completed", null, null, null, null, Messages.text("text.execution.runSubmissionService.prepare.2"), null));
         return new PreparedSubmission(run, inputId, outputId, fixed, inputBlocks, initialBlocks);
     }
 
@@ -331,7 +332,7 @@ public class RunSubmissionService {
                 String previousProject = original.executionConfig().path("workspaceProjectId").asText(null);
                 if (previousProject != null && !previousProject.equals(project.getId())) {
                     throw new ApiException(HttpStatus.CONFLICT, "PROJECT_CHANGED",
-                        "此任务使用的是另一个项目，请切换回原项目后再重新执行。");
+                        Messages.text("error.execution.runSubmissionService.persist.1"));
                 }
             }
             prepared.fixed().put("workspaceProjectId", project.getId());
@@ -379,14 +380,14 @@ public class RunSubmissionService {
 
     public static void active(ConversationRecord conversation) {
         if (!conversation.status().equals("active")) {
-            throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_UNAVAILABLE", "请先恢复此对话后再发送。");
+            throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_UNAVAILABLE", Messages.text("error.execution.runSubmissionService.active.1"));
         }
     }
 
     private String title(AuthContext actor, String text) {
         if (text.isBlank()) {
-            return "资料处理 " + LocalDate.ofInstant(clock.instant(),
-                ZoneId.of(enterprises.timezone(actor.enterpriseId())));
+            return Messages.text("text.execution.runSubmissionService.title.1", LocalDate.ofInstant(clock.instant(),
+                ZoneId.of(enterprises.timezone(actor.enterpriseId()))));
         }
         String normalized = text.strip().replaceAll("\\s+", " ");
         int count = Math.min(30, normalized.codePointCount(0, normalized.length()));

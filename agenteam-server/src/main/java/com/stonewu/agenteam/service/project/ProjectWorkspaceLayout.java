@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -135,7 +137,7 @@ public class ProjectWorkspaceLayout {
             WorkspacePaths.requireInside(root(), project(location));
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_STORAGE_UNAVAILABLE",
-                "暂时无法读取已登记的项目目录，请检查持久存储及执行节点的挂载配置。", failure);
+                Messages.text("error.project.projectWorkspaceLayout.requireRegistered.1"), failure);
         }
     }
 
@@ -176,6 +178,6 @@ public class ProjectWorkspaceLayout {
 
     public static ApiException unavailable() {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_STORAGE_UNAVAILABLE",
-            "暂时无法读取已登记的项目目录，请检查持久存储及执行节点的挂载配置。");
+            Messages.text("error.project.projectWorkspaceLayout.requireRegistered.1"));
     }
 }

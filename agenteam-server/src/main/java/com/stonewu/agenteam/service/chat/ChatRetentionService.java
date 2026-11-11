@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -65,7 +67,7 @@ public class ChatRetentionService {
             capabilities.expireProbes();
             self.getObject().clean();
         } catch (RuntimeException failure) {
-            LOG.warn("聊天资料清理本轮未完成", ChatSocket.safe("CHAT_RETENTION_FAILED", "稍后继续清理过期资料。", failure));
+            LOG.warn(Messages.log("log.chat.chatRetentionService.poll.1"), ChatSocket.safe("CHAT_RETENTION_FAILED", Messages.text("text.chat.chatRetentionService.poll.1"), failure));
         }
     }
 
@@ -78,7 +80,7 @@ public class ChatRetentionService {
         for (var row : old) {
             receipts.update(new LambdaUpdateWrapper<ChatInboundReceiptRow>().eq(ChatInboundReceiptRow::getEnterpriseId, row.getEnterpriseId())
                 .eq(ChatInboundReceiptRow::getId, row.getId()).isNull(ChatInboundReceiptRow::getPayloadPurgedAt)
-                .set(ChatInboundReceiptRow::getPayloadEncrypted, cipher.encrypt(row.getEnterpriseId(), "receipt", row.getId(), Map.of("reason", "原始事件已按保留期限清理")))
+                .set(ChatInboundReceiptRow::getPayloadEncrypted, cipher.encrypt(row.getEnterpriseId(), "receipt", row.getId(), Map.of("reason", Messages.text("text.chat.chatRetentionService.clean.1"))))
                 .set(ChatInboundReceiptRow::getPayloadPurgedAt, now));
         }
         var unused = messages.selectPage(new Page<ChatMessageRow>(1, 100, false), new LambdaQueryWrapper<ChatMessageRow>()
@@ -89,7 +91,7 @@ public class ChatRetentionService {
             enterprises.lockEnterprise(row.getEnterpriseId()).orElseThrow();
             int changed = messages.update(new LambdaUpdateWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, row.getEnterpriseId())
                 .eq(ChatMessageRow::getId, row.getId()).isNull(ChatMessageRow::getTaskId).eq(ChatMessageRow::getRoutingStatus, row.getRoutingStatus())
-                .set(ChatMessageRow::getContentEncrypted, cipher.encrypt(row.getEnterpriseId(), "message", row.getId(), Map.of("reason", "未采用的消息正文已清理")))
+                .set(ChatMessageRow::getContentEncrypted, cipher.encrypt(row.getEnterpriseId(), "message", row.getId(), Map.of("reason", Messages.text("text.chat.chatRetentionService.clean.2"))))
                 .set(ChatMessageRow::getSenderIdentitiesEncrypted, cipher.encrypt(row.getEnterpriseId(), "message-senders", row.getId(), Map.of()))
                 .set(ChatMessageRow::getMentionsJson, "[]").set(ChatMessageRow::getRoutingStatus, "ignored").set(ChatMessageRow::getContentPurgedAt, now));
             if (changed == 1) {

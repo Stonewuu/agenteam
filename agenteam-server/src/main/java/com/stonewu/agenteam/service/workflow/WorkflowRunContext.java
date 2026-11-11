@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.agent.AgentPublicEventMapper;
 import com.stonewu.agenteam.mapper.workflow.WorkflowEventMapper;
@@ -203,7 +205,7 @@ public final class WorkflowRunContext implements AutoCloseable {
         String session = context.getSessionId();
         var current = context.getAgentState();
         if (current == null) {
-            throw new IllegalStateException("当前模型步骤缺少可保存的框架状态");
+            throw new IllegalStateException(Messages.text("error.workflow.workflowRunContext.boundary.1"));
         }
         var codec = JsonUtils.getJsonCodec();
         live.put(session, codec.fromJson(codec.toJson(current), AgentState.class));

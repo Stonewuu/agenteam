@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -36,7 +38,7 @@ import java.util.Comparator;
 public class ChatCapabilityService {
     private static final Logger LOG = LoggerFactory.getLogger(ChatCapabilityService.class);
     private static final Pattern RECEIVE_MARKER = Pattern.compile(
-        "群策能力验证-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?![a-f0-9-])");
+        Messages.source("protocol.chat.chatCapabilityService.RECEIVE_MARKER.1"));
     public record Check(String enterprise, String botId, long revision, long credentialRevision, String capability, String status, String errorCode) {
     }
     private final ChatBotBindingService bots;
@@ -83,7 +85,7 @@ public class ChatCapabilityService {
             }
             chatId = member.getExternalChatId();
         } else if (!"credential".equals(input.type())) {
-            throw ApiException.invalidField("type", "请在“测试收发消息”中选择接收测试或发送测试。");
+            throw ApiException.invalidField("type", Messages.text("error.chat.chatCapabilityService.prepare.1"));
         }
         try {
             if ("credential".equals(input.type())) {
@@ -94,7 +96,7 @@ public class ChatCapabilityService {
                 adapter.checkHistory(app, chatId);
             }
         } catch (ChannelProviderException failure) {
-            LOG.warn("机器人能力检查失败，企业={}，机器人={}，能力={}，错误代码={}", enterprise, botId, input.type(), failure.code(), failure);
+            LOG.warn(Messages.log("log.chat.chatCapabilityService.prepare.1"), enterprise, botId, input.type(), failure.code(), failure);
             return new Check(enterprise, botId, bot.getRevision(), app.credentialRevision(), input.type(), "failed", failure.code());
         }
         return new Check(enterprise, botId, bot.getRevision(), app.credentialRevision(), input.type(), "passed", "");
@@ -113,7 +115,7 @@ public class ChatCapabilityService {
 
     @Transactional
     public Map<String, Object> receive(UserEntity actor, String enterprise, String botId, ChatCheckRequest input) {
-        String marker = "群策能力验证-" + UUID.randomUUID();
+        String marker = Messages.source("protocol.chat.chatCapabilityService.receive.1", UUID.randomUUID());
         var result = receive(actor, enterprise, botId, input, marker);
         if (input.peerBotId() != null) {
             var bot = bots.require(enterprise, botId);
@@ -122,13 +124,13 @@ public class ChatCapabilityService {
             var other = bots.application(peer);
             if (botId.equals(peer.getId()) || !app.providerCode().equals("feishu") || !other.providerCode().equals("feishu")
                 || app.externalTenantId() == null || !app.externalTenantId().equals(other.externalTenantId())) {
-                throw ApiException.invalidField("peerBotId", "请选择同一飞书企业的两个机器人，再选择已绑定飞书账号的成员参与测试。");
+                throw ApiException.invalidField("peerBotId", Messages.text("error.chat.chatCapabilityService.receive.1"));
             }
             String user = json.read(bot.getConfigJson()).at("/receiveProbe/userId").asText();
             var peerBinding = bindings.selectList(identities.candidates(enterprise, peer.getConnectionId())
                 .eq(UserChannelBindingRow::getUserId, user).orderByAsc(UserChannelBindingRow::getId)).stream().findFirst().orElse(null);
             if (peerBinding == null) {
-                throw ApiException.invalidField("senderBindingId", "尚不能确认测试成员在另一机器人中的身份，请检查飞书账号绑定。");
+                throw ApiException.invalidField("senderBindingId", Messages.text("error.chat.chatCapabilityService.receive.2"));
             }
             receive(actor, enterprise, peer.getId(), new ChatCheckRequest(peer.getRevision(), input.conversationId(), input.type(), peerBinding.getId(), botId), marker);
         }
@@ -150,7 +152,7 @@ public class ChatCapabilityService {
         }
         var binding = bindings.selectList(query.orderByAsc(UserChannelBindingRow::getId)).stream().findFirst().orElse(null);
         if (binding == null) {
-            throw ApiException.invalidField("senderBindingId", "请参与测试的成员在“个人设置 → 企业账号绑定”绑定账号，并开启“允许通过此账号使用智能体”。");
+            throw ApiException.invalidField("senderBindingId", Messages.text("error.chat.chatCapabilityService.receive.3"));
         }
         var config = (ObjectNode) json.read(bot.getConfigJson());
         config.remove("receiveProof");
@@ -168,7 +170,7 @@ public class ChatCapabilityService {
 
     @Transactional
     public boolean consume(ChatBotBindingRow bot, NormalizedChatEvent event) {
-        if (!event.humanMessage() || !event.text().contains("群策能力验证-")) {
+        if (!event.humanMessage() || !event.text().contains(Messages.source("protocol.chat.chatCapabilityService.consume.1"))) {
             return false;
         }
         var matcher = RECEIVE_MARKER.matcher(event.text());
@@ -250,11 +252,11 @@ public class ChatCapabilityService {
             return Map.of("outboundId", row.getId(), "status", row.getStatus());
         }
         if (!"text".equals(input.type())) {
-            throw ApiException.invalidField("type", "请选择要发送的测试消息。");
+            throw ApiException.invalidField("type", Messages.text("error.chat.chatCapabilityService.send.1"));
         }
         evidence(bot, "sendText", Map.of("status", "not_tested", "checkedAt", clock.instant().toString()));
         var row = outbound.text(enterprise, input.conversationId(), botId, null, null, "probe:" + operationId, "send_probe",
-            "群策连接测试：这是一条测试消息，无需回复。", null);
+            Messages.text("text.chat.chatCapabilityService.send.1"), null);
         return Map.of("outboundId", row.getId(), "status", row.getStatus());
     }
 
@@ -305,7 +307,7 @@ public class ChatCapabilityService {
 
     private void changed(int count) {
         if (count != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONFIGURATION_CHANGED", "机器人配置已变化，请刷新后重试。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CONFIGURATION_CHANGED", Messages.text("error.chat.chatCapabilityService.changed.1"));
         }
     }
 }

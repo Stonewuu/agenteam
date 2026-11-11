@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -54,7 +56,7 @@ public class HttpDataSourceReader {
         String endpoint = config.at("/connection/endpoint").asText();
         HttpUrl url = HttpUrl.parse(endpoint);
         if (url == null || !url.isHttps()) {
-            throw ApiException.invalidField("connection.endpoint", "数据接口必须使用 HTTPS 加密地址。");
+            throw ApiException.invalidField("connection.endpoint", Messages.text("error.data.httpDataSourceReader.read.1"));
         }
         var parameters = new HashSet<String>();
         config.at("/connection/queryParameters").forEach(value -> parameters.add(value.asText()));
@@ -66,10 +68,10 @@ public class HttpDataSourceReader {
                 continue;
             }
             if (!condition.operator().equals("eq") || condition.value().isContainerNode()) {
-                throw ApiException.invalidField("filters", "传给接口的查询参数只接受单个相等条件。");
+                throw ApiException.invalidField("filters", Messages.text("error.data.httpDataSourceReader.read.2"));
             }
             if (!sent.add(name)) {
-                throw ApiException.invalidField("filters", "传给接口的同一参数不能重复设置。");
+                throw ApiException.invalidField("filters", Messages.text("error.data.httpDataSourceReader.read.3"));
             }
             address.setQueryParameter(name, condition.value().asText());
         }
@@ -82,7 +84,7 @@ public class HttpDataSourceReader {
             var response = exchange.response();
             if (!response.isSuccessful() || response.body() == null) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "DATA_HTTP_RESPONSE_FAILED",
-                    "数据接口没有返回成功结果，请检查连接与凭据。");
+                    Messages.text("error.data.httpDataSourceReader.read.4"));
             }
             var body = response.body();
             var media = body.contentType();
@@ -108,24 +110,24 @@ public class HttpDataSourceReader {
         } catch (IOException failed) {
             remaining(deadline);
             throw new ApiException(HttpStatus.BAD_GATEWAY, "DATA_HTTP_READ_FAILED",
-                "数据接口无法读取，或返回的 JSON 内容无效，请检查接口后重试。", failed);
+                Messages.text("error.data.httpDataSourceReader.read.5"), failed);
         }
     }
 
     public static long remaining(long deadline) {
         long value = deadline - System.nanoTime();
         if (value <= 0 || Thread.currentThread().isInterrupted()) {
-            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "DATA_QUERY_TIMEOUT", "数据查询已取消或超过允许时间。");
+            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "DATA_QUERY_TIMEOUT", Messages.text("error.data.httpDataSourceReader.remaining.1"));
         }
         return value;
     }
 
     private ApiException invalid() {
-        return new ApiException(HttpStatus.BAD_GATEWAY, "DATA_HTTP_JSON_REQUIRED", "数据接口必须返回 JSON 对象或数组。");
+        return new ApiException(HttpStatus.BAD_GATEWAY, "DATA_HTTP_JSON_REQUIRED", Messages.text("error.data.httpDataSourceReader.invalid.1"));
     }
 
     private ApiException tooLarge() {
         return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "DATA_HTTP_RESPONSE_TOO_LARGE",
-            "数据接口返回内容超过一 MiB，请在接口端缩小单次返回范围。");
+            Messages.text("error.data.httpDataSourceReader.tooLarge.1"));
     }
 }

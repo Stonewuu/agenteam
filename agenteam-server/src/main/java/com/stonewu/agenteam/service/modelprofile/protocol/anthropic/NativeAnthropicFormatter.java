@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol.anthropic;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.anthropic.core.JsonValue;
 import com.anthropic.models.messages.ContentBlockParam;
 import com.anthropic.models.messages.MessageParam;
@@ -61,18 +63,18 @@ final class NativeAnthropicFormatter extends AnthropicChatFormatter {
             case "tool_use" -> {
                 var tool = message.getContentBlocks(ToolUseBlock.class).stream()
                     .filter(value -> Objects.equals(value.getId(), item.toolCallId())).findFirst()
-                    .orElseThrow(() -> new IllegalStateException("保存的模型内容缺少对应工具调用。"));
+                    .orElseThrow(() -> new IllegalStateException(Messages.text("error.modelprofile.nativeAnthropicFormatter.nativeBlock.1")));
                 yield ContentBlockParam.ofToolUse(ToolUseBlockParam.builder().id(tool.getId()).name(tool.getName())
                     .input(JsonValue.from(tool.getInput())).build());
             }
-            default -> throw new IllegalStateException("保存的模型包含当前不支持的原生内容类型。");
+            default -> throw new IllegalStateException(Messages.text("error.modelprofile.nativeAnthropicFormatter.nativeBlock.2"));
         };
     }
 
     private static String attribute(NativeModelState.Item item, String name) {
         Object value = item.attributes().get(name);
         if (!(value instanceof String text) || text.isEmpty()) {
-            throw new IllegalStateException("保存的模型签名内容不完整。");
+            throw new IllegalStateException(Messages.text("error.modelprofile.nativeAnthropicFormatter.attribute.1"));
         }
         return text;
     }

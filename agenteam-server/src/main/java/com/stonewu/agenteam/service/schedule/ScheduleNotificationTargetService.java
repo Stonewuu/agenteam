@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
 import com.stonewu.agenteam.mapper.integration.UserChannelBindingMapper;
@@ -58,12 +60,12 @@ public class ScheduleNotificationTargetService {
 
     public List<NotificationScheduleRecipient> validate(AuthContext actor, List<NotificationScheduleActionRequest.Recipient> requested) {
         if (requested == null || requested.isEmpty() || requested.size() > 50) {
-            throw ApiException.invalidField("action.config.recipients", "请选择一至五十名明确接收成员。");
+            throw ApiException.invalidField("action.config.recipients", Messages.text("error.schedule.scheduleNotificationTargetService.validate.1"));
         }
         var users = requested.stream().map(NotificationScheduleActionRequest.Recipient::userId).toList();
         requireScope(actor, users);
         if (new HashSet<>(users).size() != users.size()) {
-            throw ApiException.invalidField("action.config.recipients", "同一成员不能重复选择。");
+            throw ApiException.invalidField("action.config.recipients", Messages.text("error.schedule.scheduleNotificationTargetService.validate.2"));
         }
         var active = members.selected(actor.enterpriseId(), users).stream().map(value -> value.getId()).collect(Collectors.toSet());
         var ids = requested.stream().flatMap(value -> value.connectionIds().stream()).distinct().toList();
@@ -74,21 +76,21 @@ public class ScheduleNotificationTargetService {
             var person = requested.get(index);
             String field = "action.config.recipients." + index;
             if (!active.contains(person.userId())) {
-                throw ApiException.invalidField(field + ".userId", "此接收成员已不可用，请重新选择。");
+                throw ApiException.invalidField(field + ".userId", Messages.text("error.schedule.scheduleNotificationTargetService.validate.3"));
             }
             var selectedProviders = new HashSet<String>();
             for (String id : person.connectionIds()) {
                 var app = apps.get(id);
                 if (app == null || !"enabled".equals(app.getStatus()) || !Boolean.TRUE.equals(app.getMessagingEnabled())) {
-                    throw ApiException.invalidField(field + ".connectionIds", "所选渠道当前不允许发送通知，请重新选择。");
+                    throw ApiException.invalidField(field + ".connectionIds", Messages.text("error.schedule.scheduleNotificationTargetService.validate.4"));
                 }
                 providers.sender(app.getProviderCode());
                 if (!selectedProviders.add(app.getProviderCode())) {
-                    throw ApiException.invalidField(field + ".connectionIds", "每名成员在同一平台只能选择一个接入应用。");
+                    throw ApiException.invalidField(field + ".connectionIds", Messages.text("error.schedule.scheduleNotificationTargetService.validate.5"));
                 }
                 var binding = bound.get(new BindingKey(person.userId(), id));
                 if (binding == null || !Boolean.TRUE.equals(binding.getReceiveEnabled())) {
-                    throw ApiException.invalidField(field + ".connectionIds", "此成员尚未绑定所选应用，或已经关闭通知接收。");
+                    throw ApiException.invalidField(field + ".connectionIds", Messages.text("error.schedule.scheduleNotificationTargetService.validate.6"));
                 }
             }
             result.add(new NotificationScheduleRecipient(person.userId(), List.copyOf(person.connectionIds())));
@@ -98,13 +100,13 @@ public class ScheduleNotificationTargetService {
 
     public void requireScope(AuthContext actor, List<String> users) {
         if (!maySend(actor, users)) {
-            throw ApiException.invalidField("action.config.recipients", "当前只能向自己发送通知，向其他成员发送需要企业授权。");
+            throw ApiException.invalidField("action.config.recipients", Messages.text("error.schedule.scheduleNotificationTargetService.requireScope.1"));
         }
     }
 
     public void requireExecutionScope(AuthContext actor, List<String> users) {
         if (!maySend(actor, users)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "SCHEDULE_PERMISSION_DENIED", "创建人已无权向所选成员发送通知。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "SCHEDULE_PERMISSION_DENIED", Messages.text("error.schedule.scheduleNotificationTargetService.requireExecutionScope.1"));
         }
     }
 
@@ -159,7 +161,7 @@ public class ScheduleNotificationTargetService {
         return recipients.stream().map(person -> new NotificationScheduleSnapshot.Recipient(person.userId(), person.connectionIds().stream().map(id -> {
             var app = apps.get(id);
             if (app == null) {
-                throw new IllegalStateException("计划接收渠道缺少企业接入记录");
+                throw new IllegalStateException(Messages.text("error.schedule.scheduleNotificationTargetService.capture.1"));
             }
             var binding = bound.get(new BindingKey(person.userId(), id));
             return new ChannelDeliveryTarget(id, app.getCredentialRevision(), binding == null ? null : binding.getId(), binding == null ? null : binding.getRevision());

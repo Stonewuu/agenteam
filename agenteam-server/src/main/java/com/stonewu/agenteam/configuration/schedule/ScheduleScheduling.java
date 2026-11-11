@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.schedule.ScheduleTriggerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +31,11 @@ public class ScheduleScheduling {
                 try {
                     triggers.process(candidate);
                 } catch (RuntimeException failure) {
-                    LOG.warn("计划 {} 本次检查未提交，下一轮继续处理", candidate.id(), failure);
+                    LOG.warn(Messages.log("log.schedule.scheduleScheduling.poll.1"), candidate.id(), failure);
                 }
             }
         } catch (RuntimeException failure) {
-            LOG.warn("计划列表暂时无法读取", failure);
+            LOG.warn(Messages.log("log.schedule.scheduleScheduling.poll.2"), failure);
         }
     }
 }

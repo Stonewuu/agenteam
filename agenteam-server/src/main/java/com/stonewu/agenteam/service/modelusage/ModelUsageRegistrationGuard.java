@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -51,11 +53,11 @@ public class ModelUsageRegistrationGuard {
         if (context.purpose().equals("title")) {
             // 标题还需锁企业校验权限，必须在账号更新锁之前取得企业锁。
             enterprises.lockEnterprise(context.enterpriseId()).filter("active"::equals)
-                .orElseThrow(() -> new CancellationException("标题所属企业已不可用。"));
+                .orElseThrow(() -> new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireActive.1")));
         }
-        var user = users.findByIdForUpdate(context.userId(), 2).orElseThrow(() -> new CancellationException("模型调用账号已不可用。"));
+        var user = users.findByIdForUpdate(context.userId(), 2).orElseThrow(() -> new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireActive.2")));
         if (!user.status().equals("active") || !behavior.allowed(user)) {
-            throw new CancellationException("模型调用账号已不可用。");
+            throw new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireActive.2"));
         }
         if (context.purpose().equals("title")) {
             authorization.lockAndRequire(new AuthContext(user, context.enterpriseId(), Set.of()), "agent.run");
@@ -63,15 +65,15 @@ public class ModelUsageRegistrationGuard {
             return;
         }
         if (context.backgroundJob() != null) {
-            throw new CancellationException("模型调用的后台任务类型不正确。");
+            throw new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireActive.3"));
         }
         if (context.runId() == null && context.purpose().equals("preview")) {
             return;
         }
-        var run = runs.find(context.enterpriseId(), context.runId(), false).orElseThrow(() -> new CancellationException("本次执行已不存在。"));
+        var run = runs.find(context.enterpriseId(), context.runId(), false).orElseThrow(() -> new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireActive.4")));
         if (!run.userId().equals(context.userId()) || !run.status().equals("running")
             || run.currentAttemptNo() != context.attemptNo() || run.leaseVersion() != context.leaseVersion()) {
-            throw new CancellationException("本次执行已结束或已由另一次尝试继续。");
+            throw new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireActive.5"));
         }
     }
 
@@ -85,14 +87,14 @@ public class ModelUsageRegistrationGuard {
             || job.getLeaseUntil() == null || !job.getLeaseUntil().isAfter(clock.instant())
             || !Objects.equals(ConversationTitleJob.key(context.conversationId()), job.getDedupeKey())
             || !Objects.equals(context.conversationId(), json.read(job.getPayloadJson()).path("conversationId").asText())) {
-            throw new CancellationException("标题模型调用的执行权或归属已失效。");
+            throw new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireTitle.1"));
         }
         var conversation = conversations.selectById(context.conversationId());
         if (conversation == null || !Objects.equals(context.enterpriseId(), conversation.getEnterpriseId())
             || !Objects.equals(context.userId(), conversation.getUserId()) || "deleted".equals(conversation.getStatus())
             || !Integer.valueOf(0).equals(conversation.getTitleCustomized()) || !"normal".equals(conversation.getMode())
             || !"web".equals(conversation.getSourceType())) {
-            throw new CancellationException("此对话已不再允许自动命名。");
+            throw new CancellationException(Messages.text("error.modelusage.modelUsageRegistrationGuard.requireTitle.2"));
         }
     }
 }

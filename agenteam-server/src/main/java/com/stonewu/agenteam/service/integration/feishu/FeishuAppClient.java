@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -46,7 +48,7 @@ public class FeishuAppClient {
     public record Polled(String state, String appId, String secret) {
         @Override
         public String toString() {
-            return "Polled[state=" + state + ", 凭据已隐藏]";
+            return Messages.log("log.integration.feishuAppClient.toString.1", state);
         }
     }
 
@@ -69,12 +71,12 @@ public class FeishuAppClient {
             Map.of("action", "poll", "device_code", device), Set.of("authorization_pending", "slow_down", "expired_token", "access_denied"));
         var body = response.body();
         if (body == null || !body.isObject()) {
-            throw failure("FEISHU_REGISTRATION_UNCERTAIN", "暂时无法确认飞书创建结果，请稍后继续检查。");
+            throw failure("FEISHU_REGISTRATION_UNCERTAIN", Messages.text("error.integration.feishuAppClient.poll.1"));
         }
         if (response.status() == 200 && body.hasNonNull("client_id") && body.hasNonNull("client_secret")) {
             String appId = required(body, "client_id");
             if (!appId.matches("cli_[A-Za-z0-9]{1,100}")) {
-                throw failure("FEISHU_REGISTRATION_INVALID", "飞书返回的应用编号无效。");
+                throw failure("FEISHU_REGISTRATION_INVALID", Messages.text("error.integration.feishuAppClient.poll.2"));
             }
             return new Polled("created", appId, required(body, "client_secret"));
         }
@@ -83,9 +85,9 @@ public class FeishuAppClient {
             return new Polled(state, null, null);
         }
         if ("lark".equals(body.path("user_info").path("tenant_brand").asText())) {
-            throw failure("FEISHU_ACCOUNT_REQUIRED", "请使用飞书企业账号完成创建。");
+            throw failure("FEISHU_ACCOUNT_REQUIRED", Messages.text("error.integration.feishuAppClient.poll.3"));
         }
-        throw failure("FEISHU_REGISTRATION_UNCERTAIN", "飞书尚未返回明确创建结果，请检查创建页面后重试查询。");
+        throw failure("FEISHU_REGISTRATION_UNCERTAIN", Messages.text("error.integration.feishuAppClient.poll.4"));
     }
 
     public String token(String record, String appId, String secret) {
@@ -121,13 +123,13 @@ public class FeishuAppClient {
             ready &= granted.contains(MANAGE_SCOPE + ":user") && granted.contains("offline_access:user");
         }
         if (!ready) {
-            throw failure("FEISHU_SCOPES_REQUIRED", "飞书尚未授予创建流程所需的全部权限，请完成平台审批后继续。");
+            throw failure("FEISHU_SCOPES_REQUIRED", Messages.text("error.integration.feishuAppClient.requireScopes.1"));
         }
     }
 
     public void requireSelfManagement(String record, String token) {
         if (!grantedScopes(record, token).contains("application:application:self_manage:tenant")) {
-            throw failure("FEISHU_SELF_MANAGEMENT_REQUIRED", "此应用尚未开通自动配置权限，请在飞书为此应用开通“管理应用自身”并发布后重试，或新建企业接入。");
+            throw failure("FEISHU_SELF_MANAGEMENT_REQUIRED", Messages.text("error.integration.feishuAppClient.requireSelfManagement.1"));
         }
     }
 
@@ -188,7 +190,7 @@ public class FeishuAppClient {
         URI uri = URI.create(value);
         if (!"https".equals(uri.getScheme()) || uri.getUserInfo() != null || uri.getFragment() != null
             || uri.getPort() != -1 && uri.getPort() != 443 || !Set.of("open.feishu.cn", "accounts.feishu.cn").contains(uri.getHost())) {
-            throw failure("FEISHU_LINK_INVALID", "飞书未返回可用的创建地址。");
+            throw failure("FEISHU_LINK_INVALID", Messages.text("error.integration.feishuAppClient.allowedLink.1"));
         }
         return uri;
     }
@@ -208,7 +210,7 @@ public class FeishuAppClient {
             }
             return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes.toByteArray());
         } catch (IOException failure) {
-            throw new IllegalStateException("飞书创建参数无法生成", failure);
+            throw new IllegalStateException(Messages.text("error.integration.feishuAppClient.addons.1"), failure);
         }
     }
 
@@ -222,7 +224,7 @@ public class FeishuAppClient {
 
     private JsonNode registrationBody(ChannelHttpResponse response) {
         if (response.status() != 200 || response.body() == null || !response.body().isObject() || response.body().hasNonNull("error")) {
-            throw failure("FEISHU_REGISTRATION_UNAVAILABLE", "飞书暂时无法开始创建，请稍后重试。");
+            throw failure("FEISHU_REGISTRATION_UNAVAILABLE", Messages.text("error.integration.feishuAppClient.registrationBody.1"));
         }
         return response.body();
     }
@@ -230,17 +232,17 @@ public class FeishuAppClient {
     private JsonNode success(ChannelHttpResponse response) {
         String code = response.body() == null ? "" : response.body().path("code").asText();
         if (Set.of("99991663", "99991665", "20005", "20008", "20037").contains(code)) {
-            throw failure("FEISHU_AUTHORIZATION_REQUIRED", "飞书管理授权已失效，请重新授权后继续。");
+            throw failure("FEISHU_AUTHORIZATION_REQUIRED", Messages.text("error.integration.feishuAppClient.success.1"));
         }
         if (Set.of("210036", "210037").contains(code)) {
-            throw failure("FEISHU_APP_ROLE_REQUIRED", "当前飞书账号没有此应用的管理权限，请由应用所有者或管理员授权。");
+            throw failure("FEISHU_APP_ROLE_REQUIRED", Messages.text("error.integration.feishuAppClient.success.2"));
         }
         return responses.requireSuccess(response, true);
     }
 
     public static String required(JsonNode value, String key) {
         if (!value.path(key).isTextual() || value.path(key).asText().isBlank()) {
-            throw failure("FEISHU_RESPONSE_INVALID", "飞书返回的信息不完整，请稍后继续检查。");
+            throw failure("FEISHU_RESPONSE_INVALID", Messages.text("error.integration.feishuAppClient.required.1"));
         }
         return value.path(key).asText();
     }

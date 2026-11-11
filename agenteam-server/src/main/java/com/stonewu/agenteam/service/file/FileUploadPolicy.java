@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.file.request.FilePrepareRequest;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -26,21 +28,21 @@ public class FileUploadPolicy {
         long limit = maxBytes(request.purpose());
         if (request.sizeBytes() < 1 || request.sizeBytes() > limit) {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE,
-                "FILE_TOO_LARGE", "此类文件不能超过 " + (limit / (1024 * 1024)) + " MiB。");
+                "FILE_TOO_LARGE", Messages.text("error.file.fileUploadPolicy.prepare.1", (limit / (1024 * 1024))));
         }
         String name = request.name();
         if (name == null || name.isBlank() || name.codePointCount(0, name.length()) > 255 || name.contains(
             "/") || name.contains("\\")
             || name.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("name", "请使用不含路径或控制字符的文件名。");
+            throw ApiException.invalidField("name", Messages.text("error.file.fileUploadPolicy.prepare.2"));
         }
         if (request.sha256() == null || !request.sha256().matches("[a-f0-9]{64}")) {
-            throw ApiException.invalidField("sha256", "文件摘要格式不正确，请重新选择文件。");
+            throw ApiException.invalidField("sha256", Messages.text("error.file.fileUploadPolicy.prepare.3"));
         }
         boolean resourceRequired = Set.of("knowledge", "data_import").contains(request.purpose());
         if (resourceRequired != (request.resourceId() != null)) {
             throw ApiException.invalidField("resourceId",
-                resourceRequired ? "请先选择所属资料资源。" : "此类文件不直接关联资料资源。");
+                resourceRequired ? Messages.text("error.file.fileUploadPolicy.prepare.4") : Messages.text("error.file.fileUploadPolicy.prepare.5"));
         }
         return mediaType(request.purpose(), name);
     }
@@ -50,7 +52,7 @@ public class FileUploadPolicy {
             case "skill_import" -> 1024 * 1024;
             case "data_import" -> 10 * 1024 * 1024;
             case "knowledge", "attachment" -> 20 * 1024 * 1024;
-            default -> throw ApiException.invalidField("purpose", "请选择支持的文件用途。");
+            default -> throw ApiException.invalidField("purpose", Messages.text("error.file.fileUploadPolicy.maxBytes.1"));
         };
     }
 
@@ -68,10 +70,10 @@ public class FileUploadPolicy {
         };
         if (media == null) {
             throw ApiException.invalidField("name", switch (purpose) {
-                case "skill_import" -> "请选择 JSON、Markdown 或 TXT 技能文件。";
-                case "data_import" -> "请选择 UTF-8 编码的 CSV 文件。";
-                case "attachment" -> "请选择图片、PDF、Word、Excel、PowerPoint 或文本文件。";
-                default -> "请选择有文字内容的 PDF、DOCX、TXT 或 Markdown 文件。";
+                case "skill_import" -> Messages.text("error.file.fileUploadPolicy.mediaType.1");
+                case "data_import" -> Messages.text("error.file.fileUploadPolicy.mediaType.2");
+                case "attachment" -> Messages.text("error.file.fileUploadPolicy.mediaType.3");
+                default -> Messages.text("error.file.fileUploadPolicy.mediaType.4");
             });
         }
         return media;

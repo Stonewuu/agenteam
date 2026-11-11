@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.background.PublicJobMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRoomEntryFileMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
@@ -103,7 +105,7 @@ public class FileAccessService {
     public FileRecord ready(AuthContext actor, String id) {
         var file = readable(actor, id, false);
         if (!file.status().equals("ready")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", "文件尚未通过检查，暂时无法使用。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", Messages.text("error.file.fileAccessService.ready.1"));
         }
         return file;
     }
@@ -116,6 +118,6 @@ public class FileAccessService {
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "FILE_UNAVAILABLE", "文件不存在或已不可读取。");
+        return new ApiException(HttpStatus.NOT_FOUND, "FILE_UNAVAILABLE", Messages.text("error.file.fileAccessService.unavailable.1"));
     }
 }

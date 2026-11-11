@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.LiveConversationState;
@@ -94,7 +96,7 @@ public class LiveEventCache {
         var result = strings(redis.execute(INITIALIZE, keys, owner, generation, Long.toString(databaseVersion),
             activeRun == null ? "" : activeRun, replaceGeneration == null ? "" : replaceGeneration));
         if (result.size() < 2) {
-            throw new IllegalStateException("实时内容正在由其他请求初始化");
+            throw new IllegalStateException(Messages.text("error.execution.liveEventCache.initialize.1"));
         }
         return result.get(1);
     }
@@ -108,10 +110,10 @@ public class LiveEventCache {
     public AppendResult append(String enterprise, String conversation, StreamCursor cursor, String leaseToken,
                                LiveEventCodec.Mutation mutation) {
         if (mutation.kind().equals("delta") && mutation.text().getBytes(StandardCharsets.UTF_8).length > 4096) {
-            throw new IllegalArgumentException("单次实时正文片段超过允许长度");
+            throw new IllegalArgumentException(Messages.text("error.execution.liveEventCache.append.1"));
         }
         if (mutation.text().length() > 200_000) {
-            throw new IllegalArgumentException("内容块超过允许长度");
+            throw new IllegalArgumentException(Messages.text("error.execution.liveEventCache.append.2"));
         }
         String prefix = key(enterprise, conversation);
         var keys = coreKeys(prefix);
@@ -127,7 +129,7 @@ public class LiveEventCache {
                 mutation.envelope(),
                 mutation.activeChange(), Integer.toString(eventLimit), "2048", cursor.sequence()));
         if (result.isEmpty()) {
-            throw new IllegalStateException("Redis 没有返回实时事件写入结果");
+            throw new IllegalStateException(Messages.text("error.execution.liveEventCache.append.3"));
         }
         return result.size() == 4 ? new AppendResult(result.getFirst(), new StreamCursor(result.get(1), result.get(2)),
             Long.parseLong(result.get(3))) : new AppendResult(result.getFirst(), cursor, 0);
@@ -161,7 +163,7 @@ public class LiveEventCache {
             }
             return Optional.of(state(result, values));
         }
-        throw new IllegalStateException("累计内容目录持续变化，请重新读取对话");
+        throw new IllegalStateException(Messages.text("error.execution.liveEventCache.snapshot.1"));
     }
 
     public boolean renew(String enterprise, String conversation, StreamCursor cursor, JobLease lease, Instant until,
@@ -221,7 +223,7 @@ public class LiveEventCache {
             var event = codec.decode((String) value.getValue().get("data"));
             if (!value.getId().getValue().equals(event.sequence() + "-0") || !enterprise.equals(event.enterpriseId())
                 || !conversation.equals(event.conversationId()) || !cursor.generation().equals(event.generation())) {
-                throw new IllegalStateException("实时事件的归属或读取位置不一致");
+                throw new IllegalStateException(Messages.text("error.execution.liveEventCache.after.1"));
             }
             return event;
         }).toList();

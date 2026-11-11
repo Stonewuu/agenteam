@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.agent.AgentHireService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +31,7 @@ public class HireMaintenanceConfiguration {
         try {
             hires.expireApplications();
         } catch (RuntimeException failure) {
-            LOGGER.warn("雇佣申请暂时无法整理，稍后重试", failure);
+            LOGGER.warn(Messages.log("log.agent.hireMaintenanceConfiguration.expireApplications.1"), failure);
         }
     }
 }

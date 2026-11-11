@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.file.entity.OpenedPreviewFile;
 import com.stonewu.agenteam.service.audit.AuditEventService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,18 +51,18 @@ final class FilePreviewHttpResponse {
                 var ranges = HttpRange.parseRanges(rangeHeader);
                 if (ranges.size() == 1) {
                     if (size == 0) {
-                        throw new IllegalArgumentException("空文件没有可读取的字节范围");
+                        throw new IllegalArgumentException(Messages.text("error.file.filePreviewHttpResponse.write.1"));
                     }
                     start = ranges.getFirst().getRangeStart(size);
                     end = ranges.getFirst().getRangeEnd(size);
                     if (start < 0 || start >= size || end < start) {
-                        throw new IllegalArgumentException("字节范围超出文件大小");
+                        throw new IllegalArgumentException(Messages.text("error.file.filePreviewHttpResponse.write.2"));
                     }
                     response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
                     response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + size);
                 }
             } catch (IllegalArgumentException failure) {
-                LOG.debug("文件预览的读取范围无效，请求编号 {}，方法 {}，路径 {}",
+                LOG.debug(Messages.log("log.file.filePreviewHttpResponse.write.1"),
                     request.getAttribute(AuditEventService.REQUEST_ID_ATTRIBUTE), request.getMethod(),
                     request.getRequestURI(), failure);
                 response.setStatus(HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
@@ -79,7 +81,7 @@ final class FilePreviewHttpResponse {
         while (remaining > 0) {
             int count = opened.input().read(buffer, 0, (int) Math.min(buffer.length, remaining));
             if (count < 0) {
-                throw new IOException("文件内容在传输结束前中断");
+                throw new IOException(Messages.text("error.file.filePreviewHttpResponse.write.3"));
             }
             if (count == 0) {
                 continue;

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import io.agentscope.core.message.Msg;
@@ -22,12 +24,12 @@ public final class ModelInputBudget {
             json.writeValue(counter, tools);
         } catch (IOException failure) {
             if (counter.exceeded) {
-                var safe = new IOException("模型输入超过内存预算");
+                var safe = new IOException(Messages.text("error.modelprofile.modelInputBudget.requireFits.1"));
                 safe.setStackTrace(failure.getStackTrace());
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "MODEL_INPUT_TOO_LARGE",
-                    "本次对话内容过大，已保留原始内容，请缩小输入或新建对话后重试。", safe);
+                    Messages.text("error.modelprofile.modelInputBudget.requireFits.2"), safe);
             }
-            var safe = new IllegalStateException("模型输入无法编码。");
+            var safe = new IllegalStateException(Messages.text("error.modelprofile.modelInputBudget.requireFits.3"));
             safe.setStackTrace(failure.getStackTrace());
             throw safe;
         }
@@ -56,7 +58,7 @@ public final class ModelInputBudget {
             count += length;
             if (count > maximum) {
                 exceeded = true;
-                throw new IOException("模型输入超过内存预算");
+                throw new IOException(Messages.text("error.modelprofile.modelInputBudget.requireFits.1"));
             }
         }
     }

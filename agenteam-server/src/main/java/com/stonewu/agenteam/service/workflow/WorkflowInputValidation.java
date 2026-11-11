@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.workflow.request.*;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -19,7 +21,7 @@ public final class WorkflowInputValidation {
         WorkflowNodes.entries(config);
         validateGraph(config, complete);
         if (executionSize(config) > 200) {
-            throw ApiException.invalidField("config.nodes", "按循环上限计算，工作流最多执行 200 个步骤，请减少循环次数或步骤。");
+            throw ApiException.invalidField("config.nodes", Messages.text("error.workflow.workflowInputValidation.validate.1"));
         }
     }
 
@@ -53,7 +55,7 @@ public final class WorkflowInputValidation {
                 case "join" -> WorkflowJoinNodeInput.class;
                 case "loop" -> WorkflowLoopNodeInput.class;
                 case "end" -> WorkflowEndNodeInput.class;
-                default -> throw ApiException.invalidField(path + ".type", "请选择支持的节点类型。");
+                default -> throw ApiException.invalidField(path + ".type", Messages.text("error.workflow.workflowInputValidation.validateGraph.1"));
             };
             InputValidation.read(node, type, path);
             var fields = node.path("config");
@@ -61,16 +63,16 @@ public final class WorkflowInputValidation {
                 if (fields.path("mode").asText().equals("count")) {
                     InputValidation.required(fields, path + ".config", "count");
                     if (fields.path("count").asInt() > fields.path("maxIterations").asInt()) {
-                        throw ApiException.invalidField(path + ".config.count", "循环次数不能超过执行上限。");
+                        throw ApiException.invalidField(path + ".config.count", Messages.text("error.workflow.workflowInputValidation.validateGraph.2"));
                     }
                 } else {
                     InputValidation.required(fields, path + ".config", "items");
                     var items = fields.path("items");
                     if (!items.isArray() && !(items.isTextual() && items.asText().matches("\\$\\{[^{}]+}"))) {
-                        throw ApiException.invalidField(path + ".config.items", "请选择一个列表变量或填写固定列表。");
+                        throw ApiException.invalidField(path + ".config.items", Messages.text("error.workflow.workflowInputValidation.validateGraph.3"));
                     }
                     if (items.isArray() && items.size() > fields.path("maxIterations").asInt()) {
-                        throw ApiException.invalidField(path + ".config.items", "列表条目不能超过循环执行上限。");
+                        throw ApiException.invalidField(path + ".config.items", Messages.text("error.workflow.workflowInputValidation.validateGraph.4"));
                     }
                 }
                 validateGraph(fields.path("body"), complete);
@@ -96,7 +98,7 @@ public final class WorkflowInputValidation {
                         "literal") ? 1 : 0);
                     if (sources != 1) {
                         throw ApiException.invalidField(path + ".config.fields",
-                            "每个转换字段只能选择一个来源、模板或固定值。");
+                            Messages.text("error.workflow.workflowInputValidation.validateGraph.5"));
                     }
                 }
             }
@@ -113,11 +115,11 @@ public final class WorkflowInputValidation {
         for (var group : graph.path("groups")) {
             String path = "config.groups[" + index++ + "]";
             if (!groups.add(group.path("groupId").asText()) || nodes.contains(group.path("groupId").asText()) || group.path("name").asText().isBlank()) {
-                throw ApiException.invalidField(path, "分组编号不能重复，名称不能为空。");
+                throw ApiException.invalidField(path, Messages.text("error.workflow.workflowInputValidation.validateGroups.1"));
             }
             for (var member : group.path("nodeIds")) {
                 if (!nodes.contains(member.asText()) || !groupedNodes.add(member.asText())) {
-                    throw ApiException.invalidField(path + ".nodeIds", "分组只能包含本层已有节点，同一节点不能重复分组。");
+                    throw ApiException.invalidField(path + ".nodeIds", Messages.text("error.workflow.workflowInputValidation.validateGroups.2"));
                 }
             }
         }
@@ -125,7 +127,7 @@ public final class WorkflowInputValidation {
 
     private static void condition(JsonNode value, String path, int depth, int[] comparisons) {
         if (depth > 5 || !value.isObject()) {
-            throw ApiException.invalidField(path, "条件需要是对象，且最多嵌套五层。");
+            throw ApiException.invalidField(path, Messages.text("error.workflow.workflowInputValidation.condition.1"));
         }
         if (value.has("field")) {
             InputValidation.fields(value, path, "field", "operator", "value");
@@ -135,10 +137,10 @@ public final class WorkflowInputValidation {
                 || !Set.of("eq", "ne", "gt", "gte", "lt", "lte", "contains", "in", "exists")
                 .contains(value.path("operator").asText())
                 || ++comparisons[0] > 50) {
-                throw ApiException.invalidField(path, "比较字段或操作不正确，比较条件不能超过五十个。");
+                throw ApiException.invalidField(path, Messages.text("error.workflow.workflowInputValidation.condition.2"));
             }
             if (!value.path("operator").asText().equals("exists") && !value.has("value")) {
-                throw ApiException.invalidField(path + ".value", "请填写比较值。");
+                throw ApiException.invalidField(path + ".value", Messages.text("error.workflow.workflowInputValidation.condition.3"));
             }
         } else if (value.has("not")) {
             InputValidation.fields(value, path, "not");
@@ -148,7 +150,7 @@ public final class WorkflowInputValidation {
             InputValidation.fields(value, path, operation);
             JsonNode children = value.path(operation);
             if (!children.isArray() || children.isEmpty() || children.size() > 20) {
-                throw ApiException.invalidField(path, "组合条件需要一至二十个子条件。");
+                throw ApiException.invalidField(path, Messages.text("error.workflow.workflowInputValidation.condition.4"));
             }
             for (var child : children) {
                 condition(child, path + "." + operation, depth + 1, comparisons);

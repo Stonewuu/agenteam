@@ -1,0 +1,32 @@
+{
+  "platform_basics": {
+    "name": {"source": "平台基础", "zh-CN": "平台基础", "en": "Workspace utilities"},
+    "description": {"source": "读取当前企业和时间，搜索本人有权访问的工作空间内容。", "zh-CN": "查看企业和时间，搜索工作空间内容。", "en": "View the organization and time, and search workspace content."},
+    "icon": "Library", "color": "purple"
+  },
+  "todo_management": {
+    "name": {"source": "待办管理", "zh-CN": "待办管理", "en": "To-do management"},
+    "description": {"source": "查询、创建和维护待办，选择负责人、修改状态与查看历史。修改前需确认。", "zh-CN": "查询和管理待办，分配负责人、修改状态并查看历史。修改前需确认。", "en": "Find and manage to-dos, assign owners, update statuses, and view history. Changes require confirmation."},
+    "icon": "NotebookPen", "color": "mint"
+  },
+  "schedule_management": {
+    "name": {"source": "定时任务", "zh-CN": "定时任务", "en": "Schedules"},
+    "description": {"source": "查询和管理本人的执行计划，预览未来时间，启停计划或执行一次。修改前需确认。", "zh-CN": "管理执行计划，预览时间、启停计划或执行一次。修改前需确认。", "en": "Manage schedules, preview upcoming runs, pause or enable schedules, or run them once. Changes require confirmation."},
+    "icon": "GitBranch", "color": "blue"
+  },
+  "web_read": {
+    "name": {"source": "网页读取", "zh-CN": "网页读取", "en": "Web reader"},
+    "description": {"source": "读取指定地址的文字内容，用于任务中的资料参考。", "zh-CN": "读取网页文字内容，作为任务参考。", "en": "Read webpage text as reference material for a task."},
+    "icon": "Telescope", "color": "amber"
+  },
+  "workflow_management": {
+    "name": {"source": "工作流管理", "zh-CN": "工作流管理", "en": "Workflow management"},
+    "description": {"source": "查询、创建和编辑已授权的工作流草稿，选择真实插件与智能体并检查流程。", "zh-CN": "查询、创建和编辑工作流，选择插件和智能体并检查流程。", "en": "Find, create, and edit workflows, choose plugins and agents, and validate the workflow."},
+    "icon": "GitBranch", "color": "blue"
+  },
+  "group_collaboration": {
+    "name": {"source": "团队协作", "zh-CN": "团队协作", "en": "Collaboration"},
+    "description": {"source": "在当前协作任务中分配岗位工作、移交负责人、共享成果并等待其他岗位。", "zh-CN": "分配岗位工作、移交负责人、共享成果并等待其他岗位。", "en": "Assign work, transfer responsibility, share results, and wait for other roles."},
+    "icon": "Box", "color": "purple"
+  }
+}

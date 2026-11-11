@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
@@ -89,11 +91,11 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
                                           String workingDirectory,
                                           Duration timeout, ToolCallControl control) {
         if (!settings.executeEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", "当前部署未启用沙盒执行。");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", Messages.text("error.project.dockerProjectCommandExecutor.execute.1"));
         }
         if (callId == null || !callId.matches("[A-Za-z0-9_-]{1,100}") || command == null || command.isBlank()
             || Utf8Text.size(command) > 65536 || command.indexOf('\0') >= 0) {
-            throw ApiException.invalidField("command", "请提供有效的命令，命令内容不能超过 64 KB。");
+            throw ApiException.invalidField("command", Messages.text("error.project.dockerProjectCommandExecutor.execute.2"));
         }
         long deadline = System.nanoTime() + Math.min(timeout.toNanos(),
             Duration.ofSeconds(settings.timeoutSeconds()).toNanos());
@@ -105,7 +107,7 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
             }
             var working = ProjectExecutionPaths.workingDirectory(layout, location, workingDirectory);
             if (!Files.isDirectory(working, LinkOption.NOFOLLOW_LINKS)) {
-                throw ApiException.invalidField("workingDirectory", "指定的工作目录不存在，请先创建目录。");
+                throw ApiException.invalidField("workingDirectory", Messages.text("error.project.dockerProjectCommandExecutor.execute.3"));
             }
             String directory = ProjectExecutionPaths.containerDirectory(layout, location, working);
             try (var permit = capacity.acquire(remaining(deadline), control)) {
@@ -149,7 +151,7 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
                         cancelSafely(record);
                     }
                 } catch (IOException | RuntimeException failure) {
-                    LOG.warn("检查项目容量失败，项目编号 {}，调用编号 {}", record.projectId(), record.callId(), failure);
+                    LOG.warn(Messages.log("log.project.dockerProjectCommandExecutor.run.1"), record.projectId(), record.callId(), failure);
                     cancelSafely(record);
                 }
             }, 500, 500, TimeUnit.MILLISECONDS);
@@ -181,7 +183,7 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
                 lifecycle.complete(record, lifecycle.result(record, status, false));
             }
         } catch (RuntimeException failure) {
-            LOG.warn("命令停止结果待核实，项目编号 {}，调用编号 {}", record.projectId(), record.callId(), failure);
+            LOG.warn(Messages.log("log.project.dockerProjectCommandExecutor.cancelSafely.1"), record.projectId(), record.callId(), failure);
         } finally {
             if (interrupted) {
                 Thread.currentThread().interrupt();
@@ -203,14 +205,14 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
             }
             if (!containers.daemon(Duration.ofSeconds(5), null).equals(previous.daemonId())) {
                 throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_EXECUTION_HOST_CHANGED",
-                    "请先在原执行节点核实旧命令，再切换执行节点。");
+                    Messages.text("error.project.dockerProjectCommandExecutor.recover.1"));
             }
             if (previous.containerName() == null) {
                 containers.requireLegacyStopped(previous.project(), Duration.ofSeconds(5));
             } else {
                 if (!containers.name(previous.project()).equals(previous.containerName())) {
                     throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_EXECUTION_HOST_CHANGED",
-                        "旧命令容器不属于当前部署，请先核实原执行环境。");
+                        Messages.text("error.project.dockerProjectCommandExecutor.recover.2"));
                 }
                 // 仅兼容升级前未结束的记录，新命令不再生成此文件。
                 containers.stop(previous.project(), Duration.ofSeconds(5));

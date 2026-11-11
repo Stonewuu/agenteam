@@ -9,7 +9,7 @@ let storageWarningShown = false;
 function reportStorageFailure(failure: unknown) {
   if (!storageWarningShown) {
     storageWarningShown = true;
-    console.warn("无法保存文件侧栏开关状态，本次页面仍可正常使用。", failure);
+    console.warn("Failed to persist file sidebar visibility; the current page remains usable.", failure);
   }
 }
 

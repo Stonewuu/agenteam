@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleDefinition;
@@ -58,7 +60,7 @@ public class ScheduleMapper {
         int changed = statements.updateSchedule(before, value, value.rule().frequency().name().toLowerCase(Locale.ROOT),
             encodeWeekdays(value), value.rule().timezone().getId(), now);
         if (changed != 1) {
-            throw new IllegalStateException("已锁定计划的修改版本发生变化，当前操作未提交");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleMapper.update.1"));
         }
     }
 
@@ -66,7 +68,7 @@ public class ScheduleMapper {
         int changed = statements.enabledScheduledTask(enabled, timestamp(next), timestamp(now), before.enterpriseId(),
             before.userId(), before.id(), before.revision());
         if (changed != 1) {
-            throw new IllegalStateException("已锁定计划的修改版本发生变化，当前操作未提交");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleMapper.update.1"));
         }
     }
 
@@ -74,7 +76,7 @@ public class ScheduleMapper {
         int changed = statements.upgradeScheduledTask(version, timestamp(now), before.enterpriseId(), before.userId(),
             before.id(), before.revision());
         if (changed != 1) {
-            throw new IllegalStateException("已锁定计划的修改版本发生变化，当前操作未提交");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleMapper.update.1"));
         }
     }
 
@@ -82,7 +84,7 @@ public class ScheduleMapper {
         int changed = statements.deleteScheduledTask(timestamp(now), before.enterpriseId(), before.userId(),
             before.id(), before.revision());
         if (changed != 1) {
-            throw new IllegalStateException("计划仍在执行或已被修改，当前删除未提交");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleMapper.delete.1"));
         }
     }
 
@@ -110,7 +112,7 @@ public class ScheduleMapper {
     public void activate(ScheduleRecord value, String occurrence, Instant now) {
         int changed = statements.activateScheduledTask(occurrence, timestamp(now), value.enterpriseId(), value.id());
         if (changed != 1) {
-            throw new IllegalStateException("计划已有未结束的发生记录，不能再次执行");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleMapper.activate.1"));
         }
     }
 

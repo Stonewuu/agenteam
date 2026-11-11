@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.execution.entity.LiveConversationState;
 import com.stonewu.agenteam.model.execution.response.*;
@@ -24,7 +26,7 @@ public class LiveSnapshotMapper {
     public ConversationSnapshotView merge(ConversationSnapshotView base, LiveConversationState live,
                                           Map<String, String> attemptMessages) {
         if (!live.covers(Long.parseLong(base.lastSequence()))) {
-            throw new IllegalArgumentException("数据库快照与 Redis 保留内容的版本不对应");
+            throw new IllegalArgumentException(Messages.text("error.execution.liveSnapshotMapper.merge.1"));
         }
         Map<String, MessageView> messages = new LinkedHashMap<>();
         base.messages().forEach(message -> messages.put(message.id(), message));
@@ -75,7 +77,7 @@ public class LiveSnapshotMapper {
         }
         RunView active = live.activeRunId() == null ? null : runs.get(live.activeRunId());
         if (live.activeRunId() != null && active == null) {
-            throw new IllegalStateException("累计内容中缺少当前执行状态");
+            throw new IllegalStateException(Messages.text("error.execution.liveSnapshotMapper.merge.2"));
         }
         var ordered = new ArrayList<>(messages.values().stream().sorted(Comparator.comparing((MessageView message) -> Instant.parse(message.createdAt()))
             .thenComparing(message -> message.role().equals("user") ? 0 : 1).thenComparing(MessageView::id)).toList());

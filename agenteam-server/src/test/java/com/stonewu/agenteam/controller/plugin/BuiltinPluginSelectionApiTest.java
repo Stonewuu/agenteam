@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.plugin;
 
+import com.stonewu.agenteam.model.i18n.entity.UiLanguage;
+import com.stonewu.agenteam.service.i18n.MessageLanguage;
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
 import org.springframework.context.annotation.Import;
 
@@ -92,6 +94,8 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
             var resource = resources.find(enterprise, id, false, false).orElseThrow();
             builtinCodes.add(resource.config().path("builtinCode").asText());
             assertEquals("builtin", resource.source());
+            assertEquals("builtin", value.path("source").asText());
+            assertEquals(resource.config().path("builtinCode").asText(), value.path("builtinCode").asText());
             assertEquals(versionId, resource.publishedVersionId());
             assertEquals(1, value.path("versionNo").asInt());
             var published = tools.list(enterprise, versionId);
@@ -102,6 +106,26 @@ class BuiltinPluginSelectionApiTest extends ExecutionApiTestSupport {
         assertEquals(40, toolCount);
         assertEquals(Set.of("platform_basics", "todo_management", "schedule_management", "web_read", "workflow_management"), builtinCodes);
         assertFalse(response.toString().contains("inputSchema"));
+    }
+
+    @Test
+    void englishSearchFindsBuiltinsWithoutChangingPublishedVersions() throws Exception {
+        var before = available(actor(enterprise));
+        try (var ignored = MessageLanguage.use(UiLanguage.ENGLISH)) {
+            initialization.run(new DefaultApplicationArguments());
+        }
+        var response = data(mvc.perform(get(base() + "/resources/usable-versions")
+            .param("kind", "plugin").param("query", "Web reader").header("Accept-Language", "en")
+            .cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(1, response.path("items").size());
+        assertEquals("web_read", response.path("items").get(0).path("builtinCode").asText());
+        assertEquals(before, available(actor(enterprise)));
+        var invalid = mvc.perform(get(base() + "/resources/usable-versions")
+            .param("kind", "invalid").header("Accept-Language", "en").cookie(cookie))
+            .andExpect(status().isUnprocessableEntity()).andReturn();
+        assertEquals("en", invalid.getResponse().getHeader("Content-Language"));
+        assertFalse(json.readTree(invalid.getResponse().getContentAsString()).path("error").path("message")
+            .asText().matches(".*[\\p{IsHan}].*"));
     }
 
     @Test

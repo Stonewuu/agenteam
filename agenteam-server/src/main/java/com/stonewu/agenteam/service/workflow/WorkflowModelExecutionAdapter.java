@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionStepIds;
 import com.stonewu.agenteam.mapper.workflow.WorkflowEventMapper.Identity;
@@ -119,7 +121,7 @@ public class WorkflowModelExecutionAdapter {
                         if (messages.find(run.enterpriseId(), run.conversationId(), run.outputMessageId()).orElseThrow()
                             .content().isBlank()) {
                             return Mono.error(new ApiException(HttpStatus.CONFLICT, "EXECUTION_EMPTY_RESULT",
-                                "员工没有返回可显示的回复，请稍后重试。"));
+                                Messages.text("error.agent.agentExecutionAdapter.completion.3")));
                         }
                         context.finishRoot();
                         return Mono.empty();
@@ -138,7 +140,7 @@ public class WorkflowModelExecutionAdapter {
                 if (saved != null && (!saved.versionId().equals(binding.versionId()) || !values.read(saved.input())
                     .equals(values.read(call.input())))) {
                     return Mono.error(new ApiException(HttpStatus.CONFLICT, "WORKFLOW_CALL_CHANGED",
-                        "同一工作流调用编号不能用于不同版本或参数。"));
+                        Messages.text("error.workflow.workflowModelExecutionAdapter.pendingFlows.1")));
                 }
                 if (saved == null) {
                     saved = WorkflowTraversal.initial(binding.graph(), id, binding.versionId(),
@@ -172,7 +174,7 @@ public class WorkflowModelExecutionAdapter {
                 var binding = binding(call);
                 var saved = context.savedInvocation(invocationId(call));
                 if (saved == null || !saved.status().equals("completed")) {
-                    throw new IllegalStateException("工作流尚未完成，不能向模型提交成功结果");
+                    throw new IllegalStateException(Messages.text("error.workflow.workflowModelExecutionAdapter.modelTask.1"));
                 }
                 String output = saved.nodes().get(binding.graph().endId()).output();
                 // 2.0.3 的 OpenAI 转换器每条工具消息只读取第一项，必须按调用分别提交消息。
@@ -203,7 +205,7 @@ public class WorkflowModelExecutionAdapter {
             var binding = bindings.get(call.name());
             if (binding == null) {
                 throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                    "模型请求的工作流不属于本次固定能力。");
+                    Messages.text("error.workflow.workflowModelExecutionAdapter.binding.1"));
             }
             return binding;
         }

@@ -1,0 +1,378 @@
+{
+  "error.schedule.scheduleMapper.update.1": {
+    "zh-CN": "已锁定计划的修改版本发生变化，当前操作未提交",
+    "en": "The locked schedule revision changed. This operation was not committed."
+  },
+  "error.schedule.scheduleMapper.delete.1": {
+    "zh-CN": "计划仍在执行或已被修改，当前删除未提交",
+    "en": "The schedule is still running or has changed. Deletion was not committed."
+  },
+  "error.schedule.scheduleMapper.activate.1": {
+    "zh-CN": "计划已有未结束的发生记录，不能再次执行",
+    "en": "The schedule has an unfinished occurrence and cannot run again yet."
+  },
+  "error.schedule.scheduleRuleMapper.from.1": {
+    "zh-CN": "请选择有效的执行日期。",
+    "en": "Select a valid execution date."
+  },
+  "error.schedule.scheduleRuleMapper.from.2": {
+    "zh-CN": "请选择执行时间，精确到分钟。",
+    "en": "Choose a run time to the nearest minute."
+  },
+  "error.schedule.scheduleRuleMapper.from.3": {
+    "zh-CN": "日期、星期和月日需要符合所选重复方式。",
+    "en": "The date, weekdays, and day of month must match the selected recurrence."
+  },
+  "error.schedule.scheduleRule.init.1": {
+    "zh-CN": "计划时间必须精确到分钟",
+    "en": "The scheduled time must be specified to the minute."
+  },
+  "error.schedule.scheduleRule.init.2": {
+    "zh-CN": "日期、星期和月日必须符合所选重复方式",
+    "en": "Dates, weekdays, and days of the month must match the selected recurrence."
+  },
+  "error.schedule.agentRunActionHandler.prepare.1": {
+    "zh-CN": "智能体自动重试次数需要在零至两次之间。",
+    "en": "The agent automatic retry count must be between 0 and 2."
+  },
+  "error.schedule.agentRunActionHandler.validateCurrent.1": {
+    "zh-CN": "员工雇佣已暂停或解除，计划暂时不能执行。",
+    "en": "The employee's employment is paused or ended. The schedule cannot run yet."
+  },
+  "error.schedule.notificationSendActionHandler.prepare.1": {
+    "zh-CN": "通知操作不使用智能体重试次数，请填写零。",
+    "en": "Notification actions do not use agent retries. Enter 0."
+  },
+  "error.schedule.notificationSendActionHandler.validateCurrent.1": {
+    "zh-CN": "此通知计划没有有效的接收设置，请重新编辑计划。",
+    "en": "This notification schedule has no valid recipient settings. Edit the schedule again."
+  },
+  "error.schedule.notificationSendActionHandler.requireEnabled.1": {
+    "zh-CN": "通知计划已暂时关闭，请稍后再试。",
+    "en": "Notification schedules are temporarily disabled. Try again later."
+  },
+  "error.schedule.scheduleAccessService.requireOwner.1": {
+    "zh-CN": "创建人的账号、成员资格或定时任务权限已不可用。",
+    "en": "The creator's account, membership, or schedule permissions are no longer available."
+  },
+  "error.schedule.scheduleActionRegistry.init.1": {
+    "zh-CN": "定时操作重复注册：{0}",
+    "en": "Duplicate scheduled action registration: {0}"
+  },
+  "error.schedule.scheduleActionRegistry.require.1": {
+    "zh-CN": "请选择当前支持的定时操作。",
+    "en": "Select a currently supported scheduled action."
+  },
+  "error.schedule.scheduleActionRegistry.require.2": {
+    "zh-CN": "此操作参数版本暂不支持，请刷新页面后再试。",
+    "en": "This action parameter version is unsupported. Refresh the page and try again."
+  },
+  "error.schedule.scheduleActionRegistry.prepare.1": {
+    "zh-CN": "请选择一种操作参数格式，不要同时提交新旧两种参数。",
+    "en": "Select one action parameter format. Do not submit both the old and new formats."
+  },
+  "error.schedule.scheduleActionRegistry.prepare.2": {
+    "zh-CN": "请提供操作参数版本。",
+    "en": "Provide the action parameter version."
+  },
+  "error.schedule.scheduleActionStore.create.1": {
+    "zh-CN": "本次定时操作没有保存成功",
+    "en": "The scheduled action was not saved."
+  },
+  "error.schedule.scheduleActionStore.save.1": {
+    "zh-CN": "已锁定的定时操作没有保存成功",
+    "en": "The locked scheduled action was not saved."
+  },
+  "error.schedule.scheduleActionTransactions.lock.1": {
+    "zh-CN": "定时操作所属企业记录不存在",
+    "en": "The scheduled action's organization record does not exist."
+  },
+  "error.schedule.scheduledNotificationRetryService.reserve.1": {
+    "zh-CN": "原计划已删除，不能再次发送本次通知。",
+    "en": "The original schedule was deleted. This notification cannot be sent again."
+  },
+  "error.schedule.scheduledNotificationRetryService.reserve.2": {
+    "zh-CN": "此计划正在执行另一次任务，请等待完成后再试。",
+    "en": "This schedule is running another task. Wait for it to finish and try again."
+  },
+  "error.schedule.scheduleManagementService.upgrade.1": {
+    "zh-CN": "此操作不使用智能体版本，无需升级员工版本。",
+    "en": "This action does not use an agent version. No employee version upgrade is needed."
+  },
+  "error.schedule.scheduleManagementService.delete.1": {
+    "zh-CN": "请先暂停计划，再执行删除。",
+    "en": "Pause the schedule before deleting it."
+  },
+  "error.schedule.scheduleManagementService.delete.2": {
+    "zh-CN": "此计划还有未结束的任务，请先停止或等待结束。",
+    "en": "This schedule has unfinished tasks. Stop them or wait for them to finish."
+  },
+  "error.schedule.scheduleManagementService.next.1": {
+    "zh-CN": "此计划已经没有未来执行时间，请修改日期后再启用。",
+    "en": "This schedule has no future runs. Change its dates before enabling it."
+  },
+  "error.schedule.scheduleNotificationTargetService.validate.1": {
+    "zh-CN": "请选择一至五十名明确接收成员。",
+    "en": "Select between 1 and 50 specific recipients."
+  },
+  "error.schedule.scheduleNotificationTargetService.validate.2": {
+    "zh-CN": "同一成员不能重复选择。",
+    "en": "The same member cannot be selected twice."
+  },
+  "error.schedule.scheduleNotificationTargetService.validate.3": {
+    "zh-CN": "此接收成员已不可用，请重新选择。",
+    "en": "This recipient is unavailable. Select another member."
+  },
+  "error.schedule.scheduleNotificationTargetService.validate.4": {
+    "zh-CN": "所选渠道当前不允许发送通知，请重新选择。",
+    "en": "The selected channel does not allow notifications right now. Select another channel."
+  },
+  "error.schedule.scheduleNotificationTargetService.validate.5": {
+    "zh-CN": "每名成员在同一平台只能选择一个接入应用。",
+    "en": "Each member can select only one application per platform."
+  },
+  "error.schedule.scheduleNotificationTargetService.validate.6": {
+    "zh-CN": "此成员尚未绑定所选应用，或已经关闭通知接收。",
+    "en": "This member has not linked the selected application or has disabled notifications."
+  },
+  "error.schedule.scheduleNotificationTargetService.requireScope.1": {
+    "zh-CN": "当前只能向自己发送通知，向其他成员发送需要企业授权。",
+    "en": "You can only notify yourself. Organization authorization is required to notify other members."
+  },
+  "error.schedule.scheduleNotificationTargetService.requireExecutionScope.1": {
+    "zh-CN": "创建人已无权向所选成员发送通知。",
+    "en": "The creator can no longer notify the selected members."
+  },
+  "error.schedule.scheduleNotificationTargetService.capture.1": {
+    "zh-CN": "计划接收渠道缺少企业接入记录",
+    "en": "The scheduled recipient channel is missing its organization integration record."
+  },
+  "error.schedule.scheduleOccurrenceCancellation.cancel.1": {
+    "zh-CN": "定时操作准备工作状态已变化，停止操作未提交",
+    "en": "The scheduled action preparation status changed. The stop operation was not committed."
+  },
+  "error.schedule.schedulePolicy.select.1": {
+    "zh-CN": "请先恢复该员工的雇佣，再创建或启用计划。",
+    "en": "Resume the AI employee's hire before creating or enabling a schedule."
+  },
+  "error.schedule.scheduleRecipientViewService.views.1": {
+    "zh-CN": "已保存计划的接收渠道不存在",
+    "en": "The saved schedule's recipient channel does not exist."
+  },
+  "error.schedule.scheduleRunStateService.changed.1": {
+    "zh-CN": "计划执行缺少发生记录",
+    "en": "The scheduled execution is missing its occurrence record."
+  },
+  "error.schedule.scheduleTimeCalculator.next.1": {
+    "zh-CN": "读取的计划时间数量必须在一至一百之间",
+    "en": "Read between 1 and 100 scheduled times."
+  },
+  "error.schedule.scheduleTimeCalculator.between.1": {
+    "zh-CN": "超过三十天的计划需要重新确认时间",
+    "en": "Schedules more than 30 days away require time confirmation again."
+  },
+  "error.schedule.scheduleTimeCalculator.resolve.1": {
+    "zh-CN": "无法计算所选时间的时区变化",
+    "en": "Time zone changes for the selected time could not be calculated."
+  },
+  "error.schedule.scheduleTriggerService.manual.1": {
+    "zh-CN": "此计划还有未结束的任务，请等待完成或先停止。",
+    "en": "This schedule has unfinished tasks. Wait for them or stop them first."
+  },
+  "error.schedule.scheduleViewMapper.reason.1": {
+    "zh-CN": "此计划超过三十天没有检查，已暂停。请确认时间后重新启用。",
+    "en": "This schedule was paused after 30 days without review. Check the times before enabling it again."
+  },
+  "error.schedule.scheduleViewMapper.reason.2": {
+    "zh-CN": "上一次任务尚未结束，本次已跳过。",
+    "en": "The previous task is still running, so this occurrence was skipped."
+  },
+  "error.schedule.scheduleViewMapper.reason.3": {
+    "zh-CN": "本次已错过执行时间。",
+    "en": "The scheduled time for this occurrence was missed."
+  },
+  "error.schedule.scheduleViewMapper.reason.4": {
+    "zh-CN": "本月适用的执行次数不足，本次未执行。",
+    "en": "This occurrence did not run because the monthly allowance was reached."
+  },
+  "error.schedule.scheduleViewMapper.reason.5": {
+    "zh-CN": "同时执行的任务已达到上限，本次未执行。",
+    "en": "This occurrence did not run because the concurrent task limit was reached."
+  },
+  "error.schedule.scheduleViewMapper.reason.6": {
+    "zh-CN": "创建人的账号或企业成员资格已不可用，计划已暂停。",
+    "en": "The owner's account or membership is no longer available. The schedule was paused."
+  },
+  "error.schedule.scheduleViewMapper.reason.7": {
+    "zh-CN": "员工雇佣已暂停或解除，计划已暂停。",
+    "en": "The employee's hire is paused or has ended. The schedule was paused."
+  },
+  "error.schedule.scheduleViewMapper.reason.8": {
+    "zh-CN": "员工版本或所需能力已不可用，计划已暂停。",
+    "en": "The employee version or required capabilities are no longer available. The schedule was paused."
+  },
+  "error.schedule.scheduleViewMapper.reason.9": {
+    "zh-CN": "执行所需权限已变化，计划已暂停。",
+    "en": "Required permissions have changed. The schedule was paused."
+  },
+  "error.schedule.scheduleViewMapper.reason.10": {
+    "zh-CN": "已停止尚未开始的操作。",
+    "en": "Actions that had not started were stopped."
+  },
+  "error.schedule.scheduleViewMapper.reason.11": {
+    "zh-CN": "本次通知已超过发送有效期。",
+    "en": "The delivery window for this notification has expired."
+  },
+  "error.schedule.scheduleViewMapper.reason.12": {
+    "zh-CN": "部分通知未能发送，请查看各接收人的结果。",
+    "en": "Some notifications could not be sent. Check each recipient's result."
+  },
+  "error.schedule.scheduleViewMapper.reason.13": {
+    "zh-CN": "部分平台请求尚不能确认是否被接受，请查看发送详情。",
+    "en": "Some platform requests have no confirmed result. Check the delivery details."
+  },
+  "error.schedule.scheduleViewMapper.reason.14": {
+    "zh-CN": "本次通知发送失败，请查看发送详情。",
+    "en": "This notification failed to send. Check the delivery details."
+  },
+  "error.schedule.scheduleViewMapper.reason.15": {
+    "zh-CN": "本次通知的接收条件已变化，未能发送。",
+    "en": "The recipient's delivery conditions have changed. This notification could not be sent."
+  },
+  "error.schedule.scheduleViewMapper.reason.16": {
+    "zh-CN": "本次操作准备失败，请检查后重新执行。",
+    "en": "This action could not be prepared. Check the details before running it again."
+  },
+  "error.schedule.scheduleViewMapper.reason.17": {
+    "zh-CN": "通知计划已暂时关闭，请稍后重新启用。",
+    "en": "Notification schedules are temporarily disabled. Enable this schedule again later."
+  },
+  "error.schedule.scheduleViewMapper.reason.18": {
+    "zh-CN": "本次无法继续执行，请检查计划和任务详情。",
+    "en": "This occurrence could not continue. Check the schedule and task details."
+  },
+  "error.schedule.notificationSendActionHandler.submit.1": {
+    "zh-CN": "此成员已不在企业中或账号已停用。",
+    "en": "This member has left the organization or the account is disabled."
+  },
+  "error.schedule.scheduleActionTransactions.submit.1": {
+    "zh-CN": "本次操作多次准备失败，请检查后重新执行。",
+    "en": "Preparation failed repeatedly. Check the operation before running it again."
+  },
+  "error.schedule.scheduleActionTransactions.failure.1": {
+    "zh-CN": "本次操作暂时无法准备，稍后会继续尝试。",
+    "en": "The operation cannot be prepared right now and will be retried later."
+  },
+  "error.schedule.scheduleActionTransactions.failure.2": {
+    "zh-CN": "执行所需的账号、权限或资源已不可用，本次操作未提交。",
+    "en": "The required account, permissions, or resources are unavailable. The operation was not submitted."
+  },
+  "error.schedule.scheduleOccurrenceCancellation.cancel.2": {
+    "zh-CN": "停止本次定时操作",
+    "en": "Stop this scheduled action."
+  },
+  "log.schedule.scheduleActionScheduling.reconcile.1": {
+    "zh-CN": "定时操作结果暂时无法汇总，发生记录编号={}",
+    "en": "Scheduled action results could not be summarized; occurrenceId={}"
+  },
+  "log.schedule.scheduleScheduling.poll.1": {
+    "zh-CN": "计划 {} 本次检查未提交，下一轮继续处理",
+    "en": "Schedule {} check was not committed; processing will resume on the next cycle"
+  },
+  "log.schedule.scheduleScheduling.poll.2": {
+    "zh-CN": "计划列表暂时无法读取",
+    "en": "The schedule list could not be read"
+  },
+  "text.schedule.scheduleTimesMapper.view.1": {
+    "zh-CN": "所选本地时间 {0} 不存在，该次将在 {1} 执行。",
+    "en": "The selected local time {0} does not exist. This occurrence will run at {1}."
+  },
+  "text.schedule.scheduleTimesMapper.view.2": {
+    "zh-CN": "本地时间 {0} 会出现两次，该次只在第一次出现时执行。",
+    "en": "The local time {0} occurs twice. This occurrence will run only at the first instance."
+  },
+  "text.schedule.scheduleTimesMapper.view.3": {
+    "zh-CN": "所选执行时间已经过去，请选择未来时间。",
+    "en": "The selected execution time has passed. Select a future time."
+  },
+  "text.schedule.agentRunActionHandler.name.1": {
+    "zh-CN": "执行智能体任务",
+    "en": "Run an agent task"
+  },
+  "text.schedule.notificationScheduleDetailService.details.1": {
+    "zh-CN": "已不可用成员",
+    "en": "Unavailable member"
+  },
+  "text.schedule.notificationSendActionHandler.name.1": {
+    "zh-CN": "发送通知",
+    "en": "Send notification"
+  },
+  "log.schedule.scheduleAccessService.check.1": {
+    "zh-CN": "定时计划当前执行资格检查失败，计划编号={}",
+    "en": "Schedule execution eligibility check failed; scheduleId={}"
+  },
+  "text.schedule.scheduleActionStore.init.1": {
+    "zh-CN": "定时操作的工作租约已变化，本次提交已回滚",
+    "en": "The scheduled action job lease changed. This submission was rolled back."
+  },
+  "text.schedule.scheduleActionTransactions.submit.1": {
+    "zh-CN": "本次操作多次准备失败。",
+    "en": "Preparation for this operation failed repeatedly."
+  },
+  "log.schedule.scheduleActionWorker.runOnce.1": {
+    "zh-CN": "定时操作准备工作暂时无法领取",
+    "en": "Could not claim scheduled action preparation work"
+  },
+  "log.schedule.scheduleActionWorker.runOnce.2": {
+    "zh-CN": "定时操作准备结果因租约变化未提交，工作编号={}",
+    "en": "Scheduled action preparation was not committed because its lease changed; jobId={}"
+  },
+  "log.schedule.scheduleActionWorker.runOnce.3": {
+    "zh-CN": "定时操作准备未完成，工作编号={}",
+    "en": "Scheduled action preparation did not complete; jobId={}"
+  },
+  "log.schedule.scheduleActionWorker.runOnce.4": {
+    "zh-CN": "定时操作失败状态暂未保存，工作编号={}",
+    "en": "Scheduled action failure status was not saved; jobId={}"
+  },
+  "log.schedule.scheduleActionWorker.renew.1": {
+    "zh-CN": "定时操作工作租约无法续期，工作编号={}",
+    "en": "Could not renew the scheduled action job lease; jobId={}"
+  },
+  "text.schedule.scheduleManagementService.create.1": {
+    "zh-CN": "创建本人定时任务",
+    "en": "Create my schedule"
+  },
+  "text.schedule.scheduleManagementService.update.1": {
+    "zh-CN": "修改本人计划的未来执行设置",
+    "en": "Update future execution settings for my schedule"
+  },
+  "text.schedule.scheduleManagementService.enabled.1": {
+    "zh-CN": "启用本人定时任务",
+    "en": "Enable my schedule"
+  },
+  "text.schedule.scheduleManagementService.enabled.2": {
+    "zh-CN": "暂停本人计划的未来触发",
+    "en": "Pause future triggers for my schedule"
+  },
+  "text.schedule.scheduleManagementService.upgrade.1": {
+    "zh-CN": "更新本人计划未来使用的员工版本",
+    "en": "Update the employee version used by future schedule executions"
+  },
+  "text.schedule.scheduleManagementService.delete.1": {
+    "zh-CN": "删除本人已暂停的定时任务",
+    "en": "Delete my paused schedule"
+  },
+  "text.schedule.scheduleRecipientViewService.views.1": {
+    "zh-CN": "成员已不可用",
+    "en": "Member unavailable"
+  },
+  "text.schedule.scheduleRunStateService.pause.1": {
+    "zh-CN": "“{0}”已暂停",
+    "en": "“{0}” paused"
+  },
+  "text.schedule.scheduleTriggerService.manual.1": {
+    "zh-CN": "手动执行定时任务",
+    "en": "Run schedule manually"
+  }
+}

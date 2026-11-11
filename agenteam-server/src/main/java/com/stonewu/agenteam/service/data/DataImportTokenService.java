@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.data.entity.DataCollectionRecord;
@@ -45,7 +47,7 @@ public class DataImportTokenService {
             return Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(json.writeValueAsBytes(encryption.encrypt(token, binding(actor))));
         } catch (Exception unavailable) {
-            throw new IllegalStateException("数据导入预览无法保存", unavailable);
+            throw new IllegalStateException(Messages.text("error.data.dataImportTokenService.issue.1"), unavailable);
         }
     }
 
@@ -72,6 +74,6 @@ public class DataImportTokenService {
     }
 
     private ApiException invalid() {
-        return new ApiException(HttpStatus.GONE, "DATA_IMPORT_EXPIRED", "数据导入预览已经失效，请重新选择文件并预览。");
+        return new ApiException(HttpStatus.GONE, "DATA_IMPORT_EXPIRED", Messages.text("error.data.dataImportTokenService.invalid.1"));
     }
 }

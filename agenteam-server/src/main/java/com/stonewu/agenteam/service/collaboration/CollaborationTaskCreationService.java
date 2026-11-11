@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -94,7 +96,7 @@ public class CollaborationTaskCreationService {
             String entryBot, Set<String> explicitlyRequested, JsonNode content) {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
         if (!actor.enterpriseId().equals(message.getEnterpriseId()) || !actor.userId().equals(message.getSenderUserId())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_IDENTITY_MISMATCH", "任务发起人与消息所属成员不匹配。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_IDENTITY_MISMATCH", Messages.text("error.collaboration.collaborationTaskCreationService.create.1"));
         }
         var existing = tasks.selectOne(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getOriginMessageId, message.getId()));
@@ -106,7 +108,7 @@ public class CollaborationTaskCreationService {
         if (tasks.selectCount(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getConversationId, group.getId()).eq(CollaborationTaskRow::getInitiatorUserId, actor.userId())
             .gt(CollaborationTaskRow::getCreatedAt, now.minusSeconds(60))) >= perMinute) {
-            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "COLLABORATION_NEW_TASK_RATE_LIMITED", "此会话的新任务较多，请一分钟后重试。");
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "COLLABORATION_NEW_TASK_RATE_LIMITED", Messages.text("error.collaboration.collaborationTaskCreationService.create.2"));
         }
         var roster = new ArrayList<CollaborationParticipantRow>();
         for (var member : conversations.members(actor.enterpriseId(), group.getId())) {
@@ -125,8 +127,8 @@ public class CollaborationTaskCreationService {
                 if (explicitlyRequested.contains(bot.getId()) || entryBot.equals(bot.getId())) {
                     throw failure;
                 }
-                LOG.debug("未将无权使用的岗位加入协作，企业={}，岗位={}", actor.enterpriseId(), bot.getId(),
-                    new ChannelProviderException("ROLE_UNAVAILABLE", "该岗位不在当前用户的协作范围。", failure));
+                LOG.debug(Messages.log("log.collaboration.collaborationTaskCreationService.create.1"), actor.enterpriseId(), bot.getId(),
+                    new ChannelProviderException("ROLE_UNAVAILABLE", Messages.text("error.collaboration.collaborationTaskCreationService.create.3"), failure));
                 continue;
             }
             roster.add(role(actor, bot, fixedVersion, explicitlyRequested.contains(bot.getId())));
@@ -184,7 +186,7 @@ public class CollaborationTaskCreationService {
         task.setHandoffCount(0);
         task.setRunCount(0);
         tasks.insert(task);
-        var project = projects.createOwned(actor.enterpriseId(), actor.userId(), task.getShortCode() + " 协作任务", null, null);
+        var project = projects.createOwned(actor.enterpriseId(), actor.userId(), Messages.text("text.collaboration.collaborationSubmissionRecords.prepare.1", task.getShortCode()), null, null);
         for (var role : roster) {
             role.setTaskId(task.getId());
             role.setProjectId(project.getId());
@@ -197,7 +199,7 @@ public class CollaborationTaskCreationService {
         work.setOriginActionId(action.getId());
         work.setPurpose("lead");
         work.setRequired(true);
-        work.setInstructionEncrypted(cipher.encrypt(actor.enterpriseId(), "work-instruction", work.getId(), Map.of("goal", "处理原发起人的任务；先给每个明确指定的岗位安排独立工作。", "artifactRefs", List.of())));
+        work.setInstructionEncrypted(cipher.encrypt(actor.enterpriseId(), "work-instruction", work.getId(), Map.of("goal", Messages.text("text.collaboration.collaborationTaskCreationService.initialize.1"), "artifactRefs", List.of())));
         work.setStatus("ready");
         work.setResumeReason("initial");
         work.setInputRevision(1L);
@@ -211,12 +213,12 @@ public class CollaborationTaskCreationService {
         if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getId, task.getId()).set(CollaborationTaskRow::getOwnerParticipantId, owner.getId())
             .set(CollaborationTaskRow::getOwnerWorkId, work.getId())) != 1) {
-            throw new IllegalStateException("协作任务负责人无法保存");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationTaskCreationService.initialize.1"));
         }
         actions.finish(action, Map.of("taskId", task.getId(), "workItemId", work.getId(), "status", "ready"));
         if (!task.fromWebRoom()) {
             outbound.progress(actor.enterpriseId(), task.getConversationId(), task.getEntryBotId(), task.getId(), action.getId(), "task:" + task.getId() + ":accepted",
-                "accepted", "任务 【" + task.getShortCode() + "】：已收到，由【" + owner.getRoleName() + "】负责处理。", replyTo);
+                "accepted", Messages.text("text.collaboration.collaborationTaskCreationService.initialize.2", task.getShortCode(), owner.getRoleName()), replyTo);
         }
         return access.require(actor.enterpriseId(), task.getId());
     }

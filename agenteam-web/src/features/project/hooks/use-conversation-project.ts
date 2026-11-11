@@ -66,7 +66,7 @@ export function useConversationProject({
       onChanged?.();
       return true;
     } catch (error) {
-      console.error("切换对话项目失败", {
+      console.error("Failed to switch the conversation project", {
         method: "PUT",
         path,
         conversationId,

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.SandboxContainerCleanup;
@@ -44,7 +46,7 @@ public class RemoteSandboxContainerCleanup implements SandboxContainerCleanup {
             || !(endpoint.getScheme().equals("https") || endpoint.getScheme().equals("http") && local)
             || token == null || token.length() < 32 || token.contains("\r") || token.contains("\n")) {
             throw new IllegalArgumentException(
-                "独立沙箱清理需要加密服务地址和至少三十二字符的访问凭据；本机地址可使用 HTTP");
+                Messages.text("error.sandbox.remoteSandboxContainerCleanup.init.1"));
         }
         this.token = token;
     }
@@ -77,15 +79,15 @@ public class RemoteSandboxContainerCleanup implements SandboxContainerCleanup {
             }
             var response = pending.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             if (response.statusCode() != 204) {
-                throw new IOException("独立执行节点未确认容器清理完成，响应状态 " + response.statusCode());
+                throw new IOException(Messages.text("error.sandbox.remoteSandboxContainerCleanup.remove.1", response.statusCode()));
             }
         } catch (Exception failure) {
             if (failure instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            LOG.error("独立节点清理容器失败，清理类型 {}，工作空间编号 {}", type, scope, failure);
+            LOG.error(Messages.log("log.sandbox.remoteSandboxContainerCleanup.remove.1"), type, scope, failure);
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SANDBOX_CLEANUP_UNAVAILABLE",
-                "命令运行环境尚未清理完成，请检查独立执行服务后重试。", failure);
+                Messages.text("error.sandbox.remoteSandboxContainerCleanup.remove.2"), failure);
         } finally {
             if (pending != null && !pending.isDone()) {
                 pending.cancel(true);

@@ -75,6 +75,9 @@ function component(file, values, feature = "resource") {
     if (name === "../lib/resource-display") {
       return display;
     }
+    if (name === "../lib/resource-localization") {
+      return loadSource("features/resource/lib/resource-localization");
+    }
     if (name === "@/features/plugin/components/plugin-type-labels") {
       return component("plugin-type-labels.tsx", values, "plugin");
     }

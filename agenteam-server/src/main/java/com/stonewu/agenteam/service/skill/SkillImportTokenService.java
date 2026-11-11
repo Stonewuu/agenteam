@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.skill;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
@@ -36,7 +38,7 @@ public class SkillImportTokenService {
                 binding(actor));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(json.writeValueAsBytes(encrypted));
         } catch (Exception unavailable) {
-            throw new IllegalStateException("无法保存技能导入预览", unavailable);
+            throw new IllegalStateException(Messages.text("error.skill.skillImportTokenService.issue.1"), unavailable);
         }
     }
 
@@ -61,6 +63,6 @@ public class SkillImportTokenService {
     }
 
     private static ApiException invalid() {
-        return new ApiException(HttpStatus.GONE, "SKILL_IMPORT_EXPIRED", "技能导入预览已失效，请重新选择文件。");
+        return new ApiException(HttpStatus.GONE, "SKILL_IMPORT_EXPIRED", Messages.text("error.skill.skillImportTokenService.invalid.1"));
     }
 }

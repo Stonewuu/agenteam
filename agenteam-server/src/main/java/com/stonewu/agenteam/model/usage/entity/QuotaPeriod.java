@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.usage.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Objects;
@@ -13,7 +15,7 @@ public record QuotaPeriod(Instant start, Instant end, String timezone) {
         Objects.requireNonNull(end);
         ZoneId.of(timezone);
         if (!end.isAfter(start)) {
-            throw new IllegalArgumentException("次数周期的结束时间必须晚于起点");
+            throw new IllegalArgumentException(Messages.text("error.usage.quotaPeriod.init.1"));
         }
     }
 

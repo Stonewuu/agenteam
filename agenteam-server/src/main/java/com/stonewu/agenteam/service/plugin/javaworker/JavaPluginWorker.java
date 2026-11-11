@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin.javaworker;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +42,7 @@ public final class JavaPluginWorker {
             manager.startPlugin(id);
             var extensions = manager.getExtensions(JavaToolPlugin.class, id);
             if (extensions.size() != 1) {
-                throw new IllegalArgumentException("程序包必须提供一个 Java 工具扩展");
+                throw new IllegalArgumentException(Messages.text("error.plugin.javaPluginWorker.main.1"));
             }
             var plugin = extensions.getFirst();
             Object result;
@@ -126,17 +128,17 @@ public final class JavaPluginWorker {
             try {
                 protocol.write(output, Map.of("kind", "beforeSend"));
                 if (!protocol.read(input).path("approved").asBoolean()) {
-                    throw new IllegalStateException("插件调用已取消");
+                    throw new IllegalStateException(Messages.text("error.plugin.javaPluginWorker.beforeSend.1"));
                 }
             } catch (Exception failure) {
-                throw new IllegalStateException("插件调用授权已失效", failure);
+                throw new IllegalStateException(Messages.text("error.plugin.javaPluginWorker.beforeSend.2"), failure);
             }
         }
 
         @Override
         public void requireActive() {
             if (Thread.currentThread().isInterrupted() || System.nanoTime() >= deadline) {
-                throw new IllegalStateException("插件调用已取消或超时");
+                throw new IllegalStateException(Messages.text("error.plugin.javaPluginWorker.requireActive.1"));
             }
         }
 

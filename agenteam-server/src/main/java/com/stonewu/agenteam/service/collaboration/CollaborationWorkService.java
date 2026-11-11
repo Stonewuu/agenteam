@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -68,33 +70,33 @@ public class CollaborationWorkService {
         access.requireRole(task, target);
         for (var waived : json.read(task.getWaivedRequestedRolesJson())) {
             if (waived.asText().equals(targetId)) {
-                throw ApiException.invalidField("targetRoleId", "原发起人已取消此岗位，不能再次安排工作。");
+                throw ApiException.invalidField("targetRoleId", Messages.text("error.collaboration.collaborationWorkService.assign.1"));
             }
         }
         if (targetId.equals(source.getParticipantId())) {
-            throw ApiException.invalidField("targetRoleId", "请把协助或移交工作交给另一个岗位。");
+            throw ApiException.invalidField("targetRoleId", Messages.text("error.collaboration.collaborationWorkService.assign.2"));
         }
         var policy = json.read(task.getPolicySnapshot());
         if (handoff && repeatedHandoffs(task, source.getParticipantId(), targetId) >= 3) {
-            var result = ask(context, action, json.tree(Map.of("question", "这两个岗位已经多次互相移交，请明确下一步由谁负责以及需要补充的成果。")));
+            var result = ask(context, action, json.tree(Map.of("question", Messages.text("text.collaboration.collaborationWorkService.assign.1"))));
             tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
                 .eq(CollaborationTaskRow::getId, task.getId()).set(CollaborationTaskRow::getErrorCode, "COLLABORATION_HANDOFF_CLARIFICATION"));
             return result;
         }
         if (task.getWorkCount() >= policy.path("maxWorks").asInt(20) || handoff && task.getHandoffCount() >= policy.path("maxHandoffs").asInt(8)) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", "已达到当前任务允许的工作或交接次数。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", Messages.text("error.collaboration.collaborationWorkService.assign.3"));
         }
         String goal = text(input, handoff ? "nextGoal" : "goal", 4000);
         text(input, "acceptanceCriteria", 2000);
         var references = artifacts.references(task, input.path("artifactRefs"));
         if (task.fromWebRoom() && references.stream().anyMatch(reference -> reference.getFileId() != null)
             && !webRoster.acceptsFiles(task.getEnterpriseId(), target.getAgentId(), target.getAgentVersionId())) {
-            throw ApiException.invalidField("targetRoleId", "该岗位未启用接收附件。请选择其他岗位，或提供文字要求。");
+            throw ApiException.invalidField("targetRoleId", Messages.text("error.collaboration.collaborationWorkService.assign.4"));
         }
         if (handoff) {
             text(input, "completedSummary", 2000);
             if (references.isEmpty()) {
-                throw ApiException.invalidField("artifactRefs", "移交前请发布已完成内容，并携带至少一份成果。");
+                throw ApiException.invalidField("artifactRefs", Messages.text("error.collaboration.collaborationWorkService.assign.5"));
             }
         }
         var next = ChatRecords.initialize(new CollaborationWorkItemRow(), task.getEnterpriseId(), clock.instant());
@@ -140,9 +142,8 @@ public class CollaborationWorkService {
         if (tasks.update(update) != 1) {
             throw ApiException.versionConflict(task.getRevision());
         }
-        String notice = task.fromWebRoom() ? (handoff ? "移交给" : "交给") + target.getRoleName() + "：" + goal
-            : "任务 【" + task.getShortCode() + "】：【" + context.participant().getRoleName()
-            + "】已" + (handoff ? "移交给【" : "安排【") + target.getRoleName() + "】" + (handoff ? "继续负责。" : "协助处理。");
+        String notice = task.fromWebRoom() ? (handoff ? Messages.text("text.collaboration.collaborationWorkService.assign.2") : Messages.text("text.collaboration.collaborationWorkService.assign.3")) + target.getRoleName() + "：" + goal
+            : Messages.text("text.collaboration.collaborationWorkService.assign.4", task.getShortCode(), context.participant().getRoleName(), (handoff ? Messages.text("text.collaboration.collaborationWorkService.assign.5") : Messages.text("text.collaboration.collaborationWorkService.assign.6")), target.getRoleName(), (handoff ? Messages.text("text.collaboration.collaborationWorkService.assign.7") : Messages.text("text.collaboration.collaborationWorkService.assign.8")));
         notify(context, action, handoff ? "handed_off" : "assigned", notice);
         return Map.of("taskId", task.getId(), "workItemId", next.getId(), "inputRevision", task.getInputRevision(),
             "status", status, "goal", goal, "ownerWorkItemId", handoff ? next.getId() : task.getOwnerWorkId());
@@ -151,14 +152,14 @@ public class CollaborationWorkService {
     public Object waitFor(CollaborationExecutionContext context, CollaborationActionRow action, JsonNode input) {
         var required = identifiers(input, "workItemIds");
         if (required.isEmpty()) {
-            throw ApiException.invalidField("workItemIds", "请选择至少一项要等待的工作。");
+            throw ApiException.invalidField("workItemIds", Messages.text("error.collaboration.collaborationWorkService.waitFor.1"));
         }
         text(input, "reason", 2000);
         dependencies.add(context.task(), context.work().getId(), required, "resume");
         String status = dependencies.readiness(context.task(), context.work().getId()).equals("blocked") ? "blocked" : "waiting_dependency";
         change(context.work(), status);
-        notify(context, action, "waiting_dependency", "任务 【" + context.task().getShortCode() + "】：【" + context.participant().getRoleName() + "】正在等待协作成果。");
-        return Map.of("workItemId", context.work().getId(), "status", status, "nextAction", "结束本轮回答，成果齐备后系统会继续此工作。");
+        notify(context, action, "waiting_dependency", Messages.text("text.collaboration.collaborationWorkService.waitFor.1", context.task().getShortCode(), context.participant().getRoleName()));
+        return Map.of("workItemId", context.work().getId(), "status", status, "nextAction", Messages.text("text.collaboration.collaborationWorkService.waitFor.2"));
     }
 
     private long repeatedHandoffs(CollaborationTaskRow task, String firstRole, String secondRole) {
@@ -176,11 +177,11 @@ public class CollaborationWorkService {
         String question = text(input, "question", 2000);
         var options = input.path("options");
         if (!options.isMissingNode() && (!options.isArray() || options.size() > 5)) {
-            throw ApiException.invalidField("options", "最多提供五个选项。");
+            throw ApiException.invalidField("options", Messages.text("error.collaboration.collaborationWorkService.ask.1"));
         }
         for (var option : options) {
             if (!option.isTextual() || option.asText().isBlank() || option.asText().codePointCount(0, option.asText().length()) > 200) {
-                throw ApiException.invalidField("options", "每个选项需要填写一至二百个字符。");
+                throw ApiException.invalidField("options", Messages.text("error.collaboration.collaborationWorkService.ask.2"));
             }
         }
         change(context.work(), "waiting_input");
@@ -192,7 +193,7 @@ public class CollaborationWorkService {
         }
         questions.send(context, action, question, options);
         return Map.of("workItemId", context.work().getId(), "status", "waiting_input", "question", question,
-            "nextAction", "结束本轮回答，等待原发起人补充。");
+            "nextAction", Messages.text("text.collaboration.collaborationWorkService.ask.1"));
     }
 
     @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -200,7 +201,7 @@ public class CollaborationWorkService {
         var row = works.selectOne(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).eq(CollaborationWorkItemRow::getId, id));
         if (row == null) {
-            throw ApiException.invalidField("workItemId", "工作不属于当前任务。");
+            throw ApiException.invalidField("workItemId", Messages.text("error.collaboration.collaborationWorkService.require.1"));
         }
         return row;
     }
@@ -223,7 +224,7 @@ public class CollaborationWorkService {
 
     public static void requireOwner(CollaborationTaskRow task, CollaborationWorkItemRow work) {
         if (!work.getId().equals(task.getOwnerWorkId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "COLLABORATION_OWNER_REQUIRED", "只有负责最终交付的具体工作可以执行此操作。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "COLLABORATION_OWNER_REQUIRED", Messages.text("error.collaboration.collaborationWorkService.requireOwner.1"));
         }
     }
 
@@ -234,7 +235,7 @@ public class CollaborationWorkService {
     public static List<String> identifiers(JsonNode input, String name) {
         var values = input.path(name);
         if (!values.isArray() || values.size() > 20) {
-            throw ApiException.invalidField(name, "请提供最多二十个有效编号。");
+            throw ApiException.invalidField(name, Messages.text("error.collaboration.collaborationWorkService.identifiers.1"));
         }
         var result = new ArrayList<String>();
         for (var value : values) {

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.user.UserPreferenceMapper;
@@ -72,7 +74,7 @@ public class NotificationDeliveryMapper {
 
     public void finish(Candidate candidate, String status, Instant now) {
         if (statements.finishNotificationJob(status, timestamp(now), candidate.id(), candidate.enterprise(), candidate.user()) != 1) {
-            throw new IllegalStateException("通知工作状态已变化，当前写入未提交");
+            throw new IllegalStateException(Messages.text("error.notification.notificationDeliveryMapper.finish.1"));
         }
     }
 

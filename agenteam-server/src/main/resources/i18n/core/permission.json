@@ -1,0 +1,102 @@
+{
+  "error.permission.resourceAuthorizationMapper.advanceRevision.1": {
+    "zh-CN": "资源已经变化，授权修改未提交",
+    "en": "The resource changed. Permission changes were not committed."
+  },
+  "error.permission.dataScope.fromCode.1": {
+    "zh-CN": "数据范围未定义",
+    "en": "The data scope is undefined."
+  },
+  "error.permission.builtinRoleCatalog.init.1": {
+    "zh-CN": "内置角色模板包含空白或重复的角色编号",
+    "en": "The built-in role template contains empty or duplicate role IDs."
+  },
+  "error.permission.builtinRoleCatalog.init.2": {
+    "zh-CN": "内置角色扩展资源名称为空或重复",
+    "en": "The built-in role extension resource name is empty or duplicated."
+  },
+  "error.permission.builtinRoleCatalog.init.3": {
+    "zh-CN": "内置角色扩展引用了不存在的角色编号",
+    "en": "The built-in role extension references a nonexistent role ID."
+  },
+  "error.permission.builtinRoleCatalog.init.4": {
+    "zh-CN": "受保护权限未包含在当前内置角色模板中",
+    "en": "Protected permissions are missing from the current built-in role template."
+  },
+  "error.permission.builtinRoleCatalog.read.1": {
+    "zh-CN": "无法读取内置角色模板",
+    "en": "The built-in role template could not be read."
+  },
+  "error.permission.builtinRoleCatalog.codes.1": {
+    "zh-CN": "内置角色权限必须使用数组",
+    "en": "Built-in role permissions must use an array."
+  },
+  "error.permission.builtinRoleCatalog.codes.2": {
+    "zh-CN": "内置角色模板包含无效或重复的权限编号",
+    "en": "The built-in role template contains invalid or duplicate permission IDs."
+  },
+  "error.permission.enterpriseAuthorizationService.lockAndRequire.1": {
+    "zh-CN": "企业管理写入必须处于事务中",
+    "en": "Organization management writes require a transaction."
+  },
+  "error.permission.enterpriseAuthorizationService.lockAndRequire.2": {
+    "zh-CN": "当前企业已停用",
+    "en": "The current organization is disabled."
+  },
+  "error.permission.enterpriseAuthorizationService.require.1": {
+    "zh-CN": "请重新登录",
+    "en": "Sign in again."
+  },
+  "error.permission.enterpriseAuthorizationService.require.2": {
+    "zh-CN": "账号状态已变化，请重新登录",
+    "en": "Your account status changed. Sign in again."
+  },
+  "error.permission.enterpriseAuthorizationService.requireEnterpriseScope.1": {
+    "zh-CN": "此操作需要企业范围的管理权限",
+    "en": "This operation requires organization-wide management permissions."
+  },
+  "error.permission.enterpriseAuthorizationService.requireOwner.1": {
+    "zh-CN": "记录不存在或无法访问",
+    "en": "The record does not exist or is inaccessible."
+  },
+  "error.permission.enterpriseAuthorizationService.changed.1": {
+    "zh-CN": "企业至少需要保留一名有效管理员。",
+    "en": "The organization must retain at least one active administrator."
+  },
+  "error.permission.resourceAuthorizationService.require.1": {
+    "zh-CN": "资源操作需要明确类型",
+    "en": "Resource operations require an explicit type."
+  },
+  "error.permission.resourceAuthorizationService.scope.1": {
+    "zh-CN": "资源操作必须匹配资源类型",
+    "en": "The resource operation must match the resource type."
+  },
+  "error.permission.resourceAuthorizationService.scope.2": {
+    "zh-CN": "已删除资源不能用于执行",
+    "en": "Deleted resources cannot be used for execution."
+  },
+  "error.permission.resourceAuthorizationService.usageScope.1": {
+    "zh-CN": "不支持的资源类型",
+    "en": "Unsupported resource type."
+  },
+  "error.permission.resourceGrantService.init.1": {
+    "zh-CN": "资源授权扩展类型无效、重复或试图替换基础授权类型",
+    "en": "The resource authorization extension type is invalid, duplicated, or attempts to replace a base authorization type."
+  },
+  "error.permission.resourceGrantService.apply.1": {
+    "zh-CN": "{0}授权最多 500 项。",
+    "en": "Up to 500 {0} permissions are allowed."
+  },
+  "error.permission.resourceGrantService.apply.2": {
+    "zh-CN": "授权内容无效或存在重复项。",
+    "en": "The access grants are invalid or contain duplicates."
+  },
+  "error.permission.resourceGrantService.apply.3": {
+    "zh-CN": "授权对象必须是本企业当前有效的成员、企业或已支持的其他对象。",
+    "en": "The authorization target must be an active member, organization, or other supported object in this organization."
+  },
+  "text.permission.resourceGrantService.apply.1": {
+    "zh-CN": "修改{0}授权",
+    "en": "Update {0} permissions"
+  }
+}

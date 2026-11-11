@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.MemberRemovalMapper;
 import com.stonewu.agenteam.mapper.enterprise.MemberRemovalRecipientMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -52,11 +54,11 @@ public class MemberRemovalQueryService {
                                                                String query, String cursor, Integer size) {
         member = policy.authorize(actor, member, false, false);
         if (kind == null || !Set.of("ownership", "todo").contains(kind)) {
-            throw ApiException.invalidField("kind", "请选择资源负责人或待办接收人。");
+            throw ApiException.invalidField("kind", Messages.text("error.enterprise.memberRemovalQueryService.recipients.1"));
         }
         var state = records.load(actor.enterpriseId(), member).orElseThrow(ResourceAuthorizationService::unavailable);
         if (kind.equals("ownership") && !policy.canTransferOwnership(actor, member, state)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "当前权限不能完成这些资源或团队的交接。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", Messages.text("error.enterprise.memberRemovalQueryService.recipients.2"));
         }
         var required = kind.equals("todo") ? List.of("todo.view", "todo.manage") : state.resourceKinds().stream()
             .map(value -> value.permission("edit")).sorted().toList();

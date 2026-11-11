@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
 import com.stonewu.agenteam.mapper.schedule.ScheduleMapper;
 import com.stonewu.agenteam.mapper.schedule.ScheduleOccurrenceMapper;
@@ -39,7 +41,7 @@ public class ScheduleRunStateService {
             return;
         }
         var occurrence = occurrences.forRun(run.enterpriseId(), run.id())
-            .orElseThrow(() -> new IllegalStateException("计划执行缺少发生记录"));
+            .orElseThrow(() -> new IllegalStateException(Messages.text("error.schedule.scheduleRunStateService.changed.1")));
         occurrences.state(run, clock.instant());
         if (run.terminal()) {
             schedules.release(run.enterpriseId(), occurrence.scheduleId(), occurrence.id(), clock.instant());
@@ -50,6 +52,6 @@ public class ScheduleRunStateService {
         schedules.advance(schedule, null, reason, clock.instant());
         notifications.enqueue(schedule.enterpriseId(), schedule.userId(),
             new Notice("schedule:" + schedule.id() + ":pause:" + schedule.revision(), "schedule",
-                "“" + schedule.name() + "”已暂停", views.reason(reason), "schedule", schedule.id()));
+                Messages.text("text.schedule.scheduleRunStateService.pause.1", schedule.name()), views.reason(reason), "schedule", schedule.id()));
     }
 }

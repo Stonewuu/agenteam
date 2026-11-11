@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.modelprofile.RemoteModelMapper;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRecord;
 import com.stonewu.agenteam.model.modelprofile.response.RemoteModelView;
@@ -76,7 +78,7 @@ public class RemoteModelClient {
             for (int page = 0; page < 10; page++) {
                 long remaining = deadline - System.nanoTime();
                 if (remaining <= 0) {
-                    throw new InterruptedIOException("模型目录分页超过读取时间限制。");
+                    throw new InterruptedIOException(Messages.text("error.modelprofile.remoteModelClient.list.1"));
                 }
                 var target = url.newBuilder();
                 if (provider.protocol().equals("anthropic")) {
@@ -122,7 +124,7 @@ public class RemoteModelClient {
                         return results.values().stream().sorted(Comparator.comparing(RemoteModelView::id)).toList();
                     }
                     if (!tokens.add(result.next())) {
-                        throw new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_LIST_INVALID", "提供方重复返回同一页，请手动填写模型标识。");
+                        throw new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_LIST_INVALID", Messages.text("error.modelprofile.remoteModelClient.list.2"));
                     }
                     cursor = result.next();
                 }
@@ -130,10 +132,10 @@ public class RemoteModelClient {
             throw tooLarge();
         } catch (InterruptedIOException timeout) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "MODEL_LIST_TIMEOUT",
-                "获取模型列表超时，请重试或手动填写模型标识。", diagnostic.failure(timeout));
+                Messages.text("error.modelprofile.remoteModelClient.list.3"), diagnostic.failure(timeout));
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_LIST_UNAVAILABLE",
-                "无法连接模型提供方，请检查服务地址后重试。", diagnostic.failure(failure));
+                Messages.text("error.modelprofile.remoteModelClient.list.4"), diagnostic.failure(failure));
         } catch (ApiException failure) {
             throw new ApiException(HttpStatus.valueOf(failure.getStatusCode().value()), failure.code(), failure.getReason(), diagnostic.failure(failure));
         }
@@ -156,17 +158,17 @@ public class RemoteModelClient {
 
     private ApiException statusError(int status) {
         String message = switch (status) {
-            case 401, 403 -> "提供方拒绝访问，请检查连接中保存的访问密钥及其模型读取权限。";
-            case 404, 405 -> "此服务未提供模型列表，请检查服务地址或手动填写模型标识。";
-            case 429 -> "获取模型列表过于频繁，请稍后重试。";
-            case 301, 302, 303, 307, 308 -> "模型服务地址发生跳转，请在连接配置中填写最终服务地址。";
-            default -> "提供方暂时无法返回模型列表，请稍后重试。";
+            case 401, 403 -> Messages.text("error.modelprofile.remoteModelClient.statusError.1");
+            case 404, 405 -> Messages.text("error.modelprofile.remoteModelClient.statusError.2");
+            case 429 -> Messages.text("error.modelprofile.remoteModelClient.statusError.3");
+            case 301, 302, 303, 307, 308 -> Messages.text("error.modelprofile.remoteModelClient.statusError.4");
+            default -> Messages.text("error.modelprofile.remoteModelClient.statusError.5");
         };
         return new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_LIST_UNAVAILABLE", message);
     }
 
     private ApiException tooLarge() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_LIST_TOO_LARGE",
-            "提供方返回的模型列表过大，请手动填写模型标识。");
+            Messages.text("error.modelprofile.remoteModelClient.tooLarge.1"));
     }
 }

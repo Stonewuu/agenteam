@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.core.env.Environment;
 
 import java.util.List;
@@ -17,7 +19,7 @@ public enum FileStorageMode {
             return LOCAL;
         }
         if (!configured.equals("auto") && !configured.equals("s3")) {
-            throw new IllegalArgumentException("文件存储类型只能选择 auto、local 或 s3");
+            throw new IllegalArgumentException(Messages.text("error.file.fileStorageMode.resolve.1"));
         }
         boolean present = List.of("endpoint", "bucket", "access-key-id", "secret-access-key").stream()
             .anyMatch(name -> !environment.getProperty("files.s3." + name, "").isBlank());
@@ -26,7 +28,7 @@ public enum FileStorageMode {
         }
         for (String name : List.of("bucket", "access-key-id", "secret-access-key")) {
             if (environment.getProperty("files.s3." + name, "").isBlank()) {
-                throw new IllegalArgumentException("对象存储配置不完整，缺少 files.s3." + name);
+                throw new IllegalArgumentException(Messages.text("error.file.fileStorageMode.resolve.2", name));
             }
         }
         return S3;

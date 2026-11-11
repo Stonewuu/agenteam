@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.auth.AuthSessionAttributes;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
 import com.stonewu.agenteam.model.auth.entity.AccountOperation;
@@ -43,7 +45,7 @@ public class LocalAuthenticationService {
         if (ChannelSessionGuard.external(session)
             || !(session.getAttribute(AuthSessionAttributes.AUTHENTICATED_AT) instanceof Number timestamp)
             || clock.millis() - timestamp.longValue() >= Duration.ofMinutes(15).toMillis()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证当前账号密码，再继续操作。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", Messages.text("error.auth.localAuthenticationService.requireRecent.1"));
         }
         return actor;
     }
@@ -56,7 +58,7 @@ public class LocalAuthenticationService {
         limiter.checkAccount(account);
         if (password == null || password.length() > 256 || !passwords.matches(password, user.passwordHash())) {
             limiter.failed(account);
-            throw ApiException.invalidField("password", "密码不正确，请重新输入。");
+            throw ApiException.invalidField("password", Messages.text("error.auth.localAuthenticationService.reauthenticate.1"));
         }
         limiter.succeeded(account);
         identity.requireUser(sessions.establish(request, user));
@@ -65,7 +67,7 @@ public class LocalAuthenticationService {
     private void requirePersonalSession(HttpSession session) {
         if (SessionIdentityService.state(session) != null) {
             throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED",
-                "此操作需要账号本人验证，请结束身份切换后使用本人账号登录。");
+                Messages.text("error.http.apiRequestFilter.doFilterInternal.2"));
         }
     }
 }

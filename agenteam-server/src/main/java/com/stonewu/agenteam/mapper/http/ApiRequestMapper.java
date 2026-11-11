@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.yulichang.base.MPJBaseMapper;
 import com.stonewu.agenteam.configuration.persistence.QueryTimeoutInterceptor;
@@ -46,7 +48,7 @@ public interface ApiRequestMapper extends MPJBaseMapper<ApiRequestRow> {
 
     default void complete(String id, int status, String responseJson, Instant now) {
         if (completeProcessing(id, status, responseJson, now) != 1) {
-            throw new IllegalStateException("请求完成记录未能保存，当前事务不能提交");
+            throw new IllegalStateException(Messages.text("error.http.apiRequestMapper.complete.1"));
         }
     }
 

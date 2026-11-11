@@ -1,5 +1,6 @@
 import common from "./en/common.json";
-import {editionMessages} from "@/features/edition/messages-extension";
+import {editionMessages, editionBackendMessages} from "@/features/edition/messages-extension";
+import backend from "../generated/backend.json";
 import additional from "./en/additional.json";
 import server from "./en/server.json";
 import builtins from "./en/builtins.json";
@@ -29,6 +30,7 @@ import environment from "./en/environment.json";
 
 /** 界面英文文案按功能拆分；中文原文作为稳定的消息键。 */
 export const en: Readonly<Record<string, string>> = {
+  ...backend.legacy, ...editionBackendMessages.legacy,
   ...additional,
   ...server,
   ...builtins,
@@ -36,4 +38,5 @@ export const en: Readonly<Record<string, string>> = {
   ...common, ...auth, ...workspace, ...agent, ...data, ...todo, ...schedule, ...employee, ...enterprise,
   ...skill, ...knowledge, ...exports, ...user, ...plugin, ...workflow, ...resource, ...support,
   ...integration, ...notification, ...scheduleActions, ...modelBilling, ...collaboration, ...environment, ...editionMessages,
+  ...backend.en, ...editionBackendMessages.en,
 };

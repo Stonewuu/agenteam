@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper.ResolvedSubagent;
@@ -46,10 +48,9 @@ public final class SubagentToolEvents implements AgentTool {
             Map<String, Object> properties = new LinkedHashMap<>();
             original.forEach((key, value) -> properties.put(key.toString(), value));
             properties.put("agent_id",
-                Map.of("type", "string", "enum", List.copyOf(names.keySet()), "description", "选择当前员工已配置的助手："
-                    + String.join("；", subagents.stream()
+                Map.of("type", "string", "enum", List.copyOf(names.keySet()), "description", Messages.text("text.agent.subagentToolEvents.init.1", String.join("；", subagents.stream()
                     .map(value -> value.id() + "：" + value.definition().name() + "，" + value.definition().description())
-                    .toList())));
+                    .toList()))));
             parameters.put("properties", properties);
             var required = new ArrayList<String>();
             if (parameters.get("required") instanceof List<?> fields) {
@@ -107,7 +108,7 @@ public final class SubagentToolEvents implements AgentTool {
     public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
         return Mono.deferContextual(context -> {
             var emitter = AgentEventEmitter.fromContext(context)
-                .orElseThrow(() -> new IllegalStateException("子任务必须使用带有事件身份的执行连接"));
+                .orElseThrow(() -> new IllegalStateException(Messages.text("error.agent.subagentToolEvents.callAsync.1")));
             String call = param.getToolUseBlock().getId();
             Object label = param.getInput().get("label");
             Object agentId = param.getInput().get("agent_id");

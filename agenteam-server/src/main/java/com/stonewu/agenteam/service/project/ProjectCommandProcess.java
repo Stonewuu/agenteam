@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.project.entity.ProjectCommandRecord;
@@ -51,7 +53,7 @@ public class ProjectCommandProcess {
         Path runner = scripts.resolve("runner.py");
         try (var source = getClass().getResourceAsStream("/sandbox/command_runner.py")) {
             if (source == null) {
-                throw new IOException("沙盒命令管理程序缺失");
+                throw new IOException(Messages.text("error.project.projectCommandProcess.prepare.1"));
             }
             byte[] content = source.readAllBytes();
             if (!Files.exists(runner, LinkOption.NOFOLLOW_LINKS) || !Arrays.equals(content,
@@ -70,7 +72,7 @@ public class ProjectCommandProcess {
             Files.writeString(script, command, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE,
                 LinkOption.NOFOLLOW_LINKS);
         } else if (!Files.readString(script).equals(command)) {
-            throw new IOException("同一命令编号对应的脚本内容不一致");
+            throw new IOException(Messages.text("error.project.projectCommandProcess.prepare.2"));
         }
         readable(scripts, true);
         readable(runner, false);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import io.agentscope.core.message.Base64Source;
 import io.agentscope.core.message.ImageBlock;
@@ -31,30 +33,30 @@ public class WorkspaceImageReader {
         try {
             var source = files.resolve(path, false);
             if (!Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS) || Files.size(source) > 4L * 1024 * 1024) {
-                throw invalid("图片不存在或超过 4 MiB，请先生成较小的 PNG 或 JPEG 预览。");
+                throw invalid(Messages.text("error.workspace.workspaceImageReader.read.1"));
             }
             byte[] bytes;
             try (var input = Files.newInputStream(source, LinkOption.NOFOLLOW_LINKS)) {
                 bytes = input.readNBytes(4 * 1024 * 1024 + 1);
             }
             if (bytes.length > 4 * 1024 * 1024) {
-                throw invalid("图片超过允许大小，请先缩小图片。");
+                throw invalid(Messages.text("error.workspace.workspaceImageReader.read.2"));
             }
             try (var image = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
                 var readers = ImageIO.getImageReaders(image);
                 if (!readers.hasNext()) {
-                    throw invalid("文件不是可读取的 PNG 或 JPEG 图片。");
+                    throw invalid(Messages.text("error.workspace.workspaceImageReader.read.3"));
                 }
                 var reader = readers.next();
                 try {
                     String format = reader.getFormatName().toLowerCase(Locale.ROOT);
                     if (!Set.of("png", "jpeg", "jpg").contains(format)) {
-                        throw invalid("请先将图片转换为 PNG 或 JPEG 格式。");
+                        throw invalid(Messages.text("error.workspace.workspaceImageReader.read.4"));
                     }
                     reader.setInput(image, true, true);
                     int width = reader.getWidth(0), height = reader.getHeight(0);
                     if (width < 1 || height < 1 || (long) width * height > 16000000L) {
-                        throw invalid("图片尺寸过大，请先缩小到一千六百万像素以内。");
+                        throw invalid(Messages.text("error.workspace.workspaceImageReader.read.5"));
                     }
                     return new Image(format.equals("png") ? "image/png" : "image/jpeg",
                         Base64.getEncoder().encodeToString(bytes), width, height);
@@ -64,7 +66,7 @@ public class WorkspaceImageReader {
             }
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKSPACE_IMAGE_INVALID",
-                "图片无法读取，请重新生成预览。", failure);
+                Messages.text("error.workspace.workspaceImageReader.read.6"), failure);
         }
     }
 

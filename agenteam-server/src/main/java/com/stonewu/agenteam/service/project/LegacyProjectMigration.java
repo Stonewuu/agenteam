@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -125,7 +127,7 @@ public class LegacyProjectMigration {
                 // 旧版本的操作完成后再复制已保存内容。
             }
             if (System.nanoTime() >= deadline) {
-                throw ApiException.invalidField("projectId", "旧会话文件仍在使用，请等待任务停止后重试。");
+                throw ApiException.invalidField("projectId", Messages.text("error.project.legacyProjectMigration.acquire.1"));
             }
             control.pause(Duration.ofMillis(50));
         }
@@ -150,7 +152,7 @@ public class LegacyProjectMigration {
                     }
                     if (Files.mismatch(path, destination) != -1) {
                         throw ApiException.invalidField("projectId",
-                            "项目目录已有不同内容，未覆盖文件，请核对目录后重试。");
+                            Messages.text("error.project.legacyProjectMigration.copyTree.1"));
                     }
                 } else {
                     throw WorkspacePaths.invalid();

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.workflow.WorkflowNodes;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,19 +50,19 @@ public class ResourceCopyConfiguration {
                 }
                 remove(config, binding);
                 errors.put("config." + binding.bindingKey(),
-                    List.of("原依赖已失效或无法使用，请重新选择或确认移除后保存草稿。"));
+                    List.of(Messages.text("text.resource.resourceCopyConfiguration.copy.1")));
             }
         }
         if (config.hasNonNull("credentialId") && !credentials.canBind(actor)) {
             config.putNull("credentialId");
-            errors.put("config.credentialId", List.of("副本未保留连接凭据，请重新选择或确认不使用凭据后保存。"));
+            errors.put("config.credentialId", List.of(Messages.text("text.resource.resourceCopyConfiguration.copy.2")));
         }
         if (resource.kind() == ResourceKind.PLUGIN && PluginConfigurationMapper.modern(config) && !credentials.canBind(
             actor)) {
             for (var source : config.path("sources")) {
                 if (source.hasNonNull("credentialId")) {
                     ((ObjectNode) source).putNull("credentialId");
-                    errors.put("config.sources", List.of("副本未保留连接凭据，请重新选择或确认不使用凭据后保存。"));
+                    errors.put("config.sources", List.of(Messages.text("text.resource.resourceCopyConfiguration.copy.2")));
                 }
             }
         }

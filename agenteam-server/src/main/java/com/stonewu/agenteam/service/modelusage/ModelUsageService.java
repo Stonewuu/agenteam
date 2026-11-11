@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.stonewu.agenteam.mapper.modelpricing.ModelPriceStore;
 import com.stonewu.agenteam.mapper.modelusage.ModelUsageEvidenceMapper;
@@ -44,7 +46,7 @@ public class ModelUsageService {
         var now = clock.instant();
         var price = prices.current(context.enterpriseId(), model.id(), now);
         if (rows.insert(registration.create(callId, owner, context, model, provider, price, now)) != 1) {
-            throw new IllegalStateException("模型请求登记未完成。");
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageService.register.1"));
         }
     }
 

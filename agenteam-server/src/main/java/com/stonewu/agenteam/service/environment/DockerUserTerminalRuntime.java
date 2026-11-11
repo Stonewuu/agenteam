@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
 import com.stonewu.agenteam.model.environment.request.EnvironmentTerminalInput;
 import com.stonewu.agenteam.model.environment.response.EnvironmentTerminalView;
@@ -50,7 +52,7 @@ public class DockerUserTerminalRuntime implements UserTerminalRuntime, AutoClose
             var state = previous;
             if (state != null && state.active() && clock.millis() - state.workerAt >= 60000) {
                 state.status = "error";
-                state.error = "终端连接已中断，请重新连接。";
+                state.error = Messages.text("text.environment.dockerUserTerminalRuntime.exchange.1");
                 state.busy = false;
                 state.pendingInput = "";
                 store.save(project, state);
@@ -61,7 +63,7 @@ public class DockerUserTerminalRuntime implements UserTerminalRuntime, AutoClose
                     || !container.daemonId().equals(containers.daemon(Duration.ofSeconds(10), null))
                     || !container.containerId().equals(containers.ownedId(project, Duration.ofSeconds(10)))
                     || !containers.running(container.containerId(), Duration.ofSeconds(10))) {
-                    throw new ApiException(HttpStatus.CONFLICT, "ENVIRONMENT_DISCONNECTED", "请先连接环境，再打开终端。");
+                    throw new ApiException(HttpStatus.CONFLICT, "ENVIRONMENT_DISCONNECTED", Messages.text("error.environment.dockerUserTerminalRuntime.exchange.1"));
                 }
                 state = new EnvironmentTerminalState();
                 state.id = input.id();
@@ -79,7 +81,7 @@ public class DockerUserTerminalRuntime implements UserTerminalRuntime, AutoClose
                 store.require(state, input.id());
             }
             if (state == null) {
-                throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_DISCONNECTED", "请重新连接终端。");
+                throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_DISCONNECTED", Messages.text("error.environment.dockerUserTerminalRuntime.exchange.2"));
             }
             if (state.active()) {
                 update(project, state, input);
@@ -117,10 +119,10 @@ public class DockerUserTerminalRuntime implements UserTerminalRuntime, AutoClose
                 return;
             }
             if (input.sequence() != state.sequence + 1) {
-                throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_INPUT_CONFLICT", "其他窗口已连接此终端，请重新连接后操作。");
+                throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_INPUT_CONFLICT", Messages.text("error.environment.dockerUserTerminalRuntime.update.1"));
             }
             if (Utf8Text.size(state.pendingInput + data) > 65536) {
-                throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TERMINAL_INPUT_BUSY", "终端正在处理输入，请稍后再试。");
+                throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "TERMINAL_INPUT_BUSY", Messages.text("error.environment.dockerUserTerminalRuntime.update.2"));
             }
             state.sequence = input.sequence();
             state.inputHash = hash;

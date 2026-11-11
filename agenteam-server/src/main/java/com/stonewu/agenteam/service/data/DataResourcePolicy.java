@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.data.DataCollectionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -39,7 +41,7 @@ public class DataResourcePolicy {
         data(record);
         policy.editable(record);
         if (!record.status().equals("active")) {
-            throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", "数据源已停用，请先启用。");
+            throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED", Messages.text("error.data.dataResourcePolicy.edit.1"));
         }
         return record;
     }
@@ -77,7 +79,7 @@ public class DataResourcePolicy {
 
     public void fileSource(ResourceRecord resource) {
         if (!resource.config().path("sourceType").asText().equals("file")) {
-            throw ApiException.invalidField("resourceId", "请为文件类型的数据源导入 CSV。");
+            throw ApiException.invalidField("resourceId", Messages.text("error.data.dataResourcePolicy.fileSource.1"));
         }
     }
 

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.mapper.file.FilePreviewMapper;
 import com.stonewu.agenteam.model.file.entity.OpenedPreviewFile;
@@ -70,7 +72,7 @@ public class WorkspaceFileSnapshot {
             var after = Files.readAttributes(source, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
             if (size != before.size() || after.size() != before.size() || !after.lastModifiedTime()
                 .equals(before.lastModifiedTime())) {
-                throw new ApiException(HttpStatus.CONFLICT, "WORKSPACE_FILE_CHANGED", "文件正在修改，请稍后重新打开。");
+                throw new ApiException(HttpStatus.CONFLICT, "WORKSPACE_FILE_CHANGED", Messages.text("error.file.workspaceFileSnapshot.open.1"));
             }
             var metadata = FilePreviewMapper.view(id, source.getFileName().toString(), logical, false, "workspace",
                 null,
@@ -79,7 +81,7 @@ public class WorkspaceFileSnapshot {
             opened = true;
             return new OpenedPreviewFile(metadata, stream);
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("当前运行环境不支持文件摘要算法", failure);
+            throw new IllegalStateException(Messages.text("error.file.workspaceFileSnapshot.open.2"), failure);
         } finally {
             if (!opened) {
                 Files.deleteIfExists(copy);

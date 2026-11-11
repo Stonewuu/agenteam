@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.integration.FeishuManagementOauthMapper;
@@ -101,6 +103,6 @@ public class FeishuManagementOauthStore {
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "FEISHU_AUTHORIZATION_INVALID", "授权请求已失效，请从原群策页面重新发起。");
+        return new ApiException(HttpStatus.CONFLICT, "FEISHU_AUTHORIZATION_INVALID", Messages.text("error.integration.feishuManagementOauthStore.unavailable.1"));
     }
 }

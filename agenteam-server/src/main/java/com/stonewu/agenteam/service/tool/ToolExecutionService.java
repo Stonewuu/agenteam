@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
@@ -133,7 +135,7 @@ public class ToolExecutionService {
                 try {
                     imageOutput.accept(workspace.image(run, lease, session, result, remaining));
                 } catch (ApiException failure) {
-                    LOG.warn("重新读取已保存的图片调用失败，执行编号 {}，调用编号 {}", run.id(), call.id(), failure);
+                    LOG.warn(Messages.log("log.tool.toolExecutionService.invoke.1"), run.id(), call.id(), failure);
                     return json.tree(Map.of("isError", true, "content", failure.getReason()));
                 }
             }
@@ -198,7 +200,7 @@ public class ToolExecutionService {
             }
             boolean failed = response.path("isError").asBoolean(false);
             transactions.complete(lease, call.id(), prepared, failed ? "TOOL_EXECUTION_FAILED" : null,
-                failed ? "工具返回执行失败，请查看结果。" : null);
+                failed ? Messages.text("text.tool.toolExecutionService.invoke.1") : null);
             if (!failed && workspaceResult != null && workspaceResult.image() != null) {
                 imageOutput.accept(workspaceResult.image());
             }
@@ -206,10 +208,10 @@ public class ToolExecutionService {
         } catch (ExecutionStoppedException stopped) {
             throw stopped;
         } catch (RuntimeException failure) {
-            LOG.error("工具调用失败，执行编号 {}，调用编号 {}", run.id(), call.id(), ToolFailureDetails.safe(failure, privateValues));
+            LOG.error(Messages.log("log.tool.toolExecutionService.invoke.2"), run.id(), call.id(), ToolFailureDetails.safe(failure, privateValues));
             String code = failure instanceof ApiException known ? known.code() : "TOOL_EXECUTION_FAILED";
             String message = failure instanceof ApiException known ? ToolFailureDetails.clean(known.getReason(), privateValues)
-                : "工具调用未能完成，请检查参数或改用其他方法继续。";
+                : Messages.text("text.tool.toolExecutionService.invoke.2");
             transactions.failed(lease, call.id(), code, message);
             var failed = calls.find(run.enterpriseId(), call.id(), false).orElseThrow();
             return transactions.result(failed);

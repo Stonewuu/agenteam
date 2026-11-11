@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
@@ -28,14 +30,14 @@ public class WorkflowExpressions {
 
     public void validateSelector(String value, Set<String> previous) {
         if (value == null || value.length() > 200) {
-            throw syntax("变量路径不能超过二百个字符。");
+            throw syntax(Messages.text("error.workflow.workflowExpressions.validateSelector.1"));
         }
         if (INPUT.matcher(value).matches()) {
             return;
         }
         var step = STEP.matcher(value);
         if (!step.matches() || !previous.contains(step.group(1))) {
-            throw syntax("变量只能引用输入或已经位于当前节点之前的步骤结果。");
+            throw syntax(Messages.text("error.workflow.workflowExpressions.validateSelector.2"));
         }
     }
 
@@ -49,13 +51,13 @@ public class WorkflowExpressions {
             int end = 0;
             while (matcher.find()) {
                 if (text.substring(end, matcher.start()).contains("${")) {
-                    throw syntax("变量表达式没有完整闭合，请检查 ${ 与 }。");
+                    throw syntax(Messages.text("error.workflow.workflowExpressions.validateTemplates.1"));
                 }
                 validateSelector(matcher.group(1), previous);
                 end = matcher.end();
             }
             if (text.substring(end).contains("${")) {
-                throw syntax("变量表达式没有完整闭合，请检查 ${ 与 }。");
+                throw syntax(Messages.text("error.workflow.workflowExpressions.validateTemplates.1"));
             }
         } else if (value.isContainerNode()) {
             value.forEach(child -> validateTemplates(child, previous));
@@ -64,7 +66,7 @@ public class WorkflowExpressions {
 
     public JsonNode read(String selector, JsonNode input, Map<String, JsonNode> outputs) {
         if (selector == null || selector.length() > 200) {
-            throw syntax("变量路径不符合要求。");
+            throw syntax(Messages.text("error.workflow.workflowExpressions.read.1"));
         }
         JsonNode current;
         String suffix;
@@ -74,7 +76,7 @@ public class WorkflowExpressions {
         } else {
             var step = STEP.matcher(selector);
             if (!step.matches()) {
-                throw syntax("变量路径不符合要求。");
+                throw syntax(Messages.text("error.workflow.workflowExpressions.read.1"));
             }
             current = outputs.get(step.group(1));
             suffix = selector.substring(("steps." + step.group(1) + ".output").length());
@@ -127,7 +129,7 @@ public class WorkflowExpressions {
 
     private JsonNode resolve(JsonNode value, JsonNode input, Map<String, JsonNode> outputs, Budget budget, int depth) {
         if (depth > 64 || value == null) {
-            throw syntax("变量映射层级过深或内容不完整。");
+            throw syntax(Messages.text("error.workflow.workflowExpressions.resolve.1"));
         }
         if (value.isObject()) {
             var result = json.createObjectNode();
@@ -161,7 +163,7 @@ public class WorkflowExpressions {
         while (matcher.find()) {
             String literal = source.substring(end, matcher.start());
             if (literal.contains("${")) {
-                throw syntax("变量表达式没有完整闭合。");
+                throw syntax(Messages.text("error.workflow.workflowExpressions.text.1"));
             }
             JsonNode value = required(matcher.group(1), input, outputs);
             if (matcher.start() == 0 && matcher.end() == source.length()) {
@@ -169,7 +171,7 @@ public class WorkflowExpressions {
             }
             if (!value.isTextual() && !value.isNumber() && !value.isBoolean()) {
                 throw failure("WORKFLOW_TEMPLATE_TYPE_INVALID",
-                    "组合文字只能使用文字、数字或布尔值（真或假），不能直接拼接对象、数组或空值。");
+                    Messages.text("error.workflow.workflowExpressions.text.2"));
             }
             append(result, literal);
             append(result, value.asText());
@@ -177,7 +179,7 @@ public class WorkflowExpressions {
         }
         String tail = source.substring(end);
         if (tail.contains("${")) {
-            throw syntax("变量表达式没有完整闭合。");
+            throw syntax(Messages.text("error.workflow.workflowExpressions.text.1"));
         }
         append(result, tail);
         return json.getNodeFactory().textNode(result.toString());
@@ -186,7 +188,7 @@ public class WorkflowExpressions {
     private JsonNode required(String selector, JsonNode input, Map<String, JsonNode> outputs) {
         var value = read(selector, input, outputs);
         if (value.isMissingNode()) {
-            throw failure("WORKFLOW_INPUT_MISSING", "需要的输入字段或已完成步骤结果不存在，请检查节点映射。");
+            throw failure("WORKFLOW_INPUT_MISSING", Messages.text("error.workflow.workflowExpressions.required.1"));
         }
         return value;
     }
@@ -202,7 +204,7 @@ public class WorkflowExpressions {
         try {
             return json.writeValueAsBytes(value);
         } catch (Exception invalid) {
-            throw failure("WORKFLOW_VALUE_INVALID", "节点内容无法保存为结构化数据。");
+            throw failure("WORKFLOW_VALUE_INVALID", Messages.text("error.workflow.workflowExpressions.encoded.1"));
         }
     }
 
@@ -215,7 +217,7 @@ public class WorkflowExpressions {
     }
 
     private static ApiException tooLarge() {
-        return failure("WORKFLOW_OUTPUT_TOO_LARGE", "节点结果超过 1 MiB，请减少返回内容或使用附件。");
+        return failure("WORKFLOW_OUTPUT_TOO_LARGE", Messages.text("error.workflow.workflowValues.write.2"));
     }
 
     private static final class Budget {

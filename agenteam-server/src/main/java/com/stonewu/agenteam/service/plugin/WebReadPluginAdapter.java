@@ -1,10 +1,13 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.plugin.WebPageContentMapper;
 import com.stonewu.agenteam.model.tool.entity.ToolDefinition;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.http.ApplicationInfoService;
 import com.stonewu.agenteam.service.network.RestrictedHttpClient;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.tool.ToolSchemaValidation;
@@ -31,11 +34,14 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
     private final ResourceJson json;
     private final ToolSchemaValidation schemas;
     private final ToolDefinition definition;
+    private final ApplicationInfoService applicationInfo;
 
-    public WebReadPluginAdapter(RestrictedHttpClient http, ResourceJson json, ToolSchemaValidation schemas) {
+    public WebReadPluginAdapter(RestrictedHttpClient http, ResourceJson json, ToolSchemaValidation schemas,
+                               ApplicationInfoService applicationInfo) {
         this.http = http;
         this.json = json;
         this.schemas = schemas;
+        this.applicationInfo = applicationInfo;
         JsonNode input = json.tree(Map.of("type", "object", "properties",
             Map.of("url", Map.of("type", "string", "minLength", 1, "maxLength", 2048)),
             "required", List.of("url"), "additionalProperties", false));
@@ -44,7 +50,7 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
             List.of("url", "content", "mediaType")));
         String hash = json.hash(json.tree(
             Map.of("name", "read_url", "inputSchema", input, "outputSchema", output, "operationClass", "read")));
-        definition = new ToolDefinition("read_url", "读取指定网页的正文和链接，或纯文本、JSON 内容。动态网页可通过命令工具使用 agenteam-browser read 网址。", hash, input, output,
+        definition = new ToolDefinition("read_url", Messages.source("text.plugin.webReadPluginAdapter.init.1"), hash, input, output,
             json.tree(Map.of()),
             "read", false, false, false, List.of(), 30);
     }
@@ -56,12 +62,12 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
 
     @Override
     public String name() {
-        return "网页读取";
+        return BuiltinPluginPresentation.name(code());
     }
 
     @Override
     public String description() {
-        return "读取指定地址的文字内容，用于任务中的资料参考。";
+        return BuiltinPluginPresentation.description(code());
     }
 
     @Override
@@ -73,7 +79,7 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
     public JsonNode call(String toolName, String operationId, JsonNode arguments, Duration timeout,
                          ToolCallControl control) {
         if (!toolName.equals(definition.name())) {
-            throw ApiException.invalidField("toolName", "未提供此工具。");
+            throw ApiException.invalidField("toolName", Messages.text("error.plugin.webReadPluginAdapter.call.1"));
         }
         schemas.arguments(definition.inputSchema(), arguments);
         String url = arguments.path("url").asText();
@@ -81,7 +87,7 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
         String trace = null;
         try (var scope = control.track(http.open(url, Map.of(), timeout));
              var exchange = scope.execute("GET", url, null, Map.of("Accept", "text/html, text/plain, application/json, application/xhtml+xml",
-                 "User-Agent", "Mozilla/5.0 (compatible; AgenTeam/0.2; +https://github.com/Stonewuu/agenteam)"),
+                 "User-Agent", applicationInfo.webReaderUserAgent()),
                  control::beforeSend)) {
             var response = exchange.response();
             status = response.code();
@@ -89,34 +95,34 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
             trace = candidate != null && candidate.matches("[A-Za-z0-9_-]{1,191}") ? candidate : null;
             if (List.of(408, 502, 503, 504).contains(response.code())) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_SERVER_UNAVAILABLE",
-                    "目标网站暂时无法完成读取。");
+                    Messages.text("error.plugin.webReadPluginAdapter.call.2"));
             }
             if (!response.isSuccessful()) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_REQUEST_REJECTED",
-                    "目标网站拒绝了本次读取。可尝试沙盒浏览器或其他公开来源；需要登录或验证时，请先确认已有访问权限。");
+                    Messages.text("error.plugin.webReadPluginAdapter.call.3"));
             }
             String mediaType = response.header("Content-Type", "").split(";", 2)[0].trim();
             if (!mediaType.startsWith("text/") && !mediaType.equals("application/json") && !mediaType.equals("application/xhtml+xml")) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_RESULT_INVALID",
-                    "该地址返回的不是可读取的文字内容。");
+                    Messages.text("error.plugin.webReadPluginAdapter.call.4"));
             }
             byte[] bytes = response.body().byteStream().readNBytes(16 * 1024 * 1024 + 1);
             if (bytes.length > 16 * 1024 * 1024) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_RESPONSE_TOO_LARGE",
-                    "网页内容超过本次读取允许的大小。");
+                    Messages.text("error.plugin.webReadPluginAdapter.call.5"));
             }
             return json.tree(WebPageContentMapper.read(bytes, response.header("Content-Type"), response.request().url().toString()));
         } catch (IOException | RuntimeException failure) {
             var address = HttpUrl.parse(url);
             String code = failure instanceof ApiException known ? known.code() : "REMOTE_CONNECTION_FAILED";
-            LOG.warn("网页读取失败，操作编号 {}，方法 GET，主机 {}，路径 {}，HTTP 状态 {}，错误码 {}，平台排障编号 {}",
-                operationId, address == null ? "无效地址" : address.host(), address == null ? "—" : address.encodedPath(),
+            LOG.warn(Messages.log("log.plugin.webReadPluginAdapter.call.1"),
+                operationId, address == null ? Messages.log("log.plugin.webReadPluginAdapter.call.2") : address.host(), address == null ? "—" : address.encodedPath(),
                 status, code, trace, ToolFailureDetails.safe(failure, List.of(url)));
             if (failure instanceof ApiException known) {
                 throw known;
             }
             if (failure instanceof CharacterCodingException || failure instanceof IllegalArgumentException) {
-                throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_RESULT_INVALID", "网页的文字编码或内容类型无法解析。",
+                throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_RESULT_INVALID", Messages.text("error.plugin.webReadPluginAdapter.call.6"),
                     ToolFailureDetails.safe(failure, List.of(url)));
             }
             throw failed(ToolFailureDetails.safe(failure, List.of(url)));
@@ -124,7 +130,7 @@ public class WebReadPluginAdapter implements BuiltinPluginAdapter {
     }
 
     private static ApiException failed(Throwable cause) {
-        return new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_CONNECTION_FAILED", "无法读取该地址，请检查后重试。",
+        return new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_CONNECTION_FAILED", Messages.text("error.plugin.webReadPluginAdapter.failed.1"),
             cause);
     }
 }

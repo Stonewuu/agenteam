@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.chat.entity.ChatOutboundMessageRow;
 import com.stonewu.agenteam.service.collaboration.CollaborationAccessService;
@@ -33,21 +35,21 @@ public class ChatFileSendService {
     public ChatPlatformAdapter.UploadFile file(ChatOutboundMessageRow row, JsonNode payload) {
         if (row.getTaskId() == null && row.getKind().equals("file_probe") && payload.path("syntheticFile").asBoolean()) {
             byte[] content = "name,attendance,salary\nexample,20,0\n".getBytes(StandardCharsets.UTF_8);
-            return new ChatPlatformAdapter.UploadFile("群策能力验证.csv", "text/csv", content.length, () -> new ByteArrayInputStream(content));
+            return new ChatPlatformAdapter.UploadFile(Messages.source("protocol.chat.chatFileSendService.file.1"), "text/csv", content.length, () -> new ByteArrayInputStream(content));
         }
         if (row.getTaskId() == null || !row.getKind().equals("completed_file")) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_FILE_SEND_FORBIDDEN", "此发送记录没有可公开的成果文件。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_FILE_SEND_FORBIDDEN", Messages.text("error.chat.chatFileSendService.file.1"));
         }
         var task = access.require(row.getEnterpriseId(), row.getTaskId());
         if (!task.getOutputVisibility().equals("chat_full")
             || !ChatReplyPolicy.allowsFullResult(task, conversations.require(row.getEnterpriseId(), row.getConversationId()))) {
             throw new ApiException(HttpStatus.CONFLICT, row.getFirstSubmittedAt() == null ? "CHAT_FILE_SEND_FORBIDDEN" : "CHAT_SEND_UNKNOWN",
-                "当前回复方式不允许发送成果附件。");
+                Messages.text("error.chat.chatFileSendService.file.2"));
         }
         var artifact = artifacts.require(task, payload.path("artifactId").asText(), payload.path("artifactVersion").asInt());
         var file = files.ready(access.actor(task), artifact.getFileId());
         if (!file.id().equals(payload.path("fileId").asText()) || !file.sha256().equals(artifact.getSha256())) {
-            throw new ApiException(HttpStatus.CONFLICT, "ARTIFACT_CONTENT_CHANGED", "成果文件已变化，不能发送旧引用。");
+            throw new ApiException(HttpStatus.CONFLICT, "ARTIFACT_CONTENT_CHANGED", Messages.text("error.chat.chatFileSendService.file.3"));
         }
         return new ChatPlatformAdapter.UploadFile(file.originalName(), file.mediaType(), file.sizeBytes(), () -> storage.open(file));
     }

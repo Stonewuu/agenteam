@@ -1,0 +1,1142 @@
+{
+  "error.integration.integrationPublicUrls.init.1": {
+    "zh-CN": "公开访问地址必须是加密站点域名，本地开发仅允许回环地址",
+    "en": "The public URL must use HTTPS. Local development only permits loopback addresses."
+  },
+  "error.integration.channelResponseMapper.requireSuccess.1": {
+    "zh-CN": "平台没有接受本次请求，请检查应用配置和授权状态。",
+    "en": "The platform did not accept this request. Check the application configuration and authorization."
+  },
+  "error.integration.channelResponseMapper.requireSuccess.2": {
+    "zh-CN": "平台校验失败，请检查应用凭证、权限或重新授权。",
+    "en": "Platform verification failed. Check the application credentials and permissions, or authorize again."
+  },
+  "error.integration.channelResponseMapper.token.1": {
+    "zh-CN": "平台没有返回有效的凭证有效期。",
+    "en": "The platform did not return a valid credential lifetime."
+  },
+  "error.integration.channelResponseMapper.wecomIdentity.1": {
+    "zh-CN": "请使用当前企业的内部成员账号完成授权。",
+    "en": "Authorize using an internal member account of the current organization."
+  },
+  "error.integration.channelResponseMapper.feishuIdentity.1": {
+    "zh-CN": "授权账号不属于此接入配置对应的企业。",
+    "en": "The authorized account does not belong to the organization associated with this integration."
+  },
+  "error.integration.channelResponseMapper.required.1": {
+    "zh-CN": "平台返回结果缺少必要信息，请重新检查接入配置。",
+    "en": "The platform response is missing required information. Check the integration configuration."
+  },
+  "error.integration.integrationConfigurationMapper.encode.1": {
+    "zh-CN": "接入参数无法保存",
+    "en": "Integration parameters could not be saved."
+  },
+  "error.integration.integrationConfigurationMapper.read.1": {
+    "zh-CN": "接入参数无法读取",
+    "en": "Integration parameters could not be read."
+  },
+  "error.integration.channelRateLimit.init.1": {
+    "zh-CN": "渠道频率限制定义不正确",
+    "en": "The channel rate limit definition is invalid."
+  },
+  "error.integration.channelAuthorizationPolicy.connection.1": {
+    "zh-CN": "此接入暂时无法授权，请联系企业管理员。",
+    "en": "This integration cannot be authorized right now. Contact an organization administrator."
+  },
+  "error.integration.channelAuthorizationPolicy.unavailable.1": {
+    "zh-CN": "本次授权已失效，请重新发起。",
+    "en": "This authorization expired. Start again."
+  },
+  "error.integration.channelAuthorizationSecrets.encrypt.1": {
+    "zh-CN": "授权材料无法保存",
+    "en": "Authorization material could not be saved."
+  },
+  "error.integration.channelAuthorizationSecrets.decrypt.1": {
+    "zh-CN": "授权材料无法读取",
+    "en": "Authorization material could not be read."
+  },
+  "error.integration.channelAuthorizationSecrets.digest.1": {
+    "zh-CN": "无法生成授权校验摘要",
+    "en": "The authorization verification digest could not be generated."
+  },
+  "error.integration.channelAuthorizationService.login.1": {
+    "zh-CN": "当前已经登录，请先退出账号再使用企业登录。",
+    "en": "You are already signed in. Sign out before using organization sign-in."
+  },
+  "error.integration.channelAuthorizationService.callback.1": {
+    "zh-CN": "平台授权交换不能在数据库事务中执行",
+    "en": "Platform authorization exchange must not run inside a database transaction."
+  },
+  "error.integration.channelAuthorizationService.callback.2": {
+    "zh-CN": "平台授权未完成，请重新发起并允许授权。",
+    "en": "Platform authorization did not complete. Start again and grant permission."
+  },
+  "error.integration.channelBindingService.confirm.1": {
+    "zh-CN": "此平台账号已绑定其他群策账号，请先解除原绑定。",
+    "en": "This platform account is linked to another AgenTeam account. Remove the existing link first."
+  },
+  "error.integration.channelBindingService.confirm.2": {
+    "zh-CN": "当前账号或企业接入未开放外部登录。",
+    "en": "External sign-in is not enabled for this account or organization integration."
+  },
+  "error.integration.channelBindingService.confirm.3": {
+    "zh-CN": "本账号或外部身份已有绑定，请先解绑原账号。",
+    "en": "This account or external identity already has a binding. Remove the existing binding first."
+  },
+  "error.integration.channelBindingService.update.1": {
+    "zh-CN": "此账号绑定暂不可用，可以解除绑定后重新授权。",
+    "en": "This account binding is unavailable. Unlink it and authorize again."
+  },
+  "error.integration.channelBindingService.update.2": {
+    "zh-CN": "企微智能机器人仅提供聊天，不能用于个人通知或外部登录。",
+    "en": "WeCom intelligent bots provide chat only, not personal notifications or external sign-in."
+  },
+  "error.integration.channelBindingService.login.1": {
+    "zh-CN": "请先使用已有账号登录，绑定外部账号并开启登录。",
+    "en": "Sign in with an existing account, link the external account, and enable sign-in first."
+  },
+  "error.integration.channelBindingService.login.2": {
+    "zh-CN": "此账号尚未开启企业登录，请使用账号密码登录后，在企业账号绑定中开启。",
+    "en": "Organization sign-in is not enabled for this account. Sign in with your password and enable it in organization account bindings."
+  },
+  "error.integration.channelBindingService.own.1": {
+    "zh-CN": "绑定不存在或已解除。",
+    "en": "The binding does not exist or was removed."
+  },
+  "error.integration.channelBindingService.requireFlags.1": {
+    "zh-CN": "请选择通知接收与外部登录设置。",
+    "en": "Select notification and external sign-in settings."
+  },
+  "error.integration.channelPreferenceService.update.1": {
+    "zh-CN": "请选择是否接收此类通知。",
+    "en": "Choose whether to receive this type of notification."
+  },
+  "error.integration.channelPreferenceService.update.2": {
+    "zh-CN": "请先绑定要接收通知的企业账号。",
+    "en": "Link the organization account that will receive notifications first."
+  },
+  "error.integration.channelPreferenceService.update.3": {
+    "zh-CN": "请先启用此接入并在绑定设置中允许接收通知。",
+    "en": "Enable this integration and allow notifications in its binding settings first."
+  },
+  "error.integration.channelProviderException.sanitizedCause.1": {
+    "zh-CN": "渠道调用原异常类型：{0}",
+    "en": "Original channel call exception type: {0}"
+  },
+  "error.integration.channelRateLimiter.acquire.1": {
+    "zh-CN": "通知发送额度无法确认",
+    "en": "The notification delivery allowance could not be confirmed."
+  },
+  "error.integration.channelRateLimiter.digest.1": {
+    "zh-CN": "无法计算接收人额度编号",
+    "en": "The recipient allowance ID could not be calculated."
+  },
+  "error.integration.channelRequestDiagnostics.safeCause.1": {
+    "zh-CN": "：响应解析失败",
+    "en": ": Response parsing failed."
+  },
+  "error.integration.feishuAppClient.poll.1": {
+    "zh-CN": "暂时无法确认飞书创建结果，请稍后继续检查。",
+    "en": "The Feishu creation result cannot be confirmed yet. Check again later."
+  },
+  "error.integration.feishuAppClient.poll.2": {
+    "zh-CN": "飞书返回的应用编号无效。",
+    "en": "Feishu returned an invalid application ID."
+  },
+  "error.integration.feishuAppClient.poll.3": {
+    "zh-CN": "请使用飞书企业账号完成创建。",
+    "en": "Use a Feishu organization account to complete creation."
+  },
+  "error.integration.feishuAppClient.poll.4": {
+    "zh-CN": "飞书尚未返回明确创建结果，请检查创建页面后重试查询。",
+    "en": "Feishu has not returned a definite creation result. Check the creation page and query again."
+  },
+  "error.integration.feishuAppClient.requireScopes.1": {
+    "zh-CN": "飞书尚未授予创建流程所需的全部权限，请完成平台审批后继续。",
+    "en": "Feishu has not granted all permissions required for creation. Complete platform approval before continuing."
+  },
+  "error.integration.feishuAppClient.requireSelfManagement.1": {
+    "zh-CN": "此应用尚未开通自动配置权限，请在飞书为此应用开通“管理应用自身”并发布后重试，或新建企业接入。",
+    "en": "Automatic configuration permissions are not enabled. Enable “Manage the app itself” in Feishu and publish the app before retrying, or create a new organization integration."
+  },
+  "error.integration.feishuAppClient.allowedLink.1": {
+    "zh-CN": "飞书未返回可用的创建地址。",
+    "en": "Feishu did not return a usable creation URL."
+  },
+  "error.integration.feishuAppClient.addons.1": {
+    "zh-CN": "飞书创建参数无法生成",
+    "en": "Feishu creation parameters could not be generated."
+  },
+  "error.integration.feishuAppClient.registrationBody.1": {
+    "zh-CN": "飞书暂时无法开始创建，请稍后重试。",
+    "en": "Feishu creation cannot start right now. Try again later."
+  },
+  "error.integration.feishuAppClient.success.1": {
+    "zh-CN": "飞书管理授权已失效，请重新授权后继续。",
+    "en": "Feishu management authorization expired. Authorize again before continuing."
+  },
+  "error.integration.feishuAppClient.success.2": {
+    "zh-CN": "当前飞书账号没有此应用的管理权限，请由应用所有者或管理员授权。",
+    "en": "Your Feishu account cannot manage this application. Ask its owner or administrator to authorize it."
+  },
+  "error.integration.feishuAppClient.required.1": {
+    "zh-CN": "飞书返回的信息不完整，请稍后继续检查。",
+    "en": "Feishu returned incomplete information. Check again later."
+  },
+  "error.integration.feishuManagementAuthorizationService.callback.1": {
+    "zh-CN": "请使用管理应用所属飞书企业的账号授权。",
+    "en": "Authorize using an account in the Feishu organization that owns the management application."
+  },
+  "error.integration.feishuManagementAuthorizationService.personal.1": {
+    "zh-CN": "请结束代操作，使用本人账号完成飞书管理授权。",
+    "en": "End impersonation and authorize Feishu management with your own account."
+  },
+  "error.integration.feishuManagementGrantStore.claimRefresh.1": {
+    "zh-CN": "正在更新飞书授权，请稍后继续。",
+    "en": "Feishu authorization is being updated. Continue later."
+  },
+  "error.integration.feishuManagementGrantStore.authorizationRequired.1": {
+    "zh-CN": "请先授权飞书管理应用，再继续创建。",
+    "en": "Authorize the Feishu management application before continuing creation."
+  },
+  "error.integration.feishuManagementOauthStore.unavailable.1": {
+    "zh-CN": "授权请求已失效，请从原群策页面重新发起。",
+    "en": "The authorization request expired. Start again from the original AgenTeam page."
+  },
+  "error.integration.feishuManagementTokens.get.1": {
+    "zh-CN": "飞书管理授权无法刷新，请重新授权后继续。",
+    "en": "Feishu management authorization could not be refreshed. Authorize again before continuing."
+  },
+  "error.integration.feishuSetupApiService.change.1": {
+    "zh-CN": "请刷新创建进度后重试。",
+    "en": "Refresh the creation progress and try again."
+  },
+  "error.integration.feishuSetupApiService.open.1": {
+    "zh-CN": "创建入口已结束，请返回群策查看当前进度。",
+    "en": "The creation entry has closed. Return to AgenTeam to view progress."
+  },
+  "error.integration.feishuSetupApiService.actor.1": {
+    "zh-CN": "请结束代操作，使用本人账号创建飞书机器人。",
+    "en": "End impersonation and create the Feishu bot with your own account."
+  },
+  "error.integration.feishuSetupCipher.encrypt.1": {
+    "zh-CN": "飞书授权材料无法保存",
+    "en": "Feishu authorization material could not be saved."
+  },
+  "error.integration.feishuSetupCipher.decrypt.1": {
+    "zh-CN": "飞书授权材料无法读取",
+    "en": "Feishu authorization material could not be read."
+  },
+  "error.integration.feishuSetupProcessor.process.1": {
+    "zh-CN": "创建流程阶段不可执行",
+    "en": "This creation stage cannot be executed."
+  },
+  "error.integration.feishuSetupProcessor.prepare.1": {
+    "zh-CN": "此应用与已保存的飞书企业不一致，请检查接入配置。",
+    "en": "This application does not match the saved Feishu organization. Check the integration configuration."
+  },
+  "error.integration.feishuSetupProcessor.prepare.2": {
+    "zh-CN": "新应用与管理应用不属于同一飞书企业，请核对创建时选择的账号。",
+    "en": "The new application and management application belong to different Feishu organizations. Check the account selected during creation."
+  },
+  "error.integration.feishuSetupProcessor.publish.1": {
+    "zh-CN": "飞书应用已有待审核版本，请处理后继续。",
+    "en": "The Feishu application has a version awaiting review. Resolve it before continuing."
+  },
+  "error.integration.feishuSetupProcessor.publish.2": {
+    "zh-CN": "飞书应用正在审核其他版本，请处理后继续。",
+    "en": "Another version of the Feishu application is under review. Resolve it before continuing."
+  },
+  "error.integration.feishuSetupProcessor.connection.1": {
+    "zh-CN": "接入配置已被修改，请取消本流程并重新发起快捷配置。",
+    "en": "The integration configuration changed. Cancel this process and start quick setup again."
+  },
+  "error.integration.feishuSetupProcessor.connection.2": {
+    "zh-CN": "飞书接入已停用，请恢复后继续。",
+    "en": "The Feishu integration is disabled. Enable it before continuing."
+  },
+  "error.integration.feishuSetupProcessor.nextVersion.1": {
+    "zh-CN": "飞书应用的版本号无法自动递增，请先核对版本设置。",
+    "en": "The Feishu application version cannot be incremented automatically. Check the version settings first."
+  },
+  "error.integration.feishuSetupStore.create.1": {
+    "zh-CN": "已有创建流程尚未完成，请先继续或取消该流程。",
+    "en": "An unfinished creation process exists. Continue or cancel it first."
+  },
+  "error.integration.feishuSetupStore.create.2": {
+    "zh-CN": "只有企业快捷接入可以使用已有连接。",
+    "en": "Only organization quick setup can use an existing connection."
+  },
+  "error.integration.feishuSetupStore.create.3": {
+    "zh-CN": "请选择尚未停用的飞书企业接入或管理应用。",
+    "en": "Select a Feishu organization integration or management application that is not disabled."
+  },
+  "error.integration.feishuSetupStore.create.4": {
+    "zh-CN": "此应用正在配置，请等待当前流程完成。",
+    "en": "This application is being configured. Wait for the current process to finish."
+  },
+  "error.integration.feishuSetupStore.require.1": {
+    "zh-CN": "创建流程不存在或无法访问。",
+    "en": "The creation process does not exist or is inaccessible."
+  },
+  "error.integration.feishuSetupStore.manager.1": {
+    "zh-CN": "请先完成飞书企业快捷接入。",
+    "en": "Complete Feishu organization quick setup first."
+  },
+  "error.integration.feishuSetupStore.actor.1": {
+    "zh-CN": "发起创建的登录状态已失效，请重新登录后继续。",
+    "en": "The session that started creation expired. Sign in again before continuing."
+  },
+  "error.integration.feishuSetupStore.change.1": {
+    "zh-CN": "正在保存飞书处理结果，请稍后再试。",
+    "en": "The Feishu result is being saved. Try again later."
+  },
+  "error.integration.feishuSetupStore.change.2": {
+    "zh-CN": "当前流程无法重试，请检查飞书创建结果后重新开始。",
+    "en": "This process cannot be retried. Check the Feishu creation result before starting again."
+  },
+  "error.integration.feishuSetupStore.change.3": {
+    "zh-CN": "已有另一个创建流程，请先完成或取消它。",
+    "en": "Another creation process exists. Finish or cancel it first."
+  },
+  "error.integration.feishuSetupStore.change.4": {
+    "zh-CN": "创建已经完成，请在机器人设置中管理。",
+    "en": "Creation is complete. Manage the bot in its settings."
+  },
+  "error.integration.feishuSetupStore.input.1": {
+    "zh-CN": "飞书创建设置无法读取",
+    "en": "Feishu creation settings could not be read."
+  },
+  "error.integration.feishuSetupStore.write.1": {
+    "zh-CN": "飞书创建设置无法保存",
+    "en": "Feishu creation settings could not be saved."
+  },
+  "error.integration.integrationApiService.quickWecom.1": {
+    "zh-CN": "请选择企业微信企业接入。",
+    "en": "Select a WeCom organization integration."
+  },
+  "error.integration.integrationApiService.quickWecom.2": {
+    "zh-CN": "请填写有效的应用密钥。",
+    "en": "Enter a valid application secret."
+  },
+  "error.integration.integrationCheckService.prepare.1": {
+    "zh-CN": "应用网络校验不能在数据库事务内执行",
+    "en": "Application network verification must not run inside a database transaction."
+  },
+  "error.integration.integrationHttpClient.execute.1": {
+    "zh-CN": "平台响应超过允许大小",
+    "en": "The platform response exceeds the allowed size."
+  },
+  "error.integration.integrationHttpClient.execute.2": {
+    "zh-CN": "平台请求未取得明确结果。",
+    "en": "The platform request has no confirmed result."
+  },
+  "error.integration.integrationManagementPolicy.require.1": {
+    "zh-CN": "登录状态已变化，请重新登录。",
+    "en": "Your sign-in status changed. Sign in again."
+  },
+  "error.integration.integrationManagementPolicy.require.2": {
+    "zh-CN": "企业已停用，请先恢复企业后再修改接入。",
+    "en": "The organization is disabled. Enable it before changing the integration."
+  },
+  "error.integration.integrationManagementPolicy.denied.1": {
+    "zh-CN": "只有企业管理员或系统超级管理员可以维护此接入。",
+    "en": "Only organization administrators or system super administrators can maintain this integration."
+  },
+  "error.integration.integrationManagementPolicy.missing.1": {
+    "zh-CN": "当前企业不存在或无法访问。",
+    "en": "The current organization does not exist or is inaccessible."
+  },
+  "error.integration.integrationManagementService.create.1": {
+    "zh-CN": "请选择平台支持的企业接入或机器人接入。",
+    "en": "Select an organization or bot integration supported by the platform."
+  },
+  "error.integration.integrationManagementService.create.2": {
+    "zh-CN": "机器人接入不用于企业登录或个人通知，请在企业接入中配置这些功能。",
+    "en": "Bot integrations do not support organization sign-in or personal notifications. Configure those features in an organization integration."
+  },
+  "error.integration.integrationManagementService.create.3": {
+    "zh-CN": "此企业应用已有接入配置，请维护已有配置。",
+    "en": "This organization application already has an integration. Edit its existing configuration."
+  },
+  "error.integration.integrationManagementService.update.1": {
+    "zh-CN": "应用管理接入不用于成员绑定、登录或个人通知。",
+    "en": "Application management integrations do not support member binding, sign-in, or personal notifications."
+  },
+  "error.integration.integrationManagementService.update.2": {
+    "zh-CN": "企微智能机器人仅支持聊天配对，不能用于登录或个人通知。",
+    "en": "WeCom intelligent bots only support chat pairing, not sign-in or personal notifications."
+  },
+  "error.integration.integrationManagementService.configureFeishuEnterprise.1": {
+    "zh-CN": "请选择飞书企业接入或已有管理应用。",
+    "en": "Select a Feishu organization integration or an existing management application."
+  },
+  "error.integration.integrationManagementService.status.1": {
+    "zh-CN": "请选择启用或停用接入。",
+    "en": "Choose whether to enable or disable the integration."
+  },
+  "error.integration.integrationManagementService.status.2": {
+    "zh-CN": "请先校验当前应用密钥与配置，再启用接入。",
+    "en": "Verify the current application secret and configuration before enabling the integration."
+  },
+  "error.integration.integrationManagementService.delete.1": {
+    "zh-CN": "请先停用接入，再执行删除。",
+    "en": "Disable the integration before deleting it."
+  },
+  "error.integration.integrationManagementService.recordCheck.1": {
+    "zh-CN": "此企业应用已配置，请使用已有接入。",
+    "en": "This organization application is already configured. Use the existing integration."
+  },
+  "error.integration.integrationManagementService.identifier.1": {
+    "zh-CN": "请输入平台提供的完整编号，不要包含空格或其他符号。",
+    "en": "Enter the complete ID provided by the platform, without spaces or other symbols."
+  },
+  "error.integration.integrationProvider.normalizeConfiguration.1": {
+    "zh-CN": "此平台没有可设置的额外参数。",
+    "en": "This platform has no additional configurable parameters."
+  },
+  "error.integration.integrationProviderRegistry.init.1": {
+    "zh-CN": "渠道代码重复注册：{0}",
+    "en": "Duplicate channel code registration: {0}"
+  },
+  "error.integration.integrationProviderRegistry.require.1": {
+    "zh-CN": "请选择支持的接入平台。",
+    "en": "Select a supported integration platform."
+  },
+  "error.integration.integrationProviderRegistry.identity.1": {
+    "zh-CN": "此渠道不支持账号授权。",
+    "en": "This channel does not support account authorization."
+  },
+  "error.integration.integrationProviderRegistry.sender.1": {
+    "zh-CN": "此渠道不支持个人消息。",
+    "en": "This channel does not support personal messages."
+  },
+  "error.integration.integrationQrCode.render.1": {
+    "zh-CN": "创建二维码无法生成",
+    "en": "The creation QR code could not be generated."
+  },
+  "error.integration.integrationQueryService.list.1": {
+    "zh-CN": "请选择企业接入或机器人接入。",
+    "en": "Select an organization or bot integration."
+  },
+  "error.integration.integrationQueryService.require.1": {
+    "zh-CN": "接入不存在或无法访问。",
+    "en": "The connection does not exist or is not accessible."
+  },
+  "error.integration.integrationResourceHttpClient.download.1": {
+    "zh-CN": "平台错误响应超过允许大小",
+    "en": "The platform error response exceeds the allowed size."
+  },
+  "error.integration.integrationResourceHttpClient.download.2": {
+    "zh-CN": "平台没有返回预期的文件内容。",
+    "en": "The platform did not return the expected file content."
+  },
+  "error.integration.integrationResourceHttpClient.download.3": {
+    "zh-CN": "平台文件超过二十 MiB，请拆分后发送。",
+    "en": "The platform file exceeds 20 MiB. Split it before sending."
+  },
+  "error.integration.integrationResourceHttpClient.download.4": {
+    "zh-CN": "平台文件暂时无法下载。",
+    "en": "The platform file cannot be downloaded right now."
+  },
+  "error.integration.integrationResourceHttpClient.upload.1": {
+    "zh-CN": "文件为空或超过二十 MiB。",
+    "en": "The file is empty or exceeds 20 MiB."
+  },
+  "error.integration.integrationResourceHttpClient.writeTo.1": {
+    "zh-CN": "成果文件内容已发生变化",
+    "en": "The result file content changed."
+  },
+  "error.integration.integrationResourceHttpClient.writeTo.2": {
+    "zh-CN": "成果文件大小已发生变化",
+    "en": "The result file size changed."
+  },
+  "error.integration.integrationResourceHttpClient.upload.2": {
+    "zh-CN": "平台上传响应超过允许大小",
+    "en": "The platform upload response exceeds the allowed size."
+  },
+  "error.integration.integrationResourceHttpClient.upload.3": {
+    "zh-CN": "平台没有返回可用的文件上传结果。",
+    "en": "The platform did not return a usable file upload result."
+  },
+  "error.integration.integrationResourceHttpClient.upload.4": {
+    "zh-CN": "平台拒绝文件且无法安全读取原文件进行错误脱敏。",
+    "en": "The platform rejected the file, and the original file could not be read safely to redact the error."
+  },
+  "error.integration.integrationResourceHttpClient.upload.5": {
+    "zh-CN": "成果文件暂时无法上传到平台。",
+    "en": "The result file cannot be uploaded to the platform right now."
+  },
+  "error.integration.integrationRetentionService.init.1": {
+    "zh-CN": "渠道保留天数必须为正数，尝试记录不短于内容副本，发送结果至少保留一百八十天且不短于尝试记录",
+    "en": "Channel retention days must be positive. Attempt records must outlive content copies; delivery results must be retained for at least 180 days and at least as long as attempt records."
+  },
+  "error.integration.integrationSecretService.store.1": {
+    "zh-CN": "请输入完整应用密钥，不能包含空格或控制字符。",
+    "en": "Enter the complete application secret, without spaces or control characters."
+  },
+  "error.integration.integrationSecretService.store.2": {
+    "zh-CN": "应用密钥无法加密保存",
+    "en": "The application secret could not be encrypted and saved."
+  },
+  "error.integration.integrationSecretService.load.1": {
+    "zh-CN": "请先配置应用密钥。",
+    "en": "Configure the application secret first."
+  },
+  "error.integration.integrationSecretService.load.2": {
+    "zh-CN": "已保存的应用密钥无法读取",
+    "en": "The saved application secret could not be read."
+  },
+  "error.integration.integrationSecretService.purpose.1": {
+    "zh-CN": "接入密钥用途未登记",
+    "en": "The integration secret purpose is not registered."
+  },
+  "error.integration.integrationTokenService.get.1": {
+    "zh-CN": "应用令牌刷新不能在数据库事务中执行",
+    "en": "Application token refresh must not run inside a database transaction."
+  },
+  "error.integration.integrationTokenService.get.2": {
+    "zh-CN": "应用凭证正在刷新，请稍后重试。",
+    "en": "Application credentials are being refreshed. Try again later."
+  },
+  "error.integration.integrationTokenService.decode.1": {
+    "zh-CN": "应用凭证缓存无法读取，请稍后重试。",
+    "en": "The application credential cache cannot be read. Try again later."
+  },
+  "error.integration.integrationTokenService.encode.1": {
+    "zh-CN": "应用凭证无法保存到加密缓存",
+    "en": "Application credentials could not be saved to the encrypted cache."
+  },
+  "error.integration.feishuIntegrationProvider.checkApplication.1": {
+    "zh-CN": "应用对应的飞书企业与当前接入配置不一致。",
+    "en": "The application's Feishu organization does not match the integration configuration."
+  },
+  "error.integration.wecomAiBotIntegrationProvider.verify.1": {
+    "zh-CN": "请先停用此机器人并等待连接释放，再检查凭据。",
+    "en": "Disable this bot and wait for its connection to close before checking credentials."
+  },
+  "error.integration.wecomAiBotIntegrationProvider.verify.2": {
+    "zh-CN": "企微智能机器人尚未完成认证。",
+    "en": "The WeCom intelligent bot has not completed authentication."
+  },
+  "error.integration.wecomAiBotIntegrationProvider.unsupported.1": {
+    "zh-CN": "企微智能机器人使用专用长连接认证。",
+    "en": "WeCom intelligent bots use dedicated persistent connection authentication."
+  },
+  "error.integration.wecomBotIdentityClient.signature.1": {
+    "zh-CN": "无法计算企微身份签名",
+    "en": "The WeCom identity signature could not be calculated."
+  },
+  "error.integration.wecomBotIdentityClient.unavailable.1": {
+    "zh-CN": "暂时无法核对企微机器人身份，请稍后重试。",
+    "en": "The WeCom bot identity cannot be verified right now. Try again later."
+  },
+  "error.integration.wecomIntegrationProvider.validateApplicationId.1": {
+    "zh-CN": "企业微信应用编号需要填写正整数。",
+    "en": "The WeCom application ID must be a positive integer."
+  },
+  "error.integration.wecomIntegrationProvider.normalizeConfiguration.1": {
+    "zh-CN": "企业微信仅支持设置每日通知发送上限。",
+    "en": "WeCom only supports a daily notification delivery limit."
+  },
+  "error.integration.wecomIntegrationProvider.normalizeConfiguration.2": {
+    "zh-CN": "每日发送上限需要填写 1 至 100000000 的整数。",
+    "en": "The daily delivery limit must be an integer between 1 and 100000000."
+  },
+  "error.integration.wecomIntegrationProvider.checkApplication.1": {
+    "zh-CN": "应用密钥与填写的企业微信应用编号不匹配。",
+    "en": "The application secret does not match the entered WeCom application ID."
+  },
+  "error.integration.wecomIntegrationProvider.render.1": {
+    "zh-CN": "此通知只能发送给一个已绑定的成员。",
+    "en": "This notification can only be sent to one linked member."
+  },
+  "error.integration.wecomMemberClient.resolve.1": {
+    "zh-CN": "企微成员信息不完整，暂时无法识别账号。",
+    "en": "The WeCom member information is incomplete. The account cannot be identified yet."
+  },
+  "error.integration.wecomMemberClient.resolve.2": {
+    "zh-CN": "此消息不属于已接入的企微企业。",
+    "en": "This message does not belong to the connected WeCom organization."
+  },
+  "error.integration.wecomMemberClient.resolve.3": {
+    "zh-CN": "无法确认机器人属于当前企业，请检查扫码时选择的企业和应用可见范围。",
+    "en": "The bot's organization could not be confirmed. Check the organization selected during scanning and the application's visibility scope."
+  },
+  "error.integration.wecomMemberClient.resolve.4": {
+    "zh-CN": "此企微成员尚未激活或已停用，暂时不能使用智能体。",
+    "en": "This WeCom member is inactive or disabled and cannot use agents yet."
+  },
+  "error.integration.wecomMemberClient.success.1": {
+    "zh-CN": "企微应用凭据已过期，请稍后重试。",
+    "en": "The WeCom application credentials expired. Try again later."
+  },
+  "error.integration.wecomMemberClient.success.2": {
+    "zh-CN": "无法核对企微成员，请检查企业应用的通讯录权限和可见范围。",
+    "en": "The WeCom member could not be verified. Check the organization's application directory permissions and visibility scope."
+  },
+  "error.integration.wecomQuickCreateClient.poll.1": {
+    "zh-CN": "企微创建入口已失效，请重新获取二维码。",
+    "en": "The WeCom creation entry expired. Get a new QR code."
+  },
+  "error.integration.wecomQuickCreateClient.invalid.1": {
+    "zh-CN": "企微创建服务未返回有效结果，请稍后重试。",
+    "en": "The WeCom creation service returned no valid result. Try again later."
+  },
+  "error.integration.wecomEnterpriseConnections.require.1": {
+    "zh-CN": "请先配置并启用企业微信的企业接入。",
+    "en": "Configure and enable the WeCom organization integration first."
+  },
+  "error.integration.wecomEnterpriseConnections.requireAvailableName.1": {
+    "zh-CN": "已有同名企微机器人，请换一个便于区分的名称。",
+    "en": "A WeCom bot already uses this name. Choose a different name to distinguish it."
+  },
+  "error.integration.wecomEnterpriseProofStore.changed.1": {
+    "zh-CN": "企业接入已变化，请稍后重试。",
+    "en": "The organization integration changed. Try again later."
+  },
+  "error.integration.wecomEnterpriseVerifier.ensure.1": {
+    "zh-CN": "企微企业核验不能占用数据库事务",
+    "en": "WeCom organization verification must not hold a database transaction."
+  },
+  "error.integration.wecomMemberAliases.prepare.1": {
+    "zh-CN": "企微成员转换不能在数据库事务中执行",
+    "en": "WeCom member conversion must not run inside a database transaction."
+  },
+  "error.integration.wecomMemberAliases.prepare.2": {
+    "zh-CN": "消息不属于已接入的企微企业。",
+    "en": "The message does not belong to the connected WeCom organization."
+  },
+  "error.integration.wecomMemberAliases.unavailable.1": {
+    "zh-CN": "企微接入已变化，请重新核验后继续。",
+    "en": "The WeCom integration changed. Verify it again before continuing."
+  },
+  "error.integration.wecomSetupApiService.actor.1": {
+    "zh-CN": "请结束代操作，使用本人账号创建企微机器人。",
+    "en": "End impersonation and create the WeCom bot with your own account."
+  },
+  "error.integration.wecomSetupCipher.encrypt.1": {
+    "zh-CN": "企微创建材料无法保存",
+    "en": "WeCom creation material could not be saved."
+  },
+  "error.integration.wecomSetupCipher.read.1": {
+    "zh-CN": "企微创建材料无法读取",
+    "en": "WeCom creation material could not be read."
+  },
+  "error.integration.wecomSetupProcessor.process.1": {
+    "zh-CN": "企业接入凭据已变化，请重新检查后继续。",
+    "en": "The organization integration credentials changed. Check them again before continuing."
+  },
+  "error.integration.wecomSetupProcessor.process.2": {
+    "zh-CN": "企微创建阶段无法识别",
+    "en": "The WeCom creation stage is unrecognized."
+  },
+  "error.integration.wecomSetupStore.create.1": {
+    "zh-CN": "已有同名企微机器人正在创建，请换一个名称。",
+    "en": "A WeCom bot with this name is being created. Choose another name."
+  },
+  "error.integration.wecomSetupStore.create.2": {
+    "zh-CN": "已有企微创建流程尚未完成，请先继续或取消。",
+    "en": "An unfinished WeCom creation process exists. Continue or cancel it first."
+  },
+  "error.integration.wecomSetupStore.actor.1": {
+    "zh-CN": "请重新登录后继续创建机器人。",
+    "en": "Sign in again before continuing bot creation."
+  },
+  "error.integration.wecomSetupStore.change.1": {
+    "zh-CN": "正在保存企微处理结果，请稍后再试。",
+    "en": "The WeCom result is being saved. Try again later."
+  },
+  "error.integration.wecomSetupStore.change.2": {
+    "zh-CN": "当前流程无需重试。",
+    "en": "This process does not need to be retried."
+  },
+  "error.integration.wecomSetupStore.change.3": {
+    "zh-CN": "创建流程已经结束。",
+    "en": "The creation process has ended."
+  },
+  "error.integration.wecomSetupTransactions.bind.1": {
+    "zh-CN": "企微企业关联已变化，需要重新核验",
+    "en": "The WeCom organization association changed and must be verified again."
+  },
+  "error.integration.wecomResourceDownloader.init.1": {
+    "zh-CN": "平台资源地址不是允许的公网地址",
+    "en": "The platform resource URL is not an allowed public address."
+  },
+  "error.integration.wecomResourceDownloader.fetch.1": {
+    "zh-CN": "资源地址必须使用公网加密连接",
+    "en": "Resource URLs must use encrypted public connections."
+  },
+  "error.integration.wecomResourceDownloader.fetch.2": {
+    "zh-CN": "平台附件下载地址无效。",
+    "en": "The platform attachment download URL is invalid."
+  },
+  "error.integration.wecomResourceDownloader.fetch.3": {
+    "zh-CN": "平台拒绝附件下载，请重新发送附件。",
+    "en": "The platform rejected the attachment download. Send the attachment again."
+  },
+  "error.integration.wecomResourceDownloader.fetch.4": {
+    "zh-CN": "平台文件名字段过长",
+    "en": "The platform filename field is too long."
+  },
+  "error.integration.wecomResourceDownloader.fetch.5": {
+    "zh-CN": "平台附件超过二十 MiB。",
+    "en": "The platform attachment exceeds 20 MiB."
+  },
+  "error.integration.wecomResourceDownloader.fetch.6": {
+    "zh-CN": "企微附件暂时无法下载或解密。",
+    "en": "The WeCom attachment cannot be downloaded or decrypted right now."
+  },
+  "error.integration.wecomResourceDownloader.decrypt.1": {
+    "zh-CN": "企微附件密钥或加密内容无效",
+    "en": "The WeCom attachment key or encrypted content is invalid."
+  },
+  "error.integration.wecomResourceDownloader.decrypt.2": {
+    "zh-CN": "企微附件填充无效",
+    "en": "The WeCom attachment padding is invalid."
+  },
+  "error.integration.wecomResourceDownloader.decrypt.3": {
+    "zh-CN": "企微附件填充不一致",
+    "en": "The WeCom attachment padding is inconsistent."
+  },
+  "error.integration.feishuSetupProcessor.process.2": {
+    "zh-CN": "当前步骤未完成，请稍后重试。",
+    "en": "This step could not be completed. Try again later."
+  },
+  "error.integration.feishuSetupProcessor.process.3": {
+    "zh-CN": "无法确认飞书创建结果，请先核对飞书应用，避免重复创建。",
+    "en": "The Feishu creation result is unconfirmed. Check the Feishu application before creating another one."
+  },
+  "error.integration.feishuSetupProcessor.poll.1": {
+    "zh-CN": "创建入口已结束，但结果尚未确认，请先检查飞书应用。",
+    "en": "The creation entry closed, but the result is unconfirmed. Check the Feishu application first."
+  },
+  "error.integration.feishuSetupProcessor.approved.1": {
+    "zh-CN": "飞书未通过此版本审核，请处理审核意见后重试。",
+    "en": "Feishu rejected this version. Address the review feedback before retrying."
+  },
+  "error.integration.wecomMemberClient.invalid.1": {
+    "zh-CN": "企微返回的成员信息不完整，暂时无法识别账号。",
+    "en": "WeCom returned incomplete member information. The account cannot be identified yet."
+  },
+  "error.integration.wecomSetupProcessor.process.3": {
+    "zh-CN": "企业核验未通过，请检查后重试。",
+    "en": "Organization verification failed. Check your settings and try again."
+  },
+  "error.integration.wecomSetupProcessor.process.4": {
+    "zh-CN": "创建暂时未完成，请稍后重试。",
+    "en": "Creation is incomplete. Try again later."
+  },
+  "log.integration.integrationRetentionScheduling.sweep.1": {
+    "zh-CN": "渠道临时资料与过期发送记录清理未完成，任务 integration-retention",
+    "en": "Temporary channel data and expired delivery record cleanup did not complete; job=integration-retention"
+  },
+  "text.integration.channelResponseMapper.send.1": {
+    "zh-CN": "平台暂时无法确认是否已接受消息。",
+    "en": "The platform cannot confirm message acceptance yet."
+  },
+  "text.integration.channelResponseMapper.send.2": {
+    "zh-CN": "平台仍在处理该消息，暂时无法确认结果。",
+    "en": "The platform is still processing this message. The result is unconfirmed."
+  },
+  "text.integration.channelResponseMapper.send.3": {
+    "zh-CN": "平台要求降低发送频率，稍后继续。",
+    "en": "The platform requires a lower sending rate. Delivery will continue later."
+  },
+  "text.integration.channelResponseMapper.send.4": {
+    "zh-CN": "应用访问凭证已失效。",
+    "en": "The application access credentials expired."
+  },
+  "text.integration.channelResponseMapper.send.5": {
+    "zh-CN": "平台没有返回可确认的发送结果。",
+    "en": "The platform returned no confirmed delivery result."
+  },
+  "text.integration.channelResponseMapper.send.6": {
+    "zh-CN": "接收成员不存在、不在应用可见范围内或缺少应用使用许可。",
+    "en": "The recipient does not exist, is outside the application's visibility scope, or lacks an application license."
+  },
+  "text.integration.channelResponseMapper.send.7": {
+    "zh-CN": "平台没有返回消息编号，暂时无法确认结果。",
+    "en": "The platform returned no message ID. The result is unconfirmed."
+  },
+  "text.integration.channelResponseMapper.unknown.1": {
+    "zh-CN": "发送请求未取得明确结果，消息可能已经提交。",
+    "en": "The delivery request has no confirmed result. The message may have been submitted."
+  },
+  "text.integration.channelResponseMapper.description.1": {
+    "zh-CN": "接收成员不在应用可用范围内，或已被停用。",
+    "en": "The recipient is outside the application's available scope or is disabled."
+  },
+  "text.integration.channelResponseMapper.description.2": {
+    "zh-CN": "接收成员已离职，无法发送消息。",
+    "en": "The recipient has left the organization and cannot receive messages."
+  },
+  "text.integration.channelResponseMapper.description.3": {
+    "zh-CN": "接收成员的渠道身份已失效，请重新绑定。",
+    "en": "The recipient's channel identity expired. Link the account again."
+  },
+  "text.integration.channelResponseMapper.description.4": {
+    "zh-CN": "接收成员已关闭机器人消息。",
+    "en": "The recipient disabled bot messages."
+  },
+  "text.integration.channelResponseMapper.description.5": {
+    "zh-CN": "应用没有发送消息所需的权限。",
+    "en": "The application lacks permission to send messages."
+  },
+  "text.integration.channelResponseMapper.description.6": {
+    "zh-CN": "平台拒绝了当前消息内容，请修改后重试。",
+    "en": "The platform rejected the message content. Edit it and try again."
+  },
+  "text.integration.channelResponseMapper.description.7": {
+    "zh-CN": "平台拒绝发送，请检查应用权限、接收人和消息内容。",
+    "en": "The platform rejected delivery. Check application permissions, recipients, and message content."
+  },
+  "log.integration.channelAccessToken.toString.1": {
+    "zh-CN": "ChannelAccessToken[凭证已隐藏, expiresInSeconds={0}]",
+    "en": "ChannelAccessToken[credential redacted, expiresInSeconds={0}]"
+  },
+  "log.integration.channelHttpResponse.toString.1": {
+    "zh-CN": "ChannelHttpResponse[status={0}, 响应正文已隐藏]",
+    "en": "ChannelHttpResponse[status={0}, response body redacted]"
+  },
+  "log.integration.integrationCreateRequest.toString.1": {
+    "zh-CN": "IntegrationCreateRequest[接入配置和密钥已隐藏]",
+    "en": "IntegrationCreateRequest[integration configuration and secret redacted]"
+  },
+  "log.integration.integrationSecretRequest.toString.1": {
+    "zh-CN": "IntegrationSecretRequest[密钥已隐藏]",
+    "en": "IntegrationSecretRequest[secret redacted]"
+  },
+  "log.integration.channelAuthorizationSecrets.toString.1": {
+    "zh-CN": "Material[授权材料已隐藏]",
+    "en": "Material[authorization material redacted]"
+  },
+  "log.integration.channelAuthorizationService.callback.1": {
+    "zh-CN": "外部授权未完成：请求编号={}，方法={}，路径={}，授权记录={}",
+    "en": "External authorization did not complete; requestId={}, method={}, path={}, authorizationId={}"
+  },
+  "log.integration.channelAuthorizationService.callback.2": {
+    "zh-CN": "尚未取得",
+    "en": "Not yet available"
+  },
+  "log.integration.channelAuthorizationService.callback.3": {
+    "zh-CN": "授权失败状态保存失败：授权记录={}",
+    "en": "Could not save authorization failure status; authorizationId={}"
+  },
+  "text.integration.channelAuthorizationService.callback.1": {
+    "zh-CN": "授权暂时无法完成，请稍后重新发起。",
+    "en": "Authorization cannot be completed right now. Start again later."
+  },
+  "text.integration.channelBindingService.confirm.1": {
+    "zh-CN": "用户确认绑定外部账号",
+    "en": "User confirmed external account binding"
+  },
+  "text.integration.channelBindingService.update.1": {
+    "zh-CN": "更新本人通知和登录选择",
+    "en": "Update my notification and sign-in preferences"
+  },
+  "text.integration.channelBindingService.revoke.1": {
+    "zh-CN": "用户解除外部账号绑定",
+    "en": "User unlinked an external account"
+  },
+  "text.integration.channelBindingService.login.1": {
+    "zh-CN": "通过外部账号登录企业",
+    "en": "Sign in to organization with an external account"
+  },
+  "text.integration.channelPreferenceService.update.1": {
+    "zh-CN": "更新本人自动通知接收选择",
+    "en": "Update my automatic notification preferences"
+  },
+  "log.integration.channelRequestDiagnostics.response.1": {
+    "zh-CN": "响应不是有效的 JSON 对象",
+    "en": "The response is not a valid JSON object"
+  },
+  "log.integration.channelRequestDiagnostics.response.2": {
+    "zh-CN": "平台拒绝的接收对象字段：{0}",
+    "en": "Recipient field rejected by the platform: {0}"
+  },
+  "log.integration.channelRequestDiagnostics.response.3": {
+    "zh-CN": "平台未提供错误说明",
+    "en": "The platform provided no error description"
+  },
+  "log.integration.channelRequestDiagnostics.frame.1": {
+    "zh-CN": "渠道长连接返回错误，接入={}，命令={}，平台错误码={}，平台原因={}，平台排障编号={}",
+    "en": "Channel persistent connection returned an error; integrationId={}, command={}, platformCode={}, reason={}, traceId={}"
+  },
+  "log.integration.channelRequestDiagnostics.failure.1": {
+    "zh-CN": "渠道请求异常，接入={}，方法={}，主机={}，路径={}，HTTP状态={}，平台排障编号={}，原因={}",
+    "en": "Channel request failed; integrationId={}, method={}, host={}, path={}, httpStatus={}, traceId={}, reason={}"
+  },
+  "log.integration.channelRequestDiagnostics.failure.2": {
+    "zh-CN": "平台响应无法解析为 JSON",
+    "en": "The platform response could not be parsed as JSON"
+  },
+  "log.integration.channelRequestDiagnostics.log.1": {
+    "zh-CN": "渠道平台返回错误，接入={}，方法={}，主机={}，路径={}，HTTP状态={}，平台错误码={}，平台原因={}，平台排障编号={}",
+    "en": "Channel platform returned an error; integrationId={}, method={}, host={}, path={}, httpStatus={}, platformCode={}, reason={}, traceId={}"
+  },
+  "log.integration.feishuAppClient.toString.1": {
+    "zh-CN": "Polled[state={0}, 凭据已隐藏]",
+    "en": "Polled[state={0}, credentials redacted]"
+  },
+  "text.integration.feishuManagementAuthorizationService.callback.1": {
+    "zh-CN": "飞书管理授权已完成，可以回到原窗口继续。",
+    "en": "Feishu management access is authorized. Continue in the original window."
+  },
+  "log.integration.feishuManagementAuthorizationService.callback.1": {
+    "zh-CN": "飞书管理授权未完成，请求编号={}，方法={}，路径={}，授权记录={}",
+    "en": "Feishu management authorization did not complete; requestId={}, method={}, path={}, authorizationId={}"
+  },
+  "log.integration.feishuManagementAuthorizationService.callback.2": {
+    "zh-CN": "飞书管理授权失败状态无法保存，授权记录={}",
+    "en": "Could not save Feishu management authorization failure status; authorizationId={}"
+  },
+  "text.integration.feishuManagementAuthorizationService.callback.2": {
+    "zh-CN": "授权未能完成，请回到机器人创建页面重新发起。",
+    "en": "Authorization could not be completed. Start again from bot creation."
+  },
+  "text.integration.feishuManagementAuthorizationService.result.1": {
+    "zh-CN": "请从机器人创建页面发起授权。",
+    "en": "Start authorization from the bot creation page."
+  },
+  "text.integration.feishuManagementAuthorizationTransactions.complete.1": {
+    "zh-CN": "授权群策管理飞书应用",
+    "en": "Authorize AgenTeam to manage Feishu applications"
+  },
+  "log.integration.feishuManagementTokens.get.1": {
+    "zh-CN": "飞书管理授权刷新失败，授权记录={}，接入={}",
+    "en": "Feishu management authorization refresh failed; authorizationId={}, integrationId={}"
+  },
+  "log.integration.feishuSetupCipher.toString.1": {
+    "zh-CN": "Registration[注册材料已隐藏]",
+    "en": "Registration[registration material redacted]"
+  },
+  "log.integration.feishuSetupCipher.toString.2": {
+    "zh-CN": "Tokens[授权凭据已隐藏]",
+    "en": "Tokens[authorization credentials redacted]"
+  },
+  "log.integration.feishuSetupProcessor.process.1": {
+    "zh-CN": "飞书快捷创建未完成，企业={}，创建记录={}，阶段={}",
+    "en": "Feishu quick creation did not complete; enterpriseId={}, creationId={}, stage={}"
+  },
+  "log.integration.feishuSetupProcessor.process.2": {
+    "zh-CN": "飞书创建失败状态保存失败，创建记录={}",
+    "en": "Could not save Feishu creation failure status; creationId={}"
+  },
+  "text.integration.feishuSetupProcessor.publish.1": {
+    "zh-CN": "接入群策企业",
+    "en": "Connect an AgenTeam organization"
+  },
+  "text.integration.feishuSetupProcessor.publish.2": {
+    "zh-CN": "接入群策机器人",
+    "en": "Connect an AgenTeam bot"
+  },
+  "text.integration.feishuSetupProcessor.publish.3": {
+    "zh-CN": "配置企业账号、通知与应用管理",
+    "en": "Configure organization accounts, notifications, and application management"
+  },
+  "text.integration.feishuSetupProcessor.publish.4": {
+    "zh-CN": "配置机器人消息接收和交互能力",
+    "en": "Configure bot message receiving and interactions"
+  },
+  "text.integration.feishuSetupStore.create.1": {
+    "zh-CN": "开始创建飞书应用",
+    "en": "Start Feishu application creation"
+  },
+  "text.integration.feishuSetupStore.change.1": {
+    "zh-CN": "继续飞书创建流程",
+    "en": "Continue Feishu creation"
+  },
+  "text.integration.feishuSetupStore.change.2": {
+    "zh-CN": "取消飞书创建流程",
+    "en": "Cancel Feishu creation"
+  },
+  "text.integration.feishuSetupStore.view.1": {
+    "zh-CN": "正在准备飞书创建入口",
+    "en": "Preparing Feishu app creation"
+  },
+  "text.integration.feishuSetupStore.view.2": {
+    "zh-CN": "请在飞书确认创建",
+    "en": "Confirm creation in Feishu"
+  },
+  "text.integration.feishuSetupStore.view.3": {
+    "zh-CN": "正在保存并核验飞书应用",
+    "en": "Saving and verifying the Feishu app"
+  },
+  "text.integration.feishuSetupStore.view.4": {
+    "zh-CN": "正在配置飞书应用",
+    "en": "Configuring the Feishu app"
+  },
+  "text.integration.feishuSetupStore.view.5": {
+    "zh-CN": "正在提交发布",
+    "en": "Submitting for publication"
+  },
+  "text.integration.feishuSetupStore.view.6": {
+    "zh-CN": "等待飞书审核通过",
+    "en": "Waiting for Feishu approval"
+  },
+  "text.integration.feishuSetupStore.view.7": {
+    "zh-CN": "正在关联智能体",
+    "en": "Linking the agent"
+  },
+  "text.integration.feishuSetupStore.view.8": {
+    "zh-CN": "机器人已创建并关联智能体",
+    "en": "Bot created and linked to the agent"
+  },
+  "text.integration.feishuSetupStore.view.9": {
+    "zh-CN": "飞书企业应用已连接",
+    "en": "Feishu organization application connected"
+  },
+  "text.integration.feishuSetupStore.view.10": {
+    "zh-CN": "请先完成飞书管理授权，再继续创建",
+    "en": "Authorize app management before continuing"
+  },
+  "text.integration.feishuSetupStore.view.11": {
+    "zh-CN": "创建入口已过期，请检查飞书是否已创建应用后重新开始",
+    "en": "The creation link has expired. Check whether Feishu created the app before starting again."
+  },
+  "text.integration.feishuSetupStore.view.12": {
+    "zh-CN": "暂时无法确认飞书创建结果，请先核对飞书应用，避免重复创建",
+    "en": "The creation result is unknown. Check your Feishu apps before creating another."
+  },
+  "text.integration.feishuSetupStore.view.13": {
+    "zh-CN": "流程已取消，已经创建的飞书应用会保留",
+    "en": "Creation canceled. Existing Feishu apps are retained."
+  },
+  "text.integration.feishuSetupStore.view.14": {
+    "zh-CN": "本次创建尚未完成，请重试或检查飞书设置",
+    "en": "Creation is incomplete. Retry or check the Feishu settings."
+  },
+  "log.integration.feishuSetupWorker.tick.1": {
+    "zh-CN": "飞书创建任务无法领取，创建记录={}",
+    "en": "Could not claim the Feishu creation job; creationId={}"
+  },
+  "log.integration.integrationCheckService.prepare.1": {
+    "zh-CN": "企业应用校验失败，企业={}，接入={}",
+    "en": "Organization application verification failed; enterpriseId={}, integrationId={}"
+  },
+  "log.integration.integrationFrameDiagnostics.networkFailure.1": {
+    "zh-CN": "平台长连接网络操作失败，接入={}，操作={}",
+    "en": "Platform persistent connection network operation failed; integrationId={}, operation={}"
+  },
+  "text.integration.integrationManagementService.create.1": {
+    "zh-CN": "创建企业接入配置",
+    "en": "Create organization integration"
+  },
+  "text.integration.integrationManagementService.update.1": {
+    "zh-CN": "更新企业接入名称与能力设置",
+    "en": "Update organization integration name and capabilities"
+  },
+  "text.integration.integrationManagementService.rotate.1": {
+    "zh-CN": "更换应用密钥并等待重新校验",
+    "en": "Replace application secret and require verification again"
+  },
+  "text.integration.integrationManagementService.configureFeishuEnterprise.1": {
+    "zh-CN": "完成飞书企业快捷配置",
+    "en": "Complete Feishu organization quick setup"
+  },
+  "text.integration.integrationManagementService.status.1": {
+    "zh-CN": "启用企业接入",
+    "en": "Enable organization integration"
+  },
+  "text.integration.integrationManagementService.status.2": {
+    "zh-CN": "停用企业接入",
+    "en": "Disable organization integration"
+  },
+  "text.integration.integrationManagementService.delete.1": {
+    "zh-CN": "删除已停用的企业接入配置并解除其成员绑定",
+    "en": "Delete disabled organization integration and remove its member bindings"
+  },
+  "text.integration.integrationManagementService.recordCheck.1": {
+    "zh-CN": "应用校验未通过",
+    "en": "Application verification failed"
+  },
+  "text.integration.integrationManagementService.recordCheck.2": {
+    "zh-CN": "应用校验通过",
+    "en": "Application verification passed"
+  },
+  "log.integration.integrationTokenService.toString.1": {
+    "zh-CN": "CachedToken[应用凭证已隐藏]",
+    "en": "CachedToken[application credentials redacted]"
+  },
+  "text.integration.feishuIntegrationProvider.name.1": {
+    "zh-CN": "飞书",
+    "en": "Feishu"
+  },
+  "text.integration.feishuIntegrationProvider.publicFields.1": {
+    "zh-CN": "应用编号（App ID）",
+    "en": "Application ID (App ID)"
+  },
+  "text.integration.wecomAiBotIntegrationProvider.name.1": {
+    "zh-CN": "企微智能机器人",
+    "en": "WeCom AI bot"
+  },
+  "text.integration.wecomAiBotIntegrationProvider.publicFields.1": {
+    "zh-CN": "机器人编号（Bot ID）",
+    "en": "Bot ID"
+  },
+  "text.integration.wecomAiBotIntegrationProvider.publicFields.2": {
+    "zh-CN": "填写智能机器人专用编号。",
+    "en": "Enter the dedicated AI bot ID."
+  },
+  "protocol.integration.wecomBotIdentityClient.IDENTITY.1": {
+    "zh-CN": "\\A<extra_identity_context>\\n机器人身份：\\n名字：([^\\r\\n<>]{1,200})\\nID：([A-Za-z0-9_-]{1,191})\\n授权真人用户身份：\\n名字：[^\\r\\n<>]{1,200}\\nID：([A-Za-z0-9_-]{1,191})\\n",
+    "en": "\\A<extra_identity_context>\\n机器人身份：\\n名字：([^\\r\\n<>]{1,200})\\nID：([A-Za-z0-9_-]{1,191})\\n授权真人用户身份：\\n名字：[^\\r\\n<>]{1,200}\\nID：([A-Za-z0-9_-]{1,191})\\n"
+  },
+  "protocol.integration.wecomBotIdentityClient.parse.1": {
+    "zh-CN": "机器人身份：",
+    "en": "机器人身份："
+  },
+  "protocol.integration.wecomBotIdentityClient.parse.2": {
+    "zh-CN": "授权真人用户身份：",
+    "en": "授权真人用户身份："
+  },
+  "text.integration.wecomIntegrationProvider.name.1": {
+    "zh-CN": "企业微信",
+    "en": "WeCom"
+  },
+  "text.integration.wecomIntegrationProvider.publicFields.1": {
+    "zh-CN": "企业编号（CorpID）",
+    "en": "Organization ID (CorpID)"
+  },
+  "text.integration.wecomIntegrationProvider.publicFields.2": {
+    "zh-CN": "应用编号（AgentId）",
+    "en": "Application ID (AgentId)"
+  },
+  "text.integration.wecomIntegrationProvider.publicFields.3": {
+    "zh-CN": "每日通知发送上限",
+    "en": "Daily notification limit"
+  },
+  "text.integration.wecomIntegrationProvider.publicFields.4": {
+    "zh-CN": "按企业微信后台允许的每日消息量填写。",
+    "en": "Use the daily message allowance configured in WeCom administration."
+  },
+  "text.integration.wecomIntegrationProvider.render.1": {
+    "zh-CN": "查看详情",
+    "en": "View details"
+  },
+  "log.integration.wecomQuickCreateClient.toString.1": {
+    "zh-CN": "Registration[创建凭据已隐藏]",
+    "en": "Registration[creation credentials redacted]"
+  },
+  "log.integration.wecomSetupProcessor.process.1": {
+    "zh-CN": "企微创建暂时未完成，任务={}，原因={}",
+    "en": "WeCom creation did not complete; taskId={}, reason={}"
+  },
+  "text.integration.wecomSetupStore.create.1": {
+    "zh-CN": "开始创建企微机器人",
+    "en": "Start WeCom bot creation"
+  },
+  "text.integration.wecomSetupStore.change.1": {
+    "zh-CN": "继续创建企微机器人",
+    "en": "Continue WeCom bot creation"
+  },
+  "text.integration.wecomSetupStore.change.2": {
+    "zh-CN": "取消企微机器人创建流程",
+    "en": "Cancel WeCom bot creation"
+  },
+  "log.integration.wecomSetupWorker.tick.1": {
+    "zh-CN": "企微创建任务无法领取，创建记录={}",
+    "en": "Could not claim the WeCom creation job; creationId={}"
+  }
+}

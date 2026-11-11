@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.export.entity.ExportDefinition;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +19,7 @@ public class ExportTypeRegistry {
         for (var handler : handlers) {
             String type = handler.type();
             if (type == null || !type.matches("[a-z_]{1,32}") || registered.putIfAbsent(type, handler) != null) {
-                throw new IllegalStateException("导出类型为空、无效或重复注册");
+                throw new IllegalStateException(Messages.text("error.export.exportTypeRegistry.init.1"));
             }
         }
         this.handlers = Map.copyOf(registered);

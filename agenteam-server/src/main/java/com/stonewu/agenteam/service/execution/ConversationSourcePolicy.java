@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -21,7 +23,7 @@ public class ConversationSourcePolicy {
         var row = conversations.selectOne(new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getEnterpriseId, actor.enterpriseId())
             .eq(AgentConversationRow::getId, id).eq(AgentConversationRow::getUserId, actor.userId()));
         if (row != null && "collaboration".equals(row.getSourceType())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_INPUT_REQUIRED", "请在协作任务详情中管理任务，岗位会话由任务统一安排。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_INPUT_REQUIRED", Messages.text("error.execution.conversationSourcePolicy.requireWeb.1"));
         }
     }
 }

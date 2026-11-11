@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
@@ -62,7 +64,7 @@ public class WebRoomRoster {
     public List<CollaborationRoomMemberRow> prepareMembers(AuthContext actor, CollaborationRoomRow room, List<String> ids) {
         if (ids == null || ids.size() < 2 || ids.size() > 8 || ids.stream().anyMatch(id -> id == null || id.isBlank())
             || new HashSet<>(ids).size() != ids.size()) {
-            throw ApiException.invalidField("agentIds", "请选择两至八位不同的智能体。");
+            throw ApiException.invalidField("agentIds", Messages.text("error.collaboration.webRoomRoster.prepareMembers.1"));
         }
         var selectedMembers = new ArrayList<CollaborationRoomMemberRow>();
         for (int index = 0; index < ids.size(); index++) {

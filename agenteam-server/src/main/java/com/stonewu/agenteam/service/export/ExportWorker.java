@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import com.stonewu.agenteam.model.file.entity.PreparedGeneratedFile;
 import com.stonewu.agenteam.service.background.BackgroundJobHeartbeat;
@@ -33,7 +35,7 @@ public class ExportWorker {
     private final boolean enabled;
     private final String worker = UUID.randomUUID().toString();
     private final ExecutorService executor = Executors.newFixedThreadPool(2,
-        Thread.ofVirtual().name("数据导出-", 0).factory());
+        Thread.ofVirtual().name(Messages.log("log.export.exportWorker.executor.1"), 0).factory());
     private final AtomicInteger active = new AtomicInteger();
     private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -69,7 +71,7 @@ public class ExportWorker {
                 });
             }
         } catch (RuntimeException unavailable) {
-            LOG.warn("导出领取暂未完成，下一轮将继续检查", unavailable);
+            LOG.warn(Messages.log("log.export.exportWorker.poll.1"), unavailable);
         }
     }
 
@@ -84,7 +86,7 @@ public class ExportWorker {
         boolean committed = false, completionAttempted = false, completionKnown = false;
         try (var guard = heartbeats.start(lease)) {
             if (lease.exhausted()) {
-                transactions.failed(lease, "EXPORT_INTERRUPTED", "导出执行多次中断，请重新发起。", false);
+                transactions.failed(lease, "EXPORT_INTERRUPTED", Messages.text("error.export.exportWorker.process.1"), false);
                 return;
             }
             if (!guard.getAsBoolean()) {
@@ -100,26 +102,26 @@ public class ExportWorker {
             committed = transactions.complete(lease, snapshot, file);
             completionKnown = true;
         } catch (ResponseStatusException denied) {
-            LOG.warn("数据导出未完成，工作编号 {}", lease.id(), denied);
+            LOG.warn(Messages.log("log.export.exportWorker.process.1"), lease.id(), denied);
             completionKnown = true;
             String code = denied instanceof ApiException api ? api.code() : "EXPORT_UNAVAILABLE";
             if (code.equals("EXPORT_LIMIT_EXCEEDED")) {
                 transactions.failed(lease, code, denied.getReason(), false);
             } else if (denied.getStatusCode().is4xxClientError()) {
-                transactions.failed(lease, "EXPORT_UNAVAILABLE", "当前已无法读取所选数据，请按现有权限重新导出。", false);
+                transactions.failed(lease, "EXPORT_UNAVAILABLE", Messages.text("error.export.exportWorker.process.2"), false);
             } else {
-                transactions.failed(lease, "EXPORT_TEMPORARILY_UNAVAILABLE", "导出暂未完成，正在等待重试。", true);
+                transactions.failed(lease, "EXPORT_TEMPORARILY_UNAVAILABLE", Messages.text("error.export.exportWorker.process.3"), true);
             }
         } catch (RuntimeException failed) {
-            LOG.error("数据导出失败，工作编号 {}", lease.id(), failed);
-            transactions.failed(lease, "EXPORT_TEMPORARILY_UNAVAILABLE", "导出暂未完成，请稍后重试。", true);
+            LOG.error(Messages.log("log.export.exportWorker.process.2"), lease.id(), failed);
+            transactions.failed(lease, "EXPORT_TEMPORARILY_UNAVAILABLE", Messages.text("error.export.exportWorker.process.4"), true);
         } finally {
             // 提交应答不确定时交给后续清理核对数据库，不能删除可能已经提交的有效结果。
             if (file != null && !committed && (!completionAttempted || completionKnown)) {
                 try {
                     files.discard(file);
                 } catch (RuntimeException unavailable) {
-                    LOG.warn("未登记的导出文件暂未清理，后台文件清理将继续处理，工作编号 {}", lease.id(), unavailable);
+                    LOG.warn(Messages.log("log.export.exportWorker.process.3"), lease.id(), unavailable);
                 }
             }
         }

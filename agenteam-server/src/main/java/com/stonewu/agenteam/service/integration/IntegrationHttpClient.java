@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelHttpResponse;
@@ -90,7 +92,7 @@ public class IntegrationHttpClient {
             }
             byte[] bytes = response.body().byteStream().readNBytes(MAX_RESPONSE_BYTES + 1);
             if (bytes.length > MAX_RESPONSE_BYTES) {
-                throw new IOException("平台响应超过允许大小");
+                throw new IOException(Messages.text("error.integration.integrationHttpClient.execute.1"));
             }
             JsonNode parsed;
             try {
@@ -103,7 +105,7 @@ public class IntegrationHttpClient {
             diagnostics.response(connection, request, response.code(), parsed, traceId);
             return new ChannelHttpResponse(response.code(), parsed, retryAfter, traceId);
         } catch (IOException failure) {
-            var safe = new ChannelProviderException("CHANNEL_REQUEST_UNCERTAIN", "平台请求未取得明确结果。", failure);
+            var safe = new ChannelProviderException("CHANNEL_REQUEST_UNCERTAIN", Messages.text("error.integration.integrationHttpClient.execute.2"), failure);
             diagnostics.failure(connection, request, null, null, failure, false);
             throw safe;
         }

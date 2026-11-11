@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -59,12 +61,12 @@ public class FeishuWebhookVerifier {
         } catch (ApiException failure) {
             throw failure;
         } catch (Exception failure) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_CALLBACK_INVALID", "平台回调认证未通过。",
-                ChatSocket.safe("CHAT_CALLBACK_INVALID", "平台回调格式或加密验证失败。", failure));
+            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_CALLBACK_INVALID", Messages.text("error.chat.feishuWebhookVerifier.verify.1"),
+                ChatSocket.safe("CHAT_CALLBACK_INVALID", Messages.text("error.chat.feishuWebhookVerifier.verify.2"), failure));
         }
     }
 
     private ApiException rejected() {
-        return new ApiException(HttpStatus.FORBIDDEN, "CHAT_CALLBACK_INVALID", "平台回调认证未通过。");
+        return new ApiException(HttpStatus.FORBIDDEN, "CHAT_CALLBACK_INVALID", Messages.text("error.chat.feishuWebhookVerifier.verify.1"));
     }
 }

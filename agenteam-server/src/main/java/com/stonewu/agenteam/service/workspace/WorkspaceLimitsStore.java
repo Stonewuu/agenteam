@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.workspace.entity.WorkspaceLimitValues;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.project.ProjectWorkspaceLayout;
@@ -23,7 +25,7 @@ public class WorkspaceLimitsStore {
     public record Saved(long revision, WorkspaceLimitValues limits) {
         public Saved {
             if (revision < 2 || limits == null) {
-                throw new IllegalArgumentException("工作空间设置记录不完整");
+                throw new IllegalArgumentException(Messages.text("error.workspace.workspaceLimitsStore.init.1"));
             }
         }
     }
@@ -45,7 +47,7 @@ public class WorkspaceLimitsStore {
             WorkspacePaths.requireInside(layout.root(), file);
             var attributes = Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
             if (!attributes.isRegularFile() || attributes.size() > 4096) {
-                throw new IOException("工作空间设置文件格式不正确");
+                throw new IOException(Messages.text("error.workspace.workspaceLimitsStore.current.1"));
             }
             if (cached == null || previous == null || attributes.size() != previous.size()
                 || !attributes.lastModifiedTime().equals(previous.lastModifiedTime())
@@ -89,6 +91,6 @@ public class WorkspaceLimitsStore {
 
     private static ApiException unavailable(IOException failure) {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "WORKSPACE_SETTINGS_UNAVAILABLE",
-            "暂时无法读取或保存工作空间设置，请稍后重试。", failure);
+            Messages.text("error.workspace.workspaceLimitsStore.unavailable.1"), failure);
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -36,8 +38,8 @@ public class ChatRoutingWorker {
             try {
                 routing.route(message.getEnterpriseId(), message.getId());
             } catch (RuntimeException failure) {
-                LOG.warn("聊天消息未能建立任务，企业={}，消息={}", message.getEnterpriseId(), message.getId(),
-                    new ChannelProviderException("CHAT_ROUTING_FAILED", "消息暂时无法处理。", failure));
+                LOG.warn(Messages.log("log.chat.chatRoutingWorker.processPending.1"), message.getEnterpriseId(), message.getId(),
+                    new ChannelProviderException("CHAT_ROUTING_FAILED", Messages.text("error.chat.chatRoutingWorker.processPending.1"), failure));
                 if (failure instanceof ApiException api) {
                     routing.rejected(message.getEnterpriseId(), message.getId(), api.code());
                 }

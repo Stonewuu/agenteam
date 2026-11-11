@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.data.entity.DataCollectionRecord;
@@ -30,18 +32,18 @@ public class DataQueryValidation {
         if (!collection.status().equals(
             "active") || input.generation() < 1 || input.generation() > collection.activeGeneration() || original.isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_UNAVAILABLE",
-                "所选集合版本已经不可查询，请重新选择。");
+                Messages.text("error.data.dataQueryService.plan.2"));
         }
         if (input.fields() == null || input.fields().isEmpty() || input.fields().size() > 100 || new HashSet<>(
             input.fields()).size() != input.fields().size()) {
-            throw ApiException.invalidField("fields", "请选择一至一百个不同的字段。");
+            throw ApiException.invalidField("fields", Messages.text("error.data.dataQueryValidation.plan.1"));
         }
         int limit = input.limit() == null ? 50 : input.limit(), offset = input.offset() == null ? 0 : input.offset();
         if (limit < 1 || limit > 200 || offset < 0 || offset > 100000) {
-            throw ApiException.invalidField("limit", "每次最多返回 200 行，最多可跳过前 100000 行。");
+            throw ApiException.invalidField("limit", Messages.text("error.data.dataQueryValidation.plan.2"));
         }
         if (input.filters() == null || input.filters().size() > 20 || input.sort() == null || input.sort().size() > 3) {
-            throw ApiException.invalidField("filters", "最多使用二十个筛选条件和三个排序字段。");
+            throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.3"));
         }
         var currentByName = new HashMap<String, DataField>();
         current.forEach(field -> currentByName.put(field.name(), field));
@@ -66,36 +68,36 @@ public class DataQueryValidation {
             String operator = filter.operator();
             if (operator == null || !Set.of("eq", "ne", "gt", "gte", "lt", "lte", "in", "contains", "is_null")
                 .contains(operator)) {
-                throw ApiException.invalidField("filters", "不支持这种筛选条件。");
+                throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.4"));
             }
             JsonNode value = filter.value() instanceof JsonNode node ? node : json.valueToTree(filter.value());
             if (operator.equals("is_null")) {
                 if (value != null && !value.isNull() && !value.isBoolean()) {
-                    throw ApiException.invalidField("filters", "空值筛选只接受是否为空。");
+                    throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.5"));
                 }
             } else if (operator.equals("in")) {
                 if (value == null || !value.isArray() || value.isEmpty() || value.size() > 100) {
-                    throw ApiException.invalidField("filters", "集合筛选需要一至一百个比较值。");
+                    throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.6"));
                 }
                 var checked = json.createArrayNode();
                 for (var item : value) {
                     if (item.isNull()) {
-                        throw ApiException.invalidField("filters", "空值请使用单独的空值筛选。");
+                        throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.7"));
                     }
                     checked.add(values.parameter(field, item));
                 }
                 value = checked;
             } else {
                 if (value == null || value.isNull()) {
-                    throw ApiException.invalidField("filters", "空值请使用单独的空值筛选。");
+                    throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.7"));
                 }
                 value = values.parameter(field, value);
                 if (operator.equals("contains") && !field.valueType().equals("string")) {
-                    throw ApiException.invalidField("filters", "包含筛选只能用于文字字段。");
+                    throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.8"));
                 }
                 if (Set.of("gt", "gte", "lt", "lte").contains(operator) && Set.of("boolean", "object")
                     .contains(field.valueType())) {
-                    throw ApiException.invalidField("filters", "此字段类型不能比较大小。");
+                    throw ApiException.invalidField("filters", Messages.text("error.data.dataQueryValidation.plan.9"));
                 }
             }
             conditions.add(new DataQueryPlan.Condition(field, operator, value));
@@ -109,7 +111,7 @@ public class DataQueryValidation {
             }
             if (!sorted.add(field.name()) || item.direction() == null || !Set.of("asc", "desc")
                 .contains(item.direction())) {
-                throw ApiException.invalidField("sort", "排序字段不能重复，方向只能选择升序或降序。");
+                throw ApiException.invalidField("sort", Messages.text("error.data.dataQueryValidation.plan.10"));
             }
             order.add(new DataQueryPlan.Order(field, item.direction()));
         }
@@ -127,6 +129,6 @@ public class DataQueryValidation {
 
     private ApiException unavailable() {
         return new ApiException(HttpStatus.FORBIDDEN, "DATA_FIELD_UNAVAILABLE",
-            "所选字段已不可读取或不允许此操作，请重新选择字段。");
+            Messages.text("error.data.dataQueryValidation.unavailable.1"));
     }
 }

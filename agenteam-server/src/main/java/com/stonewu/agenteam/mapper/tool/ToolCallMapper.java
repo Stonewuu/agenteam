@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -77,7 +79,7 @@ public class ToolCallMapper {
     public Optional<ToolCallRecord> forStep(String enterprise, String run, String step) {
         var rows = statements.forStepToolCall(enterprise, run, step);
         if (rows.size() > 1) {
-            throw new IllegalStateException("同一步骤存在重复的工具调用记录");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.forStep.1"));
         }
         return rows.stream().map(this::map).findFirst();
     }
@@ -85,7 +87,7 @@ public class ToolCallMapper {
     public List<ToolCallRecord> resultsForConversation(String enterprise, String user, String conversation,
                                                        String afterId, int limit) {
         if (limit < 1 || limit > 100) {
-            throw new IllegalArgumentException("结果文件查询数量不正确");
+            throw new IllegalArgumentException(Messages.text("error.tool.toolCallMapper.resultsForConversation.1"));
         }
         return statements.resultsForConversation(enterprise, user, conversation, afterId, limit).stream().map(this::map)
             .toList();
@@ -153,28 +155,28 @@ public class ToolCallMapper {
         if (statements.update(new LambdaUpdateWrapper<ToolCallRow>().eq(ToolCallRow::getEnterpriseId, call.enterpriseId())
             .eq(ToolCallRow::getId, call.id()).in(ToolCallRow::getStatus, "prepared", "waiting_input")
             .set(ToolCallRow::getStatus, "waiting_input").set(ToolCallRow::getUpdatedAt, now)) != 1) {
-            throw new IllegalStateException("本次问题已经不能等待回答");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.waitingInput.1"));
         }
     }
 
     public void retryRead(ToolCallRecord call, long lease, Instant now) {
         int changed = statements.retryReadToolCall(lease, timestamp(now), call.enterpriseId(), call.id());
         if (changed != 1) {
-            throw new IllegalStateException("本次只读请求已经不能重新执行");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.retryRead.1"));
         }
     }
 
     public void start(ToolCallRecord call, long lease, Instant now) {
         int changed = statements.startToolCall(lease, timestamp(now), call.enterpriseId(), call.id());
         if (changed != 1) {
-            throw new IllegalStateException("本次工具操作已经开始或结束");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.start.1"));
         }
     }
 
     public void submitted(ToolCallRecord call, long lease, Instant now) {
         int changed = statements.submittedToolCall(timestamp(now), call.enterpriseId(), call.id(), lease);
         if (changed != 1) {
-            throw new IllegalStateException("本次工具操作已失去执行资格");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.submitted.1"));
         }
     }
 
@@ -192,14 +194,14 @@ public class ToolCallMapper {
     public void resumeQuery(ToolCallRecord call, long lease, Instant now) {
         int changed = statements.resumeQueryToolCall(lease, timestamp(now), call.enterpriseId(), call.id());
         if (changed != 1) {
-            throw new IllegalStateException("工具结果查询已由其他执行处理");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.resumeQuery.1"));
         }
     }
 
     public void queried(ToolCallRecord call, long lease, Instant now) {
         int changed = statements.queriedToolCall(timestamp(now), call.enterpriseId(), call.id(), lease);
         if (changed != 1) {
-            throw new IllegalStateException("工具结果查询已达到上限或当前执行不能继续");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallMapper.queried.1"));
         }
     }
 

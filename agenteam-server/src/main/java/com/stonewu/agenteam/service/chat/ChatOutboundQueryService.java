@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -58,7 +60,7 @@ public class ChatOutboundQueryService {
     public Map<String, String> retry(String enterprise, String id, long revision) {
         var row = messages.selectOne(new LambdaQueryWrapper<ChatOutboundMessageRow>().eq(ChatOutboundMessageRow::getEnterpriseId, enterprise).eq(ChatOutboundMessageRow::getId, id));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_SEND_UNAVAILABLE", "发送记录不存在。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_SEND_UNAVAILABLE", Messages.text("error.chat.chatOutboundQueryService.retry.1"));
         }
         if (row.getRevision() != revision) {
             throw ApiException.versionConflict(row.getRevision());
@@ -67,7 +69,7 @@ public class ChatOutboundQueryService {
             .eq(ChatOutboundAttemptRow::getEnterpriseId, enterprise).eq(ChatOutboundAttemptRow::getOutboundId, id).orderByDesc(ChatOutboundAttemptRow::getAttemptNo)).getRecords();
         if (!row.getStatus().equals("failed") || !latest.isEmpty() && !Set.of("PERMANENT_FAILURE", "RETRYABLE_FAILURE", "TOKEN_EXPIRED").contains(latest.getFirst().getOutcome())
             || row.getFirstSubmittedAt() != null && latest.isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_RETRY_FORBIDDEN", "仅明确未被平台接受的失败消息可以重试；发送结果未知时请先核实。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_RETRY_FORBIDDEN", Messages.text("error.chat.chatOutboundQueryService.retry.2"));
         }
         if (messages.update(new LambdaUpdateWrapper<ChatOutboundMessageRow>().eq(ChatOutboundMessageRow::getEnterpriseId, enterprise)
             .eq(ChatOutboundMessageRow::getId, id).eq(ChatOutboundMessageRow::getRevision, revision).eq(ChatOutboundMessageRow::getStatus, "failed")

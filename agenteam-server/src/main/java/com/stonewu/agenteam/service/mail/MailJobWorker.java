@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.mail;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.mail.SmtpMailMapper;
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import com.stonewu.agenteam.service.background.BackgroundJobService;
@@ -41,7 +43,7 @@ public class MailJobWorker {
             }
             lease = claimed.get();
         } catch (RuntimeException exception) {
-            LOGGER.warn("暂时无法领取邮件工作", exception);
+            LOGGER.warn(Messages.log("log.mail.mailJobWorker.runOnce.1"), exception);
             return false;
         }
         try {
@@ -58,11 +60,11 @@ public class MailJobWorker {
                 renewal.cancel(false);
             }
         } catch (MailDeliveryException exception) {
-            LOGGER.warn("邮件发送失败，工作编号 {}，错误代码 {}", lease.id(), exception.code(), exception);
+            LOGGER.warn(Messages.log("log.mail.mailJobWorker.runOnce.2"), lease.id(), exception.code(), exception);
             recordFailure(lease, exception.code(), exception.getMessage(), true);
         } catch (RuntimeException exception) {
-            LOGGER.warn("邮件工作暂未完成，工作编号 {}", lease.id(), exception);
-            recordFailure(lease, "MAIL_CONTENT_UNAVAILABLE", "邮件暂时无法处理，请重新发送。", false);
+            LOGGER.warn(Messages.log("log.mail.mailJobWorker.runOnce.3"), lease.id(), exception);
+            recordFailure(lease, "MAIL_CONTENT_UNAVAILABLE", Messages.text("error.mail.mailJobWorker.runOnce.1"), false);
         }
         return true;
     }
@@ -71,7 +73,7 @@ public class MailJobWorker {
         try {
             jobs.renew(lease);
         } catch (RuntimeException exception) {
-            LOGGER.warn("邮件工作暂时无法续期，工作编号 {}", lease.id(), exception);
+            LOGGER.warn(Messages.log("log.mail.mailJobWorker.renew.1"), lease.id(), exception);
         }
     }
 
@@ -79,7 +81,7 @@ public class MailJobWorker {
         try {
             delivery.failed(lease, code, message, retryable);
         } catch (RuntimeException exception) {
-            LOGGER.warn("邮件结果暂时无法保存，工作编号 {}", lease.id(), exception);
+            LOGGER.warn(Messages.log("log.mail.mailJobWorker.recordFailure.1"), lease.id(), exception);
         }
     }
 
@@ -90,7 +92,7 @@ public class MailJobWorker {
                 return;
             } catch (RuntimeException exception) {
                 // 重试保存同一次确认，不再次调用邮件服务。
-                LOGGER.warn("邮件服务已经确认发送，但第 {} 次保存结果失败，工作编号 {}", attempt + 1, lease.id(),
+                LOGGER.warn(Messages.log("log.mail.mailJobWorker.saveAcknowledgement.1"), attempt + 1, lease.id(),
                     exception);
             }
         }

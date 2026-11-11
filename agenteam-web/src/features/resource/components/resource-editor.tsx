@@ -27,7 +27,7 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {useBlockNavigation} from "@/features/workspace/components/navigation-guard";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {ErrorFeedback} from "@/components/ui/error-feedback";
-import {draftFrom, draftInput, newConfig, resourcePage, resourceStatus, resourceTypes} from "../lib/resource-display";
+import {draftFrom, draftInput, newConfig, resourcePage, resourceSingularLabel, resourceStatus, resourceTypes} from "../lib/resource-display";
 import {type EditorSection, editorSections, sectionForField} from "../lib/editor-sections";
 import {mergeDraftChanges} from "../lib/merge-draft-changes";
 import type {DraftWrite, PluginConfig, ResourceDetail, ResourceKind, WorkflowConfig} from "../types/resource";
@@ -189,7 +189,7 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
         apply(current);
       }
     } catch (error) {
-      console.error("重新读取资源失败", error);
+      console.error("Failed to reload the resource", error);
       if (error instanceof ApiError && error.status === 404) {
         router.push(resourcePage(enterpriseId, kind));
       } else {
@@ -215,7 +215,7 @@ function EditorForm({enterpriseId, kind, initial, permissions, builtin}: {
         setFocused(false);
       }
     }}>
-    <PageHeader title={state.draft.name || uiText("新建{0}", [label])} size="small"
+    <PageHeader title={state.draft.name || uiText("新建{0}", [resourceSingularLabel(kind, uiText)])} size="small"
       className={kind === "workflow" ? workspace.header : undefined} inlineMetadata={kind === "workflow"} leading={<>
       <Link className="icon-button" href={resourcePage(enterpriseId, kind)} aria-label={uiText("返回{0}列表", [label])}><IconArrowLeft
         size={20}/></Link>

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -106,12 +108,12 @@ public final class LocalFileObjectStore implements FileObjectStore {
     private void verifyDirectories(Path directory) throws IOException {
         Path current = root;
         if (Files.isSymbolicLink(current)) {
-            throw new IOException("文件根目录不能为链接");
+            throw new IOException(Messages.text("error.file.localFileObjectStore.verifyDirectories.1"));
         }
         for (var segment : root.relativize(directory)) {
             current = current.resolve(segment);
             if (Files.isSymbolicLink(current)) {
-                throw new IOException("文件目录不能为链接");
+                throw new IOException(Messages.text("error.file.localFileObjectStore.verifyDirectories.2"));
             }
         }
     }

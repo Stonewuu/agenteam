@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.toolkit.JoinWrappers;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -67,7 +69,7 @@ public class ResourceVersionMapper {
 
     public List<ResourceVersionRecord> list(String enterprise, String resource, PagePosition cursor, int limit) {
         if (limit < 0) {
-            throw new IllegalArgumentException("分页数量不能小于零");
+            throw new IllegalArgumentException(Messages.text("error.resource.resourceVersionMapper.list.1"));
         }
         var query = versionQuery(enterprise).eq(ResourceVersionRow::getResourceId, resource);
         if (cursor != null) {

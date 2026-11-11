@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -59,7 +61,7 @@ public class CollaborationArtifactService {
         ResourceInput.text(title, "title", 160, true);
         ResourceInput.text(summary, "summary", 2000, true);
         if (!Set.of("text", "json", "file").contains(kind)) {
-            throw ApiException.invalidField("kind", "请选择文字、结构化数据或文件成果。");
+            throw ApiException.invalidField("kind", Messages.text("error.collaboration.collaborationArtifactService.publish.1"));
         }
         if (schema != null) {
             ResourceInput.text(schema, "schemaName", 80, false);
@@ -69,16 +71,16 @@ public class CollaborationArtifactService {
         if (kind.equals("file")) {
             var file = fileAccess.ready(actor, fileId);
             if (run == null || !run.equals(file.runId())) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "ARTIFACT_ACCESS_DENIED", "只能发布本岗位当前执行已经取得的文件成果。");
+                throw new ApiException(HttpStatus.FORBIDDEN, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationArtifactService.publish.2"));
             }
             hash = file.sha256();
             files.retain(file, clock.instant());
         } else {
             if (fileId != null || content == null || content.isNull() || kind.equals("text") && !content.isTextual()) {
-                throw ApiException.invalidField("content", "请提供与成果类型一致的完整内容。");
+                throw ApiException.invalidField("content", Messages.text("error.collaboration.collaborationArtifactService.publish.3"));
             }
             if (content.toString().getBytes(StandardCharsets.UTF_8).length > 16 * 1024) {
-                throw ApiException.invalidField("content", "成果内容超过允许长度，请保存为文件后发布。");
+                throw ApiException.invalidField("content", Messages.text("error.collaboration.collaborationArtifactService.publish.4"));
             }
             hash = json.hash(content);
         }
@@ -90,7 +92,7 @@ public class CollaborationArtifactService {
             var producer = works.selectOne(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
                 .eq(CollaborationWorkItemRow::getId, previous.getFirst().getProducerWorkId()).eq(CollaborationWorkItemRow::getTaskId, task.getId()));
             if (producer == null || !producer.getParticipantId().equals(work.getParticipantId())) {
-                throw ApiException.invalidField("artifactKey", "该成果名称已由其他岗位使用，请选择自己的成果名称。");
+                throw ApiException.invalidField("artifactKey", Messages.text("error.collaboration.collaborationArtifactService.publish.5"));
             }
         }
         var row = ChatRecords.initialize(new CollaborationArtifactRow(), task.getEnterpriseId(), clock.instant());
@@ -119,18 +121,18 @@ public class CollaborationArtifactService {
             .eq(CollaborationArtifactRow::getTaskId, task.getId()).eq(CollaborationArtifactRow::getId, id)
             .eq(CollaborationArtifactRow::getArtifactVersion, version).eq(CollaborationArtifactRow::getStatus, "ready"));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", "成果不存在或不能用于当前任务。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationArtifactService.require.1"));
         }
         var producer = works.selectOne(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).eq(CollaborationWorkItemRow::getId, row.getProducerWorkId()));
         if (producer == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", "成果来源已不可用。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationArtifactService.require.2"));
         }
         access.requireArtifactRole(task, access.participant(task, producer.getParticipantId()));
         if (row.getFileId() != null) {
             var file = fileAccess.ready(access.requireArtifactRole(task, access.participant(task, producer.getParticipantId())), row.getFileId());
             if (!file.sha256().equals(row.getSha256())) {
-                throw new ApiException(HttpStatus.CONFLICT, "ARTIFACT_CONTENT_CHANGED", "成果文件已发生变化，不能继续使用旧引用。");
+                throw new ApiException(HttpStatus.CONFLICT, "ARTIFACT_CONTENT_CHANGED", Messages.text("error.collaboration.collaborationArtifactService.require.3"));
             }
         }
         return row;
@@ -138,12 +140,12 @@ public class CollaborationArtifactService {
 
     public List<CollaborationArtifactRow> references(CollaborationTaskRow task, JsonNode references) {
         if (!references.isArray() || references.size() > 20) {
-            throw ApiException.invalidField("artifactRefs", "请选择最多二十项固定版本成果。");
+            throw ApiException.invalidField("artifactRefs", Messages.text("error.collaboration.collaborationArtifactService.references.1"));
         }
         var result = new ArrayList<CollaborationArtifactRow>();
         for (var value : references) {
             if (!value.isObject() || value.size() != 2 || !value.path("artifactId").isTextual() || !value.path("version").canConvertToInt()) {
-                throw ApiException.invalidField("artifactRefs", "成果引用必须包含成果编号和版本。");
+                throw ApiException.invalidField("artifactRefs", Messages.text("error.collaboration.collaborationArtifactService.references.2"));
             }
             result.add(require(task, value.path("artifactId").asText(), value.path("version").asInt()));
         }
@@ -164,7 +166,7 @@ public class CollaborationArtifactService {
             .eq(CollaborationArtifactRow::getTaskId, task.getId()).eq(CollaborationArtifactRow::getProducerWorkId, work.getId())
             .eq(CollaborationArtifactRow::getId, work.getResultArtifactId()).eq(CollaborationArtifactRow::getStatus, "ready"));
         if (result == null) {
-            throw new ApiException(HttpStatus.CONFLICT, "ARTIFACT_ACCESS_DENIED", "依赖工作的成果已不能读取。");
+            throw new ApiException(HttpStatus.CONFLICT, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationArtifactService.workResults.1"));
         }
         var included = new ArrayList<CollaborationArtifactRow>();
         included.add(result);
@@ -178,7 +180,7 @@ public class CollaborationArtifactService {
     public JsonNode read(CollaborationTaskRow task, String id, int version, int offset, int limit) {
         var row = require(task, id, version);
         if (offset < 0 || limit < 1 || limit > 16000) {
-            throw ApiException.invalidField("offset", "读取范围不正确，每次最多一万六千个字符。");
+            throw ApiException.invalidField("offset", Messages.text("error.collaboration.collaborationArtifactService.read.1"));
         }
         if (row.getFileId() != null) {
             return json.tree(Map.of("artifact", describe(row), "fileId", row.getFileId()));

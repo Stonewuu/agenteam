@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -117,7 +119,7 @@ public class HttpDataQueryMapper {
             case "gte" -> compared >= 0;
             case "lt" -> compared < 0;
             case "lte" -> compared <= 0;
-            default -> throw new IllegalStateException("数据比较条件未经验证");
+            default -> throw new IllegalStateException(Messages.text("error.data.httpDataQueryMapper.matches.1"));
         };
     }
 
@@ -141,7 +143,7 @@ public class HttpDataQueryMapper {
         try {
             return json.writeValueAsBytes(row).length;
         } catch (Exception invalid) {
-            throw new IllegalStateException("数据行无法编码", invalid);
+            throw new IllegalStateException(Messages.text("error.data.httpDataQueryMapper.bytes.1"), invalid);
         }
     }
 }

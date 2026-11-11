@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -43,14 +45,14 @@ public class IntegrationSecretService {
     public void store(String enterprise, String connection, String name, String secret, String actor, long revision, Instant now) {
         purpose(name);
         if (secret == null || secret.isBlank() || secret.length() > 8192 || secret.chars().anyMatch(value -> value < 33 || value > 126)) {
-            throw ApiException.invalidField("secret", "请输入完整应用密钥，不能包含空格或控制字符。");
+            throw ApiException.invalidField("secret", Messages.text("error.integration.integrationSecretService.store.1"));
         }
         var previous = secrets.selectOne(query(enterprise, connection, name));
         String encrypted;
         try {
             encrypted = json.writeValueAsString(encryption.encrypt(secret, binding(enterprise, connection, name)));
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("应用密钥无法加密保存", failure);
+            throw new IllegalStateException(Messages.text("error.integration.integrationSecretService.store.2"), failure);
         }
         if (previous == null) {
             var row = new EnterpriseIntegrationSecretRow();
@@ -84,13 +86,13 @@ public class IntegrationSecretService {
         purpose(name);
         var row = secrets.selectOne(query(enterprise, connection, name));
         if (row == null) {
-            throw new ChannelProviderException("CHANNEL_SECRET_REQUIRED", "请先配置应用密钥。");
+            throw new ChannelProviderException("CHANNEL_SECRET_REQUIRED", Messages.text("error.integration.integrationSecretService.load.1"));
         }
         try {
             return encryption.decrypt(json.readValue(row.getEncryptedValue(), EncryptedPayload.class),
                 binding(enterprise, connection, name), String.class);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("已保存的应用密钥无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.integration.integrationSecretService.load.2"), failure);
         }
     }
 
@@ -131,7 +133,7 @@ public class IntegrationSecretService {
 
     private void purpose(String name) {
         if (!Set.of("app_secret", "chat_verification_token", "chat_encrypt_key").contains(name)) {
-            throw new IllegalArgumentException("接入密钥用途未登记");
+            throw new IllegalArgumentException(Messages.text("error.integration.integrationSecretService.purpose.1"));
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,7 +46,7 @@ final class CachedBodyRequest extends HttpServletRequestWrapper {
 
             @Override
             public void setReadListener(ReadListener listener) {
-                throw new UnsupportedOperationException("普通请求正文不支持异步读取");
+                throw new UnsupportedOperationException(Messages.text("error.http.cachedBodyRequest.setReadListener.1"));
             }
         };
     }

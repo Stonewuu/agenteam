@@ -76,7 +76,7 @@ export function SkillImportDialog({enterpriseId, permissions, onClose, onImporte
       })
       .catch((error) => {
         if (!request.signal.aborted) {
-          console.error("读取技能导入预览失败", {fileId}, error);
+          console.error("Failed to read the skill import preview", {fileId}, error);
           setReadingError(errorMessage(error));
         }
       });

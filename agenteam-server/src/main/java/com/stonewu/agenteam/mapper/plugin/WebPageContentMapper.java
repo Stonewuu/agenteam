@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.jsoup.Jsoup;
 import org.springframework.http.MediaType;
 
@@ -54,7 +56,7 @@ public final class WebPageContentMapper {
         if (content.isBlank()) {
             result.put("isError", true);
             result.put("code", "WEB_CONTENT_EMPTY");
-            result.put("content", "网页没有可直接读取的正文。如有命令执行工具，可用 agenteam-browser read 网址 等待页面脚本加载后读取。");
+            result.put("content", Messages.text("text.plugin.webPageContentMapper.read.1"));
         }
         return result;
     }

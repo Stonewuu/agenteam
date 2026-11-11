@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.data.DataCollectionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -85,7 +87,7 @@ public class SourceToolExecutionService {
             case "data_query" -> result = json.tree(
                 data.query(actor, binding.resourceId(), DataApiService.queryInput(arguments), binding.config(), null,
                     remaining, control));
-            default -> throw new IllegalStateException("资料工具名称未登记");
+            default -> throw new IllegalStateException(Messages.text("error.tool.sourceToolExecutionService.invoke.1"));
         }
         access.actor(run);
         control.requireActive();

@@ -67,7 +67,7 @@ export function AccountMenu({user, go}: { user: IdentityUser; go: (action: () =>
         router.replace("/login");
       });
     } catch (failure) {
-      console.error("退出登录失败", failure);
+      console.error("Failed to sign out", failure);
       setError(errorMessage(failure));
     } finally {
       setBusy(false);

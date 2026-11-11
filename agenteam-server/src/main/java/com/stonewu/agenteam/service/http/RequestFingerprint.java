@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -47,12 +49,12 @@ public class RequestFingerprint {
             mac.init(keys.requestKey());
             return HexFormat.of().formatHex(mac.doFinal(json.writeValueAsBytes(payload)));
         } catch (GeneralSecurityException exception) {
-            throw new IllegalStateException("无法计算请求摘要", exception);
+            throw new IllegalStateException(Messages.text("error.http.requestFingerprint.bodyHash.1"), exception);
         } catch (Exception exception) {
             if (exception instanceof ApiException api) {
                 throw api;
             }
-            throw new IllegalStateException("无法序列化请求摘要内容", exception);
+            throw new IllegalStateException(Messages.text("error.http.requestFingerprint.bodyHash.2"), exception);
         }
     }
 
@@ -81,11 +83,11 @@ public class RequestFingerprint {
                 var values = new TreeMap<String, JsonNode>();
                 for (JsonNode item : value) {
                     if (!item.isTextual() && !item.isNumber()) {
-                        throw ApiException.invalidField(path.substring(1), "列表中包含无效内容。");
+                        throw ApiException.invalidField(path.substring(1), Messages.text("error.http.requestFingerprint.canonical.1"));
                     }
                     var normalized = canonical(item, path, Set.of());
                     if (values.putIfAbsent(normalized.toString(), normalized) != null) {
-                        throw ApiException.invalidField(path.substring(1), "列表不能包含重复记录。");
+                        throw ApiException.invalidField(path.substring(1), Messages.text("error.http.requestFingerprint.canonical.2"));
                     }
                 }
                 values.values().forEach(result::add);
@@ -111,7 +113,7 @@ public class RequestFingerprint {
             return HexFormat.of()
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(value));
         } catch (GeneralSecurityException exception) {
-            throw new IllegalStateException("运行环境缺少必要的摘要算法", exception);
+            throw new IllegalStateException(Messages.text("error.auth.passwordResetSourceMapper.check.2"), exception);
         }
     }
 }

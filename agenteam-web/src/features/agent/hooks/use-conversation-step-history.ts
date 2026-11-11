@@ -41,7 +41,7 @@ export function useConversationStepHistory(enterprise: string, messages: readonl
           if (controller.signal.aborted) {
             return;
           }
-          console.error("读取对话步骤失败", {runId: id}, failure);
+          console.error("Failed to read conversation steps", {runId: id}, failure);
           update(id, {steps: [], attempts: [], sequence, error: errorMessage(failure, "执行过程暂时无法读取。")});
         }
       }

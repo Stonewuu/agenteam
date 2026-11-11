@@ -1,5 +1,7 @@
 import {en} from "./messages/en";
 import {type Locale, locales} from "./locales";
+import backend from "./generated/backend.json";
+import {editionBackendMessages} from "@/features/edition/messages-extension";
 
 type MessageValue = string | number | boolean | null | undefined;
 export type MessageValues = readonly MessageValue[] | Readonly<Record<string, MessageValue>>;
@@ -7,7 +9,9 @@ export type Translator = ((message: string, values?: MessageValues) => string) &
   locale: Locale;
   formatLocale: string
 };
-const dictionaries: Record<Locale, Readonly<Record<string, string>>> = {"zh-CN": {}, en};
+const dictionaries: Record<Locale, Readonly<Record<string, string>>> = {
+  "zh-CN": {...backend["zh-CN"], ...editionBackendMessages["zh-CN"]}, en,
+};
 
 /** 只翻译代码明确标记的界面文案，不扫描或改写用户内容。 */
 export function translate(locale: Locale, message: string, values?: MessageValues): string {

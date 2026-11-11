@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -31,11 +33,11 @@ public class ExecutionEventCodec {
         try {
             var node = json.readTree(value);
             if (hash == null || !hash.equals(canonical.hash(node))) {
-                throw new IllegalStateException("已保存的事件内容不完整");
+                throw new IllegalStateException(Messages.text("error.execution.executionEventCodec.decode.1"));
             }
             return json.treeToValue(node, ExecutionEvent.class);
         } catch (JsonProcessingException invalid) {
-            throw new IllegalStateException("已保存的事件无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.execution.executionEventCodec.decode.2"), invalid);
         }
     }
 }

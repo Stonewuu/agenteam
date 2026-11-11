@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.auth.AuthContextService;
 import com.stonewu.agenteam.service.file.TextFileDocument;
 import com.stonewu.agenteam.service.http.ApiResponses;
@@ -107,7 +109,7 @@ public class ToolPayloadContentController {
     private ResponseEntity<StreamingResponseBody> download(TextFileDocument document) {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).contentLength(document.sizeBytes())
             .header(HttpHeaders.CACHE_CONTROL, "no-store").header(HttpHeaders.CONTENT_DISPOSITION,
-                ContentDisposition.attachment().filename("工具内容.txt", StandardCharsets.UTF_8).build().toString())
+                ContentDisposition.attachment().filename(Messages.text("text.tool.toolPayloadContentController.download.1"), StandardCharsets.UTF_8).build().toString())
             .body(document::transferTo);
     }
 }

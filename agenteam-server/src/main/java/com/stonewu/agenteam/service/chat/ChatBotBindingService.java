@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -86,12 +88,12 @@ public class ChatBotBindingService {
 
     public PreparedIdentity prepare(UserEntity actor, String enterprise, boolean system, String connectionId) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("机器人身份校验不能占用数据库事务");
+            throw new IllegalStateException(Messages.text("error.chat.chatBotBindingService.prepare.1"));
         }
         policy.require(actor, enterprise, system, "integration.manage", false);
         var connection = integrations.require(enterprise, connectionId);
         if (!Set.of("feishu", "wecom_aibot").contains(connection.getProviderCode()) || "app_management".equals(connection.getPurpose())) {
-            throw ApiException.invalidField("connectionId", "请选择飞书应用或企微智能机器人，普通企微自建应用不能用于群聊。");
+            throw ApiException.invalidField("connectionId", Messages.text("error.chat.chatBotBindingService.prepare.2"));
         }
         var identity = platforms.adapter(connection.getProviderCode()).identity(integrations.application(connection));
         return new PreparedIdentity(connectionId, connection.getRevision(), identity);
@@ -129,9 +131,9 @@ public class ChatBotBindingService {
         try {
             bots.insert(row);
         } catch (DuplicateKeyException failure) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_BOT_ALREADY_BOUND", "此平台机器人已绑定岗位，请编辑已有绑定。", failure);
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_BOT_ALREADY_BOUND", Messages.text("error.chat.chatBotBindingService.create.1"), failure);
         }
-        audit.record(enterprise, actor, "chat.bot_create", "chat_bot", row.getId(), "绑定岗位机器人", Map.of("connectionId", connection.getId(), "agentId", row.getAgentId()));
+        audit.record(enterprise, actor, "chat.bot_create", "chat_bot", row.getId(), Messages.text("text.chat.chatBotBindingService.create.1"), Map.of("connectionId", connection.getId(), "agentId", row.getAgentId()));
         return view(row, connection);
     }
 
@@ -145,18 +147,18 @@ public class ChatBotBindingService {
         String version = resolveAgentVersion(enterprise, input);
         String status = input.status() == null ? row.getStatus() : input.status();
         if (!Set.of("draft", "enabled", "disabled").contains(status)) {
-            throw ApiException.invalidField("status", "请选择启用或停用机器人。");
+            throw ApiException.invalidField("status", Messages.text("error.chat.chatBotBindingService.update.1"));
         }
         var connection = integrations.require(enterprise, row.getConnectionId());
         if ("webhook".equals(input.transport()) && status.equals("enabled") && !callbackConfigured(row)) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CALLBACK_SECRET_REQUIRED", "请先保存飞书回调校验令牌与加密密钥。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_CALLBACK_SECRET_REQUIRED", Messages.text("error.chat.chatBotBindingService.update.2"));
         }
         if (status.equals("enabled") && !connection.getStatus().equals("enabled")) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_CHECK_REQUIRED", "请先校验并启用应用接入。");
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_CHECK_REQUIRED", Messages.text("error.chat.chatBotBindingService.update.3"));
         }
         boolean enabled = status.equals("enabled") && Boolean.TRUE.equals(input.chatEnabled() == null ? row.getChatEnabled() : input.chatEnabled());
         if (input.connectionId() != null && !input.connectionId().equals(row.getConnectionId())) {
-            throw ApiException.invalidField("connectionId", "绑定的平台身份不能直接更换，请新建绑定。");
+            throw ApiException.invalidField("connectionId", Messages.text("error.chat.chatBotBindingService.update.4"));
         }
         int changed = bots.update(new LambdaUpdateWrapper<ChatBotBindingRow>().eq(ChatBotBindingRow::getEnterpriseId, enterprise)
             .eq(ChatBotBindingRow::getId, id).eq(ChatBotBindingRow::getRevision, revision)
@@ -170,7 +172,7 @@ public class ChatBotBindingService {
         if (changed != 1) {
             throw ApiException.versionConflict(revision);
         }
-        audit.record(enterprise, actor, "chat.bot_update", "chat_bot", id, "更新岗位机器人", Map.of("status", status));
+        audit.record(enterprise, actor, "chat.bot_update", "chat_bot", id, Messages.text("text.chat.chatBotBindingService.update.1"), Map.of("status", status));
         return view(require(enterprise, id), connection);
     }
 
@@ -208,7 +210,7 @@ public class ChatBotBindingService {
         var row = bots.selectOne(new LambdaQueryWrapper<ChatBotBindingRow>().eq(ChatBotBindingRow::getEnterpriseId, enterprise)
             .eq(ChatBotBindingRow::getId, id).ne(ChatBotBindingRow::getStatus, "deleted"));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_BOT_UNAVAILABLE", "机器人绑定不存在或已停用。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_BOT_UNAVAILABLE", Messages.text("error.chat.chatBotBindingService.require.1"));
         }
         return row;
     }
@@ -231,14 +233,14 @@ public class ChatBotBindingService {
             .setIncrBy(ChatBotBindingRow::getRevision, 1).set(ChatBotBindingRow::getUpdatedAt, clock.instant())) != 1) {
             throw ApiException.versionConflict(bot.getRevision());
         }
-        audit.record(enterprise, actor, "chat.callback_secrets", "chat_bot", id, "更新机器人回调认证材料", Map.of());
+        audit.record(enterprise, actor, "chat.callback_secrets", "chat_bot", id, Messages.text("text.chat.chatBotBindingService.callbackSettings.1"), Map.of());
         return view(require(enterprise, id), app);
     }
 
     public IntegrationApplication application(ChatBotBindingRow bot) {
         var connection = integrations.require(bot.getEnterpriseId(), bot.getConnectionId());
         if (!connection.getStatus().equals("enabled")) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_DISABLED", "此机器人的应用接入已停用。");
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_DISABLED", Messages.text("error.chat.chatBotBindingService.application.1"));
         }
         return integrations.application(connection);
     }
@@ -273,24 +275,24 @@ public class ChatBotBindingService {
 
     public String resolveAgentVersion(String enterprise, ChatBotWriteRequest input) {
         if (!Set.of("pinned", "latest_on_new_task").contains(input.versionPolicy() == null ? "" : input.versionPolicy())) {
-            throw ApiException.invalidField("versionPolicy", "请选择固定版本或新任务使用最新版本。");
+            throw ApiException.invalidField("versionPolicy", Messages.text("error.chat.chatBotBindingService.resolveAgentVersion.1"));
         }
         var agent = resources.find(enterprise, input.agentId(), false, false)
             .filter(value -> value.kind() == ResourceKind.AGENT).orElseThrow(ChatPlatformRegistry::unavailable);
         String selected = input.versionPolicy().equals("pinned") ? input.pinnedVersionId() : agent.publishedVersionId();
         if (selected == null || versions.find(enterprise, selected).filter(value -> value.resourceId().equals(input.agentId())
             && value.status().equals("available")).isEmpty()) {
-            throw ApiException.invalidField("pinnedVersionId", "请选择此岗位可用的已发布版本。");
+            throw ApiException.invalidField("pinnedVersionId", Messages.text("error.chat.chatBotBindingService.resolveAgentVersion.2"));
         }
         return selected;
     }
 
     private String transport(String value, String provider) {
         if (!Set.of("websocket", "webhook").contains(value == null ? "" : value)) {
-            throw ApiException.invalidField("transport", "请选择平台支持的接收方式。");
+            throw ApiException.invalidField("transport", Messages.text("error.chat.chatBotBindingService.transport.1"));
         }
         if (provider.equals("wecom_aibot") && !value.equals("websocket")) {
-            throw ApiException.invalidField("transport", "企微智能机器人使用长连接接收消息。");
+            throw ApiException.invalidField("transport", Messages.text("error.chat.chatBotBindingService.transport.2"));
         }
         return value;
     }

@@ -120,7 +120,7 @@ function LoadEnterpriseIdentity({enterpriseId, permission, onUnavailable, childr
           remembered = true;
           void rememberEnterprise(enterpriseId, controller.signal).catch((error) => {
             if (!controller.signal.aborted) {
-              console.error("保存最近使用的企业失败", {enterpriseId, error});
+              console.error("Failed to save the last used organization", {enterpriseId, error});
             }
           });
         }
@@ -128,7 +128,7 @@ function LoadEnterpriseIdentity({enterpriseId, permission, onUnavailable, childr
         if (controller.signal.aborted || loginRedirected) {
           return;
         }
-        console.error("读取企业登录信息失败", {enterpriseId, error});
+        console.error("Failed to read organization sign-in information", {enterpriseId, error});
         if (error instanceof ApiError && error.status === 401) {
           requireLogin();
           return;

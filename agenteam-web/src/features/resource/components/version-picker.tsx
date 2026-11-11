@@ -18,6 +18,7 @@ import picker from "./version-picker.module.css";
 import {VersionSelectionDialog} from "./version-selection-dialog";
 import {JavaPluginNotices} from "@/features/plugin/components/java-plugin-notices";
 import {PluginTypeLabels} from "@/features/plugin/components/plugin-type-labels";
+import {resourceDisplayName} from "../lib/resource-localization";
 
 export function VersionPicker({
                                 enterpriseId,
@@ -70,10 +71,10 @@ export function VersionPicker({
       className={picker.selectedRow} key={id}>
       <span className={picker.summary}>{known.get(id) &&
         <ResourceAvatar icon={known.get(id)!.icon} color={known.get(id)!.color}
-                        size="small"/>}<span className={picker.selectedIdentity}><span>{known.get(id) ? uiText("{0} · 版本 {1}", [known.get(id)!.name, known.get(id)!.versionNo]) : resolved.loading ? uiText("正在读取已选内容…") : resolved.data && !resolved.error ? uiText("{0} {1}（不可用）", [title, index + 1]) : uiText("已选{0} {1}", [title, index + 1])}</span>
+                        size="small"/>}<span className={picker.selectedIdentity}><span>{known.get(id) ? uiText("{0} · 版本 {1}", [resourceDisplayName(known.get(id)!, uiText), known.get(id)!.versionNo]) : resolved.loading ? uiText("正在读取已选内容…") : resolved.data && !resolved.error ? uiText("{0} {1}（不可用）", [title, index + 1]) : uiText("已选{0} {1}", [title, index + 1])}</span>
         {kind === "plugin" && <PluginTypeLabels types={known.get(id)?.pluginTypes}/>}</span></span>
       {!readOnly && <Button className={ui.button} type="button"
-                            aria-label={uiText("移除{0}版本 {1}", [known.get(id)?.name ?? title, known.get(id)?.versionNo ?? index + 1])}
+                            aria-label={uiText("移除{0}版本 {1}", [known.has(id) ? resourceDisplayName(known.get(id)!, uiText) : title, known.get(id)?.versionNo ?? index + 1])}
                             onClick={() => {
                               setRemembered(known);
                               onChange(selected.filter((value) => value !== id));
@@ -82,8 +83,8 @@ export function VersionPicker({
     {!readOnly && allowed && <Button className={`${ui.button} ${picker.add}`} type="button" onClick={() => {
       setRemembered(known);
       setOpen(true);
-    }} aria-haspopup="dialog" aria-expanded={open}>{uiText("选择")}{title}</Button>}
-    {!allowed && !selected.length && <p className={ui.description}>{uiText("暂无可选择的")}{title}。</p>}
+    }} aria-haspopup="dialog" aria-expanded={open}>{uiText("选择{0}", [title])}</Button>}
+    {!allowed && !selected.length && <p className={ui.description}>{uiText("暂无可选择的{0}。", [title])}</p>}
     {open &&
       <VersionSelectionDialog enterpriseId={enterpriseId} kind={kind} title={title} selected={selected} known={known}
                               maximum={maximum} subagentsOnly={subagentsOnly} excludeResourceId={excludeResourceId}

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 
 import java.nio.charset.StandardCharsets;
@@ -49,12 +51,12 @@ public final class ProjectPaths {
             return HexFormat.of()
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("运行环境缺少目录摘要算法", failure);
+            throw new IllegalStateException(Messages.text("error.project.projectPaths.digest.1"), failure);
         }
     }
 
     private static ApiException invalid() {
         return ApiException.invalidField("directory",
-            "请填写工作空间内的相对目录，不能使用绝对路径、上级目录或不支持的文件名。");
+            Messages.text("error.project.projectPaths.invalid.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stonewu.agenteam.model.environment.response.EnvironmentView;
@@ -41,7 +43,7 @@ public class RemoteUserEnvironmentRuntime implements UserEnvironmentRuntime {
         if (base.getHost() == null || base.getUserInfo() != null || base.getRawQuery() != null || base.getRawFragment() != null
             || !("https".equals(base.getScheme()) || "http".equals(base.getScheme()) && local)
             || token == null || token.length() < 32 || token.contains("\r") || token.contains("\n")) {
-            throw new IllegalArgumentException("独立环境管理需要有效的服务地址和访问凭据。");
+            throw new IllegalArgumentException(Messages.text("error.environment.remoteUserEnvironmentRuntime.init.1"));
         }
         this.endpoint = base.resolve("environments");
         this.token = token;
@@ -60,25 +62,25 @@ public class RemoteUserEnvironmentRuntime implements UserEnvironmentRuntime {
             try (var input = response.body()) {
                 byte[] bytes = input.readNBytes(16385);
                 if (bytes.length > 16384) {
-                    throw new IOException("独立环境管理响应超过允许范围");
+                    throw new IOException(Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.1"));
                 }
                 if (response.statusCode() != 200) {
                     String code = json.readTree(bytes).path("code").asText();
                     String safeCode = code.matches("[A-Z_]{1,80}") ? code : "UNKNOWN";
-                    LOG.warn("独立环境管理失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}，错误码 {}",
+                    LOG.warn(Messages.log("log.environment.remoteUserEnvironmentRuntime.manage.1"),
                         project.workspaceId(), endpoint.getPath(), response.statusCode(), safeCode);
                     if ("ENVIRONMENT_BUSY".equals(code)) {
-                        throw new ApiException(HttpStatus.CONFLICT, code, "环境中仍有任务或命令正在运行，请结束后再停止。");
+                        throw new ApiException(HttpStatus.CONFLICT, code, Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.2"));
                     }
                     if ("SANDBOX_CAPACITY".equals(code)) {
-                        throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, code, "暂无可用执行环境，请稍后连接。");
+                        throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, code, Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.3"));
                     }
-                    throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ENVIRONMENT_UNAVAILABLE", "环境暂时无法连接，请稍后重试。");
+                    throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ENVIRONMENT_UNAVAILABLE", Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.4"));
                 }
                 var view = json.readValue(bytes, EnvironmentView.class);
                 if (view == null || !Set.of("running", "stopped", "stopping").contains(view.status() == null ? "" : view.status())
                     || view.idleSeconds() < 1) {
-                    throw new IOException("独立环境管理响应缺少有效状态");
+                    throw new IOException(Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.5"));
                 }
                 return view;
             }
@@ -89,8 +91,8 @@ public class RemoteUserEnvironmentRuntime implements UserEnvironmentRuntime {
                 Thread.currentThread().interrupt();
             }
             Throwable cause = failure instanceof JsonProcessingException ? ExceptionDiagnostics.withoutMessages(failure) : failure;
-            LOG.warn("独立环境管理请求失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}", project.workspaceId(), endpoint.getPath(), httpStatus, cause);
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ENVIRONMENT_UNAVAILABLE", "环境暂时无法连接，请稍后重试。", cause);
+            LOG.warn(Messages.log("log.environment.remoteUserEnvironmentRuntime.manage.2"), project.workspaceId(), endpoint.getPath(), httpStatus, cause);
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ENVIRONMENT_UNAVAILABLE", Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.4"), cause);
         }
     }
 }

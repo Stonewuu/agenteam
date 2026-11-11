@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -80,7 +82,7 @@ public class LoginAttemptMapper {
     private long execute(DefaultRedisScript<Long> script, List<String> keys, Object... arguments) {
         Long result = redis.execute(script, keys, arguments);
         if (result == null) {
-            throw new DataAccessResourceFailureException("登录次数检查未取得结果");
+            throw new DataAccessResourceFailureException(Messages.text("error.auth.loginAttemptMapper.execute.1"));
         }
         return result;
     }
@@ -95,7 +97,7 @@ public class LoginAttemptMapper {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("当前运行环境缺少必要的摘要算法", exception);
+            throw new IllegalStateException(Messages.text("error.auth.loginAttemptMapper.hash.1"), exception);
         }
     }
 }

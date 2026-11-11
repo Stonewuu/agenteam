@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -18,7 +20,7 @@ public final class ToolResultBudget {
         }
         int maximum = Math.min(inline, inline * settings.batchMultiplier() / calls);
         if (maximum < 512) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_BATCH_TOO_LARGE", "本轮工具调用过多，请分批处理。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_BATCH_TOO_LARGE", Messages.text("error.tool.toolResultBudget.perCall.1"));
         }
         return maximum;
     }

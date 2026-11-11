@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.configuration.auth.OperationActorContext;
 import com.stonewu.agenteam.service.auth.OperationActorService;
@@ -82,7 +84,7 @@ public class PlatformBuiltinInvocation {
         }
         if (!run.mode().equals("interactive")) {
             throw new ApiException(HttpStatus.CONFLICT, "PLATFORM_WRITE_MODE_UNSUPPORTED",
-                "请在普通对话中确认并修改平台内容，预览和计划执行不能修改这些内容。");
+                Messages.text("error.plugin.platformBuiltinInvocation.write.1"));
         }
         var actor = access.actor(run);
         catalog.requireCurrent(run, binding);
@@ -91,7 +93,7 @@ public class PlatformBuiltinInvocation {
             .equals(call.resourceVersionId())
             || !binding.definition().name().equals(call.toolName()) || !transactions.arguments(call)
             .equals(arguments)) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_ARGUMENTS_CHANGED", "本次业务操作已经变化，请重新发起。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_ARGUMENTS_CHANGED", Messages.text("error.plugin.platformBuiltinInvocation.write.2"));
         }
         if (call.resultEncrypted() != null) {
             return transactions.result(call);
@@ -104,12 +106,12 @@ public class PlatformBuiltinInvocation {
         control.requireActive();
         if (System.nanoTime() > deadline) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "TOOL_EXECUTION_TIMEOUT",
-                "本次业务操作超时，修改未提交。");
+                Messages.text("error.plugin.platformBuiltinInvocation.write.3"));
         }
         schemas.result(binding.definition().outputSchema(), response);
         if (response.toString().getBytes(StandardCharsets.UTF_8).length > 16 * 1024) {
             throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_TOO_LARGE",
-                "本次业务操作返回内容过多，修改未提交。");
+                Messages.text("error.plugin.platformBuiltinInvocation.write.4"));
         }
         var result = results.prepare(run, binding, response, List.of());
         transactions.complete(lease, call.id(), result, null, null);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.persistence;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.Intercepts;
@@ -27,7 +29,7 @@ public class QueryTimeoutInterceptor implements Interceptor {
      */
     public static int withTimeout(int seconds, IntSupplier operation) {
         if (seconds <= 0) {
-            throw new IllegalArgumentException("查询等待时间必须大于零");
+            throw new IllegalArgumentException(Messages.text("error.persistence.queryTimeoutInterceptor.withTimeout.1"));
         }
         Integer previous = CURRENT_TIMEOUT.get();
         CURRENT_TIMEOUT.set(previous == null ? seconds : Math.min(seconds, previous));

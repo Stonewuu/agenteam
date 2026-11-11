@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -124,10 +126,10 @@ public class NotificationService {
     }
 
     private ApiException invalidSequence() {
-        return ApiException.invalidField("throughSequence", "请重新读取通知列表后再标记已读。");
+        return ApiException.invalidField("throughSequence", Messages.text("error.notification.notificationService.invalidSequence.1"));
     }
 
     private ApiException invalidCursor() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "PAGINATION_CURSOR_INVALID", "通知列表已变化，请重新打开列表。");
+        return new ApiException(HttpStatus.BAD_REQUEST, "PAGINATION_CURSOR_INVALID", Messages.text("error.notification.notificationService.invalidCursor.1"));
     }
 }

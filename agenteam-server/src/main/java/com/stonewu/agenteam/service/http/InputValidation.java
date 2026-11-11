@@ -1,5 +1,9 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
+import com.stonewu.agenteam.service.i18n.ApplicationMessageInterpolator;
+
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -19,7 +23,8 @@ import java.util.Set;
  * 根据 Java 请求对象的字段与参数约束校验输入，不加载文档或规则文件。
  */
 public final class InputValidation {
-    private static final ValidatorFactory FACTORY = Validation.buildDefaultValidatorFactory();
+    private static final ValidatorFactory FACTORY = Validation.byDefaultProvider().configure()
+        .messageInterpolator(new ApplicationMessageInterpolator()).buildValidatorFactory();
     private static final Validator VALIDATOR = FACTORY.getValidator();
     private static final ObjectMapper JSON = JsonMapper.builder()
         .addModule(new JavaTimeModule())
@@ -31,7 +36,7 @@ public final class InputValidation {
 
     public static void request(HttpServletRequest request, Class<?> type) {
         if (!(request.getAttribute(ApiRequestFilter.JSON_ATTRIBUTE) instanceof JsonNode body)) {
-            throw ApiException.invalidField("body", "请提交完整的请求内容。");
+            throw ApiException.invalidField("body", Messages.text("error.http.inputValidation.request.1"));
         }
         read(body, type, "");
     }
@@ -42,18 +47,18 @@ public final class InputValidation {
 
     public static void nonNullWhenPresent(HttpServletRequest request, String... fields) {
         if (!(request.getAttribute(ApiRequestFilter.JSON_ATTRIBUTE) instanceof JsonNode body)) {
-            throw ApiException.invalidField("body", "请提交完整的请求内容。");
+            throw ApiException.invalidField("body", Messages.text("error.http.inputValidation.request.1"));
         }
         for (String field : fields) {
             if (body.has(field) && body.get(field).isNull()) {
-                throw ApiException.invalidField(field, "请提交此字段的内容，或省略此字段。");
+                throw ApiException.invalidField(field, Messages.text("error.http.inputValidation.nonNullWhenPresent.1"));
             }
         }
     }
 
     public static void validate(Object input, String prefix) {
         if (input == null) {
-            throw ApiException.invalidField(prefix.isEmpty() ? "body" : prefix, "请提交完整的内容。");
+            throw ApiException.invalidField(prefix.isEmpty() ? "body" : prefix, Messages.text("error.http.inputValidation.validate.1"));
         }
         Map<String, List<String>> fields = new LinkedHashMap<>();
         for (var violation : VALIDATOR.validate(input)) {
@@ -71,7 +76,7 @@ public final class InputValidation {
 
     public static <T> T read(JsonNode input, Class<T> type, String field) {
         if (input == null || !input.isObject()) {
-            throw ApiException.invalidField(field.isEmpty() ? "body" : field, "请提交完整的对象内容。");
+            throw ApiException.invalidField(field.isEmpty() ? "body" : field, Messages.text("error.http.inputValidation.read.1"));
         }
         T value;
         try {
@@ -79,7 +84,7 @@ public final class InputValidation {
         } catch (JsonMappingException invalid) {
             throw RequestValidationErrors.mapping(invalid, field);
         } catch (Exception invalid) {
-            throw new IllegalStateException("请求对象无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.http.inputValidation.read.2"), invalid);
         }
         validate(value, field);
         return value;
@@ -87,12 +92,12 @@ public final class InputValidation {
 
     public static void fields(JsonNode value, String path, String... allowed) {
         if (value == null || !value.isObject()) {
-            throw ApiException.invalidField(path, "请提交对象内容。");
+            throw ApiException.invalidField(path, Messages.text("error.http.inputValidation.fields.1"));
         }
         var names = Set.of(allowed);
         value.fieldNames().forEachRemaining(name -> {
             if (!names.contains(name)) {
-                throw ApiException.invalidField(path + "." + name, "包含不支持的字段。");
+                throw ApiException.invalidField(path + "." + name, Messages.text("error.http.inputValidation.fields.2"));
             }
         });
     }
@@ -100,7 +105,7 @@ public final class InputValidation {
     public static void required(JsonNode value, String path, String... fields) {
         for (String field : fields) {
             if (!value.hasNonNull(field)) {
-                throw ApiException.invalidField(path + "." + field, "请填写必填项。");
+                throw ApiException.invalidField(path + "." + field, Messages.text("validation.required"));
             }
         }
     }

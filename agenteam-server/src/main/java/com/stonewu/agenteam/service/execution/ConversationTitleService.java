@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -80,7 +82,7 @@ public class ConversationTitleService {
             return Optional.empty();
         }
         if (lease.exhausted()) {
-            finish(lease, "failed", "TITLE_ATTEMPTS_EXHAUSTED", "标题生成已达到尝试次数上限。", 0);
+            finish(lease, "failed", "TITLE_ATTEMPTS_EXHAUSTED", Messages.text("text.execution.conversationTitleService.prepare.1"), 0);
             return Optional.empty();
         }
         var payload = payload(lease);
@@ -135,7 +137,7 @@ public class ConversationTitleService {
         }
         if (title != null && conversations.saveAutomaticTitle(lease.enterpriseId(), lease.ownerUserId(),
             payload.conversationId(), rows.getFirst().getRevision(), title) != 1) {
-            throw new IllegalStateException("对话标题保存条件已变化，结果未提交");
+            throw new IllegalStateException(Messages.text("error.execution.conversationTitleService.complete.1"));
         }
         finish(lease, "completed", null, null, 0);
     }
@@ -146,14 +148,14 @@ public class ConversationTitleService {
             return;
         }
         boolean again = retry && !lease.exhausted() && lease.attemptCount() < lease.maxAttempts();
-        finish(lease, again ? "queued" : "failed", "TITLE_GENERATION_FAILED", "自动标题未能生成，保留原有标题。",
+        finish(lease, again ? "queued" : "failed", "TITLE_GENERATION_FAILED", Messages.text("error.execution.conversationTitleService.failed.1"),
             again ? (lease.attemptCount() == 1 ? 30 : 120) : 0);
     }
 
     private void finish(JobLease lease, String status, String code, String summary, int delay) {
         var now = clock.instant();
         if (!jobs.finish(lease, status, code, summary, now.plusSeconds(delay), now)) {
-            throw new IllegalStateException("标题任务执行权已变化，结果未提交");
+            throw new IllegalStateException(Messages.text("error.execution.conversationTitleService.finish.1"));
         }
     }
 
@@ -175,6 +177,6 @@ public class ConversationTitleService {
     }
 
     private static CancellationException unavailable() {
-        return new CancellationException("标题任务的归属或权限已不可用。");
+        return new CancellationException(Messages.text("error.execution.conversationTitleService.unavailable.1"));
     }
 }

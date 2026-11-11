@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,14 +42,14 @@ public class FileContentStorage {
 
     public Stored write(String enterprise, InputStream input, long limit) {
         if (!enterprise.matches("[A-Za-z0-9_-]{1,100}") || limit < 1) {
-            throw new IllegalArgumentException("文件存储范围不正确");
+            throw new IllegalArgumentException(Messages.text("error.file.fileContentStorage.write.1"));
         }
         String key = enterprise + "/" + UUID.randomUUID() + ".data";
         Path temporary = null;
         try {
             Files.createDirectories(temporaryRoot);
             if (Files.isSymbolicLink(temporaryRoot)) {
-                throw new IOException("临时文件目录不能为链接");
+                throw new IOException(Messages.text("error.file.fileContentStorage.write.2"));
             }
             temporary = Files.createTempFile(temporaryRoot, "upload-", ".part");
             MessageDigest digest = digest();
@@ -57,7 +59,7 @@ public class FileContentStorage {
                 int length;
                 while ((length = input.read(buffer)) >= 0) {
                     if (Thread.currentThread().isInterrupted()) {
-                        throw new IOException("文件写入已取消");
+                        throw new IOException(Messages.text("error.file.fileContentStorage.write.3"));
                     }
                     if (length == 0) {
                         continue;
@@ -65,7 +67,7 @@ public class FileContentStorage {
                     count += length;
                     if (count > limit) {
                         throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE",
-                            "文件超过当前用途允许的大小。");
+                            Messages.text("error.file.fileContentStorage.write.4"));
                     }
                     digest.update(buffer, 0, length);
                     output.write(buffer, 0, length);
@@ -130,7 +132,7 @@ public class FileContentStorage {
         try {
             Files.createDirectories(temporaryRoot);
             if (Files.isSymbolicLink(temporaryRoot)) {
-                throw new IOException("临时文件目录不能为链接");
+                throw new IOException(Messages.text("error.file.fileContentStorage.write.2"));
             }
             return Files.createTempFile(temporaryRoot, "import-", ".part");
         } catch (IOException failed) {
@@ -140,7 +142,7 @@ public class FileContentStorage {
 
     public synchronized int cleanOrphans(Instant before, Predicate<String> referenced, int limit) {
         if (limit < 1 || limit > 1000) {
-            throw new IllegalArgumentException("文件清理批次超出范围");
+            throw new IllegalArgumentException(Messages.text("error.file.fileContentStorage.cleanOrphans.1"));
         }
         int removed = 0;
         var page = objects.list(orphanCursor, limit);
@@ -180,7 +182,7 @@ public class FileContentStorage {
         try {
             return MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", impossible);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), impossible);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -151,9 +153,9 @@ public class ChatNormalizationTransactions {
                 .eq(ChatInboundReceiptRow::getEnterpriseId, lease.enterpriseId()).eq(ChatInboundReceiptRow::getId, lease.receiptId())
                 .eq(ChatInboundReceiptRow::getLeaseOwner, lease.owner()).eq(ChatInboundReceiptRow::getLeaseVersion, lease.version())
                 .set(ChatInboundReceiptRow::getPayloadEncrypted, cipher.encrypt(lease.enterpriseId(), "receipt", receipt.getId(),
-                    Map.of("reason", "企业账号绑定消息不保留正文"))).set(ChatInboundReceiptRow::getPayloadPurgedAt, clock.instant()));
+                    Map.of("reason", Messages.text("text.chat.chatNormalizationTransactions.normalize.1")))).set(ChatInboundReceiptRow::getPayloadPurgedAt, clock.instant()));
             if (changed != 1) {
-                throw new IllegalStateException("企业账号绑定接收记录已变化");
+                throw new IllegalStateException(Messages.text("error.chat.chatNormalizationTransactions.normalize.1"));
             }
             finish(lease, "ignored", null, null);
             return;
@@ -329,11 +331,11 @@ public class ChatNormalizationTransactions {
 
     private void finish(ChatReceiptLease lease, String status, String message, String error) {
         if (receipts.update(guard(lease).set(ChatInboundReceiptRow::getStatus, status).set(ChatInboundReceiptRow::getMessageId, message)
-            .set(ChatInboundReceiptRow::getPayloadEncrypted, cipher.encrypt(lease.enterpriseId(), "receipt", lease.receiptId(), Map.of("reason", "事件规范化处理已完成")))
+            .set(ChatInboundReceiptRow::getPayloadEncrypted, cipher.encrypt(lease.enterpriseId(), "receipt", lease.receiptId(), Map.of("reason", Messages.text("text.chat.chatNormalizationTransactions.finish.1"))))
             .set(ChatInboundReceiptRow::getPayloadPurgedAt, clock.instant())
             .set(ChatInboundReceiptRow::getErrorCode, error).set(ChatInboundReceiptRow::getLeaseOwner, null)
             .set(ChatInboundReceiptRow::getLeaseUntil, null).set(ChatInboundReceiptRow::getUpdatedAt, clock.instant())) != 1) {
-            throw new IllegalStateException("接收处理已由其他进程接管，当前事务不能提交");
+            throw new IllegalStateException(Messages.text("error.chat.chatNormalizationTransactions.finish.1"));
         }
     }
 }

@@ -20,11 +20,11 @@ export function broadcastIdentityChange() {
     channel.postMessage({source: identityTabId});
     channel.close();
   } catch (failure) {
-    console.warn("无法广播登录身份变化", failure);
+    console.warn("Failed to broadcast the sign-in identity change", failure);
   }
   try {
     window.localStorage.setItem("agenteam:identity-change", crypto.randomUUID());
   } catch (failure) {
-    console.warn("无法通知其他标签页更新身份", failure);
+    console.warn("Failed to notify other tabs of the identity change", failure);
   }
 }

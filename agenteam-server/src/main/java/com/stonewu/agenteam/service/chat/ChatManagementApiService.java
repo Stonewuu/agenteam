@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.model.chat.response.ChatServiceStatus;
 import com.stonewu.agenteam.model.chat.request.ChatBotWriteRequest;
@@ -182,7 +184,7 @@ public class ChatManagementApiService {
     private UserEntity actor(String enterprise, HttpServletRequest request) {
         if (ChannelSessionGuard.restricted(request.getSession(false))) {
             if (system(request)) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证账号密码，再访问平台管理。");
+                throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", Messages.text("error.chat.chatManagementApiService.actor.1"));
             }
             identity.requireEnterprise(request.getSession(false), enterprise);
         }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.LiveEventCodec;
@@ -57,7 +59,7 @@ public class LiveEventDelivery {
         var old = sessions.putIfAbsent(LiveEventCache.token(lease), session);
         if (old != null) {
             session.close();
-            throw new IllegalStateException("同一次执行资格不能创建多个独立事件入口");
+            throw new IllegalStateException(Messages.text("error.execution.liveEventDelivery.open.1"));
         }
         return session;
     }
@@ -81,7 +83,7 @@ public class LiveEventDelivery {
         }
         String owner = cache.claim(conversation.enterpriseId(), conversation.id());
         if (owner == null) {
-            throw new IllegalStateException("对话实时内容正在初始化");
+            throw new IllegalStateException(Messages.text("error.execution.liveEventDelivery.ensure.1"));
         }
         try {
             var baseline = database.conversation(conversation.enterpriseId(), conversation.userId(), conversation.id());
@@ -115,7 +117,7 @@ public class LiveEventDelivery {
                 throw new ExecutionStoppedException();
             }
             if (!result.accepted()) {
-                throw new IllegalStateException("实时内容需要重新读取，原因 " + result.status());
+                throw new IllegalStateException(Messages.text("error.execution.liveEventDelivery.append.1", result.status()));
             }
             position = result.cursor();
         }
@@ -131,7 +133,7 @@ public class LiveEventDelivery {
         database.requireLease(run, lease);
         String owner = cache.claim(run.enterpriseId(), run.conversationId());
         if (owner == null) {
-            throw new IllegalStateException("其他请求正在恢复对话实时内容");
+            throw new IllegalStateException(Messages.text("error.execution.liveEventDelivery.restore.1"));
         }
         try {
             var previous = cache.position(run.enterpriseId(), run.conversationId());
@@ -217,7 +219,7 @@ public class LiveEventDelivery {
                 var result = cache.append(run.enterpriseId(), run.conversationId(), state.cursor(), null,
                     codec.committed(event));
                 if (!result.accepted()) {
-                    throw new IllegalStateException("已保存事件暂时无法按顺序恢复，原因 " + result.status());
+                    throw new IllegalStateException(Messages.text("error.execution.liveEventDelivery.recoverLocked.1", result.status()));
                 }
                 applied = result.databaseVersion();
             }
@@ -237,12 +239,12 @@ public class LiveEventDelivery {
                 try {
                     action.run();
                 } catch (RuntimeException failed) {
-                    LOG.warn("已保存的执行事件暂时未分发，将按需恢复，会话编号 {}，执行编号 {}", run.conversationId(),
+                    LOG.warn(Messages.log("log.execution.liveEventDelivery.dispatch.1"), run.conversationId(),
                         run.id(), failed);
                 }
             });
         } catch (RejectedExecutionException full) {
-            LOG.warn("执行事件通知队列已满，将由后台恢复，会话编号 {}，执行编号 {}", run.conversationId(), run.id(), full);
+            LOG.warn(Messages.log("log.execution.liveEventDelivery.dispatch.2"), run.conversationId(), run.id(), full);
         }
     }
 

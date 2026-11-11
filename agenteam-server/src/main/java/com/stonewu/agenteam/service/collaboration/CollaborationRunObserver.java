@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -171,7 +173,7 @@ public class CollaborationRunObserver {
             .eq(CollaborationRunLinkRow::getId, id).isNull(CollaborationRunLinkRow::getTerminalObservedAt)
             .set(CollaborationRunLinkRow::getTerminalObservedAt, clock.instant()).set(CollaborationRunLinkRow::getLastStatus, run.status())
             .set(CollaborationRunLinkRow::getUpdatedAt, clock.instant())) != 1) {
-            throw new IllegalStateException("协作执行终态已经由其他进程处理");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationRunObserver.observe.1"));
         }
         wake(task);
     }
@@ -219,27 +221,27 @@ public class CollaborationRunObserver {
         for (var artifact : existing) {
             refs.add(Map.of("artifactId", artifact.getId(), "version", artifact.getArtifactVersion()));
         }
-        String summary = text.isBlank() ? "岗位已提交成果。" : text.codePointCount(0, text.length()) <= 2000 ? text : "岗位已完成本次工作，完整回答见成果。";
+        String summary = text.isBlank() ? Messages.text("text.collaboration.collaborationRunObserver.automaticResult.1") : text.codePointCount(0, text.length()) <= 2000 ? text : Messages.text("text.collaboration.collaborationRunObserver.automaticResult.2");
         if (!text.isBlank()) {
             if (json.tree(text).toString().getBytes(StandardCharsets.UTF_8).length > 16 * 1024) {
                 if (generated == null || !generated.contentHash().equals(json.hash(json.tree(text)))) {
-                    throw new IllegalStateException("需要先在事务外准备完整回答文件");
+                    throw new IllegalStateException(Messages.text("error.collaboration.collaborationRunObserver.automaticResult.1"));
                 }
                 var file = generated.file();
                 if (!file.enterpriseId().equals(task.getEnterpriseId()) || !file.ownerUserId().equals(task.getInitiatorUserId())
                     || !file.runId().equals(run.id()) || !file.resourceId().equals(role.getAgentId())
                     || !file.resourceVersionId().equals(role.getAgentVersionId()) || !file.purpose().equals("collaboration_artifact")) {
-                    throw new IllegalStateException("完整回答文件不属于本次岗位执行");
+                    throw new IllegalStateException(Messages.text("error.collaboration.collaborationRunObserver.automaticResult.2"));
                 }
                 files.generated(file, clock.instant());
                 int length = text.codePointCount(0, text.length());
                 texts.save(files.find(task.getEnterpriseId(), file.id(), false).orElseThrow(),
                     new AttachmentText(text.substring(0, text.offsetByCodePoints(0, Math.min(50000, length))), length > 50000), clock.instant());
-                var artifact = artifacts.publish(task, work, run.id(), "answer:" + work.getId(), role.getRoleName() + "完整回答", summary,
+                var artifact = artifacts.publish(task, work, run.id(), "answer:" + work.getId(), Messages.text("text.collaboration.collaborationRunObserver.automaticResult.3", role.getRoleName()), summary,
                     "file", null, file.id(), null);
                 refs.add(Map.of("artifactId", artifact.getId(), "version", artifact.getArtifactVersion()));
             } else {
-                var artifact = artifacts.publish(task, work, run.id(), "answer:" + work.getId(), role.getRoleName() + "完整回答", summary,
+                var artifact = artifacts.publish(task, work, run.id(), "answer:" + work.getId(), Messages.text("text.collaboration.collaborationRunObserver.automaticResult.3", role.getRoleName()), summary,
                     "text", json.tree(text), null, null);
                 refs.add(Map.of("artifactId", artifact.getId(), "version", artifact.getArtifactVersion()));
             }
@@ -257,7 +259,7 @@ public class CollaborationRunObserver {
                 .eq(CollaborationTaskRow::getId, task.getId()).in(CollaborationTaskRow::getStatus, "active", "waiting_input")
                 .set(CollaborationTaskRow::getStatus, "waiting_approval").setIncrBy(CollaborationTaskRow::getRevision, 1));
             outbound.send(task, null, null, "approval:" + run.id(),
-                "waiting_approval", "任务 【" + task.getShortCode() + "】：有一项操作需要原发起人确认。\n" + publicLinks.task(task.getEnterpriseId(), task.getId()), false, null);
+                "waiting_approval", Messages.text("text.collaboration.collaborationRunObserver.changedStatus.1", task.getShortCode(), publicLinks.task(task.getEnterpriseId(), task.getId())), false, null);
         } else if (run.status().equals("running") && work.getStatus().equals("waiting_approval")) {
             works.change(work, "running");
             tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
@@ -267,7 +269,7 @@ public class CollaborationRunObserver {
         if (run.status().equals("running") && run.startedAt() != null && link.getLastStatus().equals("queued")) {
             var role = access.participant(task, work.getParticipantId());
             outbound.send(task, role, null, "started:" + run.id(),
-                "started", "任务 【" + task.getShortCode() + "】：【" + role.getRoleName() + "】已开始处理。", true, null);
+                "started", Messages.text("text.collaboration.collaborationRunObserver.changedStatus.2", task.getShortCode(), role.getRoleName()), true, null);
         }
     }
 

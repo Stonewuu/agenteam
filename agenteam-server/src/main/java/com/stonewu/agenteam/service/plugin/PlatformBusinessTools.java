@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -80,7 +82,7 @@ public class PlatformBusinessTools {
         for (var extension : extensions) {
             for (String name : extension.toolNames()) {
                 if (registered.putIfAbsent(name, extension) != null) {
-                    throw new IllegalStateException("平台业务工具处理器重复登记：" + name);
+                    throw new IllegalStateException(Messages.text("error.plugin.platformBusinessTools.init.1", name));
                 }
             }
         }
@@ -117,30 +119,30 @@ public class PlatformBusinessTools {
                     limit);
             case "todo_teams" -> selections.teams(actor, input.text(args, "purpose"), query, cursor, limit);
             case "todo_create" ->
-                compact(todos.create(actor, input.todo(context, args, null)), "待办已创建。", "id", "revision", "title",
+                compact(todos.create(actor, input.todo(context, args, null)), Messages.text("text.plugin.platformBusinessTools.call.1"), "id", "revision", "title",
                     "status", "dueDate", "owner", "teamName");
             case "todo_update" -> {
                 String id = input.text(args, "todoId");
                 var previous = todoQueries.get(actor, id);
                 yield compact(todos.update(actor, id, input.todo(context, args, previous), input.revision(args)),
-                    "待办已修改。", "id", "revision", "title", "status", "dueDate", "owner", "teamName");
+                    Messages.text("text.plugin.platformBusinessTools.call.2"), "id", "revision", "title", "status", "dueDate", "owner", "teamName");
             }
             case "todo_set_status" -> {
                 var request = new TodoStatusRequest(input.text(args, "status"), input.text(args, "reason"));
                 InputValidation.validate(request);
                 yield compact(todos.status(actor, input.text(args, "todoId"), request, input.revision(args)),
-                    "待办状态已修改。", "id", "revision", "title", "status");
+                    Messages.text("text.plugin.platformBusinessTools.call.3"), "id", "revision", "title", "status");
             }
             case "todo_transfer" -> {
                 var request = new TodoTransferRequest(input.text(args, "ownerUserId"), input.text(args, "reason"));
                 InputValidation.validate(request);
                 yield compact(todos.transfer(actor, input.text(args, "todoId"), request, input.revision(args)),
-                    "待办已转交。", "id", "revision", "title", "owner");
+                    Messages.text("text.plugin.platformBusinessTools.call.4"), "id", "revision", "title", "owner");
             }
             case "todo_delete" -> {
                 String id = input.text(args, "todoId");
                 todos.delete(actor, id, input.revision(args));
-                yield Map.of("id", id, "content", "待办已删除。");
+                yield Map.of("id", id, "content", Messages.text("text.plugin.platformBusinessTools.call.5"));
             }
             case "schedule_list" -> scheduleQueries.list(actor, query, cursor, limit);
             case "schedule_actions" -> Map.of("items", scheduleSelections.actions(actor));
@@ -167,25 +169,25 @@ public class PlatformBusinessTools {
                 times.preview(actor, input.rule(args, enterprises.timezone(actor.enterpriseId())));
             case "schedule_create", "schedule_action_create" ->
                 compact(schedules.create(actor, input.schedule(args, enterprises.timezone(actor.enterpriseId()))),
-                    "定时任务已创建。", "id", "revision", "name", "enabled", "frequency", "localDate", "localTime",
+                    Messages.text("text.plugin.platformBusinessTools.call.6"), "id", "revision", "name", "enabled", "frequency", "localDate", "localTime",
                     "timezone", "nextRunAt", "action");
             case "schedule_update", "schedule_action_update" -> compact(schedules.update(actor, input.text(args, "scheduleId"),
                     input.schedule(args, enterprises.timezone(actor.enterpriseId())), input.revision(args)),
-                "定时任务已修改。", "id", "revision", "name", "enabled", "frequency", "localDate", "localTime",
+                Messages.text("text.plugin.platformBusinessTools.call.7"), "id", "revision", "name", "enabled", "frequency", "localDate", "localTime",
                 "timezone", "nextRunAt", "action");
             case "schedule_set_enabled" -> compact(
                 schedules.enabled(actor, input.text(args, "scheduleId"), args.path("enabled").asBoolean(),
-                    input.revision(args)), "定时任务启用状态已修改。", "id", "revision", "name", "enabled", "nextRunAt");
+                    input.revision(args)), Messages.text("text.plugin.platformBusinessTools.call.8"), "id", "revision", "name", "enabled", "nextRunAt");
             case "schedule_upgrade_version" ->
                 compact(schedules.upgrade(actor, input.text(args, "scheduleId"), input.revision(args)),
-                    "计划的员工版本已更新。", "id", "revision", "name", "agentVersionId");
+                    Messages.text("text.plugin.platformBusinessTools.call.9"), "id", "revision", "name", "agentVersionId");
             case "schedule_run_once" -> triggers.manual(actor, input.text(args, "scheduleId"), context.operationId());
             case "schedule_delete" -> {
                 String id = input.text(args, "scheduleId");
                 schedules.delete(actor, id, input.revision(args));
-                yield Map.of("id", id, "content", "定时任务已删除。");
+                yield Map.of("id", id, "content", Messages.text("text.plugin.platformBusinessTools.call.10"));
             }
-            default -> throw new IllegalArgumentException("平台业务工具没有登记");
+            default -> throw new IllegalArgumentException(Messages.text("error.plugin.platformBusinessTools.call.1"));
         };
         JsonNode result = json.tree(value);
         removeActions(result);

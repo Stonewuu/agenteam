@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +20,7 @@ public class IntegrationProviderRegistry {
         var registered = new LinkedHashMap<String, IntegrationProvider>();
         for (IntegrationProvider provider : implementations) {
             if (registered.putIfAbsent(provider.code(), provider) != null) {
-                throw new IllegalStateException("渠道代码重复注册：" + provider.code());
+                throw new IllegalStateException(Messages.text("error.integration.integrationProviderRegistry.init.1", provider.code()));
             }
         }
         providers = Map.copyOf(registered);
@@ -31,7 +33,7 @@ public class IntegrationProviderRegistry {
     public IntegrationProvider require(String code) {
         var provider = code == null ? null : providers.get(code);
         if (provider == null) {
-            throw ApiException.invalidField("providerCode", "请选择支持的接入平台。");
+            throw ApiException.invalidField("providerCode", Messages.text("error.integration.integrationProviderRegistry.require.1"));
         }
         return provider;
     }
@@ -40,13 +42,13 @@ public class IntegrationProviderRegistry {
         if (require(code) instanceof ChannelIdentityProvider identity) {
             return identity;
         }
-        throw ApiException.invalidField("providerCode", "此渠道不支持账号授权。");
+        throw ApiException.invalidField("providerCode", Messages.text("error.integration.integrationProviderRegistry.identity.1"));
     }
 
     public ChannelMessageSender sender(String code) {
         if (require(code) instanceof ChannelMessageSender sender) {
             return sender;
         }
-        throw ApiException.invalidField("providerCode", "此渠道不支持个人消息。");
+        throw ApiException.invalidField("providerCode", Messages.text("error.integration.integrationProviderRegistry.sender.1"));
     }
 }

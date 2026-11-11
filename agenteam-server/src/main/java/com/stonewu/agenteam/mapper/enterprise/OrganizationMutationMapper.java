@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 
 import com.stonewu.agenteam.model.enterprise.request.EnterpriseUpdatePayload;
 import org.springframework.stereotype.Repository;
@@ -32,7 +34,7 @@ public class OrganizationMutationMapper {
 
     private void changed(int count) {
         if (count != 1) {
-            throw new IllegalStateException("组织资料已经变化，当前修改未提交");
+            throw new IllegalStateException(Messages.text("error.enterprise.organizationMutationMapper.changed.1"));
         }
     }
 }

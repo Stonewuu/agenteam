@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
 import com.stonewu.agenteam.service.http.ApiException;
 import io.agentscope.core.agent.Agent;
@@ -70,14 +72,14 @@ public final class CompactionSafetyMiddleware implements MiddlewareBase {
                     return Flux.error(attempt.failure);
                 }
                 return Flux.error(new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "CONTEXT_COMPACTION_FAILED",
-                    "对话内容压缩暂未完成，已保留原始内容，请稍后重试。", attempt.failure));
+                    Messages.text("error.agent.compactionSafetyMiddleware.onModelCall.1"), attempt.failure));
             }
             // 2.0.3 的 call 异常回退会绕过自定义压缩配置并写出明文历史；此处保留安全的失败状态。
             return next.apply(input).onErrorMap(failure -> {
                 String message = failure.getMessage();
                 if (message != null && overflow(message)) {
                     return new ApiException(HttpStatus.BAD_GATEWAY, "EXECUTION_CONTEXT_LIMIT",
-                        "本次输入仍超过模型可处理的长度。对话内容已保留，请缩短输入后重试。", failure);
+                        Messages.text("error.agent.compactionSafetyMiddleware.onModelCall.2"), failure);
                 }
                 return failure;
             });

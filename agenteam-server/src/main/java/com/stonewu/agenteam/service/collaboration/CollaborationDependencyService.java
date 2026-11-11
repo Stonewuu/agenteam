@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkDependencyMapper;
@@ -49,12 +51,12 @@ public class CollaborationDependencyService {
 
     public void add(CollaborationTaskRow task, String work, List<String> required, String phase) {
         if (required.size() > 20 || !Set.of("start", "resume").contains(phase)) {
-            throw ApiException.invalidField("dependsOnWorkIds", "最多选择二十项依赖工作。");
+            throw ApiException.invalidField("dependsOnWorkIds", Messages.text("error.collaboration.collaborationDependencyService.add.1"));
         }
         var rows = works(task);
         var ids = rows.stream().map(CollaborationWorkItemRow::getId).collect(Collectors.toSet());
         if (!ids.contains(work) || !ids.containsAll(required)) {
-            throw ApiException.invalidField("dependsOnWorkIds", "依赖必须是当前任务内已存在的工作。");
+            throw ApiException.invalidField("dependsOnWorkIds", Messages.text("error.collaboration.collaborationDependencyService.add.2"));
         }
         var edges = edges(task);
         var graph = graph(edges);
@@ -91,16 +93,16 @@ public class CollaborationDependencyService {
 
     public void replace(CollaborationTaskRow task, CollaborationWorkItemRow previous, CollaborationWorkItemRow replacement) {
         if ("TOOL_RESULT_UNKNOWN".equals(previous.getErrorCode())) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN", "原工作的业务操作结果尚未确认，不能通过替换工作再次执行。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN", Messages.text("error.collaboration.collaborationDependencyService.replace.1"));
         }
         if (previous.getId().equals(task.getOwnerWorkId()) || previous.getActiveRunId() != null || previous.getReplacementWorkId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "WORK_BUSY", "原工作仍在执行、已经替换或仍负责最终交付。");
+            throw new ApiException(HttpStatus.CONFLICT, "WORK_BUSY", Messages.text("error.collaboration.collaborationDependencyService.replace.2"));
         }
         var edges = edges(task);
         var downstream = edges.stream().filter(edge -> edge.getDependsOnWorkId().equals(previous.getId()))
             .map(CollaborationWorkDependencyRow::getWorkId).collect(Collectors.toSet());
         if (works(task).stream().anyMatch(work -> downstream.contains(work.getId()) && work.getActiveRunId() != null && !work.getId().equals(task.getOwnerWorkId()))) {
-            throw new ApiException(HttpStatus.CONFLICT, "WORK_BUSY", "依赖原工作的岗位仍在执行，请等待它结束后替换。");
+            throw new ApiException(HttpStatus.CONFLICT, "WORK_BUSY", Messages.text("error.collaboration.collaborationDependencyService.replace.3"));
         }
         for (var edge : edges) {
             if (edge.getDependsOnWorkId().equals(previous.getId())) {
@@ -161,7 +163,7 @@ public class CollaborationDependencyService {
             }
         }
         if (visited != incoming.size()) {
-            throw new ApiException(HttpStatus.CONFLICT, "WORK_DEPENDENCY_CYCLE", "这些工作存在相互等待，请调整依赖关系。");
+            throw new ApiException(HttpStatus.CONFLICT, "WORK_DEPENDENCY_CYCLE", Messages.text("error.collaboration.collaborationDependencyService.requireAcyclic.1"));
         }
     }
 }

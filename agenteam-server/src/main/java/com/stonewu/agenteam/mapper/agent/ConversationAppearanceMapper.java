@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -117,7 +119,7 @@ public class ConversationAppearanceMapper {
         try {
             return json.readTree(content);
         } catch (JsonProcessingException invalid) {
-            LOG.warn("无法从已保存内容读取员工外观，执行编号 {}", run, invalid);
+            LOG.warn(Messages.log("log.agent.conversationAppearanceMapper.read.1"), run, invalid);
             return json.createObjectNode();
         }
     }

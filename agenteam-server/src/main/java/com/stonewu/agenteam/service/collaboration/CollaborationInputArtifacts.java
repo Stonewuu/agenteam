@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -61,15 +63,15 @@ public class CollaborationInputArtifacts {
         var checked = new ArrayList<InputFile>();
         for (var resource : inputs) {
             if (!resource.getStatus().equals("ready") || resource.getFileId() == null) {
-                throw ApiException.invalidField("messageReferences", "原消息的附件尚未完成检查。");
+                throw ApiException.invalidField("messageReferences", Messages.text("error.collaboration.collaborationInputArtifacts.register.1"));
             }
             var file = fileAccess.ready(actor, resource.getFileId());
             if (!file.purpose().equals("collaboration_artifact") || !file.sha256().equals(resource.getSha256())) {
-                throw ApiException.invalidField("messageReferences", "原附件的内容或用途已发生变化。");
+                throw ApiException.invalidField("messageReferences", Messages.text("error.collaboration.collaborationInputArtifacts.register.2"));
             }
             checked.add(new InputFile("input:" + resource.getId(), file));
         }
-        register(task, work, checked, "platform_message_attachment_v1", "原发起人通过平台消息提供的附件，请读取实际内容。");
+        register(task, work, checked, "platform_message_attachment_v1", Messages.text("text.collaboration.collaborationInputArtifacts.register.1"));
     }
 
     public void register(CollaborationTaskRow task, CollaborationWorkItemRow work, List<InputFile> inputs, String schema, String summary) {
@@ -110,7 +112,7 @@ public class CollaborationInputArtifacts {
             }
         }
         if (references.size() > 20) {
-            throw ApiException.invalidField("messageReferences", "本项工作引用的成果超过二十项，请拆分任务。");
+            throw ApiException.invalidField("messageReferences", Messages.text("error.collaboration.collaborationInputArtifacts.register.3"));
         }
         if (task.fromWebRoom()) {
             var fileSizes = artifacts.selectJoinList(FileObjectRow.class, JoinWrappers.lambda(CollaborationArtifactRow.class).distinct()
@@ -120,13 +122,13 @@ public class CollaborationInputArtifacts {
                 .eq(CollaborationArtifactRow::getEnterpriseId, enterprise).eq(CollaborationArtifactRow::getTaskId, task.getId())
                 .in(CollaborationArtifactRow::getId, existing));
             if (fileSizes.stream().mapToLong(FileObjectRow::getSizeBytes).sum() > 50L * 1024 * 1024) {
-                throw ApiException.invalidField("attachmentIds", "当前工作引用的附件合计超过 50 MB，请在新任务中发送。");
+                throw ApiException.invalidField("attachmentIds", Messages.text("error.collaboration.collaborationInputArtifacts.register.4"));
             }
         }
         if (works.update(new LambdaUpdateWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, enterprise)
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).eq(CollaborationWorkItemRow::getId, work.getId())
             .set(CollaborationWorkItemRow::getInstructionEncrypted, cipher.encrypt(enterprise, "work-instruction", work.getId(), instruction))) != 1) {
-            throw new IllegalStateException("原附件无法加入负责人工作");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationInputArtifacts.register.5"));
         }
     }
 

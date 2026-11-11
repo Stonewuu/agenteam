@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ModelFailureMapper;
@@ -99,7 +101,7 @@ public class WorkflowExecutionEngine {
                     return Mono.empty();
                 }
                 return Mono.error(new ApiException(HttpStatus.CONFLICT, "WORKFLOW_PROGRESS_INVALID",
-                    "工作流没有可继续的节点，请检查连接与已保存的步骤。"));
+                    Messages.text("error.workflow.workflowExecutionEngine.round.1")));
             }
             return Flux.fromIterable(candidates)
                 .flatMap(id -> node(context, identity, workflow, workflow.graph().nodes().get(id), nested), 4)
@@ -154,7 +156,7 @@ public class WorkflowExecutionEngine {
                         tools.execute(context, identity, node, input, timeout, workflow.node(node.id()).attempts());
                     case "approval" ->
                         Mono.fromCallable(() -> approvals.execute(context, identity, workflow, node, input));
-                    default -> Mono.error(new IllegalStateException("工作流节点类型未实现"));
+                    default -> Mono.error(new IllegalStateException(Messages.text("error.workflow.workflowExecutionEngine.node.1")));
                 };
             }
             // 循环里的并行分支也共享四个执行名额，循环控制节点自身不占名额。
@@ -176,12 +178,12 @@ public class WorkflowExecutionEngine {
             if (workflow.node(node.id()).status().equals("cancelled")) {
                 return Mono.empty();
             }
-            LOG.error("工作流节点执行失败，执行编号 {}，工作流编号 {}，节点编号 {}", context.run().id(), identity.id(),
+            LOG.error(Messages.log("log.workflow.workflowExecutionEngine.node.1"), context.run().id(), identity.id(),
                 node.id(), failed);
             ApiException error = cause instanceof ApiException known ? known : cause instanceof TimeoutException ? timeout()
                 : ModelFailureMapper.map(cause).orElseGet(
                 () -> new ApiException(HttpStatus.CONFLICT, "WORKFLOW_NODE_FAILED",
-                    "当前流程节点没有完成，请查看已经保存的内容。"));
+                    Messages.text("error.workflow.workflowExecutionEngine.node.2")));
             if (retries.plan(context, identity, workflow, node, error)) {
                 return retries.await(context, identity, workflow, node).then(node(context, identity, workflow, node, nested));
             }
@@ -204,6 +206,6 @@ public class WorkflowExecutionEngine {
 
     private ApiException timeout() {
         return new ApiException(HttpStatus.GATEWAY_TIMEOUT, "WORKFLOW_NODE_TIMEOUT",
-            "当前流程节点已超过允许的执行时间。");
+            Messages.text("error.workflow.workflowExecutionEngine.timeout.1"));
     }
 }

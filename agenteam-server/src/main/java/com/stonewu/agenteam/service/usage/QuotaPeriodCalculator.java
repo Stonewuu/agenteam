@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.usage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.usage.entity.QuotaPeriod;
 import com.stonewu.agenteam.model.usage.entity.QuotaPeriodState;
 import org.springframework.stereotype.Component;
@@ -16,7 +18,7 @@ public class QuotaPeriodCalculator {
     public QuotaPeriodState current(QuotaPeriodState state, Instant now) {
         var current = state.current();
         if (now.isBefore(current.start())) {
-            throw new IllegalStateException("次数周期起点晚于当前服务时间，不能重新解释已保存的用量");
+            throw new IllegalStateException(Messages.text("error.usage.quotaPeriodCalculator.current.1"));
         }
         if (now.isBefore(current.end())) {
             return state;

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.auth.AuthContextService;
 import com.stonewu.agenteam.service.auth.ChannelSessionGuard;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -50,7 +52,7 @@ public class ChannelSessionRequestFilter extends OncePerRequestFilter {
                 identity.requireUser(session);
                 String base = "/api/v1/enterprises/" + ChannelSessionGuard.enterprise(session);
                 if (!path.equals(base) && !path.startsWith(base + "/")) {
-                    throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证账号密码，再访问此功能。");
+                    throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", Messages.text("error.auth.channelSessionRequestFilter.doFilterInternal.1"));
                 }
             }
             chain.doFilter(request, response);

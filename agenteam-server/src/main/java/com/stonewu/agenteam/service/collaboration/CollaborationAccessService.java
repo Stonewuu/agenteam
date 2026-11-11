@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.service.agent.AgentChatHireService;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
@@ -129,10 +131,10 @@ public class CollaborationAccessService {
     }
 
     public static ApiException roleUnavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "ROLE_UNAVAILABLE", "岗位已停用、离群或当前账号不能使用，请检查岗位设置与雇佣关系。");
+        return new ApiException(HttpStatus.CONFLICT, "ROLE_UNAVAILABLE", Messages.text("error.collaboration.collaborationAccessService.roleUnavailable.1"));
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "COLLABORATION_TASK_UNAVAILABLE", "协作任务不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "COLLABORATION_TASK_UNAVAILABLE", Messages.text("error.collaboration.collaborationAccessService.unavailable.1"));
     }
 }

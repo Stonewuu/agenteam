@@ -7,6 +7,6 @@ import jakarta.validation.constraints.NotNull;
  * 本次明确提交的流程草稿与结构化测试输入，不覆盖资源草稿。
  */
 public record WorkflowPreviewInput(
-    @NotNull(message = "请填写必填项。") JsonNode draft,
-    @NotNull(message = "请填写必填项。") JsonNode input) {
+    @NotNull(message = "{validation.required}") JsonNode draft,
+    @NotNull(message = "{validation.required}") JsonNode input) {
 }

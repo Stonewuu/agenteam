@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult;
@@ -42,7 +44,7 @@ public class WecomAiBotChatAdapter implements ChatPlatformAdapter {
     public BotIdentity identity(IntegrationApplication application) {
         var app = integrations.require(application.enterpriseId(), application.id());
         if (!app.getLastCheckStatus().equals("passed") || app.getIdentityVerifiedAt() == null) {
-            throw new ChannelProviderException("INTEGRATION_CHECK_REQUIRED", "请先检查企微智能机器人凭据。");
+            throw new ChannelProviderException("INTEGRATION_CHECK_REQUIRED", Messages.text("error.chat.wecomAiBotChatAdapter.identity.1"));
         }
         var capabilities = json.createObjectNode();
         capabilities.putObject("credential").put("status", "passed");
@@ -72,10 +74,10 @@ public class WecomAiBotChatAdapter implements ChatPlatformAdapter {
         try (var stream = file.open().get()) {
             bytes = stream.readNBytes(20 * 1024 * 1024 + 1);
         } catch (IOException failure) {
-            throw new ChannelProviderException("CHAT_FILE_UPLOAD_FAILED", "成果文件暂时无法读取。", failure);
+            throw new ChannelProviderException("CHAT_FILE_UPLOAD_FAILED", Messages.text("error.chat.wecomAiBotChatAdapter.upload.1"), failure);
         }
         if (bytes.length < 1 || bytes.length > 20 * 1024 * 1024 || bytes.length != file.size()) {
-            throw new ChannelProviderException("CHAT_RESOURCE_TOO_LARGE", "成果文件大小不符合发送要求。");
+            throw new ChannelProviderException("CHAT_RESOURCE_TOO_LARGE", Messages.text("error.chat.wecomAiBotChatAdapter.upload.2"));
         }
         int chunks = (bytes.length + 524287) / 524288;
         Runnable guard = () -> {
@@ -99,7 +101,7 @@ public class WecomAiBotChatAdapter implements ChatPlatformAdapter {
 
     private void successful(JsonNode response) {
         if (!response.path("errcode").isIntegralNumber() || response.path("errcode").asLong() != 0) {
-            throw new ChannelProviderException("CHAT_FILE_UPLOAD_REJECTED", "企微没有接受本次文件上传。");
+            throw new ChannelProviderException("CHAT_FILE_UPLOAD_REJECTED", Messages.text("error.chat.wecomAiBotChatAdapter.successful.1"));
         }
     }
 
@@ -107,7 +109,7 @@ public class WecomAiBotChatAdapter implements ChatPlatformAdapter {
         successful(response);
         String value = response.path("body").path(name).asText();
         if (value.isBlank() || value.length() > 512) {
-            throw new ChannelProviderException("CHAT_FILE_UPLOAD_INVALID", "企微未返回有效的文件上传编号。");
+            throw new ChannelProviderException("CHAT_FILE_UPLOAD_INVALID", Messages.text("error.chat.wecomAiBotChatAdapter.field.1"));
         }
         return value;
     }
@@ -126,7 +128,7 @@ public class WecomAiBotChatAdapter implements ChatPlatformAdapter {
         String messageId = response.path("body").path("msgid").asText(null);
         return new SendReceipt(new ChannelSendResult(outcome, code, messageId,
             outcome == Outcome.ACCEPTED ? null : outcome == Outcome.UNKNOWN ? "CHAT_SEND_UNKNOWN" : "CHAT_SEND_REJECTED",
-            outcome == Outcome.ACCEPTED ? null : "企微尚未接受此消息，请查看发送记录。", null, null,
+            outcome == Outcome.ACCEPTED ? null : Messages.text("text.chat.wecomAiBotChatAdapter.send.1"), null, null,
             response.path("headers").path("req_id").asText(null)), null);
     }
 }

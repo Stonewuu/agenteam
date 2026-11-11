@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
@@ -41,7 +43,7 @@ public class FileRetentionTransactions {
     public void delete(AuthContext actor, String id) {
         var file = access.uploadOwner(actor, id, true);
         if (file.expiresAt() == null || projectInputs.contains(file.enterpriseId(), file.ownerUserId(), file.id())) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_IN_USE", "文件仍被资料或消息使用，请先在对应记录中移除。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_IN_USE", Messages.text("error.file.fileRetentionTransactions.delete.1"));
         }
         files.deleted(file, clock.instant());
     }

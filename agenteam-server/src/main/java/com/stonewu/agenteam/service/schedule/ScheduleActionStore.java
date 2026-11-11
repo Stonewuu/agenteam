@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -75,7 +77,7 @@ public class ScheduleActionStore {
             row.setFinishedAt(clock.instant());
         }
         if (occurrences.insert(row) != 1) {
-            throw new IllegalStateException("本次定时操作没有保存成功");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleActionStore.create.1"));
         }
         if (ACTIVE.contains(status)) {
             schedules.activate(plan, row.getId(), clock.instant());
@@ -132,7 +134,7 @@ public class ScheduleActionStore {
             .set(ScheduledOccurrenceRow::getConversationId, row.getConversationId()).set(ScheduledOccurrenceRow::getStartedAt, row.getStartedAt())
             .set(ScheduledOccurrenceRow::getFinishedAt, row.getFinishedAt()).set(ScheduledOccurrenceRow::getUpdatedAt, row.getUpdatedAt()));
         if (changed != 1) {
-            throw new IllegalStateException("已锁定的定时操作没有保存成功");
+            throw new IllegalStateException(Messages.text("error.schedule.scheduleActionStore.save.1"));
         }
     }
 
@@ -153,7 +155,7 @@ public class ScheduleActionStore {
 
     public static class LeaseLostException extends RuntimeException {
         public LeaseLostException() {
-            super("定时操作的工作租约已变化，本次提交已回滚");
+            super(Messages.text("text.schedule.scheduleActionStore.init.1"));
         }
     }
 }

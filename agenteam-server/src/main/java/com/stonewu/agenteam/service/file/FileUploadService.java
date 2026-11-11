@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -45,6 +47,6 @@ public class FileUploadService {
 
     private static ApiException mismatch() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_CONTENT_MISMATCH",
-            "上传内容与选择的文件不一致，请重新上传。");
+            Messages.text("error.file.fileUploadService.mismatch.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -91,13 +93,13 @@ final class GeminiUsageResponseBody extends ResponseBody {
                     line = input.readUtf8LineStrict(MAXIMUM_EVENT_BYTES - bytes);
                 } catch (EOFException failure) {
                     if (input.buffer().size() > MAXIMUM_EVENT_BYTES - bytes) {
-                        throw new IOException("模型单个响应事件超过 8 MiB 限制。", failure);
+                        throw new IOException(Messages.text("error.modelprofile.geminiUsageResponseBody.availableEvent.1"), failure);
                     }
                     line = input.readUtf8();
                 }
                 bytes += line.getBytes(StandardCharsets.UTF_8).length + 1;
                 if (bytes > MAXIMUM_EVENT_BYTES) {
-                    throw new IOException("模型单个响应事件超过 8 MiB 限制。");
+                    throw new IOException(Messages.text("error.modelprofile.geminiUsageResponseBody.availableEvent.1"));
                 }
                 raw.append(line).append('\n');
                 if (line.isEmpty()) {

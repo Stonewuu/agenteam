@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
@@ -34,8 +36,8 @@ public class ChannelFailureNoticeService {
             || enterprises.findById(row.getEnterpriseId()).filter(value -> "active".equals(value.status())).isEmpty()) {
             return;
         }
-        var notice = new Notice("channel-failure:" + row.getId(), "integration", "有一条渠道通知未能完成",
-            "unknown".equals(row.getStatus()) ? "平台是否已接受该通知暂时无法确认，请查看发送记录后处理。" : "通知未能通过外部应用发送，请查看发送记录中的原因。",
+        var notice = new Notice("channel-failure:" + row.getId(), "integration", Messages.text("error.notification.channelFailureNoticeService.enqueue.1"),
+            "unknown".equals(row.getStatus()) ? Messages.text("error.notification.channelFailureNoticeService.enqueue.2") : Messages.text("error.notification.channelFailureNoticeService.enqueue.3"),
             "notification_delivery", row.getId());
         for (String user : recipients.administrators(row.getEnterpriseId())) {
             notifications.enqueue(row.getEnterpriseId(), user, notice, clock.instant());

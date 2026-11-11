@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.announcement;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stonewu.agenteam.mapper.announcement.*;
@@ -60,7 +62,7 @@ public class AnnouncementUserService {
         if (position != null) {
             var parts = position.sortValue().split(":");
             if (parts.length != 4) {
-                throw ApiException.invalidField("cursor", "请重新打开公告列表。");
+                throw ApiException.invalidField("cursor", Messages.text("error.announcement.announcementUserService.list.1"));
             }
             before = new AnnouncementQueryMapper.Position(parts[0], Integer.parseInt(parts[1]),
                 Long.parseLong(parts[2]), Long.parseLong(parts[3]));
@@ -87,11 +89,11 @@ public class AnnouncementUserService {
         var row = announcements.lock(id);
         if (row == null || row.getDeletedAt() != null || !row.getEnabled() || (!"platform".equals(
             row.getScope()) && !actor.enterpriseId().equals(row.getEnterpriseId()))) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ANNOUNCEMENT_UNAVAILABLE", "此公告已停用或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ANNOUNCEMENT_UNAVAILABLE", Messages.text("error.announcement.announcementUserService.read.1"));
         }
         if (row.getContentVersion() != version) {
             throw new ApiException(HttpStatus.CONFLICT, "ANNOUNCEMENT_CONTENT_CHANGED",
-                "公告内容已更新，请阅读最新内容。");
+                Messages.text("error.announcement.announcementUserService.read.2"));
         }
         reads.saveRead(List.of(readRow(actor, row)));
         return unread(actor);
@@ -103,7 +105,7 @@ public class AnnouncementUserService {
                 Wrappers.<AnnouncementPublicationRow>lambdaQuery().orderByDesc(AnnouncementPublicationRow::getSequenceNo))
             .getRecords().stream().mapToLong(AnnouncementPublicationRow::getSequenceNo).findFirst().orElse(0);
         if (through < 0 || through > latest) {
-            throw ApiException.invalidField("throughSequence", "请重新读取公告列表。");
+            throw ApiException.invalidField("throughSequence", Messages.text("error.announcement.announcementReadAllRequest.throughSequence.1"));
         }
         while (true) {
             var pending = queries.page(actor, true, through, null, 100, null);

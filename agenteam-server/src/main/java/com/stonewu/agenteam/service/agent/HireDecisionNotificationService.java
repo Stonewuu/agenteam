@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
 import com.stonewu.agenteam.model.agent.entity.AgentHireApplication;
 import com.stonewu.agenteam.service.notification.NotificationDeliveryService;
@@ -22,7 +24,7 @@ public class HireDecisionNotificationService {
     public void decided(AgentHireApplication application, boolean approved) {
         notifications.enqueue(application.enterpriseId(), application.userId(),
             new Notice("hire-request:" + application.id() + ":decision", "hire",
-                "雇佣申请" + (approved ? "已批准" : "已拒绝"),
-                "“" + application.agentName() + "”的雇佣申请已处理，请查看申请详情。", "hire_request", application.id()));
+                Messages.text("text.agent.hireDecisionNotificationService.decided.1", (approved ? Messages.text("text.agent.hireDecisionNotificationService.decided.2") : Messages.text("text.agent.hireDecisionNotificationService.decided.3"))),
+                Messages.text("text.agent.hireDecisionNotificationService.decided.4", application.agentName()), "hire_request", application.id()));
     }
 }

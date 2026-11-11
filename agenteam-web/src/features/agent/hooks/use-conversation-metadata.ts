@@ -54,7 +54,7 @@ export function useConversationMetadata(enterprise: string, ids: readonly string
           return;
         }
         failures++;
-        console.warn("对话标题暂未刷新，稍后继续读取。", failure);
+        console.warn("Conversation title is not updated yet; retrying later.", failure);
       }
       if (!stopped && !current.signal.aborted && pending.length && !document.hidden) {
         timer = setTimeout(() => void read(), Math.min(1000 * 2 ** Math.min(failures, 4), 15000));

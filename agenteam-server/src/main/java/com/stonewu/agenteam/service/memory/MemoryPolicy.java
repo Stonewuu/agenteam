@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.memory;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
@@ -62,7 +64,7 @@ public class MemoryPolicy {
     public void requireMember(AuthContext actor) {
         var current = users.findById(actor.userId()).orElseThrow(ResourceAuthorizationService::unavailable);
         if (!current.status().equals("active") || current.sessionVersion() != actor.user().sessionVersion()) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", "登录已失效，请重新登录。");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", Messages.text("error.auth.sessionIdentityService.expired.1"));
         }
         if (!users.isActiveMember(actor.userId(), actor.enterpriseId())) {
             throw ResourceAuthorizationService.unavailable();
@@ -99,13 +101,13 @@ public class MemoryPolicy {
                 : versions.find(actor.enterpriseId(), resource.publishedVersionId()).map(value -> value.config())
                 .orElse(resource.config());
             return new MemoryContextView(id, resource.name(), enabled, false, List.of(),
-                "该员工暂不可使用，仍可管理已经保存的偏好。",
+                Messages.text("text.memory.memoryPolicy.context.1"),
                 appearance.path("icon").asText(null), appearance.path("color").asText(null));
         }
         List<String> topics = new ArrayList<>();
         config.path("memoryFields").forEach(value -> topics.add(value.asText()));
         boolean allowed = config.path("memoryEnabled").asBoolean() && !topics.isEmpty();
-        String reason = !enabled ? "请先在个人设置中开启记忆。" : !allowed ? "这位员工没有开放可保存的偏好。" : null;
+        String reason = !enabled ? Messages.text("text.memory.memoryPolicy.context.2") : !allowed ? Messages.text("text.memory.memoryPolicy.context.3") : null;
         return new MemoryContextView(id, resource.name(), enabled, enabled && allowed,
             allowed ? List.copyOf(topics) : List.of(), reason,
             config.path("icon").asText(null), config.path("color").asText(null));
@@ -117,7 +119,7 @@ public class MemoryPolicy {
             throw new ApiException(HttpStatus.CONFLICT, "MEMORY_DISABLED", context.unavailableReason());
         }
         if (!context.allowedTopics().contains(topic)) {
-            throw ApiException.invalidField("memoryKey", "请选择该员工允许保存的偏好主题。");
+            throw ApiException.invalidField("memoryKey", Messages.text("error.memory.memoryPolicy.create.1"));
         }
     }
 
@@ -125,7 +127,7 @@ public class MemoryPolicy {
         access.requireUse(actor, resource.id(), "agent");
         hires.forAgent(actor.enterpriseId(), actor.userId(), resource.id(), false)
             .filter(value -> value.status().equals("active")).orElseThrow(() ->
-                new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", "请先雇佣或恢复使用这位员工。"));
+                new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", Messages.text("error.memory.memoryPolicy.configuration.1")));
         if (message != null) {
             var source = sources.find(actor.enterpriseId(), actor.userId(), resource.id(), message)
                 .orElseThrow(ResourceAuthorizationService::unavailable);

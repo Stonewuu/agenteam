@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -75,7 +77,7 @@ public class ResourcePolicy {
     public void editable(ResourceRecord resource) {
         if (resource.source().equals("builtin")) {
             throw new ApiException(HttpStatus.CONFLICT, "BUILTIN_RESOURCE_READ_ONLY",
-                "内置" + resource.kind().label() + "不能直接修改，请先复制。");
+                Messages.text("error.resource.resourcePolicy.editable.1", resource.kind().localizedLabel()));
         }
         if (resource.status().equals("deleted")) {
             throw ResourceAuthorizationService.unavailable();

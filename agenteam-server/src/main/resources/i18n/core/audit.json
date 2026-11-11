@@ -1,0 +1,6 @@
+{
+  "error.audit.auditEventService.record.1": {
+    "zh-CN": "无法保存操作审计，当前变更未提交",
+    "en": "The audit record could not be saved. This change was not committed."
+  }
+}

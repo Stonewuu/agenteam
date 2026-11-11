@@ -1,0 +1,218 @@
+{
+  "error.modelpricing.modelsDevCatalogParser.require.1": {
+    "zh-CN": "价格目录格式或大小不符合读取要求。",
+    "en": "The price catalog format or size cannot be processed."
+  },
+  "error.modelpricing.modelPriceApiService.create.1": {
+    "zh-CN": "请填写新价格，或选择要复制的历史版本。",
+    "en": "Enter a new price or select a historical version to copy."
+  },
+  "error.modelpricing.modelPriceCatalogService.search.1": {
+    "zh-CN": "搜索内容最多 100 个字符，请使用有效的分页位置。",
+    "en": "Use up to 100 characters and a valid page position."
+  },
+  "error.modelpricing.modelPriceCoverage.validate.1": {
+    "zh-CN": "同优先级规则“{0}”与“{1}”存在重叠。",
+    "en": "Rules “{0}” and “{1}” overlap at the same priority."
+  },
+  "error.modelpricing.modelPriceCoverage.requireCoverage.1": {
+    "zh-CN": "星期{0}",
+    "en": "Day {0}"
+  },
+  "error.modelpricing.modelPriceCoverage.missing.1": {
+    "zh-CN": "服务档位 {0} 在输入量 {1}、{2} 未覆盖全天价格。",
+    "en": "Service tier {0} does not have all-day pricing for input {1} on {2}."
+  },
+  "error.modelpricing.modelPricePreviewService.preview.1": {
+    "zh-CN": "请选择模拟请求的发生时间。",
+    "en": "Select the time of the simulated request."
+  },
+  "error.modelpricing.modelPricePreviewService.preview.2": {
+    "zh-CN": "填写缓存创建明细时，请同时填写创建总量。",
+    "en": "When entering cache creation details, also enter the total creation count."
+  },
+  "error.modelpricing.modelPricePreviewService.preview.3": {
+    "zh-CN": "缓存创建明细必须为非负整数，且不能超过创建总量。",
+    "en": "Cache creation details must be nonnegative integers and must not exceed the total creation count."
+  },
+  "error.modelpricing.modelPricePreviewService.preview.4": {
+    "zh-CN": "输入总量不能小于缓存读取和创建之和。",
+    "en": "Total input must not be less than cache reads plus cache creation."
+  },
+  "error.modelpricing.modelPricePreviewService.counter.1": {
+    "zh-CN": "模拟用量须为 0 至一千亿的整数。",
+    "en": "Simulated usage must be an integer between 0 and 100 billion."
+  },
+  "error.modelpricing.modelPriceService.publish.1": {
+    "zh-CN": "价格刚刚更新，请稍后重新发布。",
+    "en": "The price was just updated. Publish again later."
+  },
+  "error.modelpricing.modelPriceService.draft.1": {
+    "zh-CN": "已发布价格不能修改，请复制后创建新版本。",
+    "en": "Published prices cannot be edited. Copy one to create a new version."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.1": {
+    "zh-CN": "请选择有效币种。",
+    "en": "Select a valid currency."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.2": {
+    "zh-CN": "每版价格最多配置 100 条规则。",
+    "en": "Configure up to 100 rules per price version."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.3": {
+    "zh-CN": "价格规则不能为空。",
+    "en": "Price rules must not be empty."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.4": {
+    "zh-CN": "基础规则的优先级为 0，其他规则为 1 至 1000。",
+    "en": "The base rule priority is 0. Other priorities must be between 1 and 1000."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.5": {
+    "zh-CN": "上下文上界必须大于下界，最大数量为一千亿。",
+    "en": "The context upper bound must exceed the lower bound. The maximum is 100 billion."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.6": {
+    "zh-CN": "请填写日期规则的覆盖截止日期，且不能早于已配置日期。",
+    "en": "Enter the date rule coverage end date, no earlier than any configured date."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.7": {
+    "zh-CN": "每条规则最多配置 64 个时间段。",
+    "en": "Configure up to 64 time periods per rule."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.8": {
+    "zh-CN": "请填写有效的星期、开始时间和结束时间。",
+    "en": "Enter a valid weekday, start time, and end time."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.9": {
+    "zh-CN": "跨午夜规则的名称最多为 96 个字符。",
+    "en": "An overnight rule name must not exceed 96 characters."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.10": {
+    "zh-CN": "跨午夜规则的次日也必须在日历覆盖范围内。",
+    "en": "The following day of an overnight rule must also be within calendar coverage."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.11": {
+    "zh-CN": "拆分跨午夜时间后，每版最多 100 条规则和 2000 个指定日期。",
+    "en": "After splitting overnight periods, each version supports up to 100 rules and 2000 specified dates."
+  },
+  "error.modelpricing.modelPriceValidation.normalize.12": {
+    "zh-CN": "价格规则名称不能重复。",
+    "en": "Price rule names must not be duplicated."
+  },
+  "error.modelpricing.modelPriceValidation.requirePublishable.1": {
+    "zh-CN": "请配置且只配置一条基础价格规则。",
+    "en": "Configure exactly one base price rule."
+  },
+  "error.modelpricing.modelPriceValidation.requirePublishable.2": {
+    "zh-CN": "基础价格必须覆盖标准服务的全部上下文、星期和时间。",
+    "en": "The base price must cover all contexts, weekdays, and times for standard service."
+  },
+  "error.modelpricing.modelPriceValidation.requirePublishable.3": {
+    "zh-CN": "规则“{0}”尚未填写单价。",
+    "en": "Rule “{0}” has no unit price."
+  },
+  "error.modelpricing.modelPriceValidation.rates.1": {
+    "zh-CN": "每条规则最多配置 32 项单价。",
+    "en": "Configure up to 32 unit prices per rule."
+  },
+  "error.modelpricing.modelPriceValidation.rates.2": {
+    "zh-CN": "计量项或缓存有效期不正确。",
+    "en": "The usage item or cache lifetime is invalid."
+  },
+  "error.modelpricing.modelPriceValidation.rates.3": {
+    "zh-CN": "同一计量项和缓存有效期的单价不能重复。",
+    "en": "Unit prices for the same usage item and cache lifetime must not be duplicated."
+  },
+  "error.modelpricing.modelPriceValidation.rates.4": {
+    "zh-CN": "每百万单价须为 0 至 1000000，最多保留 12 位小数。",
+    "en": "The price per million must be between 0 and 1000000, with up to 12 decimal places."
+  },
+  "error.modelpricing.modelPriceValidation.dates.1": {
+    "zh-CN": "每版最多配置 2000 个指定日期。",
+    "en": "Configure up to 2000 specified dates per version."
+  },
+  "error.modelpricing.modelPriceValidation.dates.2": {
+    "zh-CN": "指定日期不能重复，且必须选择包含或排除。",
+    "en": "Specified dates must be unique and must choose inclusion or exclusion."
+  },
+  "error.modelpricing.modelPriceValidation.reference.1": {
+    "zh-CN": "价格来源请填写不含账号、查询参数或片段的网页地址。",
+    "en": "Enter a price source URL without credentials, query parameters, or a fragment."
+  },
+  "error.modelpricing.modelPriceValidation.text.1": {
+    "zh-CN": "请填写价格规则名称。",
+    "en": "Enter a price rule name."
+  },
+  "error.modelpricing.modelPriceValidation.text.2": {
+    "zh-CN": "内容过长或包含无效控制字符。",
+    "en": "The content is too long or contains invalid control characters."
+  },
+  "error.modelpricing.modelsDevCatalogCache.load.1": {
+    "zh-CN": "价格读取已中断，请重试。",
+    "en": "Price retrieval was interrupted. Please try again."
+  },
+  "error.modelpricing.modelsDevCatalogCache.available.1": {
+    "zh-CN": "暂时无法读取 models.dev 价格，可稍后重试或手动配置。",
+    "en": "models.dev prices are unavailable. Try again later or configure prices manually."
+  },
+  "error.modelpricing.modelsDevCatalogClient.fetch.1": {
+    "zh-CN": "价格目录请求失败，HTTP 状态={0}",
+    "en": "The price catalog request failed. HTTP status={0}"
+  },
+  "error.modelpricing.modelsDevCatalogClient.fetch.2": {
+    "zh-CN": "价格目录超过允许大小。",
+    "en": "The price catalog exceeds the allowed size."
+  },
+  "text.modelpricing.modelsDevCatalogParser.init.1": {
+    "zh-CN": "价格目录返回业务错误。",
+    "en": "The price catalog returned a business error."
+  },
+  "text.modelpricing.modelsDevPriceMapper.CACHE_NOTICE.1": {
+    "zh-CN": "来源未注明缓存创建价格的有效期，该项未导入；如有缓存创建用量，请在草稿中补充。",
+    "en": "The source does not specify the cache write duration, so this price was not imported. Add it to the draft if needed."
+  },
+  "text.modelpricing.modelsDevPriceMapper.map.1": {
+    "zh-CN": "基础价格",
+    "en": "Base prices"
+  },
+  "text.modelpricing.modelsDevPriceMapper.map.2": {
+    "zh-CN": "上下文超过 {0} Token",
+    "en": "Context above {0} tokens"
+  },
+  "text.modelpricing.modelsDevPriceMapper.notice.1": {
+    "zh-CN": "本次仅导入文本价格，不包含音频价格。",
+    "en": "Only text prices are imported. Audio prices are excluded."
+  },
+  "text.modelpricing.modelPriceCatalogService.search.1": {
+    "zh-CN": "models.dev：{0}/{1}；公开美元文本价格，不含专属折扣或忙闲时段。",
+    "en": "models.dev: {0}/{1}; public text pricing in USD, excluding special discounts or time-based rates."
+  },
+  "text.modelpricing.modelPriceCatalogService.search.2": {
+    "zh-CN": "缓存创建价未导入，需按有效期补充。",
+    "en": "Cache creation prices were not imported. Add them for the applicable lifetime."
+  },
+  "text.modelpricing.modelPriceService.update.1": {
+    "zh-CN": "修改价格草稿",
+    "en": "Update price draft"
+  },
+  "text.modelpricing.modelPriceService.publish.1": {
+    "zh-CN": "发布模型价格",
+    "en": "Publish model pricing"
+  },
+  "text.modelpricing.modelPriceService.delete.1": {
+    "zh-CN": "删除价格草稿",
+    "en": "Delete price draft"
+  },
+  "text.modelpricing.modelPriceService.createDraft.1": {
+    "zh-CN": "创建价格草稿",
+    "en": "Create price draft"
+  },
+  "text.modelpricing.modelPriceValidation.normalize.1": {
+    "zh-CN": "{0}（次日）",
+    "en": "{0} (next day)"
+  },
+  "log.modelpricing.modelsDevCatalogCache.load.1": {
+    "zh-CN": "等待价格目录被中断，模型={}",
+    "en": "Waiting for the price catalog was interrupted; model={}"
+  }
+}

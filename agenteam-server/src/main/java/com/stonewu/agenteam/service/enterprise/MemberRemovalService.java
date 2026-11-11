@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityViewMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.enterprise.MemberRemovalMapper;
@@ -70,7 +72,7 @@ public class MemberRemovalService {
         tokens.verify(actor, member, state, revision, plan.impactToken());
         if (state.lastAdministrator()) {
             throw new ApiException(HttpStatus.CONFLICT, "LAST_ADMIN_REQUIRED",
-                "请先保留另一名有效的企业管理员，再移除此成员。");
+                Messages.text("error.enterprise.memberRemovalService.remove.1"));
         }
         plan = validatePlan(actor, member, state, plan);
         var before = views.member(actor.enterpriseId(), member);
@@ -83,11 +85,11 @@ public class MemberRemovalService {
             var ownershipChange = Map.of("previousOwnerId", member, "ownerUserId", plan.resourceOwnerId());
             for (var resource : state.resources()) {
                 audit.record(actor.enterpriseId(), actor.user(), "resource.owner.transfer", "resource", resource.id(),
-                    "成员移除时转交资源所有权", ownershipChange);
+                    Messages.text("text.enterprise.memberRemovalService.remove.1"), ownershipChange);
             }
             for (var team : state.ownedTeams()) {
                 audit.record(actor.enterpriseId(), actor.user(), "team.owner.transfer", "team", team.id(),
-                    "成员移除时转交团队负责人", ownershipChange);
+                    Messages.text("text.enterprise.memberRemovalService.remove.2"), ownershipChange);
             }
         }
         teams.replace(actor.enterpriseId(), member, Set.of(), now);
@@ -95,7 +97,7 @@ public class MemberRemovalService {
         if (!members.updateMember(actor.enterpriseId(), member, before.displayName(), "removed", revision, now)) {
             throw ApiException.versionConflict(revision);
         }
-        authorization.changed(actor, "member.remove", "member", member, "移除企业成员并完成关联交接",
+        authorization.changed(actor, "member.remove", "member", member, Messages.text("text.enterprise.memberRemovalService.remove.3"),
             details(state, plan));
         return views.member(actor.enterpriseId(), member);
     }
@@ -104,33 +106,33 @@ public class MemberRemovalService {
                                               MemberRemovalRequest plan) {
         String resourceOwner = null, todoOwner = null;
         if (plan.todoOwnerId() != null && plan.cancelOpenTodos()) {
-            throw ApiException.invalidField("cancelOpenTodos", "转交和取消待办只能选择一种处理方式。");
+            throw ApiException.invalidField("cancelOpenTodos", Messages.text("error.enterprise.memberRemovalService.validatePlan.1"));
         }
         if (state.hasOwnership()) {
             if (!policy.canTransferOwnership(actor, member, state)) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN",
-                    "当前权限不能完成这些资源或团队的交接，请先由有权限的维护者处理。");
+                    Messages.text("error.enterprise.memberRemovalService.validatePlan.2"));
             }
             resourceOwner = ownership.requireRecipient(actor.enterpriseId(), plan.resourceOwnerId(),
                 state.resourceKinds(), "resourceOwnerId");
             if (member.equals(resourceOwner)) {
-                throw ApiException.invalidField("resourceOwnerId", "请选择另一名有效成员接手资源和团队。");
+                throw ApiException.invalidField("resourceOwnerId", Messages.text("error.enterprise.memberRemovalService.validatePlan.3"));
             }
         } else if (plan.resourceOwnerId() != null) {
-            throw ApiException.invalidField("resourceOwnerId", "当前没有需要交接的资源或团队，请重新查看影响。");
+            throw ApiException.invalidField("resourceOwnerId", Messages.text("error.enterprise.memberRemovalService.validatePlan.4"));
         }
         if (!state.openTodos().isEmpty() && plan.todoOwnerId() == null && !plan.cancelOpenTodos()) {
-            throw new ApiException(HttpStatus.CONFLICT, "DEPENDENCIES_EXIST", "请先选择转交或取消未结束待办。",
+            throw new ApiException(HttpStatus.CONFLICT, "DEPENDENCIES_EXIST", Messages.text("error.enterprise.memberRemovalService.validatePlan.5"),
                 Map.of("counts", Map.of("openTodos", state.openTodos().size())), Map.of());
         }
         if (state.openTodos().isEmpty() && (plan.todoOwnerId() != null || plan.cancelOpenTodos())) {
-            throw ApiException.invalidField("todoOwnerId", "当前没有需要处理的待办，请重新查看影响。");
+            throw ApiException.invalidField("todoOwnerId", Messages.text("error.enterprise.memberRemovalService.validatePlan.6"));
         }
         if (plan.todoOwnerId() != null) {
             todoOwner = members.findMember(actor.enterpriseId(), plan.todoOwnerId())
-                .orElseThrow(() -> ApiException.invalidField("todoOwnerId", "请选择当前企业的有效成员。")).userId();
+                .orElseThrow(() -> ApiException.invalidField("todoOwnerId", Messages.text("error.enterprise.memberRemovalService.validatePlan.7"))).userId();
             if (member.equals(todoOwner)) {
-                throw ApiException.invalidField("todoOwnerId", "请选择另一名有效成员接手待办。");
+                throw ApiException.invalidField("todoOwnerId", Messages.text("error.enterprise.memberRemovalService.validatePlan.8"));
             }
         }
         return new MemberRemovalRequest(plan.impactToken(), resourceOwner, todoOwner, plan.cancelOpenTodos());

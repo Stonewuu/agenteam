@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.file.entity.CsvProfile;
@@ -65,7 +67,7 @@ public class FileDataMapper {
                     List.copyOf(Arrays.asList(json.readValue(row.getColumnsJson(), CsvProfile.Column[].class))),
                     row.getRowCount());
             } catch (Exception invalid) {
-                throw new IllegalStateException("已解析的数据字段无法读取", invalid);
+                throw new IllegalStateException(Messages.text("error.file.fileDataMapper.profile.1"), invalid);
             }
         });
     }
@@ -77,7 +79,7 @@ public class FileDataMapper {
                     json.readValue(row.getValuesJson(), new TypeReference<List<String>>() {
                     }));
             } catch (Exception invalid) {
-                throw new IllegalStateException("已解析的数据行无法读取", invalid);
+                throw new IllegalStateException(Messages.text("error.file.fileDataMapper.rows.1"), invalid);
             }
         }).toList();
     }

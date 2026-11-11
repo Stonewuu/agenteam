@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -86,7 +88,7 @@ public class RunQuestionService {
         row.setQuestionEncrypted(content.encrypt(row, false, content.question(transactions.arguments(call))));
         channels.orderedStream().forEach(channel -> channel.initialize(run, row));
         if (questions.insert(row) != 1) {
-            throw new IllegalStateException("问题保存失败");
+            throw new IllegalStateException(Messages.text("error.execution.runQuestionService.park.1"));
         }
         calls.waitingInput(call, clock.instant());
         writer.save(run, row);
@@ -128,7 +130,7 @@ public class RunQuestionService {
             if (content.read(question, true).path("answer").asText().equals(answer.path("answer").asText())) {
                 return content.view(question);
             }
-            throw new ApiException(HttpStatus.CONFLICT, "QUESTION_ALREADY_ANSWERED", "这个问题已经回答，请继续当前对话。");
+            throw new ApiException(HttpStatus.CONFLICT, "QUESTION_ALREADY_ANSWERED", Messages.text("error.execution.runQuestionService.answer.1"));
         }
         pending(run, question);
         if (question.getRevision() != revision) {
@@ -184,6 +186,6 @@ public class RunQuestionService {
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "QUESTION_UNAVAILABLE", "这个问题已结束，请继续当前对话。");
+        return new ApiException(HttpStatus.CONFLICT, "QUESTION_UNAVAILABLE", Messages.text("error.execution.runQuestionService.unavailable.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
@@ -76,7 +78,7 @@ public class ChannelDeliveryPolicy {
         }
         String enterprise = notice.getEnterpriseId();
         if (!users.isActiveMember(notice.getUserId(), enterprise)) {
-            return new Block("blocked", "RECIPIENT_UNAVAILABLE", "接收人已不在企业中或账号已停用。");
+            return new Block("blocked", "RECIPIENT_UNAVAILABLE", Messages.text("text.notification.channelDeliveryPolicy.check.1"));
         }
         var targetBlock = checkTarget(target, connection, binding);
         if (targetBlock != null) {
@@ -88,10 +90,10 @@ public class ChannelDeliveryPolicy {
                 .eq(UserChannelPreferenceRow::getConnectionId, target.connectionId()).eq(UserChannelPreferenceRow::getCategory, notice.getCategory())
                 .eq(UserChannelPreferenceRow::getEnabled, true));
             if (!automaticAllowed(notice) || !enabled) {
-                return new Block("cancelled", "CHANNEL_PREFERENCE_DISABLED", "接收人已关闭此类自动通知。");
+                return new Block("cancelled", "CHANNEL_PREFERENCE_DISABLED", Messages.text("text.notification.channelDeliveryPolicy.check.2"));
             }
         } else if (!senderAllowed(enterprise, notice.getInitiatorUserId(), notice.getUserId(), reason)) {
-            return new Block("blocked", "NOTIFICATION_SENDER_DENIED", "发起人已无权向此成员发送通知。");
+            return new Block("blocked", "NOTIFICATION_SENDER_DENIED", Messages.text("text.notification.channelDeliveryPolicy.check.3"));
         }
         return null;
     }
@@ -104,7 +106,7 @@ public class ChannelDeliveryPolicy {
         var occurrence = occurrences.selectOne(new LambdaQueryWrapper<ScheduledOccurrenceRow>()
             .eq(ScheduledOccurrenceRow::getEnterpriseId, notice.getEnterpriseId()).eq(ScheduledOccurrenceRow::getId, notice.getSourceOccurrenceId()));
         if (occurrence == null || json.read(occurrence.getActionResultJson()).path("cancelRequested").asBoolean(false)) {
-            return new Block("cancelled", "SCHEDULE_CANCELLED", "创建人已停止本次操作，不再继续发送。");
+            return new Block("cancelled", "SCHEDULE_CANCELLED", Messages.text("text.notification.channelDeliveryPolicy.sourceBlock.1"));
         }
         return null;
     }
@@ -116,19 +118,19 @@ public class ChannelDeliveryPolicy {
 
     public Block checkTarget(ChannelDeliveryTarget target, EnterpriseIntegrationRow connection, UserChannelBindingRow binding) {
         if (connection == null || !"enabled".equals(connection.getStatus()) || !Boolean.TRUE.equals(connection.getMessagingEnabled())) {
-            return new Block("cancelled", "CHANNEL_DISABLED", "此接入已停止发送通知。");
+            return new Block("cancelled", "CHANNEL_DISABLED", Messages.text("text.notification.channelDeliveryPolicy.checkTarget.1"));
         }
         if (connection.getCredentialRevision() != target.credentialRevision()) {
-            return new Block("cancelled", "CHANNEL_CREDENTIAL_CHANGED", "应用密钥已更换，请重新创建通知。");
+            return new Block("cancelled", "CHANNEL_CREDENTIAL_CHANGED", Messages.text("text.notification.channelDeliveryPolicy.checkTarget.2"));
         }
         if (target.bindingId() == null) {
-            return new Block("blocked", "CHANNEL_BINDING_MISSING", "接收人尚未绑定此应用账号。");
+            return new Block("blocked", "CHANNEL_BINDING_MISSING", Messages.text("text.notification.channelDeliveryPolicy.checkTarget.3"));
         }
         if (binding == null || !"active".equals(binding.getStatus()) || !binding.getRevision().equals(target.bindingRevision())) {
-            return new Block("cancelled", "CHANNEL_BINDING_CHANGED", "接收人的账号绑定已变更，请重新创建通知。");
+            return new Block("cancelled", "CHANNEL_BINDING_CHANGED", Messages.text("text.notification.channelDeliveryPolicy.checkTarget.4"));
         }
         if (!Boolean.TRUE.equals(binding.getReceiveEnabled())) {
-            return new Block("cancelled", "CHANNEL_RECEIVING_DISABLED", "接收人已关闭此渠道的通知。");
+            return new Block("cancelled", "CHANNEL_RECEIVING_DISABLED", Messages.text("text.notification.channelDeliveryPolicy.checkTarget.5"));
         }
         return null;
     }

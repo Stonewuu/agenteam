@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
 import com.stonewu.agenteam.service.integration.IntegrationQueryService;
 import com.stonewu.agenteam.service.integration.IntegrationSecretService;
@@ -36,7 +38,7 @@ public class WecomEnterpriseVerifier {
 
     public Optional<WecomEnterpriseConnections.Verified> ensure(String enterprise, String connection) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("企微企业核验不能占用数据库事务");
+            throw new IllegalStateException(Messages.text("error.integration.wecomEnterpriseVerifier.ensure.1"));
         }
         var verified = connections.verified(enterprise, connection);
         if (verified.isPresent()) {

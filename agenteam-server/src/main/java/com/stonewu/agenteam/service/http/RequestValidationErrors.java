@@ -1,5 +1,8 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.model.i18n.entity.UiLanguage;
+
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -41,7 +44,7 @@ final class RequestValidationErrors {
             if (!path.equals(name) && !path.endsWith("." + name)) {
                 path = append(path, name);
             }
-            reason = "不支持此字段，请刷新页面后重新提交。";
+            reason = Messages.text("error.http.requestValidationErrors.mapping.1");
         } else {
             reason = expectedType(expectedType);
         }
@@ -61,68 +64,83 @@ final class RequestValidationErrors {
         var annotation = violation.getConstraintDescriptor().getAnnotation();
         String message = violation.getMessage();
         if (annotation instanceof Min min) {
-            return "不能小于 " + min.value() + "。";
+            return Messages.text("error.http.requestValidationErrors.constraint.1", min.value());
         }
         if (annotation instanceof Max max) {
-            return "不能大于 " + max.value() + "。";
+            return Messages.text("error.http.requestValidationErrors.constraint.2", max.value());
         }
         if (annotation instanceof DecimalMin min) {
-            return "必须" + (min.inclusive() ? "大于或等于 " : "大于 ") + min.value() + "。";
+            return Messages.text(min.inclusive() ? "validation.decimal.minInclusive" : "validation.decimal.minExclusive", min.value());
         }
         if (annotation instanceof DecimalMax max) {
-            return "必须" + (max.inclusive() ? "小于或等于 " : "小于 ") + max.value() + "。";
+            return Messages.text(max.inclusive() ? "validation.decimal.maxInclusive" : "validation.decimal.maxExclusive", max.value());
         }
         if (annotation instanceof Size size) {
-            String subject = violation.getInvalidValue() instanceof CharSequence ? "字符数" : "条目数";
+            String subject = violation.getInvalidValue() instanceof CharSequence ? Messages.text("error.http.requestValidationErrors.constraint.8") : Messages.text("error.http.requestValidationErrors.constraint.9");
             if (size.min() == size.max()) {
-                return subject + "必须为 " + size.min() + "。";
+                return Messages.text("error.http.requestValidationErrors.constraint.10", subject, size.min());
             }
             if (size.min() == 0) {
-                return subject + "不能超过 " + size.max() + "。";
+                return Messages.text("error.http.requestValidationErrors.constraint.11", subject, size.max());
             }
             if (size.max() == Integer.MAX_VALUE) {
-                return subject + "不能少于 " + size.min() + "。";
+                return Messages.text("error.http.requestValidationErrors.constraint.12", subject, size.min());
             }
-            return subject + "需要在 " + size.min() + "～" + size.max() + " 之间。";
+            return Messages.text("error.http.requestValidationErrors.constraint.13", subject, size.min(), size.max());
         }
         return message;
     }
 
     static String summary(Map<String, List<String>> fields) {
         if (fields.isEmpty()) {
-            return "请求内容不符合要求，请检查填写内容。";
+            return Messages.text("error.http.requestValidationErrors.summary.1");
         }
         if (fields.size() > 1) {
-            return "有 " + fields.size() + " 个字段需要修改，请查看具体提示。";
+            return Messages.text("error.http.requestValidationErrors.summary.2", fields.size());
         }
         var field = fields.entrySet().iterator().next();
-        return "字段「" + field.getKey() + "」：" + field.getValue().getFirst();
+        return Messages.text("error.http.requestValidationErrors.summary.3", field.getKey(), field.getValue().getFirst());
+    }
+
+    static String localizedSummary(String message, Map<String, List<String>> original,
+                                    Map<String, List<String>> translated) {
+        if (original.size() == 1) {
+            var field = original.entrySet().iterator().next();
+            for (var language : UiLanguage.values()) {
+                String candidate = Messages.in(language, "error.http.requestValidationErrors.summary.3",
+                    field.getKey(), field.getValue().getFirst());
+                if (candidate.equals(message)) {
+                    return summary(translated);
+                }
+            }
+        }
+        return message;
     }
 
     private static String expectedType(Class<?> type) {
         if (type == null) {
-            return "类型不正确，请检查此字段。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.1");
         }
         if (type == Boolean.class || type == boolean.class) {
-            return "需要填写布尔值（true 或 false）。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.2");
         }
         if (type == Integer.class || type == int.class || type == Long.class || type == long.class || type == Short.class
             || type == short.class || type == Byte.class || type == byte.class || type == BigInteger.class) {
-            return "需要填写整数，不能使用文字或小数。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.3");
         }
         if (Number.class.isAssignableFrom(type) || type == double.class || type == float.class) {
-            return "需要填写数字，不能使用文字。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.4");
         }
         if (CharSequence.class.isAssignableFrom(type) || type == char.class || type == Character.class) {
-            return "需要填写文字。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.5");
         }
         if (type.isEnum()) {
-            return "请选择有效的选项。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.6");
         }
         if (type.isArray() || Collection.class.isAssignableFrom(type)) {
-            return "需要提交列表。";
+            return Messages.text("error.http.requestValidationErrors.expectedType.7");
         }
-        return "需要提交包含各字段的完整对象。";
+        return Messages.text("error.http.requestValidationErrors.expectedType.8");
     }
 
     private static String append(String prefix, String field) {

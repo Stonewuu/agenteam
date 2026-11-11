@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
@@ -71,10 +73,10 @@ public class CollaborationRetryService {
         if (!Set.of("active", "blocked", "waiting_input", "waiting_approval").contains(task.getStatus())
             || !task.getDeadlineAt().isAfter(clock.instant()) || work.getActiveRunId() != null
             || !Set.of("failed", "blocked", "cancelled").contains(work.getStatus()) || work.getReplacementWorkId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_RETRY_UNAVAILABLE", "此工作当前不能重试，请先等待执行结束或另起任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_RETRY_UNAVAILABLE", Messages.text("error.collaboration.collaborationRetryService.retry.1"));
         }
         if (task.getRunCount() >= json.read(task.getPolicySnapshot()).path("maxRuns").asInt(40)) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", "此任务已达到执行次数上限，请另起任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", Messages.text("error.collaboration.collaborationRetryService.retry.2"));
         }
         boolean unknown = "TOOL_RESULT_UNKNOWN".equals(work.getErrorCode());
         for (var link : links.selectList(new LambdaQueryWrapper<CollaborationRunLinkRow>().eq(CollaborationRunLinkRow::getEnterpriseId, actor.enterpriseId())
@@ -84,7 +86,7 @@ public class CollaborationRetryService {
                 .anyMatch(call -> !call.readOnly() && (call.status().equals("unknown") || call.status().equals("running") && call.submittedAt() != null));
         }
         if (unknown) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN", "上一次业务操作的结果需要核实，不能重新执行此工作。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN", Messages.text("error.collaboration.collaborationRetryService.retry.3"));
         }
         var action = actions.begin(task, workId, null, null, operation, "work_retry", arguments);
         if (works.update(new LambdaUpdateWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, actor.enterpriseId())

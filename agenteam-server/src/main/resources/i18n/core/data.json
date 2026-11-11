@@ -1,0 +1,454 @@
+{
+  "error.data.dataCollectionMapper.activate.1": {
+    "zh-CN": "数据集合已经被其他操作更新",
+    "en": "The data collection was updated by another operation."
+  },
+  "error.data.fileDataQueryMapper.readRow.1": {
+    "zh-CN": "当前数据行缺少已声明字段",
+    "en": "The current data row is missing a declared field."
+  },
+  "error.data.fileDataQueryMapper.readRow.2": {
+    "zh-CN": "已保存的数据行无法读取",
+    "en": "The saved data row could not be read."
+  },
+  "error.data.fileDataQueryMapper.tooLarge.1": {
+    "zh-CN": "字段内容超过读取上限，请减少返回字段或拆分原始资料。",
+    "en": "The field content exceeds the read limit. Select fewer fields or split the source material."
+  },
+  "error.data.httpDataQueryMapper.matches.1": {
+    "zh-CN": "数据比较条件未经验证",
+    "en": "The data comparison condition has not been validated."
+  },
+  "error.data.httpDataQueryMapper.bytes.1": {
+    "zh-CN": "数据行无法编码",
+    "en": "The data row could not be encoded."
+  },
+  "error.data.httpDataResponseMapper.rows.1": {
+    "zh-CN": "根数组填写 $，嵌套数组填写以 / 开始的 JSON 路径。",
+    "en": "Use $ for the root array, or a JSON path starting with / for a nested array."
+  },
+  "error.data.httpDataResponseMapper.rows.2": {
+    "zh-CN": "保存的集合位置没有返回数组，请检查响应内容与集合位置。",
+    "en": "The saved collection path does not return an array. Check the response and collection path."
+  },
+  "error.data.httpDataResponseMapper.rows.3": {
+    "zh-CN": "数据接口单次返回不能超过十万行。",
+    "en": "A data request can return no more than 100,000 rows."
+  },
+  "error.data.httpDataResponseMapper.rows.4": {
+    "zh-CN": "集合中的每一行必须是 JSON 对象。",
+    "en": "Each collection row must be a JSON object."
+  },
+  "error.data.httpDataResponseMapper.rows.5": {
+    "zh-CN": "数据接口返回的行缺少已登记字段。",
+    "en": "The returned rows are missing registered fields."
+  },
+  "error.data.httpDataResponseMapper.rows.6": {
+    "zh-CN": "接口中的字段值与登记类型不一致。",
+    "en": "The returned field values do not match their registered types."
+  },
+  "error.data.httpDataResponseMapper.pointer.1": {
+    "zh-CN": "JSON 路径中的 ~ 必须写为 ~0，字段名中的 / 必须写为 ~1。",
+    "en": "Escape ~ as ~0 and / in field names as ~1 in JSON paths."
+  },
+  "error.data.httpDataResponseMapper.pointer.2": {
+    "zh-CN": "请填写明确的 JSON 路径。",
+    "en": "Enter an explicit JSON path."
+  },
+  "error.data.externalMysqlSessions.createFactory.1": {
+    "zh-CN": "外部数据库映射文件不存在",
+    "en": "The external database mapping file does not exist."
+  },
+  "error.data.externalMysqlSessions.createFactory.2": {
+    "zh-CN": "外部数据库映射文件无法读取",
+    "en": "The external database mapping file could not be read."
+  },
+  "error.data.mysqlDataQueryMapper.query.1": {
+    "zh-CN": "数据库查询暂时未完成，请检查当前字段和连接。",
+    "en": "The database query could not finish. Check the selected fields and connection."
+  },
+  "error.data.mysqlDataQueryMapper.tooLarge.1": {
+    "zh-CN": "单行结果超过大小限制，请减少返回字段。",
+    "en": "A row exceeds the size limit. Return fewer fields."
+  },
+  "error.data.mysqlSourceSchema.require.1": {
+    "zh-CN": "请填写真实的表名或视图名。",
+    "en": "Enter an existing table or view name."
+  },
+  "error.data.mysqlSourceSchema.require.2": {
+    "zh-CN": "所选字段不存在或与数据库类型不匹配，请重新检查集合字段。",
+    "en": "A selected field is missing or has a different database type. Check the collection fields."
+  },
+  "error.data.mysqlSourceSchema.require.3": {
+    "zh-CN": "数据库允许空值的字段不能声明为非空。",
+    "en": "A nullable database field cannot be declared non-nullable."
+  },
+  "error.data.mysqlSourceSchema.unavailable.1": {
+    "zh-CN": "所选数据表或视图不存在，或连接账号没有读取权限。",
+    "en": "The selected table or view does not exist, or the connection account lacks read permission."
+  },
+  "error.data.dataQueryBudget.remainingMillis.1": {
+    "zh-CN": "数据查询已取消或超过允许时间，请减少查询范围。",
+    "en": "The data query was cancelled or timed out. Narrow the query scope."
+  },
+  "error.data.dataQueryParameters.prepare.1": {
+    "zh-CN": "未验证的比较条件",
+    "en": "Unvalidated comparison condition."
+  },
+  "error.data.dataQueryParameters.prepare.2": {
+    "zh-CN": "未验证的排序方向",
+    "en": "Unvalidated sort direction."
+  },
+  "error.data.dataQueryParameters.quoteIdentifier.1": {
+    "zh-CN": "数据库名称或字段名称无效",
+    "en": "The database or field name is invalid."
+  },
+  "error.data.dataConfigurationInput.readOnly.1": {
+    "zh-CN": "该选项不符合要求。",
+    "en": "This option is invalid."
+  },
+  "error.data.dataCollectionTransactions.updateFile.1": {
+    "zh-CN": "已有集合不能改为其他来源，请建立新的集合。",
+    "en": "An existing collection cannot switch sources. Create a new collection."
+  },
+  "error.data.dataCollectionTransactions.updateFile.2": {
+    "zh-CN": "集合版本数量达到上限，请建立新集合。",
+    "en": "This collection has reached its version limit. Create a new collection."
+  },
+  "error.data.dataConnectionService.inspect.1": {
+    "zh-CN": "数据源连接检查不能占用数据库事务",
+    "en": "Data source connection checks must not hold a database transaction."
+  },
+  "error.data.dataConnectionService.inspect.2": {
+    "zh-CN": "此数据连接暂时不能检查。",
+    "en": "This data connection cannot be checked right now."
+  },
+  "error.data.dataConnectionService.save.1": {
+    "zh-CN": "已有更新的检查结果，请重新加载。",
+    "en": "Newer check results are available. Reload the page."
+  },
+  "error.data.dataFieldValidation.fields.1": {
+    "zh-CN": "请选择一至一百个字段。",
+    "en": "Select between 1 and 100 fields."
+  },
+  "error.data.dataFieldValidation.fields.2": {
+    "zh-CN": "字段名不能为空、重复或包含控制字符。",
+    "en": "Field names cannot be empty, duplicated, or contain control characters."
+  },
+  "error.data.dataFieldValidation.fields.3": {
+    "zh-CN": "请填写有效的字段名称与类型。",
+    "en": "Enter valid field names and types."
+  },
+  "error.data.dataFieldValidation.fields.4": {
+    "zh-CN": "字段顺序应从零开始连续排列，不能重复。",
+    "en": "Field positions must be consecutive, starting at zero, without duplicates."
+  },
+  "error.data.dataFieldValidation.fields.5": {
+    "zh-CN": "JSON 对象字段不能用于排序。",
+    "en": "JSON object fields cannot be used for sorting."
+  },
+  "error.data.dataImportPreparation.prepare.1": {
+    "zh-CN": "所选字段不在原始 CSV 表头中。",
+    "en": "A selected field is missing from the original CSV header."
+  },
+  "error.data.dataImportPreparation.prepare.2": {
+    "zh-CN": "解析后的数据超过一百 MiB，请拆分文件后再导入。",
+    "en": "The parsed data exceeds 100 MiB. Split the file before importing."
+  },
+  "error.data.dataImportService.verify.1": {
+    "zh-CN": "数据导入预览已过期，请重新预览。",
+    "en": "The import preview expired. Generate a new preview."
+  },
+  "error.data.dataImportService.verify.2": {
+    "zh-CN": "原文件已经变化，请重新预览。",
+    "en": "The source file has changed. Generate a new preview."
+  },
+  "error.data.dataImportService.confirm.1": {
+    "zh-CN": "原文件的解析结果已经变化，请重新预览。",
+    "en": "The parsed source file has changed. Generate a new preview."
+  },
+  "error.data.dataImportService.source.1": {
+    "zh-CN": "CSV 尚未完成检查和解析，请等待完成。",
+    "en": "Wait for the CSV validation and parsing to finish."
+  },
+  "error.data.dataImportService.source.2": {
+    "zh-CN": "这份文件已经导入，请选择新的文件更新集合。",
+    "en": "This file has already been imported. Select a new file to update the collection."
+  },
+  "error.data.dataImportTokenService.issue.1": {
+    "zh-CN": "数据导入预览无法保存",
+    "en": "The data import preview could not be saved."
+  },
+  "error.data.dataImportTokenService.invalid.1": {
+    "zh-CN": "数据导入预览已经失效，请重新选择文件并预览。",
+    "en": "The import preview is no longer valid. Select the file again and preview it."
+  },
+  "error.data.dataQueryService.query.1": {
+    "zh-CN": "此集合版本使用的连接配置不同，请重新检查并保存集合。",
+    "en": "This collection version uses different connection settings. Check and save the collection again."
+  },
+  "error.data.dataQueryService.query.2": {
+    "zh-CN": "此数据连接暂时不能执行查询。",
+    "en": "This data connection cannot run queries right now."
+  },
+  "error.data.dataQueryService.query.3": {
+    "zh-CN": "数据连接在查询期间发生变化，请重新读取集合后再试。",
+    "en": "The data connection changed during the query. Reload the collection and try again."
+  },
+  "error.data.dataQueryService.query.4": {
+    "zh-CN": "结果超过大小限制，请减少返回字段。",
+    "en": "The results exceed the size limit. Return fewer fields."
+  },
+  "error.data.dataQueryService.authorizeResult.1": {
+    "zh-CN": "此结果包含现在已限制的字段，请重新查询后查看。",
+    "en": "These results contain fields that are now restricted. Run the query again."
+  },
+  "error.data.dataQueryService.plan.1": {
+    "zh-CN": "数据集合已经更新，请刷新集合后重新查询。",
+    "en": "The collection has been updated. Refresh it and run the query again."
+  },
+  "error.data.dataQueryService.plan.2": {
+    "zh-CN": "所选集合版本已经不可查询，请重新选择。",
+    "en": "This collection version can no longer be queried. Select another version."
+  },
+  "error.data.dataQueryService.bytes.1": {
+    "zh-CN": "数据查询结果无法编码",
+    "en": "The data query result could not be encoded."
+  },
+  "error.data.dataQueryService.timeout.1": {
+    "zh-CN": "数据查询超过允许时间，请减少查询范围。",
+    "en": "The query timed out. Narrow the query scope."
+  },
+  "error.data.dataQueryValidation.plan.1": {
+    "zh-CN": "请选择一至一百个不同的字段。",
+    "en": "Select between 1 and 100 different fields."
+  },
+  "error.data.dataQueryValidation.plan.2": {
+    "zh-CN": "每次最多返回 200 行，最多可跳过前 100000 行。",
+    "en": "Each request can return up to 200 rows and skip no more than 100,000 rows."
+  },
+  "error.data.dataQueryValidation.plan.3": {
+    "zh-CN": "最多使用二十个筛选条件和三个排序字段。",
+    "en": "Use up to 20 filters and 3 sort fields."
+  },
+  "error.data.dataQueryValidation.plan.4": {
+    "zh-CN": "不支持这种筛选条件。",
+    "en": "This filter type is unsupported."
+  },
+  "error.data.dataQueryValidation.plan.5": {
+    "zh-CN": "空值筛选只接受是否为空。",
+    "en": "A null filter accepts only whether the value is null."
+  },
+  "error.data.dataQueryValidation.plan.6": {
+    "zh-CN": "集合筛选需要一至一百个比较值。",
+    "en": "An inclusion filter requires between 1 and 100 comparison values."
+  },
+  "error.data.dataQueryValidation.plan.7": {
+    "zh-CN": "空值请使用单独的空值筛选。",
+    "en": "Use a separate null filter for null values."
+  },
+  "error.data.dataQueryValidation.plan.8": {
+    "zh-CN": "包含筛选只能用于文字字段。",
+    "en": "The contains filter is available only for text fields."
+  },
+  "error.data.dataQueryValidation.plan.9": {
+    "zh-CN": "此字段类型不能比较大小。",
+    "en": "This field type does not support greater-than or less-than comparisons."
+  },
+  "error.data.dataQueryValidation.plan.10": {
+    "zh-CN": "排序字段不能重复，方向只能选择升序或降序。",
+    "en": "Sort fields cannot repeat. Choose ascending or descending order."
+  },
+  "error.data.dataQueryValidation.unavailable.1": {
+    "zh-CN": "所选字段已不可读取或不允许此操作，请重新选择字段。",
+    "en": "A selected field is inaccessible or does not support this action. Select another field."
+  },
+  "error.data.dataRemoteCollectionService.inspect.1": {
+    "zh-CN": "文件集合请使用导入。",
+    "en": "Use Import for file collections."
+  },
+  "error.data.dataRemoteCollectionService.inspect.2": {
+    "zh-CN": "暂时无法读取所选库表和字段，请稍后重新检查。",
+    "en": "The selected tables and fields cannot be read right now. Check again later."
+  },
+  "error.data.dataRemoteCollectionService.save.1": {
+    "zh-CN": "已有集合不能改为另一来源，请建立新的集合。",
+    "en": "An existing collection cannot switch to another source. Create a new collection."
+  },
+  "error.data.dataRemoteCollectionService.save.2": {
+    "zh-CN": "这个来源已经登记，请修改已有集合。",
+    "en": "This source is already registered. Edit the existing collection."
+  },
+  "error.data.dataResourcePolicy.edit.1": {
+    "zh-CN": "数据源已停用，请先启用。",
+    "en": "The data source is disabled. Enable it first."
+  },
+  "error.data.dataResourcePolicy.fileSource.1": {
+    "zh-CN": "请为文件类型的数据源导入 CSV。",
+    "en": "Import a CSV file for this file-based data source."
+  },
+  "error.data.dataValueCodec.csv.1": {
+    "zh-CN": "数据值与字段类型不符，请检查对应行列。",
+    "en": "A value does not match its field type. Check the corresponding row and column."
+  },
+  "error.data.dataValueCodec.parameter.1": {
+    "zh-CN": "筛选值与字段类型不符，请检查筛选条件。",
+    "en": "A filter value does not match its field type. Check the filter."
+  },
+  "error.data.dataValueCodec.parameterValue.1": {
+    "zh-CN": "JSON 对象字段的比较值必须是对象。",
+    "en": "A comparison value for a JSON object field must be an object."
+  },
+  "error.data.dataValueCodec.parameterValue.2": {
+    "zh-CN": "筛选值与字段类型不一致。",
+    "en": "The filter value does not match the field type."
+  },
+  "error.data.httpDataSourceReader.read.1": {
+    "zh-CN": "数据接口必须使用 HTTPS 加密地址。",
+    "en": "The data endpoint must use HTTPS."
+  },
+  "error.data.httpDataSourceReader.read.2": {
+    "zh-CN": "传给接口的查询参数只接受单个相等条件。",
+    "en": "Endpoint query parameters support only a single equality condition."
+  },
+  "error.data.httpDataSourceReader.read.3": {
+    "zh-CN": "传给接口的同一参数不能重复设置。",
+    "en": "The same endpoint parameter cannot be set more than once."
+  },
+  "error.data.httpDataSourceReader.read.4": {
+    "zh-CN": "数据接口没有返回成功结果，请检查连接与凭据。",
+    "en": "The data endpoint did not return a successful result. Check the connection and credentials."
+  },
+  "error.data.httpDataSourceReader.read.5": {
+    "zh-CN": "数据接口无法读取，或返回的 JSON 内容无效，请检查接口后重试。",
+    "en": "The endpoint is inaccessible or returned invalid JSON. Check it and try again."
+  },
+  "error.data.httpDataSourceReader.remaining.1": {
+    "zh-CN": "数据查询已取消或超过允许时间。",
+    "en": "The data query was cancelled or timed out."
+  },
+  "error.data.httpDataSourceReader.invalid.1": {
+    "zh-CN": "数据接口必须返回 JSON 对象或数组。",
+    "en": "The data endpoint must return a JSON object or array."
+  },
+  "error.data.httpDataSourceReader.tooLarge.1": {
+    "zh-CN": "数据接口返回内容超过一 MiB，请在接口端缩小单次返回范围。",
+    "en": "The endpoint response exceeds 1 MiB. Reduce the response size at the source."
+  },
+  "error.data.databaseAddressPolicy.init.1": {
+    "zh-CN": "数据库允许列表需要完整 mysql 主机来源和端口，不能填写凭据或路径",
+    "en": "The database allowlist requires complete mysql host origins and ports, without credentials or paths."
+  },
+  "error.data.databaseAddressPolicy.denied.1": {
+    "zh-CN": "数据库地址不在部署允许范围内，请检查地址或联系部署管理员。",
+    "en": "The database address is outside the deployment's allowed scope. Check it or contact the administrator."
+  },
+  "error.data.databaseCredentialService.invalid.1": {
+    "zh-CN": "数据库凭据已失效或格式不正确，请重新设置。",
+    "en": "The database credentials are invalid or incorrectly formatted. Set them again."
+  },
+  "error.data.mysqlReadOnlyConnections.init.1": {
+    "zh-CN": "生产数据库数据源必须验证服务端证书和主机身份",
+    "en": "Production database sources must verify the server certificate and host identity."
+  },
+  "error.data.mysqlReadOnlyConnections.open.1": {
+    "zh-CN": "请填写完整的数据库名称。",
+    "en": "Enter the full database name."
+  },
+  "error.data.mysqlReadOnlyConnections.remaining.1": {
+    "zh-CN": "数据库连接已取消或超过允许时间。",
+    "en": "The database connection was cancelled or timed out."
+  },
+  "error.data.mysqlReadOnlyConnections.readOnlyRequired.1": {
+    "zh-CN": "请为数据源配置仅能读取目标库表的专用账号。",
+    "en": "Use a dedicated account with read-only access to the target tables."
+  },
+  "error.data.mysqlReadOnlyConnections.unavailable.1": {
+    "zh-CN": "数据库连接暂时不可用，请检查地址、证书和凭据。",
+    "en": "The database connection is unavailable. Check the address, certificate, and credentials."
+  },
+  "error.data.pinnedMysqlSocketFactory.scope.1": {
+    "zh-CN": "数据库地址登记不能嵌套",
+    "en": "Database address registrations must not be nested."
+  },
+  "error.data.pinnedMysqlSocketFactory.createSocket.1": {
+    "zh-CN": "数据库连接没有经过地址验证",
+    "en": "The database connection address has not been verified."
+  },
+  "error.data.pinnedMysqlSocketFactory.createSocket.2": {
+    "zh-CN": "数据库没有可连接的地址",
+    "en": "The database has no reachable address."
+  },
+  "error.data.pinnedMysqlSocketFactory.createSocket.3": {
+    "zh-CN": "数据库连接必须使用经过验证的地址登记",
+    "en": "Database connections must use a verified address registration."
+  },
+  "error.data.pinnedMysqlSocketFactory.remaining.1": {
+    "zh-CN": "数据库连接已取消或超过允许时间",
+    "en": "The database connection was canceled or timed out."
+  },
+  "error.data.preparedDataImport.unavailable.1": {
+    "zh-CN": "数据导入内容暂时无法读取，请重新预览后再试。",
+    "en": "The import content cannot be read. Generate a new preview and try again."
+  },
+  "text.data.dataCollectionTransactions.updateFile.1": {
+    "zh-CN": "修改数据集合字段",
+    "en": "Update data collection fields"
+  },
+  "text.data.dataConnectionService.inspect.1": {
+    "zh-CN": "文件数据源无需外部连接，导入文件会单独检查。",
+    "en": "File data sources need no external connection. Imported files are checked separately."
+  },
+  "text.data.dataConnectionService.inspect.2": {
+    "zh-CN": "数据库只读连接检查通过，已核对 {0} 个集合。",
+    "en": "The read-only database connection passed verification. Checked {0} collections."
+  },
+  "text.data.dataConnectionService.inspect.3": {
+    "zh-CN": "接口读取检查通过，已核对 {0} 个集合。",
+    "en": "API reading passed verification. Checked {0} collections."
+  },
+  "log.data.dataConnectionService.inspect.1": {
+    "zh-CN": "数据源连接检查失败，资源编号 {}",
+    "en": "Data source connection verification failed; resourceId={}"
+  },
+  "text.data.dataConnectionService.inspect.4": {
+    "zh-CN": "数据连接或字段暂时无法读取，请检查配置。",
+    "en": "The data connection or fields cannot be read right now. Check the configuration."
+  },
+  "text.data.dataConnectionService.save.1": {
+    "zh-CN": "检查数据源连接与集合字段",
+    "en": "Check data source connection and collection fields"
+  },
+  "text.data.dataImportService.confirm.1": {
+    "zh-CN": "确认导入数据文件",
+    "en": "Confirm data file import"
+  },
+  "text.data.dataQueryLogService.query.1": {
+    "zh-CN": "数据查询未能完成，请稍后重试。",
+    "en": "The data query did not complete. Try again later."
+  },
+  "text.data.dataQueryService.query.1": {
+    "zh-CN": "已隐藏",
+    "en": "Redacted"
+  },
+  "text.data.dataQueryService.query.2": {
+    "zh-CN": "读取数据集合",
+    "en": "Read data collection"
+  },
+  "text.data.dataRemoteCollectionService.save.1": {
+    "zh-CN": "保存远程数据集合与允许字段",
+    "en": "Save remote data collections and allowed fields"
+  },
+  "log.data.databaseCredentialService.toString.1": {
+    "zh-CN": "Credentials[数据库认证信息已隐藏]",
+    "en": "Credentials[database authentication data redacted]"
+  },
+  "log.data.pinnedMysqlSocketFactory.TIMER.1": {
+    "zh-CN": "数据库外部连接期限",
+    "en": "Database connection deadline"
+  },
+  "log.data.preparedDataImport.close.1": {
+    "zh-CN": "数据导入临时文件暂未删除，统一清理任务将稍后处理",
+    "en": "Temporary data import files were not deleted; scheduled cleanup will handle them later"
+  }
+}

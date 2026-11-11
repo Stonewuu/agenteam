@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
@@ -49,7 +51,7 @@ public final class SandboxServerMain {
         try {
             String token = value("AGENTEAM_SANDBOX_REMOTE_TOKEN", "");
             if (token.length() < 32) {
-                throw new IllegalArgumentException("独立执行服务需要至少三十二字符的访问凭据");
+                throw new IllegalArgumentException(Messages.text("error.sandbox.sandboxServerMain.main.1"));
             }
             Path root = Path.of(value("AGENTEAM_SANDBOX_SERVER_ROOT", ".agenteam/sandbox-server")).toAbsolutePath()
                 .normalize();
@@ -114,11 +116,11 @@ public final class SandboxServerMain {
                 executions.close();
                 server.stop(1);
                 workers.shutdownNow();
-            }, "独立执行服务关闭"));
+            }, Messages.log("log.sandbox.sandboxServerMain.main.1")));
             server.start();
-            LOG.info("独立执行服务已启动，端口 {}，工作目录 {}", server.getAddress().getPort(), root);
+            LOG.info(Messages.log("log.sandbox.sandboxServerMain.main.2"), server.getAddress().getPort(), root);
         } catch (Exception failure) {
-            LOG.error("独立执行服务启动失败", failure);
+            LOG.error(Messages.log("log.sandbox.sandboxServerMain.main.3"), failure);
             System.exit(1);
         }
     }

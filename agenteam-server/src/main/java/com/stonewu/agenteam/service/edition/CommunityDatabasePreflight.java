@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.edition;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
@@ -27,10 +29,10 @@ public final class CommunityDatabasePreflight {
                 return;
             }
             if (!tables.contains("agenteam_installation")) {
-                throw rejected("此数据库没有兼容的部署记录，请使用与现有数据匹配的程序；若另一节点正在首次初始化数据库，请等其完成后重启。");
+                throw rejected(Messages.text("error.edition.communityDatabasePreflight.verify.1"));
             }
             if (!tables.containsAll(Set.of("enterprise", "app_user", "system_super_admin_lock"))) {
-                throw rejected("数据库缺少必要的企业或初始化记录，请先恢复完整备份。");
+                throw rejected(Messages.text("error.edition.communityDatabasePreflight.verify.2"));
             }
             validate(mapper.snapshot());
         }
@@ -38,24 +40,24 @@ public final class CommunityDatabasePreflight {
 
     private void validate(InstallationPreflightRow state) {
         if (state == null || state.getRecordCount() != 1 || state.getEdition() == null) {
-            throw rejected("部署记录不完整，请恢复原部署记录，不能重新选择初始化企业。");
+            throw rejected(Messages.text("error.edition.communityDatabasePreflight.validate.1"));
         }
         if (!state.getEdition().equals("community")) {
-            throw rejected("此数据库与当前安装包不兼容，请使用与现有部署匹配的程序启动；已有数据未修改。");
+            throw rejected(Messages.text("error.edition.communityDatabasePreflight.validate.2"));
         }
         if (state.getInstallationId() == null) {
             if (state.getEnterpriseCount() == 0 && state.getAdministratorCount() == 0 && state.getUserCount() == 0
                 && state.getInitialEnterpriseId() == null) {
                 return;
             }
-            throw rejected("数据库已经包含业务数据，但缺少完整的初始化部署关系，请恢复完整的部署记录或备份。");
+            throw rejected(Messages.text("error.edition.communityDatabasePreflight.validate.3"));
         }
         if (!state.getInstallationId().matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) {
-            throw rejected("保存的部署编号格式不正确，请恢复原部署记录。");
+            throw rejected(Messages.text("error.edition.communityDatabasePreflight.validate.4"));
         }
         if (state.getEnterpriseCount() != 1 || state.getAdministratorCount() != 1
             || state.getInitialEnterpriseId() == null || state.getInitialEnterpriseCount() != 1) {
-            throw rejected("社区版只支持初始化时建立的企业，当前数据库的企业或初始化记录不一致。");
+            throw rejected(Messages.text("error.edition.communityDatabasePreflight.validate.5"));
         }
     }
 
@@ -71,8 +73,8 @@ public final class CommunityDatabasePreflight {
             factory.setMapperLocations(new ClassPathResource("mapper/edition/InstallationPreflightMapper.xml"));
             return factory.getObject();
         } catch (Exception failure) {
-            LOG.error("启动前无法建立部署检查所需的数据库映射", failure);
-            throw new IllegalStateException("无法检查数据库所属版本，应用启动已停止。", failure);
+            LOG.error(Messages.log("log.edition.communityDatabasePreflight.factory.1"), failure);
+            throw new IllegalStateException(Messages.text("error.edition.communityDatabasePreflight.factory.1"), failure);
         }
     }
 

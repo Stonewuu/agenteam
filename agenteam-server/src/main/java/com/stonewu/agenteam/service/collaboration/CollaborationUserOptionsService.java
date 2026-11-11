@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -63,7 +65,7 @@ public class CollaborationUserOptionsService {
         boolean changed = false;
         String visibility = options.path("outputVisibility").asText(null);
         if (task.fromWebRoom() && (visibility != null || !options.path("messageReferences").isEmpty())) {
-            throw ApiException.invalidField("options", "此任务没有外部群聊消息。");
+            throw ApiException.invalidField("options", Messages.text("error.collaboration.collaborationUserOptionsService.apply.1"));
         }
         if (!task.fromWebRoom() && visibility == null && !Boolean.TRUE.equals(task.getReplyModeExplicit()) && !hasExplicitVisibility(objective) && "summary_link".equals(task.getOutputVisibility())) {
             var group = conversations.require(task.getEnterpriseId(), task.getConversationId());
@@ -74,7 +76,7 @@ public class CollaborationUserOptionsService {
         if (visibility != null) {
             var group = conversations.require(task.getEnterpriseId(), task.getConversationId());
             if (!Set.of("summary_link", "chat_full").contains(visibility) || visibility.equals("chat_full") && !ChatReplyPolicy.allowsFullResult(task, group)) {
-                throw ApiException.invalidField("outputVisibility", "本群已设为仅发送链接。");
+                throw ApiException.invalidField("outputVisibility", Messages.text("error.chat.chatReplyPreferenceService.validate.1"));
             }
             update.set(CollaborationTaskRow::getOutputVisibility, visibility);
             if (options.hasNonNull("outputVisibility")) {
@@ -87,7 +89,7 @@ public class CollaborationUserOptionsService {
         for (var id : options.path("waivedRoleIds")) {
             var role = access.participant(task, id.asText());
             if (role.getId().equals(task.getOwnerParticipantId())) {
-                throw ApiException.invalidField("waivedRoleIds", "不能取消当前最终交付岗位，请先移交或取消整个任务。");
+                throw ApiException.invalidField("waivedRoleIds", Messages.text("error.collaboration.collaborationUserOptionsService.apply.2"));
             }
             waived.add(role.getId());
             var assigned = works.selectList(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
@@ -108,7 +110,7 @@ public class CollaborationUserOptionsService {
         if (changed) {
             update.set(CollaborationTaskRow::getWaivedRequestedRolesJson, json.write(json.tree(waived.stream().sorted().toList())));
             if (tasks.update(update) != 1) {
-                throw new IllegalStateException("用户选择的任务选项无法保存");
+                throw new IllegalStateException(Messages.text("error.collaboration.collaborationUserOptionsService.apply.3"));
             }
         }
         var references = additional.putArray("referencedMessages");
@@ -117,7 +119,7 @@ public class CollaborationUserOptionsService {
                 .eq(ChatMessageRow::getId, id.asText()).eq(ChatMessageRow::getConversationId, task.getConversationId())
                 .eq(ChatMessageRow::getSenderUserId, task.getInitiatorUserId()).eq(ChatMessageRow::getTaskId, task.getId()));
             if (message == null) {
-                throw ApiException.invalidField("messageReferences", "只能引用本任务中原发起人已经发送的消息。");
+                throw ApiException.invalidField("messageReferences", Messages.text("error.collaboration.collaborationUserOptionsService.apply.4"));
             }
             references.addObject().put("messageId", message.getId()).put("text",
                 cipher.decrypt(task.getEnterpriseId(), "message", message.getId(), message.getContentEncrypted()).path("text").asText());

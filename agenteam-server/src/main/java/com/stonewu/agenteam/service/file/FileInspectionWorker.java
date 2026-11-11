@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.background.entity.JobLease;
@@ -38,7 +40,7 @@ public class FileInspectionWorker {
     private final boolean enabled;
     private final String worker = UUID.randomUUID().toString();
     private final ExecutorService executor = Executors.newFixedThreadPool(4,
-        Thread.ofVirtual().name("文件检查工作-", 0).factory());
+        Thread.ofVirtual().name(Messages.log("log.file.fileInspectionWorker.executor.1"), 0).factory());
     private final AtomicInteger active = new AtomicInteger();
     private final BackgroundJobHeartbeat heartbeats;
     private final FileTypeInspection types;
@@ -139,7 +141,7 @@ public class FileInspectionWorker {
                 transactions.finish(lease, file, "ready", null, false, text, csv);
             }
         } catch (ApiException invalid) {
-            LOG.warn("文件检查未完成，工作编号 {}，错误代码 {}", lease.id(), invalid.code(), invalid);
+            LOG.warn(Messages.log("log.file.fileInspectionWorker.inspect.1"), lease.id(), invalid.code(), invalid);
             if (file != null && (file.purpose().equals("attachment") || file.purpose().equals("collaboration_artifact")) && file.mediaType().equals("application/pdf")
                 && invalid.code().equals("FILE_NO_TEXT")) {
                 transactions.finish(lease, file, "ready", "FILE_NO_TEXT", false, new AttachmentText("", false), null);
@@ -149,7 +151,7 @@ public class FileInspectionWorker {
                 .equals("FILE_PROCESSING_CANCELLED");
             transactions.finish(lease, file, retry ? "scanning" : "rejected", invalid.code(), retry, null, null);
         } catch (Exception unavailable) {
-            LOG.error("文件检查失败，工作编号 {}", lease.id(), unavailable);
+            LOG.error(Messages.log("log.file.fileInspectionWorker.inspect.2"), lease.id(), unavailable);
             transactions.finish(lease, file, "scanning", "FILE_SCAN_UNAVAILABLE", true, null, null);
         }
     }

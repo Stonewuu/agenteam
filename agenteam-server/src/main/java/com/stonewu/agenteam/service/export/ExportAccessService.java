@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.export.ExportAccessMapper;
 import com.stonewu.agenteam.mapper.export.ExportPayloadMapper;
@@ -71,6 +73,6 @@ public class ExportAccessService {
 
     public static ApiException unavailable() {
         return new ApiException(HttpStatus.NOT_FOUND, "EXPORT_UNAVAILABLE",
-            "导出任务不存在或已无法读取，请按当前可访问的范围重新导出。");
+            Messages.text("error.export.exportAccessService.unavailable.1"));
     }
 }

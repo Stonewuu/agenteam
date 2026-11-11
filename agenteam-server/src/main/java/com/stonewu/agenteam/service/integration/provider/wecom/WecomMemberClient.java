@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
@@ -37,10 +39,10 @@ public class WecomMemberClient {
     private Member resolve(IntegrationApplication enterprise, ChannelAccessToken token, String sender, String reportedTenant, boolean requireEncrypted) {
         if (!"wecom".equals(enterprise.providerCode()) || enterprise.externalTenantId() == null
             || enterprise.externalTenantId().isBlank() || sender == null || sender.isBlank() || sender.length() > 191) {
-            throw rejected("WECOM_MEMBER_INVALID", "企微成员信息不完整，暂时无法识别账号。");
+            throw rejected("WECOM_MEMBER_INVALID", Messages.text("error.integration.wecomMemberClient.resolve.1"));
         }
         if (reportedTenant != null && !reportedTenant.isBlank() && !enterprise.externalTenantId().equals(reportedTenant)) {
-            throw rejected("WECOM_ENTERPRISE_MISMATCH", "此消息不属于已接入的企微企业。");
+            throw rejected("WECOM_ENTERPRISE_MISMATCH", Messages.text("error.integration.wecomMemberClient.resolve.2"));
         }
         var body = json.createObjectNode();
         body.putArray("open_userid_list").add(sender);
@@ -65,7 +67,7 @@ public class WecomMemberClient {
             throw invalid();
         }
         if (requireEncrypted && !encrypted) {
-            throw rejected("WECOM_ENTERPRISE_UNCONFIRMED", "无法确认机器人属于当前企业，请检查扫码时选择的企业和应用可见范围。");
+            throw rejected("WECOM_ENTERPRISE_UNCONFIRMED", Messages.text("error.integration.wecomMemberClient.resolve.3"));
         }
         // 已经是明文的编号也会出现在无效转换列表；只有企业成员接口确认后才接受。
         if (!encrypted) {
@@ -77,7 +79,7 @@ public class WecomMemberClient {
             throw invalid();
         }
         if (!member.path("status").isIntegralNumber() || member.path("status").asInt() != 1) {
-            throw rejected("WECOM_MEMBER_INACTIVE", "此企微成员尚未激活或已停用，暂时不能使用智能体。");
+            throw rejected("WECOM_MEMBER_INACTIVE", Messages.text("error.integration.wecomMemberClient.resolve.4"));
         }
         return new Member(canonical, member.path("name").isTextual() ? member.path("name").asText() : null, encrypted);
     }
@@ -89,10 +91,10 @@ public class WecomMemberClient {
         }
         long code = body.path("errcode").asLong();
         if (code == 40014 || code == 42001) {
-            throw rejected("CHANNEL_TOKEN_EXPIRED", "企微应用凭据已过期，请稍后重试。");
+            throw rejected("CHANNEL_TOKEN_EXPIRED", Messages.text("error.integration.wecomMemberClient.success.1"));
         }
         if (code != 0) {
-            throw rejected("WECOM_MEMBER_UNAVAILABLE", "无法核对企微成员，请检查企业应用的通讯录权限和可见范围。");
+            throw rejected("WECOM_MEMBER_UNAVAILABLE", Messages.text("error.integration.wecomMemberClient.success.2"));
         }
         return body;
     }
@@ -107,7 +109,7 @@ public class WecomMemberClient {
     }
 
     private static ChannelProviderException invalid() {
-        return rejected("WECOM_MEMBER_RESPONSE_INVALID", "企微返回的成员信息不完整，暂时无法识别账号。");
+        return rejected("WECOM_MEMBER_RESPONSE_INVALID", Messages.text("error.integration.wecomMemberClient.invalid.1"));
     }
 
     private static ChannelProviderException rejected(String code, String message) {

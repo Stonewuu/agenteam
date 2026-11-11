@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.skill;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -78,7 +80,7 @@ public class SkillPackageMapper {
             if (!source.path("config").path(kind + "VersionIds").isEmpty() && names.stream()
                 .noneMatch(value -> value.kind().equals(kind))) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "SKILL_PACKAGE_INVALID",
-                    "技能文件缺少依赖名称，请补齐后再导入。");
+                    Messages.text("error.skill.skillPackageMapper.parse.1"));
             }
         }
         config.putArray("pluginVersionIds");
@@ -103,7 +105,7 @@ public class SkillPackageMapper {
         String[] lines = text.split("\\R", 2);
         if (lines.length < 2 || lines[1].isBlank()) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "SKILL_PACKAGE_INVALID",
-                "文件首行之后还需要填写技能执行指令。");
+                Messages.text("error.skill.skillPackageMapper.text.1"));
         }
         String name = lines[0].replaceFirst("^#{1,6}\\s+", "").strip();
         if (name.isBlank()) {
@@ -123,6 +125,6 @@ public class SkillPackageMapper {
 
     private static ApiException invalid() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "SKILL_PACKAGE_INVALID",
-            "技能文件格式不正确或格式版本不受支持。");
+            Messages.text("error.skill.skillPackageMapper.invalid.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -35,12 +37,12 @@ public final class UserContainerOwnership {
             if (found.output().contains("No such")) {
                 return null;
             }
-            throw DockerWorkspaceCommands.unavailable(new IOException("无法读取用户容器归属：" + found.output()));
+            throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerOwnership.ownedId.1", found.output())));
         }
         String[] values = found.output().trim().split("\\s+", 2);
         if (values.length != 2 || !values[0].matches("[0-9a-f]{64}") || !values[1].equals(scope(storagePath))) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_CONTAINER_OWNERSHIP_MISMATCH",
-                "命令容器不属于当前部署，已停止操作，请检查工作目录配置。");
+                Messages.text("error.project.userContainerOwnership.ownedId.2"));
         }
         return values[0];
     }

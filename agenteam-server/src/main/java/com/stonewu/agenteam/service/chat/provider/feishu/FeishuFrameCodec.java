@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.lark.oapi.google.protobuf.ByteString;
 import com.lark.oapi.ws.pb.Pbbp2;
 
@@ -24,25 +26,25 @@ public final class FeishuFrameCodec {
         String id = header(frame, "message_id");
         byte[] payload = frame.getPayload().toByteArray();
         if (sum < 1 || sum > 32 || seq < 0 || seq >= sum || id.length() > 191 || payload.length > 1_048_576) {
-            throw new IllegalArgumentException("飞书分片字段超出允许范围");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuFrameCodec.payload.1"));
         }
         if (sum == 1) {
             return payload;
         }
         if (fragments.size() >= 32 && !fragments.containsKey(id)) {
-            throw new IllegalArgumentException("飞书未完成分片过多");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuFrameCodec.payload.2"));
         }
         var part = fragments.computeIfAbsent(id, key -> new Parts(now.plusSeconds(30), new byte[sum][]));
         if (part.bytes().length != sum || part.bytes()[seq] != null && !Arrays.equals(part.bytes()[seq], payload)) {
             fragments.remove(id);
-            throw new IllegalArgumentException("飞书相同分片编号内容发生变化");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuFrameCodec.payload.3"));
         }
         part.bytes()[seq] = payload;
         long size = fragments.values().stream().flatMap(value -> Arrays.stream(value.bytes()))
             .filter(value -> value != null).mapToLong(value -> value.length).sum();
         if (size > 4_194_304 || Arrays.stream(part.bytes()).filter(value -> value != null).mapToInt(value -> value.length).sum() > 1_048_576) {
             fragments.remove(id);
-            throw new IllegalArgumentException("飞书分片内容超过允许大小");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuFrameCodec.payload.4"));
         }
         if (Arrays.stream(part.bytes()).anyMatch(value -> value == null)) {
             return null;
@@ -73,13 +75,13 @@ public final class FeishuFrameCodec {
 
     public static String header(Pbbp2.Frame frame, String key) {
         return frame.getHeadersList().stream().filter(value -> value.getKey().equals(key))
-            .map(Pbbp2.Header::getValue).findFirst().orElseThrow(() -> new IllegalArgumentException("飞书帧缺少必要字段"));
+            .map(Pbbp2.Header::getValue).findFirst().orElseThrow(() -> new IllegalArgumentException(Messages.text("error.chat.feishuFrameCodec.header.1")));
     }
 
     private int number(Pbbp2.Frame frame, String key) {
         String value = header(frame, key);
         if (!value.matches("[0-9]{1,3}")) {
-            throw new IllegalArgumentException("飞书分片编号无效");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuFrameCodec.number.1"));
         }
         return Integer.parseInt(value);
     }

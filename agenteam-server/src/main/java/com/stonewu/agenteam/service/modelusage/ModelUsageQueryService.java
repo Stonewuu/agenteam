@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -75,7 +77,7 @@ public class ModelUsageQueryService {
         var filter = enterpriseFilter(actor, request);
         boolean daily = "day".equals(request.groupBy());
         if (request.groupBy() != null && !daily) {
-            throw ApiException.invalidField("groupBy", "只支持按日分组。");
+            throw ApiException.invalidField("groupBy", Messages.text("error.modelusage.modelUsageQueryService.summary.1"));
         }
         return views.summary(filter, aggregate.aggregate(filter, daily ? days(filter) : List.of()), daily);
     }
@@ -100,10 +102,10 @@ public class ModelUsageQueryService {
                 .like(!text.isEmpty(), AppUserRow::getDisplayName, text)
                 .groupBy(ModelUsageRecordRow::getUserId).groupBy(AppUserRow::getDisplayName).orderByAsc(AppUserRow::getDisplayName);
         } else {
-            throw ApiException.invalidField("kind", "请选择模型或用户筛选。");
+            throw ApiException.invalidField("kind", Messages.text("error.modelusage.modelUsageQueryService.options.1"));
         }
         return rows.selectJoinPage(new Page<ModelUsageOptionRow>(1, 100, false), ModelUsageOptionRow.class, query).getRecords()
-            .stream().map(row -> new ModelUsageOptionView(row.getId(), row.getName() == null ? "已移除用户" : row.getName())).toList();
+            .stream().map(row -> new ModelUsageOptionView(row.getId(), row.getName() == null ? Messages.text("text.modelusage.modelUsageQueryService.options.1") : row.getName())).toList();
     }
 
     @Transactional(readOnly = true)
@@ -134,14 +136,14 @@ public class ModelUsageQueryService {
         authorization.requireEnterpriseScope(authorization.require(actor, "usage.view"));
         String timezone = request.timezone() == null ? "UTC" : request.timezone();
         if (!ZoneId.getAvailableZoneIds().contains(timezone)) {
-            throw ApiException.invalidField("timezone", "请选择有效时区。");
+            throw ApiException.invalidField("timezone", Messages.text("error.auth.accountInputValidation.timezone.1"));
         }
         var zone = ZoneId.of(timezone);
         var month = clock.instant().atZone(zone).toLocalDate().withDayOfMonth(1);
         Instant from = request.from() == null ? month.atStartOfDay(zone).toInstant() : request.from();
         Instant to = request.to() == null ? month.plusMonths(1).atStartOfDay(zone).toInstant() : request.to();
         if (!to.isAfter(from) || Duration.between(from, to).compareTo(Duration.ofDays(93)) > 0) {
-            throw ApiException.invalidField("to", "结束时间须晚于开始时间，单次范围最多 93 天。");
+            throw ApiException.invalidField("to", Messages.text("error.modelusage.modelUsageQueryService.enterpriseFilter.1"));
         }
         return new ModelUsageFilter(actor.enterpriseId(), from, to, timezone, identifier(request.modelProfileId(), "modelProfileId"),
             identifier(request.userId(), "userId"), null, null);
@@ -197,7 +199,7 @@ public class ModelUsageQueryService {
 
     private String identifier(String value, String field) {
         if (value != null && (value.isBlank() || value.length() > 100 || value.codePoints().anyMatch(Character::isISOControl))) {
-            throw ApiException.invalidField(field, "请选择有效记录。");
+            throw ApiException.invalidField(field, Messages.text("error.modelusage.modelUsageQueryService.identifier.1"));
         }
         return value;
     }

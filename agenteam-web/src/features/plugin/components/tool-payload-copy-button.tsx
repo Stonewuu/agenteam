@@ -75,7 +75,7 @@ export function ToolPayloadCopyButton({title, value, source, raw}: {
         return;
       }
       controller.abort();
-      console.error("复制工具内容失败", {
+      console.error("Failed to copy tool content", {
         path: source?.url.split(/[?#]/)[0],
         part: source?.part,
         requestId: error instanceof ApiError ? error.requestId : undefined,

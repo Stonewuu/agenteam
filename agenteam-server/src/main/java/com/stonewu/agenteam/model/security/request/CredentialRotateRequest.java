@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.security.request;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -7,9 +9,9 @@ import jakarta.validation.constraints.Size;
  * 轮换只替换秘密，不改变凭据用途。
  */
 public record CredentialRotateRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 8192, message = "文字长度不符合要求。") String secret) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 8192, message = "{validation.textLength}") String secret) {
     @Override
     public String toString() {
-        return "CredentialRotateRequest[凭据内容已隐藏]";
+        return Messages.log("log.security.credentialRotateRequest.toString.1");
     }
 }

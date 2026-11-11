@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource.validation;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.resource.entity.DependencyBinding;
 import com.stonewu.agenteam.model.resource.entity.ResourceKind;
@@ -25,7 +27,7 @@ public class SkillConfigurationValidator implements ResourceConfigValidator {
     public void draft(JsonNode config) {
         InputValidation.read(config, SkillConfigurationInput.class, "config");
         if (config.path("instructions").asText().isBlank()) {
-            throw ApiException.invalidField("config.instructions", "请填写技能执行指令。");
+            throw ApiException.invalidField("config.instructions", Messages.text("error.resource.skillConfigurationValidator.draft.1"));
         }
     }
 

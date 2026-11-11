@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityViewMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.enterprise.OrganizationViewMapper;
@@ -58,7 +60,7 @@ public class OrganizationQueryService {
         int limit = pagination.limit(requestedLimit);
         String query = pagination.query(search);
         if (status != null && !Set.of("active", "disabled", "removed").contains(status)) {
-            throw ApiException.invalidField("status", "请选择有效的成员状态。");
+            throw ApiException.invalidField("status", Messages.text("error.enterprise.organizationQueryService.members.1"));
         }
         var binding = binding(actor, teamId == null ? "members" : "teams/" + teamId + "/members",
             query + "\nstatus=" + (status == null ? "" : status));
@@ -73,7 +75,7 @@ public class OrganizationQueryService {
         var scope = authorization.require(actor, "enterprise.members.view");
         authorization.requireOwner(actor, scope, id);
         if (members.findMember(actor.enterpriseId(), id).isEmpty()) {
-            throw missing("成员");
+            throw missing(Messages.text("error.enterprise.organizationQueryService.member.1"));
         }
         return identities.member(actor.enterpriseId(), id);
     }
@@ -91,7 +93,7 @@ public class OrganizationQueryService {
 
     public TeamView team(AuthContext actor, String id) {
         var scope = authorization.require(actor, "enterprise.teams.view");
-        var team = views.team(actor.enterpriseId(), id).orElseThrow(() -> missing("团队"));
+        var team = views.team(actor.enterpriseId(), id).orElseThrow(() -> missing(Messages.text("label.team")));
         authorization.requireOwner(actor, scope, team.owner().id());
         return team;
     }
@@ -108,7 +110,7 @@ public class OrganizationQueryService {
 
     public RoleView role(AuthContext actor, String id) {
         authorization.requireEnterpriseScope(authorization.require(actor, "enterprise.roles.view"));
-        return views.role(actor.enterpriseId(), id).orElseThrow(() -> missing("角色"));
+        return views.role(actor.enterpriseId(), id).orElseThrow(() -> missing(Messages.text("label.role")));
     }
 
     public List<PermissionView> permissions(AuthContext actor) {
@@ -123,6 +125,6 @@ public class OrganizationQueryService {
     }
 
     private ApiException missing(String label) {
-        return new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", label + "不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", Messages.text("error.enterprise.organizationQueryService.missing.1", label));
     }
 }

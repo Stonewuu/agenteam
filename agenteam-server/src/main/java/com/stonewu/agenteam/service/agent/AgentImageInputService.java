@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.MessageAttachmentMapper;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.service.execution.ExecutionAccessService;
@@ -77,7 +79,7 @@ public class AgentImageInputService {
                     if (!file.ownerUserId().equals(run.userId())) throw FileAccessService.unavailable();
                     total += file.sizeBytes();
                     if (total > 32L * 1024 * 1024) {
-                        throw ApiException.invalidField("attachmentIds", "本次对话的图片合计超过三十二 MiB，请减少图片后重试。");
+                        throw ApiException.invalidField("attachmentIds", Messages.text("error.agent.agentImageInputService.prepare.1"));
                     }
                     content.add(loaded.computeIfAbsent(id, ignored -> images.read(file)));
                 }

@@ -1,0 +1,6 @@
+{
+  "error.persistence.queryTimeoutInterceptor.withTimeout.1": {
+    "zh-CN": "查询等待时间必须大于零",
+    "en": "The query timeout must be greater than zero."
+  }
+}

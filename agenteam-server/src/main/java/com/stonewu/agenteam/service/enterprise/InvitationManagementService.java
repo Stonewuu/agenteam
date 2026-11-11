@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityViewMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.enterprise.InvitationMapper;
@@ -95,9 +97,9 @@ public class InvitationManagementService {
         authorize(actor);
         String email = AccountInputValidation.email(request.email(), "email");
         String displayName = request.displayName() == null || request.displayName().isBlank() ? null
-            : EnterpriseValidation.name(request.displayName(), "成员显示名", 50);
-        Set<String> roleIds = EnterpriseValidation.identifiers(request.roleIds(), 1, 10, "角色");
-        Set<String> teamIds = EnterpriseValidation.identifiers(request.teamIds(), 0, 10, "团队");
+            : EnterpriseValidation.name(request.displayName(), Messages.text("label.member.name"), 50);
+        Set<String> roleIds = EnterpriseValidation.identifiers(request.roleIds(), 1, 10, Messages.text("label.role"));
+        Set<String> teamIds = EnterpriseValidation.identifiers(request.teamIds(), 0, 10, Messages.text("label.team"));
         String note = EnterpriseValidation.invitationNote(request.note());
         roles.validateAssignments(actor, roleIds);
         policy.validateTeams(actor.enterpriseId(), teamIds, null, true);
@@ -111,7 +113,7 @@ public class InvitationManagementService {
         try {
             invitations.insert(invitation, note, now);
         } catch (DuplicateKeyException exception) {
-            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_EXISTS", "此邮箱已有待接受的邀请，请查看现有记录。");
+            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_EXISTS", Messages.text("error.enterprise.invitationManagementService.create.1"));
         }
         var enterprise = views.enterprise(actor.enterpriseId()).orElseThrow();
         var member = views.member(actor.enterpriseId(), actor.userId());
@@ -119,7 +121,7 @@ public class InvitationManagementService {
             new MailDeliveryContent(email, token.value(), enterprise.name(), member.displayName(),
                 enterprises.timezone(actor.enterpriseId()), invitation.expiresAt().toString(), note));
         audit.record(actor.enterpriseId(), actor.user(), "invitation.create", "invitation", invitation.id(),
-            "创建成员邀请", Map.of("roleIds", roleIds, "teamIds", teamIds));
+            Messages.text("text.enterprise.invitationManagementService.create.1"), Map.of("roleIds", roleIds, "teamIds", teamIds));
         return invitations.view(actor.enterpriseId(), invitation.id(), now);
     }
 
@@ -128,7 +130,7 @@ public class InvitationManagementService {
         authorize(actor);
         var invitation = pending(actor, id, revision);
         invitations.revoke(invitation, clock.instant());
-        audit.record(actor.enterpriseId(), actor.user(), "invitation.revoke", "invitation", id, "撤回成员邀请",
+        audit.record(actor.enterpriseId(), actor.user(), "invitation.revoke", "invitation", id, Messages.text("text.enterprise.invitationManagementService.revoke.1"),
             Map.of());
         return invitations.view(actor.enterpriseId(), id, clock.instant());
     }
@@ -140,22 +142,22 @@ public class InvitationManagementService {
         policy.validateIssuer(invitation);
         if (invitation.email() == null) {
             throw new ApiException(HttpStatus.CONFLICT, "INVITATION_NOT_EMAIL",
-                "此邀请无需发送邮件，请复制创建时生成的邀请码或链接。");
+                Messages.text("error.enterprise.invitationManagementService.resend.1"));
         }
         roles.validateAssignments(actor, Set.copyOf(invitation.roleIds()));
         long retryAfter = delivery.invitationRetryAfter(actor.enterpriseId(), id, clock.instant());
         if (retryAfter > 0) {
-            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "邀请邮件发送次数较多，请稍后重试。",
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", Messages.text("error.enterprise.invitationManagementService.resend.2"),
                 Map.of("retryAfterSeconds", retryAfter), Map.of());
         }
         var content = mail.previousInvitation(actor.enterpriseId(), id);
         if (!tokens.hash(content.token()).equals(invitation.tokenHash()) || !Instant.parse(content.expiresAt())
             .equals(invitation.expiresAt())) {
-            throw new IllegalStateException("邀请投递内容与当前有效链接不一致");
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationManagementService.resend.3"));
         }
         invitations.resend(invitation, clock.instant());
         mail.enqueueInvitation(actor.enterpriseId(), id, invitation.createdBy(), revision + 1, content);
-        audit.record(actor.enterpriseId(), actor.user(), "invitation.resend", "invitation", id, "重新发送邀请邮件",
+        audit.record(actor.enterpriseId(), actor.user(), "invitation.resend", "invitation", id, Messages.text("text.enterprise.invitationManagementService.resend.1"),
             Map.of());
         return invitations.view(actor.enterpriseId(), id, clock.instant());
     }

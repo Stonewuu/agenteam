@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -87,7 +89,7 @@ public class ChatOutboundService {
         var payload = (ObjectNode) cipher.decrypt(enterprise, "outbound", row.getId(), row.getPayloadEncrypted());
         if (payload.path("messageType").asText().equals("file")) {
             if (artifact == null ? !payload.path("syntheticFile").asBoolean() : !artifact.getId().equals(payload.path("artifactId").asText())) {
-                throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_REQUEST_CONFLICT", "同一发送请求不能更换成果。");
+                throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_REQUEST_CONFLICT", Messages.text("error.chat.chatOutboundService.file.1"));
             }
             return row;
         }
@@ -101,7 +103,7 @@ public class ChatOutboundService {
             .eq(ChatOutboundMessageRow::getId, row.getId()).isNull(ChatOutboundMessageRow::getFirstSubmittedAt)
             .set(ChatOutboundMessageRow::getPayloadEncrypted, cipher.encrypt(enterprise, "outbound", row.getId(), payload))
             .set(ChatOutboundMessageRow::getPayloadHash, json.hash(payload))) != 1) {
-            throw new IllegalStateException("成果发送记录保存失败");
+            throw new IllegalStateException(Messages.text("error.chat.chatOutboundService.file.2"));
         }
         return row;
     }
@@ -119,7 +121,7 @@ public class ChatOutboundService {
                 .eq(ChatOutboundMessageRow::getId, row.getId()).isNull(ChatOutboundMessageRow::getFirstSubmittedAt)
                 .set(ChatOutboundMessageRow::getPayloadEncrypted, cipher.encrypt(enterprise, "outbound", row.getId(), payload))
                 .set(ChatOutboundMessageRow::getPayloadHash, json.hash(payload))) != 1) {
-            throw new IllegalStateException("回复方式入口保存失败");
+            throw new IllegalStateException(Messages.text("error.chat.chatOutboundService.settings.1"));
         }
         return row;
     }
@@ -127,7 +129,7 @@ public class ChatOutboundService {
     @Transactional
     public ChatOutboundMessageRow cardProbe(String enterprise, String conversation, String botId, String operationId) {
         var row = text(enterprise, conversation, botId, null, null, "card-probe:" + operationId, "card_probe",
-            "请点击下方按钮，确认可以在飞书里修改回复方式。", null);
+            Messages.text("text.chat.chatOutboundService.cardProbe.1"), null);
         if (row.getFirstSubmittedAt() == null) {
             var payload = (ObjectNode) cipher.decrypt(enterprise, "outbound", row.getId(), row.getPayloadEncrypted());
             payload.put("replyCardProbe", true);
@@ -135,7 +137,7 @@ public class ChatOutboundService {
                     .eq(ChatOutboundMessageRow::getId, row.getId()).isNull(ChatOutboundMessageRow::getFirstSubmittedAt)
                     .set(ChatOutboundMessageRow::getPayloadEncrypted, cipher.encrypt(enterprise, "outbound", row.getId(), payload))
                     .set(ChatOutboundMessageRow::getPayloadHash, json.hash(payload))) != 1) {
-                throw new IllegalStateException("卡片检查消息保存失败");
+                throw new IllegalStateException(Messages.text("error.chat.chatOutboundService.cardProbe.1"));
             }
         }
         return row;
@@ -161,7 +163,7 @@ public class ChatOutboundService {
                 .set(!previous.isEmpty(), ChatOutboundMessageRow::getDependsOnOutboundId, previous.isEmpty() ? null : previous.getFirst().getId())
                 .set(ChatOutboundMessageRow::getPayloadEncrypted, cipher.encrypt(row.getEnterpriseId(), "outbound", row.getId(), payload))
                 .set(ChatOutboundMessageRow::getPayloadHash, json.hash(payload))) != 1) {
-            throw new IllegalStateException("卡片更新记录保存失败");
+            throw new IllegalStateException(Messages.text("error.chat.chatOutboundService.updateSettingsCard.1"));
         }
     }
 
@@ -205,7 +207,7 @@ public class ChatOutboundService {
             var payload = cipher.decrypt(enterprise, "outbound", existing.getId(), existing.getPayloadEncrypted());
             if (!payload.path("content").path("text").asText().equals(text) || !existing.getKind().equals(kind)
                 || !sourceHash.equals(payload.path("sourceTextHash").asText())) {
-                throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_REQUEST_CONFLICT", "同一发送请求不能更换内容。");
+                throw new ApiException(HttpStatus.CONFLICT, "CHAT_SEND_REQUEST_CONFLICT", Messages.text("error.chat.chatOutboundService.textPart.1"));
             }
             return existing;
         }
@@ -213,7 +215,7 @@ public class ChatOutboundService {
         var member = conversations.member(enterprise, conversation, botId);
         var bot = bots.selectOne(new LambdaQueryWrapper<ChatBotBindingRow>().eq(ChatBotBindingRow::getEnterpriseId, enterprise).eq(ChatBotBindingRow::getId, botId));
         if (bot == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_BOT_UNAVAILABLE", "机器人绑定不存在。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_BOT_UNAVAILABLE", Messages.text("error.chat.chatConnectionTransactions.bot.1"));
         }
         var app = integrations.selectOne(new LambdaQueryWrapper<EnterpriseIntegrationRow>().eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise)
             .eq(EnterpriseIntegrationRow::getId, bot.getConnectionId()));
@@ -239,7 +241,7 @@ public class ChatOutboundService {
             task = tasks.selectOne(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, enterprise)
                 .eq(CollaborationTaskRow::getId, taskId).eq(CollaborationTaskRow::getConversationId, conversation));
             if (task == null) {
-                throw ApiException.invalidField("taskId", "任务不属于当前会话。");
+                throw ApiException.invalidField("taskId", Messages.text("error.chat.chatOutboundService.textPart.2"));
             }
         }
         String replyTarget = replyTarget(group, task, replyTo);
@@ -261,7 +263,7 @@ public class ChatOutboundService {
             if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, enterprise)
                 .eq(CollaborationTaskRow::getId, taskId).eq(CollaborationTaskRow::getNextSequence, task.getNextSequence())
                 .setIncrBy(CollaborationTaskRow::getNextSequence, 1)) != 1) {
-                throw new IllegalStateException("协作任务发送顺序已发生变化");
+                throw new IllegalStateException(Messages.text("error.chat.chatOutboundService.textPart.3"));
             }
         }
         row.setPayloadEncrypted(cipher.encrypt(enterprise, "outbound", row.getId(), payload));
@@ -284,7 +286,7 @@ public class ChatOutboundService {
             .eq(ChatMessageRow::getEnterpriseId, task.getEnterpriseId()).eq(ChatMessageRow::getConversationId, conversation.getId())
             .eq(ChatMessageRow::getId, task.getOriginMessageId()));
         if (origin == null || origin.getPlatformMessageId() == null || origin.getPlatformMessageId().isBlank()) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_REPLY_UNAVAILABLE", "原消息已不可用，请重新发起任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_REPLY_UNAVAILABLE", Messages.text("error.chat.chatOutboundService.replyTarget.1"));
         }
         return origin.getPlatformMessageId();
     }

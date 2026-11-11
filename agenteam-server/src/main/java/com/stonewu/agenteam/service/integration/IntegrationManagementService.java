@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
 import com.stonewu.agenteam.mapper.integration.IntegrationConfigurationMapper;
@@ -67,10 +69,10 @@ public class IntegrationManagementService {
                 || Boolean.TRUE.equals(input.bindingEnabled()) || Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))
             || purpose.equals("chat_bot") && !Set.of("feishu", "wecom_aibot").contains(input.providerCode())
             || purpose.equals("enterprise") && input.providerCode().equals("wecom_aibot")) {
-            throw ApiException.invalidField("purpose", "请选择平台支持的企业接入或机器人接入。");
+            throw ApiException.invalidField("purpose", Messages.text("error.integration.integrationManagementService.create.1"));
         }
         if (purpose.equals("chat_bot") && (Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
-            throw ApiException.invalidField("purpose", "机器人接入不用于企业登录或个人通知，请在企业接入中配置这些功能。");
+            throw ApiException.invalidField("purpose", Messages.text("error.integration.integrationManagementService.create.2"));
         }
         String app = identifier(input.externalAppId(), "externalAppId", true);
         String tenant = identifier(input.externalTenantId(), "externalTenantId",
@@ -103,10 +105,10 @@ public class IntegrationManagementService {
         try {
             connections.insert(row);
         } catch (DuplicateKeyException duplicate) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ALREADY_CONFIGURED", "此企业应用已有接入配置，请维护已有配置。", duplicate);
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ALREADY_CONFIGURED", Messages.text("error.integration.integrationManagementService.create.3"), duplicate);
         }
         secrets.store(enterprise, row.getId(), input.secret(), actor.id(), 1, clock.instant());
-        audit.record(enterprise, actor, "integration.create", "integration", row.getId(), "创建企业接入配置",
+        audit.record(enterprise, actor, "integration.create", "integration", row.getId(), Messages.text("text.integration.integrationManagementService.create.1"),
             Map.of("providerCode", input.providerCode()));
         return queries.view(queries.require(enterprise, row.getId()));
     }
@@ -116,14 +118,14 @@ public class IntegrationManagementService {
         var row = current(actor, enterprise, system, id, revision, "integration.manage");
         if ("app_management".equals(row.getPurpose()) && (Boolean.TRUE.equals(input.bindingEnabled())
             || Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
-            throw ApiException.invalidField("bindingEnabled", "应用管理接入不用于成员绑定、登录或个人通知。");
+            throw ApiException.invalidField("bindingEnabled", Messages.text("error.integration.integrationManagementService.update.1"));
         }
         if ("chat_bot".equals(row.getPurpose()) && (Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
-            throw ApiException.invalidField("loginEnabled", "机器人接入不用于企业登录或个人通知，请在企业接入中配置这些功能。");
+            throw ApiException.invalidField("loginEnabled", Messages.text("error.integration.integrationManagementService.create.2"));
         }
         if ("bot".equals(row.getIdentityScope()) && (Boolean.TRUE.equals(input.bindingEnabled())
             || Boolean.TRUE.equals(input.loginEnabled()) || Boolean.TRUE.equals(input.messagingEnabled()))) {
-            throw ApiException.invalidField("providerCode", "企微智能机器人仅支持聊天配对，不能用于登录或个人通知。");
+            throw ApiException.invalidField("providerCode", Messages.text("error.integration.integrationManagementService.update.2"));
         }
         var changes = changes(row, actor);
         if (input.name() != null) {
@@ -145,7 +147,7 @@ public class IntegrationManagementService {
         if (Boolean.FALSE.equals(input.messagingEnabled())) {
             cancellations.cancel(enterprise, id, null, null, null);
         }
-        audit.record(enterprise, actor, "integration.update", "integration", id, "更新企业接入名称与能力设置", Map.of());
+        audit.record(enterprise, actor, "integration.update", "integration", id, Messages.text("text.integration.integrationManagementService.update.1"), Map.of());
         return queries.view(queries.require(enterprise, id));
     }
 
@@ -158,7 +160,7 @@ public class IntegrationManagementService {
             .set(EnterpriseIntegrationRow::getLastCheckStatus, "not_checked")
             .set(EnterpriseIntegrationRow::getLastCheckedAt, null).set(EnterpriseIntegrationRow::getLastCheckedRevision, null)
             .set(EnterpriseIntegrationRow::getLastCheckErrorCode, null).set(EnterpriseIntegrationRow::getLastCheckErrorSummary, null));
-        audit.record(enterprise, actor, "integration.rotate_secret", "integration", id, "更换应用密钥并等待重新校验", Map.of());
+        audit.record(enterprise, actor, "integration.rotate_secret", "integration", id, Messages.text("text.integration.integrationManagementService.rotate.1"), Map.of());
         cancellations.cancel(enterprise, id, null, null, null);
         return queries.view(queries.require(enterprise, id));
     }
@@ -168,7 +170,7 @@ public class IntegrationManagementService {
                                          Boolean bindingEnabled, Boolean loginEnabled, Boolean messagingEnabled) {
         var row = current(actor, enterprise, system, id, revision, "integration.manage");
         if (!"feishu".equals(row.getProviderCode()) || !Set.of("enterprise", "app_management").contains(row.getPurpose())) {
-            throw ApiException.invalidField("connectionId", "请选择飞书企业接入或已有管理应用。");
+            throw ApiException.invalidField("connectionId", Messages.text("error.integration.integrationManagementService.configureFeishuEnterprise.1"));
         }
         boolean binding = bindingEnabled == null ? "app_management".equals(row.getPurpose()) || Boolean.TRUE.equals(row.getBindingEnabled()) : bindingEnabled;
         boolean login = loginEnabled == null ? "app_management".equals(row.getPurpose()) || Boolean.TRUE.equals(row.getLoginEnabled()) : loginEnabled;
@@ -179,31 +181,31 @@ public class IntegrationManagementService {
         if (!messaging) {
             cancellations.cancel(enterprise, id, null, null, null);
         }
-        audit.record(enterprise, actor, "integration.enterprise_setup", "integration", id, "完成飞书企业快捷配置", Map.of());
+        audit.record(enterprise, actor, "integration.enterprise_setup", "integration", id, Messages.text("text.integration.integrationManagementService.configureFeishuEnterprise.1"), Map.of());
     }
 
     public IntegrationView status(UserEntity actor, String enterprise, boolean system, String id, long revision, String status) {
         var row = current(actor, enterprise, system, id, revision, "integration.manage");
         if (!Set.of("enabled", "disabled").contains(status == null ? "" : status)) {
-            throw ApiException.invalidField("status", "请选择启用或停用接入。");
+            throw ApiException.invalidField("status", Messages.text("error.integration.integrationManagementService.status.1"));
         }
         if (status.equals("enabled") && (!row.getLastCheckStatus().equals("passed") || row.getIdentityVerifiedAt() == null
             || row.getExternalTenantId() == null && !"bot".equals(row.getIdentityScope()) || !secrets.configured(enterprise, id))) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_CHECK_REQUIRED", "请先校验当前应用密钥与配置，再启用接入。");
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_CHECK_REQUIRED", Messages.text("error.integration.integrationManagementService.status.2"));
         }
         save(row, changes(row, actor).set(EnterpriseIntegrationRow::getStatus, status));
         if (status.equals("disabled")) {
             cancellations.cancel(enterprise, id, null, null, null);
         }
         audit.record(enterprise, actor, "integration.status", "integration", id,
-            status.equals("enabled") ? "启用企业接入" : "停用企业接入", Map.of("status", status));
+            status.equals("enabled") ? Messages.text("text.integration.integrationManagementService.status.1") : Messages.text("text.integration.integrationManagementService.status.2"), Map.of("status", status));
         return queries.view(queries.require(enterprise, id));
     }
 
     public void delete(UserEntity actor, String enterprise, boolean system, String id, long revision) {
         var row = current(actor, enterprise, system, id, revision, "integration.manage");
         if (row.getStatus().equals("enabled")) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ENABLED", "请先停用接入，再执行删除。");
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ENABLED", Messages.text("error.integration.integrationManagementService.delete.1"));
         }
         cancellations.requireNoActive(enterprise, id);
         int revokedBindings = bindingRevocations.revokeConnection(row);
@@ -211,7 +213,7 @@ public class IntegrationManagementService {
             .set(EnterpriseIntegrationRow::getBindingEnabled, false).set(EnterpriseIntegrationRow::getLoginEnabled, false)
             .set(EnterpriseIntegrationRow::getMessagingEnabled, false)
             .set(EnterpriseIntegrationRow::getDeletedAt, clock.instant()).set(EnterpriseIntegrationRow::getDeletedToken, id));
-        audit.record(enterprise, actor, "integration.delete", "integration", id, "删除已停用的企业接入配置并解除其成员绑定",
+        audit.record(enterprise, actor, "integration.delete", "integration", id, Messages.text("text.integration.integrationManagementService.delete.1"),
             Map.of("revokedBindings", revokedBindings));
     }
 
@@ -229,10 +231,10 @@ public class IntegrationManagementService {
         try {
             save(row, update);
         } catch (DuplicateKeyException duplicate) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ALREADY_CONFIGURED", "此企业应用已配置，请使用已有接入。", duplicate);
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_ALREADY_CONFIGURED", Messages.text("error.integration.integrationManagementService.recordCheck.1"), duplicate);
         }
         audit.record(row.getEnterpriseId(), actor, "integration.check", "integration", row.getId(),
-            check.result() == null ? "应用校验未通过" : "应用校验通过", Map.of("passed", check.result() != null));
+            check.result() == null ? Messages.text("text.integration.integrationManagementService.recordCheck.1") : Messages.text("text.integration.integrationManagementService.recordCheck.2"), Map.of("passed", check.result() != null));
         return queries.view(queries.require(row.getEnterpriseId(), row.getId()));
     }
 
@@ -264,7 +266,7 @@ public class IntegrationManagementService {
         }
         String text = ResourceInput.text(value, field, 191, required);
         if (text != null && !text.isEmpty() && !text.matches("[A-Za-z0-9_-]+")) {
-            throw ApiException.invalidField(field, "请输入平台提供的完整编号，不要包含空格或其他符号。");
+            throw ApiException.invalidField(field, Messages.text("error.integration.integrationManagementService.identifier.1"));
         }
         return text == null || text.isEmpty() ? null : text;
     }

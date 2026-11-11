@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.sandbox.SandboxExecutionService;
 import com.sun.net.httpserver.HttpExchange;
@@ -36,11 +38,11 @@ public final class SandboxServerController implements HttpHandler {
         try {
             String supplied = exchange.getRequestHeaders().getFirst("Authorization");
             if (supplied == null || !MessageDigest.isEqual(authorization, supplied.getBytes(StandardCharsets.UTF_8))) {
-                reply(exchange, 401, "执行服务认证失败");
+                reply(exchange, 401, Messages.text("text.sandbox.sandboxServerController.handle.1"));
                 return;
             }
             if (!id.matches("[0-9a-f-]{36}") || exchange.getRequestURI().getRawQuery() != null) {
-                reply(exchange, 404, "执行请求不存在");
+                reply(exchange, 404, Messages.text("text.sandbox.sandboxServerController.handle.2"));
                 return;
             }
             if (exchange.getRequestMethod().equals("DELETE")) {
@@ -49,7 +51,7 @@ public final class SandboxServerController implements HttpHandler {
                 return;
             }
             if (!exchange.getRequestMethod().equals("POST")) {
-                reply(exchange, 405, "请求方法不受支持");
+                reply(exchange, 405, Messages.text("text.sandbox.sandboxServerController.handle.3"));
                 return;
             }
             try (var result = executions.execute(id, exchange.getRequestBody())) {
@@ -62,10 +64,10 @@ public final class SandboxServerController implements HttpHandler {
                 }
             }
         } catch (Exception failure) {
-            LOG.error("独立执行请求失败，执行编号 {}，方法 {}，路径 {}", id, exchange.getRequestMethod(), path, failure);
+            LOG.error(Messages.log("log.sandbox.sandboxServerController.handle.1"), id, exchange.getRequestMethod(), path, failure);
             if (!committed) {
                 int status = failure instanceof ApiException known ? known.getStatusCode().value() : 500;
-                reply(exchange, status, "执行服务未能完成本次请求");
+                reply(exchange, status, Messages.text("text.sandbox.sandboxServerController.handle.4"));
             }
         } finally {
             exchange.close();

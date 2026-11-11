@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.integration.entity.ChannelAccessToken;
 import com.stonewu.agenteam.model.integration.entity.ChannelApplicationCheck;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
@@ -24,7 +26,7 @@ public interface IntegrationProvider {
 
     default Map<String, Object> normalizeConfiguration(Map<String, Object> configuration) {
         if (configuration != null && !configuration.isEmpty()) {
-            throw ApiException.invalidField("configuration", "此平台没有可设置的额外参数。");
+            throw ApiException.invalidField("configuration", Messages.text("error.integration.integrationProvider.normalizeConfiguration.1"));
         }
         return Map.of();
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool.provider;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.tool.api.ToolProvider;
 import org.springframework.http.HttpStatus;
@@ -20,7 +22,7 @@ public class ToolProviderRegistry {
         var values = new LinkedHashMap<String, ToolProvider>();
         for (var provider : providers) {
             if (values.putIfAbsent(provider.type(), provider) != null) {
-                throw new IllegalStateException("工具来源类型重复登记");
+                throw new IllegalStateException(Messages.text("error.tool.toolProviderRegistry.init.1"));
             }
         }
         this.providers = Map.copyOf(values);
@@ -30,7 +32,7 @@ public class ToolProviderRegistry {
         var provider = providers.get(type);
         if (provider == null) {
             throw new ApiException(HttpStatus.CONFLICT, "TOOL_SOURCE_UNAVAILABLE",
-                "本次工具来源已不可用，请联系维护者检查。");
+                Messages.text("error.tool.toolProviderRegistry.require.1"));
         }
         return provider;
     }

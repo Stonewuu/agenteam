@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.user.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -8,9 +10,9 @@ import java.util.Optional;
  */
 public enum UserLanguage {
     SIMPLIFIED_CHINESE("zh-CN",
-        "\n\n用户的使用语言是简体中文。请默认使用简体中文回复；用户明确要求其他语言时，按用户要求回复。代码、命令和专有名称保留原文。"),
+        Messages.source("text.user.userLanguage.SIMPLIFIED_CHINESE.1")),
     ENGLISH("en",
-        "\n\n用户的使用语言是英语。请默认使用英语回复；用户明确要求其他语言时，按用户要求回复。代码、命令和专有名称保留原文。");
+        Messages.source("text.user.userLanguage.ENGLISH.1"));
 
     private final String code;
     private final String instruction;

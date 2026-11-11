@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.tool.ToolPayloadPreview;
@@ -140,13 +142,13 @@ public class LiveConversationEventService {
                     return reset("events_expired");
                 }
                 if (clock.millis() - heartbeatAt >= 15000) {
-                    output.add(ServerSentEvent.builder().comment("保持连接").build());
+                    output.add(ServerSentEvent.builder().comment(Messages.text("text.execution.conversationEventService.poll.1")).build());
                     heartbeatAt = clock.millis();
                 }
                 return new Batch(output, ready && latest.activeRunId() == null
                     && cursor.sequence().equals(latest.cursor().sequence()));
             } catch (RuntimeException failed) {
-                LOG.warn("实时连接读取失败，将重新加载完整快照，会话编号 {}，请求编号 {}，请求方法 {}，请求路径 {}",
+                LOG.warn(Messages.log("log.execution.liveConversationEventService.poll.1"),
                     conversation, request.id(), request.method(), request.path(), failed);
                 return reset("data_incomplete");
             }

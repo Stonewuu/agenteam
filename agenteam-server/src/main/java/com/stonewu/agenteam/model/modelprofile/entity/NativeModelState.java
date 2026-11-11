@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.modelprofile.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +31,7 @@ public record NativeModelState(int formatVersion, String protocol, String provid
     public record Span(int start, int length) {
         public Span {
             if (start < 0 || length < 0) {
-                throw new IllegalArgumentException("模型历史文字的位置不能为负数。");
+                throw new IllegalArgumentException(Messages.text("error.modelprofile.nativeModelState.init.1"));
             }
         }
     }

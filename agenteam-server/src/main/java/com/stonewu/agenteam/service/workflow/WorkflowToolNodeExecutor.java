@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.agent.AgentPublicEventMapper.Scope;
 import com.stonewu.agenteam.mapper.execution.RunApprovalMapper;
@@ -74,10 +76,10 @@ public class WorkflowToolNodeExecutor {
                 if (approval.isPresent() && !approval.get().status().equals("approved")) {
                     if (!approval.get().status().equals("rejected")) {
                         throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_ALREADY_RESOLVED",
-                            "此操作尚未完成确认，暂时无法执行。");
+                            Messages.text("error.workflow.workflowToolNodeExecutor.execute.1"));
                     }
                     attempt.emit("TOOL_RESULT_END", "DENIED");
-                    throw new ApiException(HttpStatus.CONFLICT, "TOOL_USER_REJECTED", "用户已拒绝本次操作，未发送请求。");
+                    throw new ApiException(HttpStatus.CONFLICT, "TOOL_USER_REJECTED", Messages.text("error.workflow.workflowToolNodeExecutor.execute.2"));
                 }
             }
             attempt.emit("TOOL_RESULT_START", null);
@@ -89,7 +91,7 @@ public class WorkflowToolNodeExecutor {
                 var call = calls.find(context.run().enterpriseId(), attempt.call.id(), false).orElseThrow();
                 throw new ApiException(HttpStatus.BAD_GATEWAY,
                     call.errorCode() == null ? "TOOL_EXECUTION_FAILED" : call.errorCode(),
-                    call.errorSummary() == null ? "当前工具没有完成请求。" : call.errorSummary());
+                    call.errorSummary() == null ? Messages.text("error.workflow.workflowToolNodeExecutor.execute.3") : call.errorSummary());
             }
             return WorkflowNodeResult.completed(output, "default");
         }), ToolAttempt::close);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import io.agentscope.core.exception.CompositeAgentException;
 import io.agentscope.core.model.ModelHttpException;
@@ -53,12 +55,12 @@ public final class ModelFailureMapper {
 
     private static ApiException temporary() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_TEMPORARY_FAILURE",
-            "模型服务暂时无法完成请求，已保存的内容仍可查看。");
+            Messages.text("error.execution.modelFailureMapper.temporary.1"));
     }
 
     private static ApiException rejected(int status) {
         return new ApiException(HttpStatus.BAD_GATEWAY,
             status == 401 || status == 403 ? "MODEL_ACCESS_DENIED" : "MODEL_REQUEST_FAILED",
-            status == 401 || status == 403 ? "模型服务拒绝了当前访问，请联系管理员检查配置。" : "模型服务没有接受本次请求，请联系管理员检查配置。");
+            status == 401 || status == 403 ? Messages.text("error.execution.modelFailureMapper.rejected.1") : Messages.text("error.execution.modelFailureMapper.rejected.2"));
     }
 }

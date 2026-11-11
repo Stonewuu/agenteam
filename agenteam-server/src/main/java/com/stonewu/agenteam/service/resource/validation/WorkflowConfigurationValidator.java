@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource.validation;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.resource.entity.DependencyBinding;
@@ -41,7 +43,7 @@ public class WorkflowConfigurationValidator implements ResourceConfigValidator {
         Set<String> nodes = new HashSet<>(), edges = new HashSet<>();
         for (var node : config.path("nodes")) {
             if (!nodes.add(node.path("nodeId").asText())) {
-                throw ApiException.invalidField("config.nodes", "节点编号不能重复。");
+                throw ApiException.invalidField("config.nodes", Messages.text("error.resource.workflowConfigurationValidator.validateDraftGraph.1"));
             }
             if (node.path("type").asText().equals("loop")) {
                 validateDraftGraph(node.path("config").path("body"));
@@ -49,7 +51,7 @@ public class WorkflowConfigurationValidator implements ResourceConfigValidator {
         }
         for (var edge : config.path("edges")) {
             if (!edges.add(edge.path("edgeId").asText())) {
-                throw ApiException.invalidField("config.edges", "连线编号不能重复。");
+                throw ApiException.invalidField("config.edges", Messages.text("error.resource.workflowConfigurationValidator.validateDraftGraph.2"));
             }
         }
     }

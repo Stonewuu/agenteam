@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -168,7 +170,7 @@ public class ChatGroupActivationService {
         }
         var entry = bots.require(group.getEnterpriseId(), group.getIngressBotId());
         outbound.text(group.getEnterpriseId(), group.getId(), receiver.getId(), null, null, "group-entry:" + event.messageId(),
-            "guidance", "本群目前由“" + entry.getRoleName() + "”接收任务，请 @ 该机器人继续。", event.messageId());
+            "guidance", Messages.text("text.chat.chatGroupActivationService.guideReceiver.1", entry.getRoleName()), event.messageId());
     }
 
     public static Map<String, Object> visibleLimits(ResourceJson json, ChatConversationRow group) {

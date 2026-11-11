@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.security;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -50,11 +52,11 @@ public class CredentialSecretValidation {
                     throw invalid();
                 }
             }
-            default -> throw ApiException.invalidField("kind", "请选择支持的凭据类型。");
+            default -> throw ApiException.invalidField("kind", Messages.text("error.security.credentialSecretValidation.validate.1"));
         }
     }
 
     private static ApiException invalid() {
-        return ApiException.invalidField("secret", "请填写当前认证类型要求的完整凭据，不能使用空值或控制字符。");
+        return ApiException.invalidField("secret", Messages.text("error.security.credentialSecretValidation.invalid.1"));
     }
 }

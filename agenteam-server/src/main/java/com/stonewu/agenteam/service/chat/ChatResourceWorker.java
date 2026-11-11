@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
@@ -36,7 +38,7 @@ public class ChatResourceWorker {
             }
             runOnce();
         } catch (RuntimeException failure) {
-            LOG.warn("聊天附件后台工作本轮未完成", new ChannelProviderException("CHAT_RESOURCE_WORKER_FAILED", "附件处理稍后继续。", failure));
+            LOG.warn(Messages.log("log.chat.chatResourceWorker.poll.1"), new ChannelProviderException("CHAT_RESOURCE_WORKER_FAILED", Messages.text("error.chat.chatResourceWorker.poll.1"), failure));
         }
     }
 
@@ -52,8 +54,8 @@ public class ChatResourceWorker {
             transactions.fetched(lease, prepared, content);
         } catch (RuntimeException failure) {
             String code = failure instanceof ApiException api ? api.code() : failure instanceof ChannelProviderException platform ? platform.code() : "CHAT_RESOURCE_DOWNLOAD_FAILED";
-            LOG.warn("聊天附件处理失败，企业={}，资源={}", lease.enterpriseId(), lease.resourceId(),
-                new ChannelProviderException(code, "平台附件暂时无法读取。", failure));
+            LOG.warn(Messages.log("log.chat.chatResourceWorker.runOnce.1"), lease.enterpriseId(), lease.resourceId(),
+                new ChannelProviderException(code, Messages.text("error.chat.chatResourceWorker.runOnce.1"), failure));
             transactions.failed(lease, code, !(failure instanceof ApiException));
         }
         return true;

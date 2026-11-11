@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +55,7 @@ public class FeishuSetupWorker {
                 });
             } catch (RuntimeException failure) {
                 slots.release();
-                LOG.error("飞书创建任务无法领取，创建记录={}", candidate.getId(), failure);
+                LOG.error(Messages.log("log.integration.feishuSetupWorker.tick.1"), candidate.getId(), failure);
             }
         }
     }

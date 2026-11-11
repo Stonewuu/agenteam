@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.ApiOperationResult;
 import com.stonewu.agenteam.model.todo.request.TodoStatusRequest;
@@ -83,7 +85,7 @@ public class TodoApiService {
         long revision = RequestPreconditions.revision(request);
         return execute(enterprise, id, true, request, actor -> {
             management.delete(actor, id, revision);
-            audit.record(actor.enterpriseId(), actor.user(), "todo.delete", "todo", id, "删除待办", Map.of());
+            audit.record(actor.enterpriseId(), actor.user(), "todo.delete", "todo", id, Messages.text("text.tool.toolDisplayNameMapper.BUILTINS.13"), Map.of());
             return ApiOperationResult.of(200, Map.of());
         });
     }
@@ -96,11 +98,11 @@ public class TodoApiService {
             return;
         }
         String summary = switch (action) {
-            case "todo.create" -> "创建待办";
-            case "todo.update" -> "修改待办内容";
-            case "todo.status" -> "修改待办状态";
-            case "todo.transfer" -> "转交待办";
-            default -> throw new IllegalArgumentException("待办活动类型不正确");
+            case "todo.create" -> Messages.text("text.tool.toolDisplayNameMapper.BUILTINS.9");
+            case "todo.update" -> Messages.text("text.todo.todoApiService.record.1");
+            case "todo.status" -> Messages.text("text.todo.todoApiService.record.2");
+            case "todo.transfer" -> Messages.text("text.tool.toolDisplayNameMapper.BUILTINS.12");
+            default -> throw new IllegalArgumentException(Messages.text("error.todo.todoApiService.record.1"));
         };
         audit.record(actor.enterpriseId(), actor.user(), action, "todo", result.id(), summary, Map.of());
     }

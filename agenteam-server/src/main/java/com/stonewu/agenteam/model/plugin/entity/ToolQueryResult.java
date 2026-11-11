@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.plugin.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -10,7 +12,7 @@ public record ToolQueryResult(Status status, JsonNode result) {
 
     public ToolQueryResult {
         if (status == null || (status == Status.COMPLETED && result == null)) {
-            throw new IllegalArgumentException("工具查询结果不完整");
+            throw new IllegalArgumentException(Messages.text("error.plugin.toolQueryResult.init.1"));
         }
     }
 

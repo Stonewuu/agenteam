@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.user;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthTokenMapper;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
 import com.stonewu.agenteam.model.user.request.EmailChangeRequest;
@@ -43,13 +45,13 @@ public class EmailChangeService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void request(UserEntity actor, EmailChangeRequest request, String source) {
         if (request == null) {
-            throw ApiException.invalidField("newEmail", "请输入新邮箱。");
+            throw ApiException.invalidField("newEmail", Messages.text("error.user.emailChangeService.request.1"));
         }
         String email = AccountInputValidation.email(request.newEmail(), "newEmail");
         behavior.requireOperation(actor.id(), AccountOperation.CHANGE_EMAIL);
         UserEntity user = profiles.verifyCurrentPassword(actor, request.currentPassword(), "email-change:" + source);
         if (user.emailVerifiedAt() != null && email.equalsIgnoreCase(user.email())) {
-            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_VERIFIED", "这个邮箱已经完成验证，无需再次申请。");
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_VERIFIED", Messages.text("error.user.emailChangeService.request.2"));
         }
         Instant now = clock.instant();
         long wait = tokens.mailRetryAfter(user.id(), "email_verify", now);

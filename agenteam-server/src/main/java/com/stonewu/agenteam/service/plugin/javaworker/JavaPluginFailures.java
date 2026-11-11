@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin.javaworker;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -44,7 +46,7 @@ final class JavaPluginFailures {
     }
 
     static Throwable decode(JsonNode value) {
-        var failure = new IllegalStateException(value.path("message").asText("插件未返回具体原因"));
+        var failure = new IllegalStateException(value.path("message").asText(Messages.text("error.plugin.javaPluginFailures.decode.1")));
         var frames = new ArrayList<StackTraceElement>();
         for (var frame : value.path("stack")) {
             frames.add(new StackTraceElement(frame.path("class").asText(), frame.path("method").asText(),

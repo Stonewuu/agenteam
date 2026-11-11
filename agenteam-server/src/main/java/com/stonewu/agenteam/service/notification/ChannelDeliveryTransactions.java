@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.integration.IntegrationConfigurationMapper;
@@ -125,7 +127,7 @@ public class ChannelDeliveryTransactions {
             return;
         }
         if (row.getAttemptCount() >= row.getMaxAttempts()) {
-            finish(row, lease, "failed", "CHANNEL_ATTEMPTS_EXHAUSTED", "通知发送已用尽本次允许的尝试次数。");
+            finish(row, lease, "failed", "CHANNEL_ATTEMPTS_EXHAUSTED", Messages.text("text.notification.channelDeliveryTransactions.complete.1"));
             return;
         }
         long[] backoff = {30, 120, 600, 1800};
@@ -142,7 +144,7 @@ public class ChannelDeliveryTransactions {
         if (owned != null && ChannelDeliveryStore.ACTIVE.contains(owned.delivery().getStatus())) {
             if ("sending".equals(owned.delivery().getStatus())) {
                 // 请求开始后的异常必须通过 complete 保存为结果未知，不能伪装成发送前等待。
-                throw new IllegalStateException("已经开始的通知请求不能退回发送前等待");
+                throw new IllegalStateException(Messages.text("error.notification.channelDeliveryTransactions.defer.1"));
             }
             waitUntil(owned.delivery(), lease, clock.instant().plus(delay), code, summary);
         }
@@ -156,19 +158,19 @@ public class ChannelDeliveryTransactions {
             return null;
         }
         if (lease.exhausted() || row.getAttemptCount() >= row.getMaxAttempts()) {
-            finish(row, lease, "failed", "CHANNEL_RECOVERY_EXHAUSTED", "通知发送或恢复次数已达到上限。");
+            finish(row, lease, "failed", "CHANNEL_RECOVERY_EXHAUSTED", Messages.text("text.notification.channelDeliveryTransactions.ready.1"));
             return null;
         }
         if (!row.getExpiresAt().isAfter(clock.instant())) {
-            finish(row, lease, "expired", "NOTIFICATION_EXPIRED", "此通知已超过发送有效期。");
+            finish(row, lease, "expired", "NOTIFICATION_EXPIRED", Messages.text("text.notification.channelDeliveryTransactions.ready.2"));
             return null;
         }
         if (!safeRetry(row, clock.instant())) {
-            finish(row, lease, "unknown", "CHANNEL_RESULT_UNKNOWN", "此前请求可能已被接受，已停止自动重试。");
+            finish(row, lease, "unknown", "CHANNEL_RESULT_UNKNOWN", Messages.text("text.notification.channelDeliveryTransactions.ready.3"));
             return null;
         }
         if (!owned.activeEnterprise() || owned.notice() == null) {
-            finish(row, lease, "blocked", "ENTERPRISE_UNAVAILABLE", "企业或通知当前不可用。");
+            finish(row, lease, "blocked", "ENTERPRISE_UNAVAILABLE", Messages.text("text.notification.channelDeliveryTransactions.ready.4"));
             return null;
         }
         var connection = policy.connection(row.getEnterpriseId(), row.getConnectionId());
@@ -180,7 +182,7 @@ public class ChannelDeliveryTransactions {
             return null;
         }
         if (row.getPayloadJson() == null || !payloads.hash(payloads.decode(row.getPayloadJson())).equals(row.getPayloadHash())) {
-            finish(row, lease, "failed", "CHANNEL_CONTENT_UNAVAILABLE", "原发送内容不可用，不能继续发送。");
+            finish(row, lease, "failed", "CHANNEL_CONTENT_UNAVAILABLE", Messages.text("text.notification.channelDeliveryTransactions.ready.5"));
             return null;
         }
         if ("sending".equals(row.getStatus())) {
@@ -198,7 +200,7 @@ public class ChannelDeliveryTransactions {
 
     private void waitUntil(NotificationChannelDeliveryRow row, JobLease lease, Instant next, String code, String summary) {
         if (!next.isBefore(row.getExpiresAt()) || !safeRetry(row, next)) {
-            finish(row, lease, "expired", "NOTIFICATION_RETRY_EXPIRED", "在通知有效期内无法继续等待发送。");
+            finish(row, lease, "expired", "NOTIFICATION_RETRY_EXPIRED", Messages.text("text.notification.channelDeliveryTransactions.waitUntil.1"));
             return;
         }
         row.setStatus("retry_wait");
@@ -214,7 +216,7 @@ public class ChannelDeliveryTransactions {
         row.setStatus(uncertain ? "unknown" : status);
         row.setNextAttemptAt(null);
         row.setLastErrorCode(code);
-        row.setLastErrorSummary(uncertain ? "此前请求可能已被平台接受；" + (summary == null ? "最终结果无法确认。" : summary) : summary);
+        row.setLastErrorSummary(uncertain ? Messages.text("error.notification.channelDeliveryTransactions.finish.1", (summary == null ? Messages.text("error.notification.channelDeliveryTransactions.finish.2") : summary)) : summary);
         store.save(row);
         String jobStatus = "accepted".equals(row.getStatus()) ? "completed" : "cancelled".equals(row.getStatus()) ? "cancelled" : "failed";
         requireFinished(jobs.finish(lease, jobStatus, code, row.getLastErrorSummary(), clock.instant(), clock.instant()));
@@ -223,7 +225,7 @@ public class ChannelDeliveryTransactions {
 
     private void requireFinished(boolean finished) {
         if (!finished) {
-            throw new IllegalStateException("通知工作租约已变化，不能保存旧结果");
+            throw new IllegalStateException(Messages.text("error.notification.channelDeliveryTransactions.requireFinished.1"));
         }
     }
 

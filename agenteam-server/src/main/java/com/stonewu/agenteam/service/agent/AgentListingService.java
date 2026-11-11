@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentListingMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -69,36 +71,36 @@ public class AgentListingService {
 
     private void apply(AuthContext actor, ResourceRecord resource, AgentListingRequest value, boolean grantsProvided) {
         if (resource.kind() != ResourceKind.AGENT) {
-            throw ApiException.invalidField("listing", "只有数字员工可以设置上架与雇佣策略。");
+            throw ApiException.invalidField("listing", Messages.text("error.agent.agentListingService.apply.1"));
         }
         policy.editable(resource);
         if (value == null || value.listed() == null || value.hirePolicy() == null || !Set.of("automatic", "approval")
             .contains(value.hirePolicy())) {
-            throw ApiException.invalidField("listing", "请选择是否上架以及雇佣方式。");
+            throw ApiException.invalidField("listing", Messages.text("error.agent.agentListingService.apply.2"));
         }
         if (resource.publishedVersionId() == null) {
-            throw ApiException.invalidField("listing", "请先发布数字员工，再设置上架信息。");
+            throw ApiException.invalidField("listing", Messages.text("error.agent.agentListingService.apply.3"));
         }
         if (value.listed() && (!resource.status().equals("active") || versions.find(actor.enterpriseId(),
                 resource.publishedVersionId())
             .filter(version -> version.resourceId().equals(resource.id()) && version.status().equals("available"))
             .isEmpty())) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_UNAVAILABLE",
-                "数字员工已停用或发布版本不可用，暂时不能上架。");
+                Messages.text("error.agent.agentListingService.apply.4"));
         }
         var before = listings.find(actor.enterpriseId(), resource.id());
         saveUseGrants(actor, resource, value, !before.listed(), grantsProvided);
         listings.save(actor.enterpriseId(), resource.id(), value.listed(), value.hirePolicy(), actor.userId(),
             clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "agent.listing.update", "resource", resource.id(),
-            "修改数字员工的上架与雇佣方式",
+            Messages.text("text.agent.agentListingService.apply.1"),
             Map.of("before", before, "after", value));
     }
 
     private void saveUseGrants(AuthContext actor, ResourceRecord resource, AgentListingRequest value,
                                boolean newlyListed, boolean grantsProvided) {
         if (value.useGrants() != null && grantsProvided) {
-            throw ApiException.invalidField("useGrants", "请只在一处设置员工使用范围。");
+            throw ApiException.invalidField("useGrants", Messages.text("error.agent.agentListingService.saveUseGrants.1"));
         }
         var current = authorizations.grants(actor.enterpriseId(), resource.id());
         List<ResourceGrantSpec> requested = value.useGrants();
@@ -113,7 +115,7 @@ public class AgentListingService {
         }
         for (var grant : requested) {
             if (grant == null || !"use".equals(grant.capability())) {
-                throw ApiException.invalidField("useGrants", "上架范围只能设置使用授权。");
+                throw ApiException.invalidField("useGrants", Messages.text("error.agent.agentListingService.saveUseGrants.2"));
             }
         }
         var combined = new ArrayList<>(current.stream().filter(grant -> !grant.capability().equals("use")).toList());

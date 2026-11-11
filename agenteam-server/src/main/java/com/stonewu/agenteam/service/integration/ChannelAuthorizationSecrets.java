@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelIdentity;
@@ -49,7 +51,7 @@ public class ChannelAuthorizationSecrets {
         try {
             return json.writeValueAsString(encryption.encrypt(material, "channel-authorization:" + id));
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("授权材料无法保存", failure);
+            throw new IllegalStateException(Messages.text("error.integration.channelAuthorizationSecrets.encrypt.1"), failure);
         }
     }
 
@@ -57,7 +59,7 @@ public class ChannelAuthorizationSecrets {
         try {
             return encryption.decrypt(json.readValue(encrypted, EncryptedPayload.class), "channel-authorization:" + id, Material.class);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("授权材料无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.integration.channelAuthorizationSecrets.decrypt.1"), failure);
         }
     }
 
@@ -65,14 +67,14 @@ public class ChannelAuthorizationSecrets {
         try {
             return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("无法生成授权校验摘要", failure);
+            throw new IllegalStateException(Messages.text("error.integration.channelAuthorizationSecrets.digest.1"), failure);
         }
     }
 
     public record Material(String verifier, ChannelIdentity identity) {
         @Override
         public String toString() {
-            return "Material[授权材料已隐藏]";
+            return Messages.log("log.integration.channelAuthorizationSecrets.toString.1");
         }
     }
 }

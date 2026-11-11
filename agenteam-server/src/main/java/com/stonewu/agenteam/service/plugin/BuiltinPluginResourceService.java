@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.audit.AuditEventMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -65,7 +67,7 @@ public class BuiltinPluginResourceService {
         }
         var administrator = selection.administrator(enterprise);
         if (administrator.isEmpty()) {
-            LOG.warn("企业 {} 暂无有效管理员，内置插件将在下次初始化时补充", enterprise);
+            LOG.warn(Messages.log("log.plugin.builtinPluginResourceService.initialize.1"), enterprise);
             return;
         }
         for (var entry : registry.list()) {
@@ -84,7 +86,7 @@ public class BuiltinPluginResourceService {
         if (resource != null) {
             if (!resource.source().equals("builtin") || !resource.config().path("builtinCode").asText()
                 .equals(adapter.code())) {
-                throw new IllegalStateException("内置插件的固定编号与已有资源冲突");
+                throw new IllegalStateException(Messages.text("error.plugin.builtinPluginResourceService.initialize.1"));
             }
             // 已有版本、管理员停用状态和调整过的授权均保留，不因重启恢复。
             if (resource.deletedAt() != null || versions.find(enterprise, versionId).isPresent()) {
@@ -99,30 +101,19 @@ public class BuiltinPluginResourceService {
                     new ResourceGrantSpec("enterprise", enterprise, "use")), clock.instant());
         }
         resource = resources.find(enterprise, resourceId, false, true).orElseThrow();
-        versions.publish(versionId, resource, "更新平台内置插件", owner, List.of(), clock.instant());
+        versions.publish(versionId, resource, Messages.text("text.plugin.builtinPluginResourceService.initialize.1"), owner, List.of(), clock.instant());
         tools.publish(enterprise, versionId, adapter.tools(), clock.instant());
         resources.publish(resource, versionId, clock.instant());
-        audit.append(enterprise, "system:builtin-plugins", "系统", "resource.builtin.initialize", "resource",
-            resourceId, "初始化平台内置插件版本",
+        audit.append(enterprise, "system:builtin-plugins", Messages.text("text.plugin.builtinPluginResourceService.initialize.2"), "resource.builtin.initialize", "resource",
+            resourceId, Messages.text("text.plugin.builtinPluginResourceService.initialize.3"),
             json.write(json.tree(
                 Map.of("builtinCode", adapter.code(), "versionId", versionId, "versionNo", resource.nextVersionNo()))),
             UUID.randomUUID().toString(), clock.instant());
     }
 
     private ObjectNode configuration(BuiltinPluginAdapter adapter) {
-        String icon = switch (adapter.code()) {
-            case "platform_basics" -> "Library";
-            case "todo_management" -> "NotebookPen";
-            case "schedule_management", "workflow_management" -> "GitBranch";
-            case "web_read" -> "Telescope";
-            default -> "Box";
-        };
-        String color = switch (adapter.code()) {
-            case "todo_management" -> "mint";
-            case "schedule_management", "workflow_management" -> "blue";
-            case "web_read" -> "amber";
-            default -> "purple";
-        };
+        String icon = BuiltinPluginPresentation.icon(adapter.code());
+        String color = BuiltinPluginPresentation.color(adapter.code());
         ObjectNode config = json.tree(
                 Map.of("icon", icon, "color", color, "pluginType", "builtin", "builtinCode", adapter.code(),
                     "timeoutSeconds", 30, "enabledToolNames", adapter.tools().stream().map(tool -> tool.name()).toList()))

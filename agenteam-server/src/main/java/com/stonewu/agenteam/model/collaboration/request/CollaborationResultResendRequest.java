@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
 public record CollaborationResultResendRequest(
-        @NotBlank(message = "请重新打开发送窗口。") @Pattern(regexp = "[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}", message = "请重新打开发送窗口。") String requestId,
-        @NotNull(message = "请重新打开任务后发送。") @Positive(message = "请重新打开任务后发送。") Long expectedRevision,
-        @NotNull(message = "请重新确认回复方式。") @PositiveOrZero(message = "请重新确认回复方式。") Long expectedReplyModeRevision) {
+        @NotBlank(message = "{error.collaboration.collaborationResultResendRequest.requestId.1}") @Pattern(regexp = "[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}", message = "{error.collaboration.collaborationResultResendRequest.requestId.1}") String requestId,
+        @NotNull(message = "{error.collaboration.collaborationResultResendRequest.expectedRevision.1}") @Positive(message = "{error.collaboration.collaborationResultResendRequest.expectedRevision.1}") Long expectedRevision,
+        @NotNull(message = "{error.collaboration.collaborationResultResendRequest.expectedReplyModeRevision.1}") @PositiveOrZero(message = "{error.collaboration.collaborationResultResendRequest.expectedReplyModeRevision.1}") Long expectedReplyModeRevision) {
 }

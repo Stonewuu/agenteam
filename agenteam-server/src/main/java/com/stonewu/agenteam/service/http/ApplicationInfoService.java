@@ -19,4 +19,10 @@ public class ApplicationInfoService {
     public ApplicationInfoResponse current() {
         return information;
     }
+
+    public String webReaderUserAgent() {
+        String version = information.version();
+        String product = version != null && version.matches("[A-Za-z0-9._+-]+") ? "AgenTeam/" + version : "AgenTeam";
+        return "Mozilla/5.0 (compatible; " + product + "; +https://github.com/Stonewuu/agenteam)";
+    }
 }

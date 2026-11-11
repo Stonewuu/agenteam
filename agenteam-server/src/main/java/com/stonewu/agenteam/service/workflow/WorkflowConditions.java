@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -25,11 +27,11 @@ public class WorkflowConditions {
 
     private void validate(JsonNode condition, Set<String> previous, int depth, int[] count) {
         if (depth > 5) {
-            throw WorkflowExpressions.syntax("条件最多嵌套五层。");
+            throw WorkflowExpressions.syntax(Messages.text("error.workflow.workflowConditions.validate.1"));
         }
         if (condition.has("field")) {
             if (++count[0] > 50) {
-                throw WorkflowExpressions.syntax("比较条件不能超过五十个。");
+                throw WorkflowExpressions.syntax(Messages.text("error.workflow.workflowConditions.validate.2"));
             }
             expressions.validateSelector(condition.path("field").asText(), previous);
             expressions.validateTemplates(condition.get("value"), previous);
@@ -68,7 +70,7 @@ public class WorkflowConditions {
             return !left.isMissingNode();
         }
         if (left.isMissingNode()) {
-            throw failure("WORKFLOW_INPUT_MISSING", "条件需要的输入或步骤结果不存在，请先判断字段是否存在。");
+            throw failure("WORKFLOW_INPUT_MISSING", Messages.text("error.workflow.workflowConditions.evaluate.1"));
         }
         var right = expressions.resolve(condition.path("value"), input, outputs);
         return switch (operator) {
@@ -80,12 +82,12 @@ public class WorkflowConditions {
             case "lte" -> compare(left, right) <= 0;
             case "in" -> {
                 if (!right.isArray()) {
-                    throw failure("WORKFLOW_COMPARISON_INVALID", "在这些值中判断需要提供数组。");
+                    throw failure("WORKFLOW_COMPARISON_INVALID", Messages.text("error.workflow.workflowConditions.evaluate.2"));
                 }
                 yield contains(right, left);
             }
             case "contains" -> contains(left, right);
-            default -> throw failure("WORKFLOW_CONDITION_INVALID", "条件使用了不支持的比较方式。");
+            default -> throw failure("WORKFLOW_CONDITION_INVALID", Messages.text("error.workflow.workflowConditions.evaluate.3"));
         };
     }
 
@@ -96,7 +98,7 @@ public class WorkflowConditions {
         if (left.isTextual() && right.isTextual()) {
             return left.asText().compareTo(right.asText());
         }
-        throw failure("WORKFLOW_COMPARISON_INVALID", "大小比较必须使用两个数字或两段文字。");
+        throw failure("WORKFLOW_COMPARISON_INVALID", Messages.text("error.workflow.workflowConditions.compare.1"));
     }
 
     private boolean contains(JsonNode container, JsonNode value) {
@@ -111,7 +113,7 @@ public class WorkflowConditions {
             }
             return false;
         }
-        throw failure("WORKFLOW_COMPARISON_INVALID", "包含判断需要文字或数组，并使用相符的值类型。");
+        throw failure("WORKFLOW_COMPARISON_INVALID", Messages.text("error.workflow.workflowConditions.contains.1"));
     }
 
     private boolean equal(JsonNode left, JsonNode right) {

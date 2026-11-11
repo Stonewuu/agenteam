@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin.javaworker;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -24,17 +26,17 @@ public final class JavaPluginProtocol {
                 return mapper.readTree(bytes.toByteArray());
             }
             if (bytes.size() >= MAX_BYTES) {
-                throw new IOException("插件返回内容超过限制");
+                throw new IOException(Messages.text("error.plugin.javaPluginProtocol.read.1"));
             }
             bytes.write(next);
         }
-        throw new EOFException("插件进程提前结束");
+        throw new EOFException(Messages.text("error.plugin.javaPluginProtocol.read.2"));
     }
 
     public void write(OutputStream output, Object value) throws IOException {
         byte[] bytes = mapper.writeValueAsBytes(value);
         if (bytes.length > MAX_BYTES) {
-            throw new IOException("插件通信内容超过限制");
+            throw new IOException(Messages.text("error.plugin.javaPluginProtocol.write.1"));
         }
         output.write(bytes);
         output.write('\n');

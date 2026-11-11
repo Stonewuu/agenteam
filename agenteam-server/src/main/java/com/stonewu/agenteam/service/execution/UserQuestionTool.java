@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
@@ -30,8 +32,8 @@ public class UserQuestionTool {
             "options", Map.of("type", "array", "items", option, "maxItems", 4)),
             "required", List.of("question"), "additionalProperties", false));
         definition = new ToolDefinition(NAME,
-            "向当前用户提问并等待回答，可提供至多四个选项及说明，最多标记一个推荐选项。用户始终可以自由输入。仅在确实需要用户补充信息或作出选择时使用，不能代替业务操作审批，也不要重复询问已知信息。工具返回的是用户回答，之后继续处理原任务。",
-            json.hash(schema), schema, null, json.tree(Map.of("title", "询问用户", "readOnlyHint", true)),
+            Messages.source("text.execution.userQuestionTool.init.1"),
+            json.hash(schema), schema, null, json.tree(Map.of("title", Messages.text("text.execution.questionConversationWriter.save.1"), "readOnlyHint", true)),
             "read", false, false, false, List.of(), 30);
     }
 
@@ -41,7 +43,7 @@ public class UserQuestionTool {
         }
         String kind = run.executionConfig().has("workflowId") ? "workflow" : "agent";
         String resource = run.executionConfig().path(kind + "Id").asText();
-        var binding = new ExecutionToolBinding(resource, run.agentVersionId(), kind, "对话", null, definition,
+        var binding = new ExecutionToolBinding(resource, run.agentVersionId(), kind, Messages.text("text.execution.userQuestionTool.list.1"), null, definition,
             json.tree(Map.of("userQuestionTool", true)));
         return Map.of(binding.alias(), binding);
     }
@@ -58,19 +60,19 @@ public class UserQuestionTool {
 
     public static void validate(JsonNode input) {
         if (input.path("question").asText().isBlank()) {
-            throw invalid("请填写要向用户提出的问题。");
+            throw invalid(Messages.text("error.execution.userQuestionTool.validate.1"));
         }
         int recommended = 0;
         var labels = new HashSet<String>();
         for (var option : input.path("options")) {
             String label = option.path("label").asText().strip();
             if (label.isBlank() || !labels.add(label)) {
-                throw invalid("选项名称不能为空或重复。");
+                throw invalid(Messages.text("error.execution.userQuestionTool.validate.2"));
             }
             recommended += option.path("recommended").asBoolean() ? 1 : 0;
         }
         if (recommended > 1) {
-            throw invalid("最多标记一个推荐选项。");
+            throw invalid(Messages.text("error.execution.userQuestionTool.validate.3"));
         }
     }
 

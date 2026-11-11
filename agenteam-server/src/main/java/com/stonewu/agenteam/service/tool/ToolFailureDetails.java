@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.IdentityHashMap;
@@ -20,17 +22,17 @@ public final class ToolFailureDetails {
 
     public static String clean(String value, List<String> secrets) {
         if (value == null) {
-            return "未提供具体原因";
+            return Messages.log("log.tool.toolFailureDetails.clean.1");
         }
         String safe = value;
         for (String secret : secrets) {
             if (secret != null && !secret.isEmpty()) {
-                safe = safe.replace(secret, "[已隐藏]");
+                safe = safe.replace(secret, Messages.log("text.tool.toolPayloadMapper.redact.1"));
             }
         }
-        safe = ADDRESS.matcher(safe).replaceAll("[地址已隐藏]");
-        safe = SECRET.matcher(safe).replaceAll("$1[已隐藏]");
-        safe = safe.replaceAll("(?i)Bearer\\s+[A-Za-z0-9._~+/=-]+", "Bearer [已隐藏]")
+        safe = ADDRESS.matcher(safe).replaceAll(Messages.log("log.tool.toolFailureDetails.clean.2"));
+        safe = SECRET.matcher(safe).replaceAll(Messages.log("text.tool.toolPayloadMapper.clean.1"));
+        safe = safe.replaceAll("(?i)Bearer\\s+[A-Za-z0-9._~+/=-]+", Messages.log("log.tool.toolFailureDetails.clean.3"))
             .replaceAll("[\\p{Cntrl}\\u2028\\u2029]", " ");
         return safe.length() > 1200 ? safe.substring(0, 1200) : safe;
     }
@@ -62,8 +64,8 @@ public final class ToolFailureDetails {
         if (error == null || visited.containsKey(error)) {
             return null;
         }
-        String message = error instanceof JsonProcessingException ? "响应解析失败" : clean(error.getMessage(), secrets);
-        var result = new IllegalStateException(error.getClass().getName() + "：" + message);
+        String message = error instanceof JsonProcessingException ? Messages.log("log.tool.toolFailureDetails.safe.1") : clean(error.getMessage(), secrets);
+        var result = new IllegalStateException(error.getClass().getName() + ": " + message);
         visited.put(error, result);
         result.setStackTrace(error.getStackTrace());
         var cause = safe(error.getCause(), secrets, visited);

@@ -25,16 +25,16 @@ class ChatCallbackTimingTest {
         var nanos = new AtomicLong();
         var timing = new ChatCallbackTiming(clock, nanos::get);
         nanos.set(2_000_000);
-        timing.enter("等待企业锁");
+        timing.enter("Wait for organization lock");
         nanos.set(9_000_000);
-        timing.enter("保存业务结果");
+        timing.enter("Save business result");
         nanos.set(12_000_000);
         var result = timing.finish();
         assertEquals(clock.instant(), timing.receivedAt());
         assertEquals(12, result.totalMillis());
-        assertEquals(2, result.stages().get("启动事务"));
-        assertEquals(7, result.stages().get("等待企业锁"));
-        assertEquals(3, result.stages().get("保存业务结果"));
+        assertEquals(2, result.stages().get("Begin transaction"));
+        assertEquals(7, result.stages().get("Wait for organization lock"));
+        assertEquals(3, result.stages().get("Save business result"));
         timing.enter("不应追加");
         assertSame(result, timing.finish());
         assertThrows(UnsupportedOperationException.class, () -> result.stages().put("修改", 1L));
@@ -51,8 +51,8 @@ class ChatCallbackTimingTest {
         when(transactions.accept(eq("enterprise"), eq("bot"), eq(1L), eq(1L), eq(1L), eq(event), any()))
             .thenAnswer(call -> {
                 ChatCallbackTiming timing = call.getArgument(6);
-                timing.enter("保存业务结果");
-                timing.enter("提交事务");
+                timing.enter("Save business result");
+                timing.enter("Commit transaction");
                 return json.createObjectNode().put("ok", true);
             }).thenThrow(new ApiException(HttpStatus.CONFLICT, "QUESTION_ALREADY_ANSWERED", "这个问题已经回答。"));
         var logger = (Logger) LoggerFactory.getLogger(ChatCardInteractionService.class);
@@ -63,13 +63,13 @@ class ChatCallbackTimingTest {
             assertTrue(service.accept("enterprise", "bot", 1L, 1L, 1L, event).path("ok").asBoolean());
             assertEquals("warning", service.accept("enterprise", "bot", 1L, 1L, 1L, event).at("/toast/type").asText());
             var timings = appender.list.stream().map(ILoggingEvent::getFormattedMessage)
-                .filter(message -> message.startsWith("飞书卡片操作耗时")).toList();
+                .filter(message -> message.startsWith("Feishu card action timing")).toList();
             assertEquals(2, timings.size());
-            assertTrue(timings.getFirst().contains("提交事务="));
+            assertTrue(timings.getFirst().contains("Commit transaction="));
             assertTrue(timings.getLast().contains("QUESTION_ALREADY_ANSWERED"));
             assertFalse(timings.toString().contains("敏感答案"));
             assertFalse(timings.toString().contains("synthetic-secret"));
-            assertEquals("无有效事件编号", ChatCallbackTiming.eventId("token\nsecret"));
+            assertEquals("No valid event ID", ChatCallbackTiming.eventId("token\nsecret"));
         } finally {
             logger.detachAppender(appender);
             appender.stop();

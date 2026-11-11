@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.file.FileObjectStore;
 import com.stonewu.agenteam.service.file.LocalFileObjectStore;
@@ -49,7 +51,7 @@ public class FileStorageConfiguration {
             if ((!"https".equalsIgnoreCase(uri.getScheme()) && !(development && "http".equalsIgnoreCase(
                 uri.getScheme()))) || uri.getHost() == null || uri.getUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null || (uri.getRawPath() != null && !uri.getRawPath()
                 .isEmpty() && !uri.getRawPath().equals("/"))) {
-                throw new IllegalArgumentException("对象存储地址必须是完整服务来源，生产环境必须使用 HTTPS");
+                throw new IllegalArgumentException(Messages.text("error.file.fileStorageConfiguration.fileObjectStore.1"));
             }
             builder.endpointOverride(uri);
         }
@@ -66,7 +68,7 @@ public class FileStorageConfiguration {
     private String required(Environment environment, String name) {
         String value = environment.getProperty(name, "");
         if (value.isBlank()) {
-            throw new IllegalArgumentException("缺少文件存储配置：" + name);
+            throw new IllegalArgumentException(Messages.text("error.file.fileStorageConfiguration.required.1", name));
         }
         return value;
     }

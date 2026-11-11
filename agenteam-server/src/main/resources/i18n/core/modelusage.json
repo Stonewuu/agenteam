@@ -1,0 +1,118 @@
+{
+  "error.modelusage.modelUsageEvidenceMapper.encode.1": {
+    "zh-CN": "模型用量证据超出 16 KiB 限制。",
+    "en": "Model usage evidence exceeds the 16 KiB limit."
+  },
+  "error.modelusage.modelUsageEvidenceMapper.decode.1": {
+    "zh-CN": "已保存的模型用量无法解析。",
+    "en": "Saved model usage could not be parsed."
+  },
+  "error.modelusage.modelUsageEvidenceMapper.write.1": {
+    "zh-CN": "模型用量无法编码。",
+    "en": "Model usage could not be encoded."
+  },
+  "error.modelusage.modelUsageRegistrationMapper.create.1": {
+    "zh-CN": "模型调用缺少有效的企业归属。",
+    "en": "The model call has no valid organization ownership."
+  },
+  "error.modelusage.modelUsageJournal.open.1": {
+    "zh-CN": "模型调用缺少可信的运行归属。",
+    "en": "The model call is missing trusted run ownership."
+  },
+  "error.modelusage.modelUsageJournal.open.2": {
+    "zh-CN": "模型用量保存正在恢复，请稍后重试。",
+    "en": "Model usage recording is recovering. Try again later."
+  },
+  "error.modelusage.modelUsageJournal.beforeDispatch.1": {
+    "zh-CN": "模型请求不能重复登记或发送。",
+    "en": "The model request cannot be registered or sent twice."
+  },
+  "error.modelusage.modelUsageNormalizer.normalize.1": {
+    "zh-CN": "不支持的模型用量协议。",
+    "en": "Unsupported model usage protocol."
+  },
+  "error.modelusage.modelUsageProtocolRepairService.repair.1": {
+    "zh-CN": "修正模型用量时记录已变更。",
+    "en": "The record changed while correcting model usage."
+  },
+  "error.modelusage.modelUsageQueryService.summary.1": {
+    "zh-CN": "只支持按日分组。",
+    "en": "Only daily grouping is supported."
+  },
+  "error.modelusage.modelUsageQueryService.options.1": {
+    "zh-CN": "请选择模型或用户筛选。",
+    "en": "Select a model or user filter."
+  },
+  "error.modelusage.modelUsageQueryService.enterpriseFilter.1": {
+    "zh-CN": "结束时间须晚于开始时间，单次范围最多 93 天。",
+    "en": "The end time must be after the start time, with a maximum range of 93 days."
+  },
+  "error.modelusage.modelUsageQueryService.identifier.1": {
+    "zh-CN": "请选择有效记录。",
+    "en": "Select a valid record."
+  },
+  "error.modelusage.modelUsageRecoveryService.calculate.1": {
+    "zh-CN": "模型金额保存时记录已变更。",
+    "en": "The record changed while saving the model cost."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireActive.1": {
+    "zh-CN": "标题所属企业已不可用。",
+    "en": "The title's organization is no longer available."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireActive.2": {
+    "zh-CN": "模型调用账号已不可用。",
+    "en": "The model call account is no longer available."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireActive.3": {
+    "zh-CN": "模型调用的后台任务类型不正确。",
+    "en": "The model call background job type is invalid."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireActive.4": {
+    "zh-CN": "本次执行已不存在。",
+    "en": "This execution no longer exists."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireActive.5": {
+    "zh-CN": "本次执行已结束或已由另一次尝试继续。",
+    "en": "This execution has ended or another attempt has continued it."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireTitle.1": {
+    "zh-CN": "标题模型调用的执行权或归属已失效。",
+    "en": "The title model call's execution authorization or ownership expired."
+  },
+  "error.modelusage.modelUsageRegistrationGuard.requireTitle.2": {
+    "zh-CN": "此对话已不再允许自动命名。",
+    "en": "Automatic naming is no longer allowed for this conversation."
+  },
+  "error.modelusage.modelUsageService.register.1": {
+    "zh-CN": "模型请求登记未完成。",
+    "en": "Model request registration did not complete."
+  },
+  "log.modelusage.modelUsageJournal.flush.1": {
+    "zh-CN": "补存模型用量失败，企业={}，调用={}",
+    "en": "Could not recover model usage persistence; enterpriseId={}, callId={}"
+  },
+  "log.modelusage.modelUsageJournal.flush.2": {
+    "zh-CN": "保存模型用量快照失败，企业={}，调用={}",
+    "en": "Could not save the model usage snapshot; enterpriseId={}, callId={}"
+  },
+  "log.modelusage.modelUsageJournal.finish.1": {
+    "zh-CN": "模型调用已结束，用量等待补存，企业={}，调用={}",
+    "en": "Model call ended; usage is awaiting persistence recovery; enterpriseId={}, callId={}"
+  },
+  "text.modelusage.modelUsageQueryService.options.1": {
+    "zh-CN": "已移除用户",
+    "en": "Removed user"
+  },
+  "log.modelusage.modelUsageRecoveryWorker.run.1": {
+    "zh-CN": "修正旧模型用量失败，企业={}，调用={}",
+    "en": "Could not correct previous model usage; enterpriseId={}, callId={}"
+  },
+  "log.modelusage.modelUsageRecoveryWorker.run.2": {
+    "zh-CN": "计算模型金额失败，企业={}，调用={}",
+    "en": "Could not calculate model cost; enterpriseId={}, callId={}"
+  },
+  "log.modelusage.modelUsageRecoveryWorker.run.3": {
+    "zh-CN": "模型用量恢复任务失败，将在下一批继续",
+    "en": "Model usage recovery failed; continuing in the next batch"
+  }
+}

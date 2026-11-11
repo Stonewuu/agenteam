@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.notification.NotificationChannelDeliveryMapper;
 import com.stonewu.agenteam.model.notification.entity.NotificationChannelDeliveryRow;
@@ -37,7 +39,7 @@ public class ChannelDeliveryCancellation {
         if (deliveries.exists(new LambdaQueryWrapper<NotificationChannelDeliveryRow>()
             .eq(NotificationChannelDeliveryRow::getEnterpriseId, enterprise).eq(NotificationChannelDeliveryRow::getConnectionId, connection)
             .in(NotificationChannelDeliveryRow::getStatus, ChannelDeliveryStore.ACTIVE))) {
-            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_DELIVERY_ACTIVE", "此接入仍有正在处理的通知，请稍后再删除。");
+            throw new ApiException(HttpStatus.CONFLICT, "INTEGRATION_DELIVERY_ACTIVE", Messages.text("error.notification.channelDeliveryCancellation.requireNoActive.1"));
         }
     }
 }

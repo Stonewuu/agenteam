@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -26,7 +28,7 @@ public final class S3FileObjectStore implements FileObjectStore {
         this.privacy = new S3PrivateBucket(client, bucket, json);
         if (bucket == null || !bucket.matches("[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]") || bucket.contains("..")
             || prefix == null || !prefix.matches("[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*/") || prefix.length() > 100) {
-            throw new IllegalArgumentException("文件存储桶或目录配置不正确");
+            throw new IllegalArgumentException(Messages.text("error.file.s3FileObjectStore.init.1"));
         }
         privacy.requirePrivate();
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
@@ -48,9 +50,9 @@ public class IdempotentRequestService {
     public Optional<ApiOperationResult> replay(HttpServletRequest request, UserEntity actor, String enterpriseId,
                                                Set<String> unorderedPaths, Runnable authorize) {
         var current = users.findById(actor.id())
-            .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "请重新登录。"));
+            .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", Messages.text("error.http.idempotentRequestService.replay.1")));
         if (!current.status().equals("active") || current.sessionVersion() != actor.sessionVersion()) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", "登录已失效，请重新登录。");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", Messages.text("error.auth.sessionIdentityService.expired.1"));
         }
         authorize.run();
         String scope = enterpriseId == null ? "global" : "enterprise:" + enterpriseId;
@@ -67,12 +69,12 @@ public class IdempotentRequestService {
         try {
             // 全局修改锁用户；企业修改先由授权过程锁企业，再保存请求记录，不能提前持有用户更新锁。
             current = (enterpriseId == null ? users.findByIdForUpdate(actor.id(), 2) : users.findById(actor.id()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "请重新登录。"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", Messages.text("error.http.idempotentRequestService.replay.1")));
         } catch (QueryTimeoutException timeout) {
             throw inProgress();
         }
         if (!"active".equals(current.status()) || current.sessionVersion() != actor.sessionVersion()) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", "登录已失效，请重新登录。");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", Messages.text("error.auth.sessionIdentityService.expired.1"));
         }
         String scope = enterpriseId == null ? "global" : "enterprise:" + enterpriseId;
         String operationHash = fingerprint.operationHash(request);
@@ -95,19 +97,19 @@ public class IdempotentRequestService {
         try {
             requests.complete(id, result.status(), json.writeValueAsString(result.data()), clock.instant());
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("请求结果无法保存，当前变更未提交", exception);
+            throw new IllegalStateException(Messages.text("error.http.idempotentRequestService.execute.1"), exception);
         }
         return result;
     }
 
     private ApiException inProgress() {
-        return new ApiException(HttpStatus.CONFLICT, "REQUEST_IN_PROGRESS", "相关操作仍在提交，请稍后重试。");
+        return new ApiException(HttpStatus.CONFLICT, "REQUEST_IN_PROGRESS", Messages.text("error.http.idempotentRequestService.inProgress.1"));
     }
 
     private ApiOperationResult replayed(StoredApiRequest existing, String bodyHash) {
         if (!existing.requestHash().equals(bodyHash)) {
             throw new ApiException(HttpStatus.CONFLICT, "REQUEST_KEY_CONFLICT",
-                "本次提交的内容与上次不同，请重新发起操作。");
+                Messages.text("error.http.idempotentRequestService.replayed.1"));
         }
         if (!existing.status().equals("completed")) {
             throw inProgress();
@@ -116,7 +118,7 @@ public class IdempotentRequestService {
             return new ApiOperationResult(existing.httpStatus(), json.readValue(existing.responseJson(), Object.class),
                 true);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("已保存的请求结果无法读取", exception);
+            throw new IllegalStateException(Messages.text("error.http.idempotentRequestService.replayed.2"), exception);
         }
     }
 }

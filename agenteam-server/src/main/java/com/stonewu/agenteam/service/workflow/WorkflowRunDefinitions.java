@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -19,6 +21,6 @@ public final class WorkflowRunDefinitions {
                 return dependency;
             }
         }
-        throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE", "当前流程节点的固定资源不可用。");
+        throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE", Messages.text("error.workflow.workflowRunDefinitions.dependency.1"));
     }
 }

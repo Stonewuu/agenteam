@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.skill;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.http.entity.ApiOperationResult;
 import com.stonewu.agenteam.model.skill.request.SkillImportConfirmRequest;
 import com.stonewu.agenteam.model.skill.request.SkillImportPreviewRequest;
@@ -83,7 +85,7 @@ public class SkillTransferApiService {
         return requests.execute(request, actor.user(), enterprise, Set.of(), authorize, () -> {
             var file = files.register(prepared);
             audit.record(actor.enterpriseId(), actor.user(), "skill.export", "resource", prepared.resourceId(),
-                "导出技能固定版本",
+                Messages.text("text.skill.skillTransferApiService.export.1"),
                 Map.of("versionId", prepared.resourceVersionId(), "fileId", file.id()));
             return ApiOperationResult.of(200, downloads.issue(actor, file.id()));
         });

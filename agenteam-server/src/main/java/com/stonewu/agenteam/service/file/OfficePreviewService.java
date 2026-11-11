@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.FilePreviewMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.file.entity.OpenedPreviewFile;
@@ -59,7 +61,7 @@ public class OfficePreviewService {
             String format = FileUploadPolicy.extension(file.name());
             if (!Set.of("docx", "xlsx", "pptx").contains(format)) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "OFFICE_PREVIEW_UNSUPPORTED",
-                    "此格式暂不支持在线预览，可下载原文件查看。");
+                    Messages.text("error.file.officePreviewService.open.1"));
             }
             String key = Utf8Text.revision("office-preview-v1",
                 String.join("\n", actor.enterpriseId(), actor.userId(), conversation, id, file.revision()));
@@ -110,13 +112,13 @@ public class OfficePreviewService {
                 }
                 if (System.nanoTime() >= deadline) {
                     throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "OFFICE_PREVIEW_TIMEOUT",
-                        "文档预览生成超时，请稍后重试或下载原文件。");
+                        Messages.text("error.file.officePreviewService.convert.1"));
                 }
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException failure) {
                     Thread.currentThread().interrupt();
-                    throw new IOException("文档预览请求已经取消", failure);
+                    throw new IOException(Messages.text("error.file.officePreviewService.convert.2"), failure);
                 }
             }
         }
@@ -137,7 +139,7 @@ public class OfficePreviewService {
                 }
             }
         } catch (IOException failure) {
-            LOG.warn("清理文档预览缓存失败，工作编号 office-preview-cleanup", failure);
+            LOG.warn(Messages.log("log.file.officePreviewService.cleanup.1"), failure);
         }
     }
 }

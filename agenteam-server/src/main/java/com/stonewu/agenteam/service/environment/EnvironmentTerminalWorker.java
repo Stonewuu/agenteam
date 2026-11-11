@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
@@ -61,7 +63,7 @@ public class EnvironmentTerminalWorker {
                 try (var input = currentProcess.getErrorStream()) {
                     input.transferTo(OutputStream.nullOutputStream());
                 } catch (IOException failure) {
-                    LOG.warn("终端诊断流读取失败，工作空间编号 {}，终端编号 {}", project.workspaceId(), initial.id, failure);
+                    LOG.warn(Messages.log("log.environment.environmentTerminalWorker.run.1"), project.workspaceId(), initial.id, failure);
                 }
             });
             int cols = initial.cols;
@@ -101,7 +103,7 @@ public class EnvironmentTerminalWorker {
                 if (clock.millis() - checked >= 1500) {
                     var usage = monitor.usage();
                     if (monitor.exceeded(usage) && usage.increasedFrom(baseline)) {
-                        error = "环境文件已达到容量限制，请清理后继续。";
+                        error = Messages.text("text.environment.environmentTerminalWorker.run.1");
                         break;
                     }
                     checked = clock.millis();
@@ -109,8 +111,8 @@ public class EnvironmentTerminalWorker {
                 Thread.sleep(30);
             }
         } catch (Exception failure) {
-            LOG.warn("终端连接结束，工作空间编号 {}，终端编号 {}", project.workspaceId(), initial.id, ExceptionDiagnostics.withoutMessages(failure));
-            error = "终端连接已中断，请重新连接。";
+            LOG.warn(Messages.log("log.environment.environmentTerminalWorker.run.2"), project.workspaceId(), initial.id, ExceptionDiagnostics.withoutMessages(failure));
+            error = Messages.text("text.environment.dockerUserTerminalRuntime.exchange.1");
         } finally {
             stopped.set(true);
             if (process != null) {
@@ -118,18 +120,18 @@ public class EnvironmentTerminalWorker {
                     process.getOutputStream().close();
                     if (!process.waitFor(7, TimeUnit.SECONDS)) {
                         process.destroyForcibly();
-                        error = "终端连接已中断，请重新连接。";
+                        error = Messages.text("text.environment.dockerUserTerminalRuntime.exchange.1");
                     } else if (process.exitValue() != 0 && error == null) {
-                        LOG.warn("终端管理进程退出，工作空间编号 {}，终端编号 {}，退出码 {}", project.workspaceId(), initial.id, process.exitValue());
-                        error = "终端连接已中断，请重新连接。";
+                        LOG.warn(Messages.log("log.environment.environmentTerminalWorker.run.3"), project.workspaceId(), initial.id, process.exitValue());
+                        error = Messages.text("text.environment.dockerUserTerminalRuntime.exchange.1");
                     }
                     if (reader != null) {
                         reader.join(1000);
                     }
                 } catch (IOException | InterruptedException failure) {
-                    LOG.warn("关闭终端连接失败，工作空间编号 {}，终端编号 {}", project.workspaceId(), initial.id, failure);
+                    LOG.warn(Messages.log("log.environment.environmentTerminalWorker.run.4"), project.workspaceId(), initial.id, failure);
                     process.destroyForcibly();
-                    error = "终端连接已中断，请重新连接。";
+                    error = Messages.text("text.environment.dockerUserTerminalRuntime.exchange.1");
                 }
             }
             finish(project, initial.id, error);
@@ -160,7 +162,7 @@ public class EnvironmentTerminalWorker {
                 });
             }
         } catch (Exception failure) {
-            LOG.warn("终端输出读取失败，工作空间编号 {}，终端编号 {}", project.workspaceId(), id, ExceptionDiagnostics.withoutMessages(failure));
+            LOG.warn(Messages.log("log.environment.environmentTerminalWorker.read.1"), project.workspaceId(), id, ExceptionDiagnostics.withoutMessages(failure));
             stopped.set(true);
         }
     }
@@ -173,7 +175,7 @@ public class EnvironmentTerminalWorker {
                 return line.toString();
             }
             if (line.length() >= 131072) {
-                throw new IOException("终端数据超过允许范围");
+                throw new IOException(Messages.text("error.environment.environmentTerminalWorker.readFrame.1"));
             }
             line.append((char) value);
         }
@@ -195,7 +197,7 @@ public class EnvironmentTerminalWorker {
                 return null;
             });
         } catch (RuntimeException failure) {
-            LOG.warn("保存终端结束状态失败，工作空间编号 {}，终端编号 {}", project.workspaceId(), id, failure);
+            LOG.warn(Messages.log("log.environment.environmentTerminalWorker.finish.1"), project.workspaceId(), id, failure);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.model.notification.entity.NotificationRow;
@@ -63,6 +65,6 @@ public class ChannelDeliveryAccess {
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "NOTIFICATION_DELIVERY_UNAVAILABLE", "发送记录不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "NOTIFICATION_DELIVERY_UNAVAILABLE", Messages.text("error.notification.channelDeliveryAccess.unavailable.1"));
     }
 }

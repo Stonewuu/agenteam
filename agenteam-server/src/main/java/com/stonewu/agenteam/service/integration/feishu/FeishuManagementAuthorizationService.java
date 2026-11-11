@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.integration.IntegrationPublicUrls;
 import com.stonewu.agenteam.service.auth.SessionIdentityService;
 import com.stonewu.agenteam.model.integration.entity.FeishuManagementOauthRow;
@@ -86,23 +88,23 @@ public class FeishuManagementAuthorizationService {
             var profile = client.get(flow.getId(), "/open-apis/authen/v1/user_info", Map.of(),
                 FeishuAppClient.required(result, "access_token")).path("data");
             if (!manager.getExternalTenantId().equals(profile.path("tenant_key").asText())) {
-                throw new ChannelProviderException("FEISHU_TENANT_MISMATCH", "请使用管理应用所属飞书企业的账号授权。");
+                throw new ChannelProviderException("FEISHU_TENANT_MISMATCH", Messages.text("error.integration.feishuManagementAuthorizationService.callback.1"));
             }
             transactions.complete(flow, actor, result);
             request.getSession().setAttribute(RESULT, Map.of("success", true, "connectionId", connection,
-                "message", "飞书管理授权已完成，可以回到原窗口继续。"));
+                "message", Messages.text("text.integration.feishuManagementAuthorizationService.callback.1")));
         } catch (RuntimeException failure) {
-            LOG.warn("飞书管理授权未完成，请求编号={}，方法={}，路径={}，授权记录={}", responses.requestId(request),
-                request.getMethod(), request.getRequestURI(), flow == null ? "尚未取得" : flow.getId(), failure);
+            LOG.warn(Messages.log("log.integration.feishuManagementAuthorizationService.callback.1"), responses.requestId(request),
+                request.getMethod(), request.getRequestURI(), flow == null ? Messages.log("log.integration.channelAuthorizationService.callback.2") : flow.getId(), failure);
             if (flow != null) {
                 try {
                     flows.finish(flow.getId(), false);
                 } catch (RuntimeException persistenceFailure) {
-                    LOG.error("飞书管理授权失败状态无法保存，授权记录={}", flow.getId(), persistenceFailure);
+                    LOG.error(Messages.log("log.integration.feishuManagementAuthorizationService.callback.2"), flow.getId(), persistenceFailure);
                 }
             }
             String message = failure instanceof ApiException known ? known.getReason()
-                : failure instanceof ChannelProviderException ? failure.getMessage() : "授权未能完成，请回到机器人创建页面重新发起。";
+                : failure instanceof ChannelProviderException ? failure.getMessage() : Messages.text("text.integration.feishuManagementAuthorizationService.callback.2");
             request.getSession().setAttribute(RESULT, Map.of("success", false, "connectionId", connection, "message", message));
         }
         return URI.create("/feishu-authorization");
@@ -111,12 +113,12 @@ public class FeishuManagementAuthorizationService {
     public Object result(HttpServletRequest request) {
         identity.requireUser(request.getSession(false));
         Object result = request.getSession(false).getAttribute(RESULT);
-        return result == null ? Map.of("success", false, "message", "请从机器人创建页面发起授权。") : result;
+        return result == null ? Map.of("success", false, "message", Messages.text("text.integration.feishuManagementAuthorizationService.result.1")) : result;
     }
 
     private void personal(HttpSession session) {
         if (SessionIdentityService.state(session) != null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED", "请结束代操作，使用本人账号完成飞书管理授权。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED", Messages.text("error.integration.feishuManagementAuthorizationService.personal.1"));
         }
     }
 

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -165,7 +167,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
     public void externalTools(HarnessAgent agent, Map<String, ToolBase> tools) {
         for (var entry : tools.entrySet()) {
             if (bindings.containsKey(entry.getKey()) || !entry.getKey().equals(entry.getValue().getName())) {
-                throw new IllegalStateException("外部工具名称与当前工具冲突");
+                throw new IllegalStateException(Messages.text("error.agent.executionToolRuntime.externalTools.1"));
             }
             externalNames.add(entry.getKey());
             agent.getToolkit().registerAgentTool(entry.getValue());
@@ -273,7 +275,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
         }
         long left = timeout.toNanos() - (System.nanoTime() - startedAt);
         if (left <= 0) {
-            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "EXECUTION_TIMEOUT", "本次执行已超时。");
+            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "EXECUTION_TIMEOUT", Messages.text("error.agent.executionToolRuntime.remaining.1"));
         }
         return Duration.ofNanos(left);
     }
@@ -297,21 +299,21 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                 requireActive();
                 if (invalidArguments.contains(binding.alias() + ":" + json.hash(json.tree(input)))) {
                     // 调用已保存为参数错误，只读取该错误结果，不发送操作或申请写入确认。
-                    return PermissionDecision.allow("本次调用只返回已经保存的参数校验错误。");
+                    return PermissionDecision.allow(Messages.text("text.agent.executionToolRuntime.checkPermissions.1"));
                 }
                 if (UserQuestionTool.handles(binding)) {
                     return transactions.questionAnswered(preparedTopLevelCalls.get(binding.alias() + ":" + json.hash(json.tree(input))))
-                        ? PermissionDecision.allow("用户已回答当前问题。") : PermissionDecision.ask("等待用户回答当前问题。");
+                        ? PermissionDecision.allow(Messages.text("text.agent.executionToolRuntime.checkPermissions.2")) : PermissionDecision.ask(Messages.text("text.agent.executionToolRuntime.checkPermissions.3"));
                 }
                 if (transactions.rejected(run, binding, json.tree(input))) {
-                    return PermissionDecision.deny("用户已拒绝本次操作，不能对相同参数再次请求确认。");
+                    return PermissionDecision.deny(Messages.text("text.agent.executionToolRuntime.checkPermissions.4"));
                 }
                 if (transactions.internalAction(run, binding, preparedTopLevelCalls.get(binding.alias() + ":" + json.hash(json.tree(input))))) {
-                    return PermissionDecision.allow("当前岗位可以执行任务范围内的协作动作。");
+                    return PermissionDecision.allow(Messages.text("text.agent.executionToolRuntime.checkPermissions.5"));
                 }
                 return ToolApprovalPolicy.forRun(run).requiresApproval(binding.definition().operationClass())
-                    ? PermissionDecision.ask("本次工具操作需要由原发起人确认。") : PermissionDecision.allow(
-                    "当前会话策略允许执行此工具。");
+                    ? PermissionDecision.ask(Messages.text("text.agent.executionToolRuntime.checkPermissions.6")) : PermissionDecision.allow(
+                    Messages.text("text.agent.executionToolRuntime.checkPermissions.7"));
             }).subscribeOn(Schedulers.boundedElastic());
         }
 
@@ -349,7 +351,7 @@ public final class ExecutionToolRuntime implements AutoCloseable {
                     }).subscribeOn(Schedulers.boundedElastic()).onErrorResume(Exception.class, error -> {
                         if (ToolFailureRecovery.terminal(error) && (!cancelled.get() || stopped.get())) {
                             failure.compareAndSet(null, error instanceof RuntimeException runtime ? runtime
-                                : new IllegalStateException("工具执行被中断", error));
+                                : new IllegalStateException(Messages.text("error.agent.executionToolRuntime.callAsync.1"), error));
                             return Mono.error(error);
                         }
                         return Mono.just(ToolFailureRecovery.result(run.id(), param.getRuntimeContext().getSessionId(),

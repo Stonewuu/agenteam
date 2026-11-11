@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.edition;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.edition.InstallationMapper;
@@ -39,7 +41,7 @@ public class InstallationService {
         requireUninitialized(installations.lockInstallation());
         if (enterprises.selectCount(new LambdaQueryWrapper<EnterpriseRow>()) != 0) {
             throw new ApiException(HttpStatus.CONFLICT, "INITIALIZATION_STATE_INVALID",
-                "当前数据库已有企业但初始化记录不完整，请先恢复完整的部署记录或备份。");
+                Messages.text("error.edition.installationService.lockBeforeBootstrap.1"));
         }
     }
 
@@ -48,7 +50,7 @@ public class InstallationService {
         var administrator = administrators.selectById(1);
         if (administrator == null || !administrator.getUserId().equals(userId)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "INITIALIZATION_ACTOR_INVALID",
-                "初始企业必须由首次初始化的管理员创建。");
+                Messages.text("error.edition.installationService.requireBootstrapAdministrator.1"));
         }
     }
 
@@ -57,7 +59,7 @@ public class InstallationService {
         var state = requireUninitialized(installations.lockInstallation());
         if (enterprises.selectCount(new LambdaQueryWrapper<EnterpriseRow>()) != 1
             || enterprises.selectById(enterpriseId) == null) {
-            throw new IllegalStateException("首次初始化必须在同一事务中创建且只创建一个企业");
+            throw new IllegalStateException(Messages.text("error.edition.installationService.recordInitialEnterprise.1"));
         }
         int changed = installations.update(new LambdaUpdateWrapper<InstallationRow>()
             .eq(InstallationRow::getId, 1).eq(InstallationRow::getRevision, state.getRevision())
@@ -68,7 +70,7 @@ public class InstallationService {
             .set(InstallationRow::getInitializedAt, now).set(InstallationRow::getUpdatedAt, now)
             .set(InstallationRow::getRevision, state.getRevision() + 1));
         if (changed != 1) {
-            throw new IllegalStateException("部署记录已经变化，首次初始化未提交");
+            throw new IllegalStateException(Messages.text("error.edition.installationService.recordInitialEnterprise.2"));
         }
     }
 
@@ -79,7 +81,7 @@ public class InstallationService {
     private InstallationRow requireUninitialized(InstallationRow state) {
         requireRecord(state);
         if (state.getInstallationId() != null || state.getInitialEnterpriseId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "SYSTEM_ALREADY_INITIALIZED", "系统已经初始化，请前往登录。");
+            throw new ApiException(HttpStatus.CONFLICT, "SYSTEM_ALREADY_INITIALIZED", Messages.text("error.auth.authBootstrapService.alreadyInitialized.1"));
         }
         return state;
     }
@@ -87,11 +89,11 @@ public class InstallationService {
     private InstallationRow requireRecord(InstallationRow state) {
         if (state == null) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "INSTALLATION_RECORD_MISSING",
-                "部署记录不完整，请联系管理员恢复备份。");
+                Messages.text("error.edition.installationService.requireRecord.1"));
         }
         if (edition.edition() == ProductEdition.COMMUNITY && !"community".equals(state.getEdition())) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "INSTALLATION_EDITION_MISMATCH",
-                "数据库与当前安装版本不一致，请使用与现有部署匹配的程序启动。");
+                Messages.text("error.edition.installationService.requireRecord.2"));
         }
         return state;
     }

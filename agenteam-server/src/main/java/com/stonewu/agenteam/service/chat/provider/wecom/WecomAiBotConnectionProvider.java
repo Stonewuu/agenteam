@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
@@ -50,7 +52,7 @@ public class WecomAiBotConnectionProvider implements ChatConnectionProvider {
             var body = json.createObjectNode().put("bot_id", application.externalAppId()).put("secret", secret);
             var result = live.request("aibot_subscribe_" + UUID.randomUUID(), "aibot_subscribe", body, () -> { });
             if (!result.path("errcode").isIntegralNumber() || result.path("errcode").asLong() != 0) {
-                throw new ChannelProviderException("CHAT_AUTHENTICATION_FAILED", "企微智能机器人认证未通过，请核对专用编号和密钥。");
+                throw new ChannelProviderException("CHAT_AUTHENTICATION_FAILED", Messages.text("error.chat.wecomAiBotConnectionProvider.open.1"));
             }
             live.authenticated = true;
             return live;
@@ -83,7 +85,7 @@ public class WecomAiBotConnectionProvider implements ChatConnectionProvider {
                 String command = frame.path("cmd").asText();
                 if (command.equals("aibot_msg_callback") || command.equals("aibot_event_callback")) {
                     if (!authenticated) {
-                        throw new ChannelProviderException("CHAT_AUTHENTICATION_REQUIRED", "企微在认证完成前推送了业务事件。");
+                        throw new ChannelProviderException("CHAT_AUTHENTICATION_REQUIRED", Messages.text("error.chat.wecomAiBotConnectionProvider.text.1"));
                     }
                     if (frame.path("body").path("event").path("eventtype").asText().equals("disconnected_event")) {
                         displaced = true;
@@ -106,23 +108,23 @@ public class WecomAiBotConnectionProvider implements ChatConnectionProvider {
                     waiting.complete(frame);
                 }
             } catch (Exception failure) {
-                throw ChatSocket.safe("CHAT_FRAME_INVALID", "企微长连接帧处理失败。", failure);
+                throw ChatSocket.safe("CHAT_FRAME_INVALID", Messages.text("error.chat.wecomAiBotConnectionProvider.text.2"), failure);
             }
         }
 
         @Override
         public void binary(byte[] value) {
-            throw new IllegalArgumentException("企微长连接返回了非文本帧");
+            throw new IllegalArgumentException(Messages.text("error.chat.wecomAiBotConnectionProvider.binary.1"));
         }
 
         @Override
         public JsonNode request(String id, String command, JsonNode body, Runnable beforeSend) {
             if (pending.size() >= 64 || id == null || !id.matches("[A-Za-z0-9_-]{1,191}")) {
-                throw new ChannelProviderException("CHAT_SEND_BUSY", "机器人有较多未完成的发送，请稍后重试。");
+                throw new ChannelProviderException("CHAT_SEND_BUSY", Messages.text("error.chat.wecomAiBotConnectionProvider.request.1"));
             }
             var future = new CompletableFuture<JsonNode>();
             if (pending.putIfAbsent(id, future) != null) {
-                throw new ChannelProviderException("CHAT_SEND_BUSY", "此发送请求正在处理。");
+                throw new ChannelProviderException("CHAT_SEND_BUSY", Messages.text("error.chat.wecomAiBotConnectionProvider.request.2"));
             }
             var request = json.createObjectNode().put("cmd", command);
             request.putObject("headers").put("req_id", id);
@@ -137,11 +139,11 @@ public class WecomAiBotConnectionProvider implements ChatConnectionProvider {
                 return result;
             } catch (InterruptedException failure) {
                 Thread.currentThread().interrupt();
-                throw ChatSocket.safe("CHAT_SEND_UNKNOWN", "企微尚未确认发送结果。", failure);
+                throw ChatSocket.safe("CHAT_SEND_UNKNOWN", Messages.text("error.chat.wecomAiBotConnectionProvider.request.3"), failure);
             } catch (RuntimeException failure) {
                 throw failure;
             } catch (Exception failure) {
-                throw ChatSocket.safe("CHAT_SEND_UNKNOWN", "企微尚未确认发送结果。", failure);
+                throw ChatSocket.safe("CHAT_SEND_UNKNOWN", Messages.text("error.chat.wecomAiBotConnectionProvider.request.3"), failure);
             } finally {
                 pending.remove(id, future);
             }
@@ -174,7 +176,7 @@ public class WecomAiBotConnectionProvider implements ChatConnectionProvider {
         @Override
         public void closed() {
             authenticated = false;
-            pending.values().forEach(value -> value.completeExceptionally(new ChannelProviderException("CHAT_CONNECTION_CLOSED", "企微长连接已断开。")));
+            pending.values().forEach(value -> value.completeExceptionally(new ChannelProviderException("CHAT_CONNECTION_CLOSED", Messages.text("error.chat.wecomAiBotConnectionProvider.closed.1"))));
             pending.clear();
         }
 

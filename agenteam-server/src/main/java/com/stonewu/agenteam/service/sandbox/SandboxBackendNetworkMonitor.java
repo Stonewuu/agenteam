@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +39,7 @@ public final class SandboxBackendNetworkMonitor implements AutoCloseable {
             return null;
         }
         if (!container.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")) {
-            throw new IllegalArgumentException("执行服务容器名称无效。");
+            throw new IllegalArgumentException(Messages.text("error.sandbox.sandboxBackendNetworkMonitor.start.1"));
         }
         String mode = docker.require(List.of("inspect", "--type=container", "--format={{.HostConfig.NetworkMode}}", container),
             CHECK_TIMEOUT, null).output().trim();
@@ -46,7 +48,7 @@ public final class SandboxBackendNetworkMonitor implements AutoCloseable {
         }
         String backend = mode.substring("container:".length());
         if (!backend.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")) {
-            throw new IllegalStateException("Docker 返回了无效的后端容器标识。");
+            throw new IllegalStateException(Messages.text("error.sandbox.sandboxBackendNetworkMonitor.start.2"));
         }
         String namespace = Files.readSymbolicLink(Path.of("/proc/self/ns/net")).toString();
         var monitor = new SandboxBackendNetworkMonitor(docker, backend, namespace, () -> System.exit(0));
@@ -71,14 +73,14 @@ public final class SandboxBackendNetworkMonitor implements AutoCloseable {
             }
             String current = result.output().trim();
             if (!current.matches("net:\\[\\d+\\]")) {
-                throw new IllegalStateException("后端网络空间检查没有返回有效标识。");
+                throw new IllegalStateException(Messages.text("error.sandbox.sandboxBackendNetworkMonitor.poll.1"));
             }
             if (!namespace.equals(current) && restarting.compareAndSet(false, true)) {
-                LOG.warn("后端网络空间已变化，执行服务即将退出，由容器重启策略重新连接。");
+                LOG.warn(Messages.log("log.sandbox.sandboxBackendNetworkMonitor.poll.1"));
                 restart.run();
             }
         } catch (RuntimeException failure) {
-            LOG.warn("后端网络空间检查失败，下次继续检查", failure);
+            LOG.warn(Messages.log("log.sandbox.sandboxBackendNetworkMonitor.poll.2"), failure);
         }
     }
 

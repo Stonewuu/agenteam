@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,7 +30,7 @@ public class ResourceJson {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("资源配置无法保存", exception);
+            throw new IllegalStateException(Messages.text("error.resource.resourceJson.write.1"), exception);
         }
     }
 
@@ -39,7 +41,7 @@ public class ResourceJson {
         try {
             return json.readTree(value);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("已保存的资源配置无法读取", exception);
+            throw new IllegalStateException(Messages.text("error.resource.resourceJson.read.1"), exception);
         }
     }
 
@@ -57,20 +59,20 @@ public class ResourceJson {
             return HexFormat.of()
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(json.writeValueAsBytes(canonical(value))));
         } catch (JsonProcessingException | NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("资源配置摘要无法计算", exception);
+            throw new IllegalStateException(Messages.text("error.resource.resourceJson.hash.1"), exception);
         }
     }
 
     public JsonNode checkedSize(JsonNode value) {
         if (value == null || !value.isObject()) {
-            throw ApiException.invalidField("config", "请填写资源配置。");
+            throw ApiException.invalidField("config", Messages.text("error.resource.resourceJson.checkedSize.1"));
         }
         try {
             if (json.writeValueAsBytes(value).length > 256 * 1024) {
-                throw ApiException.invalidField("config", "配置内容不能超过 256 KiB。");
+                throw ApiException.invalidField("config", Messages.text("error.resource.resourceJson.checkedSize.2"));
             }
         } catch (JsonProcessingException exception) {
-            throw ApiException.invalidField("config", "配置内容无法读取。");
+            throw ApiException.invalidField("config", Messages.text("error.resource.resourceJson.checkedSize.3"));
         }
         return value.deepCopy();
     }

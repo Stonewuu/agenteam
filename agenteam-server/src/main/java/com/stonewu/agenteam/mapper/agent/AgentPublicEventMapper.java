@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionPresentationState;
@@ -81,7 +83,7 @@ public final class AgentPublicEventMapper {
         presentation = new ExecutionPresentationState(run.id(), attempt, run.currentAttemptNo(), initialBlocks);
         blocks = presentation.blocks();
         steps = presentation.steps();
-        scopes.put(run.conversationId(), new Scope(run.conversationId(), null, null, "处理任务"));
+        scopes.put(run.conversationId(), new Scope(run.conversationId(), null, null, Messages.text("text.agent.agentPublicEventMapper.init.1")));
     }
 
     public void platformTools(Map<String, ExecutionToolBinding> tools,
@@ -105,7 +107,7 @@ public final class AgentPublicEventMapper {
     public void scope(Scope scope) {
         var previous = scopes.putIfAbsent(scope.sessionId(), scope);
         if (previous != null && !previous.equals(scope)) {
-            throw new IllegalStateException("同一智能体会话不能属于不同流程节点");
+            throw new IllegalStateException(Messages.text("error.agent.agentPublicEventMapper.scope.1"));
         }
     }
 
@@ -136,7 +138,7 @@ public final class AgentPublicEventMapper {
             String reply = required(event.replyId());
             lifecycleSessions.put(reply, source);
             String label = source.parentCall() == null ? scope.label() : event.metadata()
-                .get(SubagentToolEvents.LABEL) instanceof String name ? publicLabel(name) : "子智能体";
+                .get(SubagentToolEvents.LABEL) instanceof String name ? publicLabel(name) : Messages.text("text.agent.agentPublicEventMapper.accept.1");
             step(changes, id("agent:" + session), source.parentCall() == null ? scope.parentStepId() : id(
                 "tool-step:" + source.owner() + ":" + source.parentCall()), "agent", label, "running", event, null);
             if (source.parentCall() != null) {
@@ -158,7 +160,7 @@ public final class AgentPublicEventMapper {
             }
         } else if (type.equals("MODEL_CALL_START") || type.equals("MODEL_CALL_END")) {
             String key = id("model:" + session + ":" + required(event.replyId()));
-            step(changes, key, id("agent:" + session), "model", "生成回复",
+            step(changes, key, id("agent:" + session), "model", Messages.text("text.agent.agentPublicEventMapper.accept.2"),
                 type.endsWith("START") ? "running" : "completed", event,
                 type.endsWith("END") ? event.details().get("usage") : null);
         } else if (type.startsWith("TEXT_BLOCK_") || type.startsWith("THINKING_BLOCK_")) {
@@ -167,7 +169,7 @@ public final class AgentPublicEventMapper {
             tool(event, session, parent, changes);
         } else if (type.equals("REQUIRE_USER_CONFIRM") || type.equals("REQUIRE_EXTERNAL_EXECUTION")) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                "本次任务需要的工具尚不能继续执行。");
+                Messages.text("error.agent.agentPublicEventMapper.accept.1"));
         }
         return List.copyOf(changes);
     }
@@ -177,7 +179,7 @@ public final class AgentPublicEventMapper {
         String key = id(kind + ":" + session + ":" + required(event.replyId()) + ":" + required(event.blockId()));
         ContentBlock block = blocks.get(key);
         if (block == null) {
-            block = newBlock(key, kind, parent, kind.equals("thinking") ? "思考" : null,
+            block = newBlock(key, kind, parent, kind.equals("thinking") ? Messages.text("text.agent.agentPublicEventMapper.text.1") : null,
                 id("model:" + session + ":" + event.replyId()), "running", null);
             replace(changes, block);
         }
@@ -228,7 +230,7 @@ public final class AgentPublicEventMapper {
         ContentBlock block = blocks.get(key);
         if (block == null) {
             String name = event.toolCallName() == null ? "tool" : event.toolCallName();
-            String label = Set.of("agent_spawn", "agent_send").contains(name) ? "子智能体" : "工具调用";
+            String label = Set.of("agent_spawn", "agent_send").contains(name) ? Messages.text("text.agent.agentPublicEventMapper.accept.1") : Messages.text("text.agent.agentPublicEventMapper.tool.1");
             block = newBlock(key, "tool", parent, label, id("tool-step:" + session + ":" + call), "pending",
                 new ToolBlockDetails(call, name, null, "", "", "running", "pending"));
             replace(changes, block);
@@ -270,7 +272,7 @@ public final class AgentPublicEventMapper {
             next(block.revision()), "", status, block.stepId(), null, null, null, block.label(),
             new ToolBlockDetails(call, name, null, AgentToolTextMapper.input(json, input),
                 status.equals("failed") && Set.of("agent_spawn", "agent_send").contains(name)
-                    ? "子任务未完成，请查看已保存的部分结果。" : AgentToolTextMapper.result(json, result), callStatus,
+                    ? Messages.text("text.agent.agentPublicEventMapper.tool.2") : AgentToolTextMapper.result(json, result), callStatus,
                 resultStatus));
         replace(changes, updated);
         step(changes, block.stepId(), id("agent:" + session), "tool", block.label(), status, event, null);
@@ -321,7 +323,7 @@ public final class AgentPublicEventMapper {
             .path("truncated").asBoolean(false) ? record.resultRedacted().path("content")
             .asText() : ToolPayloadPreview.value(record.resultRedacted());
         if ((record != null && "TOOL_USER_REJECTED".equals(record.errorCode())) || "DENIED".equals(event.state())) {
-            output = "用户已拒绝本次操作，未发送请求。";
+            output = Messages.text("error.workflow.workflowToolNodeExecutor.execute.2");
         }
         replace(changes, new ContentBlock(block.id(), block.type(), block.parentBlockId(), block.displayOrder(),
             next(block.revision()), "", status, block.stepId(), block.approvalId(), null, null, block.label(),
@@ -354,7 +356,7 @@ public final class AgentPublicEventMapper {
             if (file != null && !blocks.containsKey(artifactId)) {
                 replace(changes,
                     new ContentBlock(artifactId, "attachment", parent, presentation.nextOrder(), "1", "", "completed",
-                        block.stepId(), null, file, null, exported ? "生成文件" : "完整工具结果", null));
+                        block.stepId(), null, file, null, exported ? Messages.text("text.agent.agentPublicEventMapper.platformTool.1") : Messages.text("text.agent.agentPublicEventMapper.platformTool.2"), null));
             }
         }
     }
@@ -417,7 +419,7 @@ public final class AgentPublicEventMapper {
         String owner = event.metadata().get(
             ExecutionGuardMiddleware.OWNER_SESSION_METADATA) instanceof String value ? value : run.conversationId();
         if (!scopes.containsKey(owner)) {
-            throw new IllegalStateException("智能体事件没有登记所属流程节点");
+            throw new IllegalStateException(Messages.text("error.agent.agentPublicEventMapper.source.1"));
         }
         if (event.eventType().equals("AGENT_START")) {
             Object value = event.details().get("sessionId");
@@ -435,7 +437,7 @@ public final class AgentPublicEventMapper {
         if (event.source() == null || event.source().isBlank()) {
             return new Source(owner, null, owner);
         }
-        throw new IllegalStateException("子任务事件没有明确的会话身份，不能猜测归属");
+        throw new IllegalStateException(Messages.text("error.agent.agentPublicEventMapper.source.2"));
     }
 
     private Source identified(String session, String parentCall, String owner) {
@@ -443,7 +445,7 @@ public final class AgentPublicEventMapper {
             return new Source(session, null, owner);
         }
         if (parentCall == null || parentCall.isBlank()) {
-            throw new IllegalStateException("子任务事件没有发起工具的编号，不能猜测归属");
+            throw new IllegalStateException(Messages.text("error.agent.agentPublicEventMapper.identified.1"));
         }
         return new Source(session, parentCall, owner);
     }
@@ -454,7 +456,7 @@ public final class AgentPublicEventMapper {
 
     private String required(String value) {
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException("框架事件缺少关联编号");
+            throw new IllegalStateException(Messages.text("error.agent.agentPublicEventMapper.required.1"));
         }
         return value;
     }
@@ -465,7 +467,7 @@ public final class AgentPublicEventMapper {
 
     private ApiException outputLimit() {
         return new ApiException(HttpStatus.CONFLICT, "EXECUTION_OUTPUT_LIMIT",
-            "本次输出已达到允许的长度，请缩小任务范围后重试。");
+            Messages.text("error.agent.agentPublicEventMapper.outputLimit.1"));
     }
 
     private String publicLabel(String value) {

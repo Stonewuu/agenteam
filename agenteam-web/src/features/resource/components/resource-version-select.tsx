@@ -8,6 +8,7 @@ import {Pagination, QueryState} from "@/components/ui/query-state";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {useApiPage} from "@/lib/http/use-api-query";
 import type {UsableVersion} from "../types/resource";
+import {resourceDisplayName} from "../lib/resource-localization";
 import styles from "./subagent-picker.module.css";
 
 export function ResourceVersionSelect({
@@ -46,7 +47,7 @@ export function ResourceVersionSelect({
                    }
                  }}>
     <SelectTrigger className={`select-trigger ${className}`}
-                   aria-label={uiText("{0}的版本", [value.name])}><SelectValue>{uiText("版本 ")}{value.versionNo}</SelectValue></SelectTrigger>
+                   aria-label={uiText("{0}的版本", [resourceDisplayName(value, uiText)])}><SelectValue className={styles.versionValue}>{uiText("版本 {0}", [value.versionNo])}</SelectValue></SelectTrigger>
     <SelectContent className="select-menu agenteam-popup" alignItemWithTrigger={false} onKeyDown={(event) => {
       if (event.key === "Escape") {
         event.stopPropagation();
@@ -54,7 +55,7 @@ export function ResourceVersionSelect({
     }}>
       <QueryState {...versions} hasData={items.length > 0} empty={uiText("没有其他可用版本。")}>
         {choices.map((item) => <SelectItem key={item.versionId} value={item.versionId}
-                                           className="select-option">{uiText("版本 ")}{item.versionNo}</SelectItem>)}
+                                           className="select-option">{uiText("版本 {0}", [item.versionNo])}</SelectItem>)}
       </QueryState>
       <Pagination {...versions} hasMore={versions.data?.hasMore}/>
     </SelectContent>

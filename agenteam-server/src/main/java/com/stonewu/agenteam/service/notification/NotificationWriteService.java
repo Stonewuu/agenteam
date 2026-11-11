@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
@@ -60,7 +62,7 @@ public class NotificationWriteService {
         }
         long sequence = Math.addExact(recipient.sequence(), 1);
         if (members.updateNotificationSequence(sequence, recipient.enterprise(), recipient.user()) != 1) {
-            throw new IllegalStateException("通知接收成员的序号无法更新");
+            throw new IllegalStateException(Messages.text("error.notification.notificationWriteService.writeLocked.1"));
         }
         var row = new NotificationRow();
         row.setId(UUID.randomUUID().toString());

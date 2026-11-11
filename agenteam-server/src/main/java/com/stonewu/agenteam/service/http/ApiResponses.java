@@ -7,6 +7,9 @@ import com.stonewu.agenteam.model.http.response.ApiErrorResponse;
 import com.stonewu.agenteam.model.http.response.ApiResponse;
 import com.stonewu.agenteam.service.audit.AuditEventService;
 import com.stonewu.agenteam.service.auth.LoginRateLimitException;
+import com.stonewu.agenteam.configuration.i18n.RequestLanguageResolver;
+import com.stonewu.agenteam.service.i18n.MessageLanguage;
+import com.stonewu.agenteam.service.i18n.Messages;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -64,9 +67,19 @@ public class ApiResponses {
     }
 
     public ResponseEntity<ApiErrorResponse> failure(Exception exception, HttpServletRequest request) {
-        var result = errorResponse(exception, requestId(request));
-        logFailure(exception, request, result.getStatusCode().value());
-        return result;
+        var language = RequestLanguageResolver.resolve(request);
+        try (var ignored = MessageLanguage.use(language)) {
+            var result = errorResponse(exception, requestId(request));
+            logFailure(exception, request, result.getStatusCode().value());
+            var error = result.getBody().error();
+            var fields = new LinkedHashMap<String, List<String>>();
+            error.fieldErrors().forEach((field, messages) -> fields.put(field,
+                messages.stream().map(message -> Messages.localize(message, language)).toList()));
+            return ResponseEntity.status(result.getStatusCode()).headers(result.getHeaders())
+                .body(new ApiErrorResponse(new ApiErrorResponse.Error(error.code(),
+                    Messages.localize(RequestValidationErrors.localizedSummary(error.message(), error.fieldErrors(), fields), language),
+                    error.requestId(), fields, error.details())));
+        }
     }
 
     /**
@@ -79,10 +92,10 @@ public class ApiResponses {
         String code = exception instanceof ApiException business ? business.code() : exception.getClass()
             .getSimpleName();
         if (status >= 500) {
-            LOGGER.error("请求处理失败，请求编号 {}，请求方法 {}，请求路径 {}，响应状态 {}，错误代码 {}",
+            LOGGER.error(Messages.log("log.http.apiResponses.logFailure.1"),
                 requestId(request), request.getMethod(), request.getRequestURI(), status, code, exception);
         } else {
-            LOGGER.warn("请求未能完成，请求编号 {}，请求方法 {}，请求路径 {}，响应状态 {}，错误代码 {}",
+            LOGGER.warn(Messages.log("log.http.apiResponses.logFailure.2"),
                 requestId(request), request.getMethod(), request.getRequestURI(), status, code, exception);
         }
         request.setAttribute(LOGGED_EXCEPTION_ATTRIBUTE, exception);
@@ -99,7 +112,7 @@ public class ApiResponses {
             Map<String, List<String>> fields = new LinkedHashMap<>();
             invalid.getBindingResult().getFieldErrors().stream().limit(20).forEach(error ->
                 fields.putIfAbsent(error.getField(),
-                    List.of(error.getDefaultMessage() == null ? "请检查填写的内容。" : error.getDefaultMessage())));
+                    List.of(error.getDefaultMessage() == null ? Messages.text("http.checkFields") : error.getDefaultMessage())));
             return ResponseEntity.status(422).body(new ApiErrorResponse(
                 new ApiErrorResponse.Error("VALIDATION_FAILED", RequestValidationErrors.summary(fields), requestId,
                     fields, Map.of())));
@@ -122,8 +135,8 @@ public class ApiResponses {
                 default -> "INTERNAL_ERROR";
             };
             String message = status.getStatusCode()
-                .is5xxServerError() ? "服务暂时不可用，请稍后重试。" : status.getReason();
-            return response(status.getStatusCode().value(), code, message == null ? "请求无法完成。" : message,
+                .is5xxServerError() ? Messages.text("http.serviceUnavailable") : status.getReason();
+            return response(status.getStatusCode().value(), code, message == null ? Messages.text("http.requestRejected") : message,
                 requestId);
         }
         if (exception instanceof HttpMessageNotReadableException unreadable) {
@@ -142,19 +155,19 @@ public class ApiResponses {
                     mapping instanceof MismatchedInputException mismatch ? mismatch.getTargetType() : null);
                 return ResponseEntity.badRequest().body(errorResponse(invalid, requestId).getBody());
             }
-            return response(400, "VALIDATION_FAILED", "请求内容格式不正确，请检查括号、引号和字段分隔符。", requestId);
+            return response(400, "VALIDATION_FAILED", Messages.text("http.invalidJson"), requestId);
         }
         if (exception instanceof NoResourceFoundException) {
-            return response(404, "RESOURCE_NOT_FOUND", "记录不存在或无法访问。", requestId);
+            return response(404, "RESOURCE_NOT_FOUND", Messages.text("http.notFound"), requestId);
         }
         if (exception instanceof DataAccessResourceFailureException) {
-            return response(503, "SERVICE_UNAVAILABLE", "服务暂时不可用，请稍后重试。", requestId);
+            return response(503, "SERVICE_UNAVAILABLE", Messages.text("http.serviceUnavailable"), requestId);
         }
         if (exception instanceof ErrorResponse framework && framework.getStatusCode().is4xxClientError()) {
             return response(framework.getStatusCode().value(), "VALIDATION_FAILED",
-                "请求格式或操作方式不正确，请重新操作。", requestId);
+                Messages.text("http.invalidRequest"), requestId);
         }
-        return response(500, "INTERNAL_ERROR", "请求暂时无法完成，请稍后重试。", requestId);
+        return response(500, "INTERNAL_ERROR", Messages.text("http.requestFailed"), requestId);
     }
 
     public void writeFailure(Exception exception, HttpServletRequest request,

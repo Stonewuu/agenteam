@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.execution.entity.RunQuestionRow;
@@ -39,10 +41,10 @@ public class RunQuestionContent {
         String optionId = input.optionId() == null ? "" : input.optionId().strip();
         String text = input.text() == null ? "" : input.text().strip();
         if (optionId.isEmpty() && text.isEmpty()) {
-            throw ApiException.invalidField("text", "请选择一个选项，或输入你的回答。");
+            throw ApiException.invalidField("text", Messages.text("error.execution.runQuestionContent.answer.1"));
         }
         if (text.codePointCount(0, text.length()) > 8000) {
-            throw ApiException.invalidField("text", "回答不能超过八千个字符。");
+            throw ApiException.invalidField("text", Messages.text("error.execution.questionAnswerRequest.text.1"));
         }
         String label = "";
         for (var option : read(row, false).path("options")) {
@@ -51,7 +53,7 @@ public class RunQuestionContent {
             }
         }
         if (!optionId.isEmpty() && label.isEmpty()) {
-            throw ApiException.invalidField("optionId", "请选择本次问题提供的选项。");
+            throw ApiException.invalidField("optionId", Messages.text("error.execution.questionAnswerRequest.optionId.1"));
         }
         String answer = label.isEmpty() ? text : text.isEmpty() ? label : label + "\n" + text;
         return json.createObjectNode().put("answer", answer).put("selectedOptionId", optionId).put("customText", text);
@@ -61,7 +63,7 @@ public class RunQuestionContent {
         try {
             return json.writeValueAsString(encryption.encrypt(value, binding(row, answer)));
         } catch (Exception failure) {
-            throw new IllegalStateException("问题内容无法加密保存", failure);
+            throw new IllegalStateException(Messages.text("error.execution.runQuestionContent.encrypt.1"), failure);
         }
     }
 
@@ -73,7 +75,7 @@ public class RunQuestionContent {
         try {
             return encryption.decrypt(json.readValue(value, EncryptedPayload.class), binding(row, answer), JsonNode.class);
         } catch (Exception failure) {
-            throw new IllegalStateException("已保存的问题内容无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.execution.runQuestionContent.read.1"), failure);
         }
     }
 

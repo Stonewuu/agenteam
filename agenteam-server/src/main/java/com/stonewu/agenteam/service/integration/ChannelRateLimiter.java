@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.integration.entity.ChannelRateLimit;
 import com.stonewu.agenteam.model.integration.entity.IntegrationApplication;
 import org.springframework.core.io.ClassPathResource;
@@ -59,7 +61,7 @@ public class ChannelRateLimiter {
         }
         Long wait = redis.execute(ACQUIRE, keys, arguments.toArray());
         if (wait == null || wait < 0) {
-            throw new IllegalStateException("通知发送额度无法确认");
+            throw new IllegalStateException(Messages.text("error.integration.channelRateLimiter.acquire.1"));
         }
         return Duration.ofMillis(wait);
     }
@@ -68,7 +70,7 @@ public class ChannelRateLimiter {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("无法计算接收人额度编号", failure);
+            throw new IllegalStateException(Messages.text("error.integration.channelRateLimiter.digest.1"), failure);
         }
     }
 }

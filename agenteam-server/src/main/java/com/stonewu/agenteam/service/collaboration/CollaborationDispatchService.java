@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -143,7 +145,7 @@ public class CollaborationDispatchService {
 
     private void changed(int count) {
         if (count != 1) {
-            throw new IllegalStateException("协作工作领取已经过期");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationDispatchService.changed.1"));
         }
     }
 }

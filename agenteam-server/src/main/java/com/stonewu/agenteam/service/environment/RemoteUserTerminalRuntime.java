@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stonewu.agenteam.model.environment.response.EnvironmentTerminalView;
@@ -42,7 +44,7 @@ public class RemoteUserTerminalRuntime implements UserTerminalRuntime {
         if (base.getHost() == null || base.getUserInfo() != null || base.getRawQuery() != null || base.getRawFragment() != null
             || !("https".equals(base.getScheme()) || "http".equals(base.getScheme()) && local)
             || token == null || token.length() < 32 || token.contains("\r") || token.contains("\n")) {
-            throw new IllegalArgumentException("独立终端需要有效的服务地址和访问凭据。");
+            throw new IllegalArgumentException(Messages.text("error.environment.remoteUserTerminalRuntime.init.1"));
         }
         this.endpoint = base.resolve("terminals");
         this.token = token;
@@ -61,26 +63,26 @@ public class RemoteUserTerminalRuntime implements UserTerminalRuntime {
             try (var body = response.body()) {
                 byte[] bytes = body.readNBytes(262145);
                 if (bytes.length > 262144) {
-                    throw new IOException("独立终端响应超过允许范围");
+                    throw new IOException(Messages.text("error.environment.remoteUserTerminalRuntime.exchange.1"));
                 }
                 if (response.statusCode() != 200) {
                     String code = json.readTree(bytes).path("code").asText();
                     String safeCode = code.matches("[A-Z_]{1,80}") ? code : "UNKNOWN";
-                    LOG.warn("独立终端失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}，错误码 {}",
+                    LOG.warn(Messages.log("log.environment.remoteUserTerminalRuntime.exchange.1"),
                         project.workspaceId(), endpoint.getPath(), response.statusCode(), safeCode);
                     if ("ENVIRONMENT_BUSY".equals(code)) {
-                        throw new ApiException(HttpStatus.CONFLICT, code, "环境中仍有任务或命令正在运行，请结束后再停止。");
+                        throw new ApiException(HttpStatus.CONFLICT, code, Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.2"));
                     }
                     if ("SANDBOX_CAPACITY".equals(code)) {
-                        throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, code, "暂无可用执行环境，请稍后连接。");
+                        throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, code, Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.3"));
                     }
                     throw new ApiException(response.statusCode() == 409 ? HttpStatus.CONFLICT : HttpStatus.SERVICE_UNAVAILABLE,
-                        safeCode, "终端连接暂时不可用，请重新连接。");
+                        safeCode, Messages.text("error.environment.remoteUserTerminalRuntime.exchange.2"));
                 }
                 var view = json.readValue(bytes, EnvironmentTerminalView.class);
                 if (view == null || !Set.of("starting", "running", "closing", "closed", "error").contains(view.status() == null ? "" : view.status())
                     || view.id() == null || view.output() == null) {
-                    throw new IOException("独立终端响应缺少有效状态");
+                    throw new IOException(Messages.text("error.environment.remoteUserTerminalRuntime.exchange.3"));
                 }
                 return view;
             }
@@ -91,8 +93,8 @@ public class RemoteUserTerminalRuntime implements UserTerminalRuntime {
                 Thread.currentThread().interrupt();
             }
             Throwable cause = failure instanceof JsonProcessingException ? ExceptionDiagnostics.withoutMessages(failure) : failure;
-            LOG.warn("独立终端请求失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}", project.workspaceId(), endpoint.getPath(), httpStatus, cause);
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ENVIRONMENT_UNAVAILABLE", "终端暂时无法连接，请稍后重试。", cause);
+            LOG.warn(Messages.log("log.environment.remoteUserTerminalRuntime.exchange.2"), project.workspaceId(), endpoint.getPath(), httpStatus, cause);
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ENVIRONMENT_UNAVAILABLE", Messages.text("error.environment.remoteUserTerminalRuntime.exchange.4"), cause);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
@@ -43,7 +45,7 @@ public final class ModelUsageContextMiddleware implements MiddlewareBase {
 
     private ModelCallContext scope(RuntimeContext context) {
         if (!Objects.equals(owner.userId(), context.getUserId()) || context.getSessionId() == null) {
-            throw new IllegalStateException("模型调用的用户或会话与执行归属不一致。");
+            throw new IllegalStateException(Messages.text("error.agent.modelUsageContextMiddleware.scope.1"));
         }
         return owner.forSession(context.getSessionId());
     }

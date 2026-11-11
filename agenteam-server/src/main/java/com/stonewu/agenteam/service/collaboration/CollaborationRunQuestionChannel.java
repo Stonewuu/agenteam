@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
@@ -74,7 +76,7 @@ public class CollaborationRunQuestionChannel implements RunQuestionChannel {
     private void taskStatus(CollaborationTaskRow task, String status) {
         boolean blocked = "blocked".equals(task.getStatus());
         if (blocked && !dependencies.failureReplaced(task)) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_TASK_BLOCKED", "这项任务还有工作需要先处理，请查看任务详情。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_TASK_BLOCKED", Messages.text("error.collaboration.collaborationRunQuestionChannel.taskStatus.1"));
         }
         if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>()
                 .eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId()).eq(CollaborationTaskRow::getId, task.getId())
@@ -82,7 +84,7 @@ public class CollaborationRunQuestionChannel implements RunQuestionChannel {
                 .in(!blocked, CollaborationTaskRow::getStatus, "active", "waiting_input", "waiting_approval")
                 .set(blocked, CollaborationTaskRow::getErrorCode, null)
                 .set(CollaborationTaskRow::getStatus, status).setIncrBy(CollaborationTaskRow::getRevision, 1)) != 1) {
-            throw new IllegalStateException("当前任务已不能等待或继续回答");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationRunQuestionChannel.taskStatus.2"));
         }
     }
 }

@@ -1,0 +1,110 @@
+{
+  "error.knowledge.knowledgeChunkMapper.citation.1": {
+    "zh-CN": "保存的资料位置无法读取",
+    "en": "The saved source location could not be read."
+  },
+  "error.knowledge.knowledgeSearchTerms.prefix.1": {
+    "zh-CN": "知识检索词的摘要无法生成",
+    "en": "The knowledge search term digest could not be generated."
+  },
+  "error.knowledge.knowledgeDocumentService.authorize.1": {
+    "zh-CN": "知识库已停用，请先启用。",
+    "en": "The knowledge base is disabled. Enable it first."
+  },
+  "error.knowledge.knowledgeDocumentService.create.1": {
+    "zh-CN": "一次请选择一至十份不同的资料。",
+    "en": "Select between 1 and 10 different documents."
+  },
+  "error.knowledge.knowledgeDocumentService.create.2": {
+    "zh-CN": "每个知识库最多保存一千份资料。",
+    "en": "A knowledge base can contain up to 1,000 documents."
+  },
+  "error.knowledge.knowledgeDocumentService.create.3": {
+    "zh-CN": "资料尚未通过检查，请等待文件检查完成。",
+    "en": "The document has not passed validation. Wait for the file check to finish."
+  },
+  "error.knowledge.knowledgeDocumentService.create.4": {
+    "zh-CN": "这份文件已在知识库中，请选择“重新处理”。",
+    "en": "This file is already in the knowledge base. Choose Reprocess."
+  },
+  "error.knowledge.knowledgeDocumentService.replaceFile.1": {
+    "zh-CN": "这份文件已经加入知识库，请选择新的文件。",
+    "en": "This file is already in the knowledge base. Select a new file."
+  },
+  "error.knowledge.knowledgeDocumentService.requireProcessable.1": {
+    "zh-CN": "资料正在排队或处理中，请等待处理完成。",
+    "en": "The document is queued or being processed. Wait for it to finish."
+  },
+  "error.knowledge.knowledgeDocumentService.requireProcessable.2": {
+    "zh-CN": "资料处理次数已达到上限，请重新上传文件。",
+    "en": "This document reached its processing attempt limit. Upload it again."
+  },
+  "error.knowledge.knowledgeProcessingTransactions.append.1": {
+    "zh-CN": "知识资料写入批次不正确",
+    "en": "The knowledge source write batch is invalid."
+  },
+  "error.knowledge.knowledgeReferenceService.read.1": {
+    "zh-CN": "这个员工尚未配置所选资料，请选择可用资料或联系维护者。",
+    "en": "This AI employee is not configured to use the selected reference material. Select available material or contact its maintainer."
+  },
+  "error.knowledge.knowledgeReferenceService.unavailable.1": {
+    "zh-CN": "所选资料版本尚未完成或已不可读取，请重新选择。",
+    "en": "This reference version is unfinished or inaccessible. Select another version."
+  },
+  "error.knowledge.knowledgeSearchService.search.1": {
+    "zh-CN": "请输入二至五百个字符的检索内容。",
+    "en": "Enter a search query of 2–500 characters."
+  },
+  "error.knowledge.knowledgeSearchService.search.2": {
+    "zh-CN": "每次最多读取八段资料。",
+    "en": "Read up to eight passages per request."
+  },
+  "error.knowledge.knowledgeProcessingWorker.process.1": {
+    "zh-CN": "文件服务暂时不可用，等待重试。",
+    "en": "The file service is temporarily unavailable. Waiting to retry."
+  },
+  "error.knowledge.knowledgeProcessingWorker.process.2": {
+    "zh-CN": "处理发起人已无法编辑这份资料。",
+    "en": "The initiator can no longer edit this source."
+  },
+  "error.knowledge.knowledgeProcessingWorker.process.3": {
+    "zh-CN": "资料暂时无法完成处理，等待重试。",
+    "en": "The source cannot finish processing right now. Waiting to retry."
+  },
+  "text.knowledge.knowledgeDocumentService.create.1": {
+    "zh-CN": "加入知识资料",
+    "en": "Add knowledge source"
+  },
+  "text.knowledge.knowledgeDocumentService.reprocess.1": {
+    "zh-CN": "重新处理知识资料",
+    "en": "Reprocess knowledge source"
+  },
+  "text.knowledge.knowledgeDocumentService.replaceFile.1": {
+    "zh-CN": "更新知识资料文件",
+    "en": "Update knowledge source file"
+  },
+  "text.knowledge.knowledgeDocumentService.delete.1": {
+    "zh-CN": "删除知识资料",
+    "en": "Delete knowledge source"
+  },
+  "log.knowledge.knowledgeProcessingWorker.executor.1": {
+    "zh-CN": "知识资料处理-",
+    "en": "knowledge-processing-"
+  },
+  "log.knowledge.knowledgeProcessingWorker.process.1": {
+    "zh-CN": "知识资料处理未完成，工作编号 {}，文档编号 {}，错误代码 {}",
+    "en": "Knowledge source processing did not complete; jobId={}, documentId={}, errorCode={}"
+  },
+  "log.knowledge.knowledgeProcessingWorker.process.2": {
+    "zh-CN": "知识资料处理被拒绝，工作编号 {}，文档编号 {}",
+    "en": "Knowledge source processing was rejected; jobId={}, documentId={}"
+  },
+  "log.knowledge.knowledgeProcessingWorker.process.3": {
+    "zh-CN": "知识资料处理失败，工作编号 {}，文档编号 {}",
+    "en": "Knowledge source processing failed; jobId={}, documentId={}"
+  },
+  "log.knowledge.knowledgeRetentionService.poll.1": {
+    "zh-CN": "知识资料清理暂未完成，稍后重试",
+    "en": "Knowledge source cleanup did not complete; retrying later"
+  }
+}

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -159,7 +161,7 @@ public class ProjectWorkspaceStore {
         long nanos = deadline - System.nanoTime();
         if (nanos <= 0) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT,
-                "WORKSPACE_TIMEOUT", "本次文件操作超过允许时间，请稍后重试。");
+                "WORKSPACE_TIMEOUT", Messages.text("error.project.projectWorkspaceStore.remaining.1"));
         }
         return Duration.ofNanos(nanos);
     }

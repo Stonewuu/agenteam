@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceSubjectMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
@@ -42,22 +44,22 @@ public class ResourceSubjectService {
             false) : access.requireGrantReader(actor, resourceId);
         var extension = grants.extensionFor(type);
         if (!Set.of("grant", "owner").contains(purpose) || !"user".equals(type) && extension.isEmpty()) {
-            throw ApiException.invalidField("subjectType", "当前版本不支持此授权对象类型。");
+            throw ApiException.invalidField("subjectType", Messages.text("error.resource.resourceSubjectService.list.1"));
         }
         if (purpose.equals("owner")) {
             policy.editable(policy.authorize(actor, resourceId, "edit", false, false));
             if (!type.equals("user")) {
-                throw ApiException.invalidField("subjectType", "资源只能转交给成员。");
+                throw ApiException.invalidField("subjectType", Messages.text("error.resource.resourceSubjectService.list.2"));
             }
         }
         String query = pagination.query(requestedQuery);
         if (selected != null) {
             if (selected.isEmpty() || selected.size() > 100 || Set.copyOf(selected).size() != selected.size()) {
-                throw ApiException.invalidField("subjectIds", "每次最多读取 100 个不同对象。");
+                throw ApiException.invalidField("subjectIds", Messages.text("error.resource.resourceSubjectService.list.3"));
             }
             selected.forEach(id -> ResourceInput.text(id, "subjectIds", 100, true));
             if (cursor != null || !query.isEmpty()) {
-                throw ApiException.invalidField("subjectIds", "读取已选对象时不能同时搜索或翻页。");
+                throw ApiException.invalidField("subjectIds", Messages.text("error.resource.resourceSubjectService.list.4"));
             }
         }
         int limit = pagination.limit(requestedLimit);

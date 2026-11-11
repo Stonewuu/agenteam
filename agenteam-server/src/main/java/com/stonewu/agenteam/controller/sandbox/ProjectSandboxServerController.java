@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.project.ProjectCommandExecutor;
@@ -63,7 +65,7 @@ public final class ProjectSandboxServerController implements HttpHandler {
             var result = executions.executeProject(id, exchange.getRequestBody(), projects);
             reply(exchange, 200, result);
         } catch (Exception failure) {
-            LOG.error("独立项目执行失败，执行编号 {}，方法 {}，路径 {}", id, exchange.getRequestMethod(), path, failure);
+            LOG.error(Messages.log("log.sandbox.projectSandboxServerController.handle.1"), id, exchange.getRequestMethod(), path, failure);
             int status = failure instanceof ApiException known ? known.getStatusCode().value() : 500;
             String code = failure instanceof ApiException known ? known.code() : "SANDBOX_FAILED";
             reply(exchange, status, Map.of("code", code));

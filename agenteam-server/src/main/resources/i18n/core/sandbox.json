@@ -1,0 +1,186 @@
+{
+  "error.sandbox.sandboxServerMain.main.1": {
+    "zh-CN": "独立执行服务需要至少三十二字符的访问凭据",
+    "en": "The standalone execution service requires an access credential of at least 32 characters."
+  },
+  "error.sandbox.environmentServerController.handle.1": {
+    "zh-CN": "环境信息不完整。",
+    "en": "Environment information is incomplete."
+  },
+  "error.sandbox.sandboxArchiveMapper.read.1": {
+    "zh-CN": "执行数据缺少描述信息",
+    "en": "Execution data is missing its description."
+  },
+  "error.sandbox.remoteProjectCommandExecutor.init.1": {
+    "zh-CN": "独立沙盒需要有效的加密服务地址和至少三十二字符的访问凭据；本机地址可使用 HTTP",
+    "en": "A standalone sandbox requires an encrypted service URL and an access credential of at least 32 characters. Localhost URLs may use HTTP."
+  },
+  "error.sandbox.remoteProjectCommandExecutor.send.1": {
+    "zh-CN": "独立节点的执行结果超过允许范围",
+    "en": "The standalone node execution result exceeds the allowed range."
+  },
+  "error.sandbox.remoteProjectCommandExecutor.send.2": {
+    "zh-CN": "执行节点无法读取项目目录，请检查两端是否使用同一份持久存储。",
+    "en": "The execution node cannot read the project directory. Check that both ends use the same persistent storage."
+  },
+  "error.sandbox.remoteProjectCommandExecutor.send.3": {
+    "zh-CN": "独立执行服务未能完成命令，请先检查项目中的已有结果再继续。",
+    "en": "The execution service could not complete the command. Check existing project results before continuing."
+  },
+  "error.sandbox.remoteProjectCommandExecutor.send.4": {
+    "zh-CN": "命令执行结果尚无法确认，请先检查项目中的已有文件再继续。",
+    "en": "The command result is unknown. Check existing project files before continuing."
+  },
+  "error.sandbox.remoteSandboxContainerCleanup.init.1": {
+    "zh-CN": "独立沙箱清理需要加密服务地址和至少三十二字符的访问凭据；本机地址可使用 HTTP",
+    "en": "Standalone sandbox cleanup requires an encrypted service URL and an access credential of at least 32 characters. Localhost URLs may use HTTP."
+  },
+  "error.sandbox.remoteSandboxContainerCleanup.remove.1": {
+    "zh-CN": "独立执行节点未确认容器清理完成，响应状态 {0}",
+    "en": "The standalone execution node did not confirm container cleanup. Response status: {0}"
+  },
+  "error.sandbox.remoteSandboxContainerCleanup.remove.2": {
+    "zh-CN": "命令运行环境尚未清理完成，请检查独立执行服务后重试。",
+    "en": "The command environment has not finished cleanup. Check the execution service and try again."
+  },
+  "error.sandbox.remoteSandboxExecutor.execute.1": {
+    "zh-CN": "执行环境正在处理其他任务，请稍后重试。",
+    "en": "The execution environment is processing another task. Try again later."
+  },
+  "error.sandbox.remoteSandboxExecutor.execute.2": {
+    "zh-CN": "独立执行服务暂不可用，请稍后重试。",
+    "en": "The execution service is unavailable. Try again later."
+  },
+  "error.sandbox.remoteSandboxExecutor.execute.3": {
+    "zh-CN": "独立执行服务未能完成本次操作。",
+    "en": "The execution service could not complete this action."
+  },
+  "error.sandbox.remoteSandboxExecutor.remaining.1": {
+    "zh-CN": "本次命令执行已经超时。",
+    "en": "The command timed out."
+  },
+  "error.sandbox.sandboxBackendNetworkMonitor.start.1": {
+    "zh-CN": "执行服务容器名称无效。",
+    "en": "The execution service container name is invalid."
+  },
+  "error.sandbox.sandboxBackendNetworkMonitor.start.2": {
+    "zh-CN": "Docker 返回了无效的后端容器标识。",
+    "en": "Docker returned an invalid backend container identifier."
+  },
+  "error.sandbox.sandboxBackendNetworkMonitor.poll.1": {
+    "zh-CN": "后端网络空间检查没有返回有效标识。",
+    "en": "The backend network namespace check returned no valid identifier."
+  },
+  "error.sandbox.sandboxExecutionService.init.1": {
+    "zh-CN": "独立执行目录已被另一个进程使用",
+    "en": "Another process is using the standalone execution directory."
+  },
+  "error.sandbox.sandboxExecutionService.execute.1": {
+    "zh-CN": "调用方与执行节点的联网设置不一致",
+    "en": "The caller and execution node have different network settings"
+  },
+  "error.sandbox.sandboxExecutionService.execute.2": {
+    "zh-CN": "执行时间超过节点允许范围",
+    "en": "The execution time exceeds the node's limit"
+  },
+  "error.sandbox.sandboxExecutionService.executeProject.1": {
+    "zh-CN": "执行请求超过允许范围",
+    "en": "The execution request exceeds the allowed scope"
+  },
+  "error.sandbox.sandboxExecutionService.executeProject.2": {
+    "zh-CN": "项目或执行时间不正确",
+    "en": "The project or execution time is invalid"
+  },
+  "error.sandbox.sandboxExecutionService.acquire.1": {
+    "zh-CN": "执行请求已经取消",
+    "en": "The execution request was cancelled"
+  },
+  "error.sandbox.sandboxExecutionService.acquire.2": {
+    "zh-CN": "执行节点已达到任务数量上限",
+    "en": "The execution node reached its task limit"
+  },
+  "error.sandbox.sandboxExecutionService.acquire.3": {
+    "zh-CN": "此执行请求已经存在",
+    "en": "This execution request already exists"
+  },
+  "log.sandbox.sandboxServerMain.main.1": {
+    "zh-CN": "独立执行服务关闭",
+    "en": "Standalone execution service shutdown"
+  },
+  "log.sandbox.sandboxServerMain.main.2": {
+    "zh-CN": "独立执行服务已启动，端口 {}，工作目录 {}",
+    "en": "Standalone execution service started; port={}, workingDirectory={}"
+  },
+  "log.sandbox.sandboxServerMain.main.3": {
+    "zh-CN": "独立执行服务启动失败",
+    "en": "Standalone execution service startup failed"
+  },
+  "log.sandbox.environmentServerController.handle.1": {
+    "zh-CN": "独立环境管理失败，工作空间编号 {}，方法 {}，路径 /environments",
+    "en": "Standalone environment management failed; workspaceId={}, method={}, path=/environments"
+  },
+  "log.sandbox.environmentTerminalServerController.handle.1": {
+    "zh-CN": "独立终端失败，工作空间编号 {}，方法 {}，路径 /terminals",
+    "en": "Standalone terminal operation failed; workspaceId={}, method={}, path=/terminals"
+  },
+  "log.sandbox.projectSandboxServerController.handle.1": {
+    "zh-CN": "独立项目执行失败，执行编号 {}，方法 {}，路径 {}",
+    "en": "Standalone project execution failed; executionId={}, method={}, path={}"
+  },
+  "log.sandbox.sandboxContainerCleanupController.handle.1": {
+    "zh-CN": "独立节点清理失败，请求编号 {}，方法 {}，路径 {}",
+    "en": "Standalone node cleanup failed; requestId={}, method={}, path={}"
+  },
+  "text.sandbox.sandboxServerController.handle.1": {
+    "zh-CN": "执行服务认证失败",
+    "en": "Execution service authentication failed."
+  },
+  "text.sandbox.sandboxServerController.handle.2": {
+    "zh-CN": "执行请求不存在",
+    "en": "The execution request does not exist."
+  },
+  "text.sandbox.sandboxServerController.handle.3": {
+    "zh-CN": "请求方法不受支持",
+    "en": "The request method is unsupported."
+  },
+  "log.sandbox.sandboxServerController.handle.1": {
+    "zh-CN": "独立执行请求失败，执行编号 {}，方法 {}，路径 {}",
+    "en": "Standalone execution request failed; executionId={}, method={}, path={}"
+  },
+  "text.sandbox.sandboxServerController.handle.4": {
+    "zh-CN": "执行服务未能完成本次请求",
+    "en": "The execution service could not complete this request."
+  },
+  "log.sandbox.remoteProjectCommandExecutor.cancel.1": {
+    "zh-CN": "通知独立节点停止项目命令失败，执行编号 {}",
+    "en": "Could not ask the standalone node to stop the project command; executionId={}"
+  },
+  "log.sandbox.remoteSandboxContainerCleanup.remove.1": {
+    "zh-CN": "独立节点清理容器失败，清理类型 {}，工作空间编号 {}",
+    "en": "Standalone node container cleanup failed; cleanupType={}, workspaceId={}"
+  },
+  "log.sandbox.remoteSandboxExecutor.execute.1": {
+    "zh-CN": "独立执行的传输文件清理失败，调用编号 {}",
+    "en": "Standalone execution transfer file cleanup failed; callId={}"
+  },
+  "log.sandbox.remoteSandboxExecutor.cancel.1": {
+    "zh-CN": "通知独立执行服务停止任务失败，执行编号 {}",
+    "en": "Could not ask the standalone execution service to stop the task; executionId={}"
+  },
+  "log.sandbox.sandboxBackendNetworkMonitor.poll.1": {
+    "zh-CN": "后端网络空间已变化，执行服务即将退出，由容器重启策略重新连接。",
+    "en": "The backend network namespace changed; the execution service will exit and reconnect through the container restart policy"
+  },
+  "log.sandbox.sandboxBackendNetworkMonitor.poll.2": {
+    "zh-CN": "后端网络空间检查失败，下次继续检查",
+    "en": "Backend network namespace check failed; checking again next cycle"
+  },
+  "log.sandbox.sandboxExecutionService.release.1": {
+    "zh-CN": "独立执行目录清理失败，执行编号 {}",
+    "en": "Standalone execution directory cleanup failed; executionId={}"
+  },
+  "log.sandbox.sandboxExecutionService.close.1": {
+    "zh-CN": "独立执行目录的进程锁释放失败，工作编号 sandbox-server-close",
+    "en": "Could not release the standalone execution directory process lock; job=sandbox-server-close"
+  }
+}

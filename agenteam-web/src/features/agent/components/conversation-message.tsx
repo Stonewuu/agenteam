@@ -80,7 +80,7 @@ export function ConversationMessage({
       });
       onFeedback(message.id, next);
     } catch (failed) {
-      console.error("保存回复评价失败", {messageId: message.id, error: failed});
+      console.error("Failed to save reply feedback", {messageId: message.id, error: failed});
       toast.error(errorMessage(failed));
     } finally {
       setBusy(false);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -40,7 +42,7 @@ public class ExecutionPaths {
         Path resolved = stateRoot.resolve(key).toAbsolutePath().normalize();
         Path expected = state(run).getParent().resolve("lease-" + lease).resolve("checkpoints");
         if (!resolved.startsWith(expected) || !resolved.getParent().equals(expected)) {
-            throw new IllegalStateException("检查点不属于本次执行");
+            throw new IllegalStateException(Messages.text("error.agent.executionPaths.checkpointPath.1"));
         }
         return resolved;
     }

@@ -12,6 +12,7 @@ import {ResourceAvatar} from "@/components/ui/resource-avatar";
 import {MotionPanel} from "@/components/ui/motion-panel";
 import {IconArrowUpRight} from "@/components/ui/icons";
 import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
+import {resourceDisplayName, resourceDisplayDescription} from "../lib/resource-localization";
 import {resourcePage, resourceStatus} from "../lib/resource-display";
 import {resourceListCopy} from "../lib/resource-list-copy";
 import type {ResourceKind, ResourceSummary} from "../types/resource";
@@ -42,8 +43,8 @@ export function ResourceCollection({enterpriseId, kind, filters, refresh, onChan
         <div className={styles.cardTop}><ResourceAvatar icon={resource.icon} color={resource.color}/><ResourceStatus
           resource={resource}/></div>
         <Link className={styles.cardMain} href={resourcePage(enterpriseId, resource.kind, resource.id)}>
-          <h2>{resource.source === "builtin" ? uiText(resource.name) : resource.name}</h2>
-          <p>{resource.source === "builtin" ? uiText(resource.description) : resource.description}</p></Link>
+          <h2>{resourceDisplayName(resource, uiText)}</h2>
+          <p>{resourceDisplayDescription(resource, uiText)}</p></Link>
         <div className={styles.cardTags}>{resource.tags.map((tag) => <span className="tag"
                                                                            key={tag.id}>{tag.name}</span>)}</div>
         {resource.kind === "agent" &&
@@ -53,7 +54,7 @@ export function ResourceCollection({enterpriseId, kind, filters, refresh, onChan
           <div className={ui.actions}><ResourceActions enterpriseId={enterpriseId} resource={resource}
                                                        onChanged={onChanged} compact quickCopy/><Link
             className="icon-button" href={resourcePage(enterpriseId, resource.kind, resource.id)}
-            aria-label={`${resource.allowedActions.includes("edit") ? uiText("编辑") : uiText("查看")}${resource.source === "builtin" ? uiText(resource.name) : resource.name}`}><IconArrowUpRight
+            aria-label={`${resource.allowedActions.includes("edit") ? uiText("编辑") : uiText("查看")} ${resourceDisplayName(resource, uiText)}`}><IconArrowUpRight
             size={18}/></Link></div>
         </footer>
       </article>)}</div> : <div className={styles.tableWrap} aria-busy={list.loading}>
@@ -72,8 +73,8 @@ export function ResourceCollection({enterpriseId, kind, filters, refresh, onChan
             <td><Link className={styles.tableName}
                       href={resourcePage(enterpriseId, resource.kind, resource.id)}><ResourceAvatar icon={resource.icon}
                                                                                                     color={resource.color}
-                                                                                                    size="small"/><span>{resource.source === "builtin" ? uiText(resource.name) : resource.name}</span></Link><span
-              className={styles.secondary}>{resource.source === "builtin" ? uiText(resource.description) : resource.description}</span>
+                                                                                                    size="small"/><span>{resourceDisplayName(resource, uiText)}</span></Link><span
+              className={styles.secondary}>{resourceDisplayDescription(resource, uiText)}</span>
             </td>
             <td><ResourceStatus resource={resource}/>{resource.kind === "agent" &&
               <AgentListingControl enterpriseId={enterpriseId} resource={resource} onChanged={onChanged}/>}</td>

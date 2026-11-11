@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
@@ -120,7 +122,7 @@ public final class UserWorkspaceLock implements AutoCloseable {
     private static void releaseReference(Path path, LocalLock local) {
         LOCAL.computeIfPresent(path, (ignored, current) -> {
             if (current != local) {
-                throw new IllegalStateException("工作空间文件锁归属已变化");
+                throw new IllegalStateException(Messages.text("error.project.userWorkspaceLock.releaseReference.1"));
             }
             current.references--;
             return current.references == 0 ? null : current;
@@ -130,7 +132,7 @@ public final class UserWorkspaceLock implements AutoCloseable {
     private static void await(long deadline, ToolCallControl control) {
         control.requireActive();
         if (System.nanoTime() >= deadline) {
-            throw new ApiException(HttpStatus.CONFLICT, "PROJECT_BUSY", "工作空间正在由其他任务使用，请稍后重试。");
+            throw new ApiException(HttpStatus.CONFLICT, "PROJECT_BUSY", Messages.text("error.project.userWorkspaceLock.await.1"));
         }
         control.pause(Duration.ofMillis(20));
     }

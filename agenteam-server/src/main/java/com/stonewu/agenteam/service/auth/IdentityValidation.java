@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,17 +26,17 @@ public final class IdentityValidation {
     public static String username(String value) {
         String name = value == null ? "" : value.trim();
         if (!name.matches("[A-Za-z0-9._-]{3,64}")) {
-            throw invalid("用户名需要 3～64 个字符，只能包含字母、数字、点、下划线和短横线");
+            throw invalid(Messages.text("error.auth.identityValidation.username.1"));
         }
         if (name.equalsIgnoreCase("test")) {
-            throw invalid("此用户名已保留，请使用其他用户名");
+            throw invalid(Messages.text("error.auth.identityValidation.username.2"));
         }
         return name;
     }
 
     public static String loginIdentifier(String value) {
         if (value == null || value.isBlank() || value.trim().length() > 254) {
-            throw invalid("请输入有效账号");
+            throw invalid(Messages.text("error.auth.identityValidation.loginIdentifier.1"));
         }
         return value.trim().toLowerCase(Locale.ROOT);
     }
@@ -43,23 +45,23 @@ public final class IdentityValidation {
         String name = value == null ? "" : value.trim();
         validateUnicode(name);
         if (name.isBlank() || name.codePointCount(0, name.length()) > 50) {
-            throw invalid("显示名需要 1～50 个字符");
+            throw invalid(Messages.text("error.auth.identityValidation.displayName.1"));
         }
         return name;
     }
 
     public static void newPassword(String value) {
         if (value == null) {
-            throw invalid("请输入密码");
+            throw invalid(Messages.text("error.auth.identityValidation.newPassword.1"));
         }
         validateUnicode(value);
         int length = value.codePointCount(0, value.length());
         if (length < 12 || length > 128) {
-            throw invalid("密码需要 12～128 个字符");
+            throw invalid(Messages.text("error.auth.identityValidation.newPassword.2"));
         }
         if (value.isBlank() || value.codePoints().distinct().limit(2).count() < 2
             || COMMON_PASSWORDS.contains(value.trim().toLowerCase(Locale.ROOT))) {
-            throw invalid("这个密码过于常见，请换用更长且不易猜测的密码");
+            throw invalid(Messages.text("error.auth.identityValidation.newPassword.3"));
         }
     }
 
@@ -68,10 +70,10 @@ public final class IdentityValidation {
             char character = value.charAt(index);
             if (Character.isHighSurrogate(character)) {
                 if (++index >= value.length() || !Character.isLowSurrogate(value.charAt(index))) {
-                    throw invalid("输入包含无效字符");
+                    throw invalid(Messages.text("error.auth.identityValidation.validateUnicode.1"));
                 }
             } else if (Character.isLowSurrogate(character)) {
-                throw invalid("输入包含无效字符");
+                throw invalid(Messages.text("error.auth.identityValidation.validateUnicode.1"));
             }
         }
     }

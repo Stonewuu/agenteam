@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -74,7 +76,7 @@ public class ChatSessionSelectionService {
         row.setUpdatedAt(clock.instant());
         row.setSelectionNo(last.isEmpty() ? 1 : last.getFirst().getSelectionNo() + 1);
         if (selections.insert(row) != 1) {
-            throw new IllegalStateException("对话选择未能保存");
+            throw new IllegalStateException(Messages.text("error.chat.chatSessionSelectionService.select.1"));
         }
         return row;
     }
@@ -84,7 +86,7 @@ public class ChatSessionSelectionService {
             || !Objects.equals(selection.getConversationId(), task.getConversationId())
             || !Objects.equals(selection.getUserId(), task.getInitiatorUserId())
             || !Objects.equals(selection.getBotBindingId(), task.getEntryBotId())) {
-            throw new IllegalArgumentException("任务不属于当前成员的机器人对话");
+            throw new IllegalArgumentException(Messages.text("error.chat.chatSessionSelectionService.bind.1"));
         }
         if (Objects.equals(selection.getTaskId(), task.getId())) {
             return;
@@ -94,7 +96,7 @@ public class ChatSessionSelectionService {
             .isNull(ChatSessionSelectionRow::getTaskId).set(ChatSessionSelectionRow::getTaskId, task.getId())
             .eq(ChatSessionSelectionRow::getRevision, selection.getRevision()).setIncrBy(ChatSessionSelectionRow::getRevision, 1)
             .set(ChatSessionSelectionRow::getUpdatedAt, clock.instant())) != 1) {
-            throw new IllegalStateException("当前对话已经关联其他任务");
+            throw new IllegalStateException(Messages.text("error.chat.chatSessionSelectionService.bind.2"));
         }
         selection.setTaskId(task.getId());
         selection.setRevision(selection.getRevision() + 1);

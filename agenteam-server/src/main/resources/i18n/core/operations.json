@@ -1,0 +1,6 @@
+{
+  "log.operations.operationalMetrics.collect.1": {
+    "zh-CN": "运维状态暂时无法采集，下一轮重试",
+    "en": "Operational metrics could not be collected; retrying next cycle"
+  }
+}

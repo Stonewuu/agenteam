@@ -110,7 +110,7 @@ class ModelProtocolBoundaryTest {
         reply = "{\"error\":{\"code\":\"rate_limit\",\"type\":\"rate_limit_error\",\"message\":\"rate limited private-api-key private-prompt https://example.test/path?private_query=value\"}}";
         assertThatThrownBy(() -> invoke(protocol, ModelProtocolOptions.defaults(), null)).isInstanceOf(HttpTransportException.class);
         assertFailure(output, "rate_limit");
-        assertThat(output.getAll()).contains("rate limited", "HTTP状态=429", "路径=/", "trace-unit");
+        assertThat(output.getAll()).contains("rate limited", "httpStatus=429", "path=/", "trace-unit");
     }
 
     @ParameterizedTest
@@ -125,7 +125,7 @@ class ModelProtocolBoundaryTest {
         };
         assertThatThrownBy(() -> invoke(protocol, ModelProtocolOptions.defaults(), null)).isInstanceOf(HttpTransportException.class);
         assertFailure(output, protocol.equals("gemini") ? "UNAVAILABLE" : "overloaded_error");
-        assertThat(output.getAll()).contains("service overloaded", "HTTP状态=200", "trace-unit");
+        assertThat(output.getAll()).contains("service overloaded", "httpStatus=200", "trace-unit");
     }
 
     @ParameterizedTest
@@ -157,7 +157,7 @@ class ModelProtocolBoundaryTest {
         failure.addSuppressed(new IllegalStateException("private_query"));
         LoggerFactory.getLogger("io.agentscope.extensions.model.gemini.formatter.GeminiResponseParser")
             .warn("Failed to parse function call: {}", "private-prompt", failure);
-        assertThat(output.getAll()).contains("响应格式处理失败", "IllegalArgumentException", "Suppressed", "ModelProtocolBoundaryTest")
+        assertThat(output.getAll()).contains("Response format processing failed", "IllegalArgumentException", "Suppressed", "ModelProtocolBoundaryTest")
             .doesNotContain("private-prompt", "private-api-key", "private_query");
     }
 
@@ -213,7 +213,7 @@ class ModelProtocolBoundaryTest {
         assertThat(saved.getValue().callStatus()).isEqualTo("failed");
         assertThat(saved.getValue().providerErrorCode()).isEqualTo(code);
         assertThat(sends.get()).isEqualTo(1);
-        assertThat(output.getAll()).contains("模型请求失败", "方法=POST", code)
+        assertThat(output.getAll()).contains("Model request failed", "method=POST", code)
             .doesNotContain("private-api-key", "private-prompt", "private_query");
     }
 }

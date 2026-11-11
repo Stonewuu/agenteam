@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.integration.ChannelProviderException;
 import com.stonewu.agenteam.service.integration.IntegrationFrameDiagnostics;
 import org.slf4j.Logger;
@@ -46,9 +48,9 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
                 connected.abort();
             }
         } catch (Exception failure) {
-            IntegrationFrameDiagnostics.networkFailure(connectionId, "建立连接", failure);
+            IntegrationFrameDiagnostics.networkFailure(connectionId, Messages.text("text.chat.chatSocket.connect.1"), failure);
             close();
-            throw safe("CHAT_CONNECT_FAILED", "平台长连接暂时无法建立。", failure);
+            throw safe("CHAT_CONNECT_FAILED", Messages.text("error.chat.chatSocket.connect.1"), failure);
         }
     }
 
@@ -62,7 +64,7 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
     public CompletionStage<?> onText(WebSocket value, CharSequence part, boolean last) {
         try {
             if (text.length() + part.length() > LIMIT) {
-                throw new IllegalArgumentException("平台文本帧超过允许大小");
+                throw new IllegalArgumentException(Messages.text("error.chat.chatSocket.onText.1"));
             }
             text.append(part);
             if (last) {
@@ -81,7 +83,7 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
     public CompletionStage<?> onBinary(WebSocket value, ByteBuffer part, boolean last) {
         try {
             if (binary.size() + part.remaining() > LIMIT) {
-                throw new IllegalArgumentException("平台二进制帧超过允许大小");
+                throw new IllegalArgumentException(Messages.text("error.chat.chatSocket.onBinary.1"));
             }
             byte[] bytes = new byte[part.remaining()];
             part.get(bytes);
@@ -106,7 +108,7 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
 
     @Override
     public void onError(WebSocket value, Throwable error) {
-        IntegrationFrameDiagnostics.networkFailure(connectionId, "读取连接", error);
+        IntegrationFrameDiagnostics.networkFailure(connectionId, Messages.text("text.chat.chatSocket.onError.1"), error);
         failed(error);
     }
 
@@ -114,8 +116,8 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
         try {
             requireOpen().sendText(payload, true).get(8, TimeUnit.SECONDS);
         } catch (Exception failure) {
-            IntegrationFrameDiagnostics.networkFailure(connectionId, "发送文字", failure);
-            throw safe("CHAT_SOCKET_SEND_UNCERTAIN", "平台长连接发送结果尚未确认。", failure);
+            IntegrationFrameDiagnostics.networkFailure(connectionId, Messages.text("text.chat.chatSocket.text.1"), failure);
+            throw safe("CHAT_SOCKET_SEND_UNCERTAIN", Messages.text("error.chat.chatSocket.text.1"), failure);
         }
     }
 
@@ -123,8 +125,8 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
         try {
             requireOpen().sendBinary(ByteBuffer.wrap(payload), true).get(8, TimeUnit.SECONDS);
         } catch (Exception failure) {
-            IntegrationFrameDiagnostics.networkFailure(connectionId, "发送二进制内容", failure);
-            throw safe("CHAT_SOCKET_SEND_UNCERTAIN", "平台长连接发送结果尚未确认。", failure);
+            IntegrationFrameDiagnostics.networkFailure(connectionId, Messages.text("text.chat.chatSocket.binary.1"), failure);
+            throw safe("CHAT_SOCKET_SEND_UNCERTAIN", Messages.text("error.chat.chatSocket.text.1"), failure);
         }
     }
 
@@ -135,13 +137,13 @@ public final class ChatSocket implements WebSocket.Listener, AutoCloseable {
 
     private WebSocket requireOpen() {
         if (!open()) {
-            throw new ChannelProviderException("CHAT_CONNECTION_UNAVAILABLE", "机器人长连接尚未就绪。");
+            throw new ChannelProviderException("CHAT_CONNECTION_UNAVAILABLE", Messages.text("error.chat.chatSocket.requireOpen.1"));
         }
         return socket;
     }
 
     private void failed(Throwable failure) {
-        LOG.warn("平台长连接处理失败，接入={}", connectionId, safe("CHAT_SOCKET_FAILED", "平台长连接已中止。", failure));
+        LOG.warn(Messages.log("log.chat.chatSocket.failed.1"), connectionId, safe("CHAT_SOCKET_FAILED", Messages.text("error.chat.chatSocket.failed.1"), failure));
         close();
     }
 

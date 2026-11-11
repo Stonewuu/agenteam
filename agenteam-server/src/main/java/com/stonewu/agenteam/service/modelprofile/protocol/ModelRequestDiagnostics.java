@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,12 +94,12 @@ public final class ModelRequestDiagnostics {
             JsonNode body = json.readTree(peek.bytes());
             captureError(body == null ? null : body.path("error"));
         } catch (JsonProcessingException failure) {
-            reason = "厂商错误响应无法解析";
-            LOG.warn("模型错误响应无法解析，调用={}，方法={}，路径={}，HTTP状态={}，平台排障编号={}",
+            reason = Messages.log("log.modelprofile.modelRequestDiagnostics.response.1");
+            LOG.warn(Messages.log("log.modelprofile.modelRequestDiagnostics.response.2"),
                 callId, method, path, httpStatus, requestId, safeCause(failure, new IdentityHashMap<>()));
         }
         if (reason == null) {
-            reason = "模型服务拒绝请求，HTTP状态=" + response.code();
+            reason = Messages.log("log.modelprofile.modelRequestDiagnostics.response.3", response.code());
         }
         // 官方 Chat 传输会记录整个错误响应，因此只向下游提供必要的脱敏错误字段。
         var safe = json.createObjectNode();
@@ -122,7 +124,7 @@ public final class ModelRequestDiagnostics {
             errorCode = identifier(error.path("type").asText(null));
         }
         String message = error.path("message").asText(null);
-        reason = message == null ? "厂商返回错误，错误码=" + errorCode : clean(message);
+        reason = message == null ? Messages.log("log.modelprofile.modelRequestDiagnostics.captureError.1", errorCode) : clean(message);
     }
 
     public RuntimeException failure(Throwable failure) {
@@ -134,7 +136,7 @@ public final class ModelRequestDiagnostics {
             reason = networkReason(failure);
         }
         var safe = safeCause(failure, new IdentityHashMap<>());
-        LOG.warn("模型请求失败，调用={}，方法={}，路径={}，HTTP状态={}，平台错误码={}，原因={}，平台排障编号={}",
+        LOG.warn(Messages.log("log.modelprofile.modelRequestDiagnostics.failure.1"),
             callId, method, path, httpStatus, errorCode, reason, requestId, safe);
         return httpStatus == null ? new HttpTransportException(reason, safe)
             : new HttpTransportException(reason, httpStatus, null, safe);
@@ -178,10 +180,10 @@ public final class ModelRequestDiagnostics {
                 return clean(current.getMessage());
             }
             if (current instanceof TimeoutException) {
-                return "模型请求超过本次执行时间限制（timeout）";
+                return Messages.log("log.modelprofile.modelRequestDiagnostics.networkReason.1");
             }
         }
-        return "模型响应处理失败，具体位置见异常堆栈";
+        return Messages.log("log.modelprofile.modelRequestDiagnostics.networkReason.2");
     }
 
     private Throwable safeCause(Throwable original, Map<Throwable, Throwable> visited) {
@@ -190,7 +192,7 @@ public final class ModelRequestDiagnostics {
         }
         boolean network = original instanceof IOException && !(original instanceof JsonProcessingException);
         var safe = new IllegalStateException(original.getClass().getName()
-            + (network ? "：" + clean(original.getMessage()) : "：模型请求处理异常"));
+            + (network ? ": " + clean(original.getMessage()) : Messages.log("error.modelprofile.modelRequestDiagnostics.safeCause.1")));
         visited.put(original, safe);
         safe.setStackTrace(original.getStackTrace());
         var cause = safeCause(original.getCause(), visited);
@@ -208,15 +210,15 @@ public final class ModelRequestDiagnostics {
 
     private String clean(String value) {
         if (value == null) {
-            return "厂商未提供错误说明";
+            return Messages.log("log.modelprofile.modelRequestDiagnostics.clean.1");
         }
         String safe = value;
         for (var secret : privateValues) {
-            safe = safe.replace(secret, "[已隐藏]");
+            safe = safe.replace(secret, Messages.log("text.tool.toolPayloadMapper.redact.1"));
         }
-        safe = QUERY.matcher(safe).replaceAll("$1?[已隐藏]");
-        safe = SECRET.matcher(safe).replaceAll("[已隐藏]");
-        safe = QUOTED.matcher(safe).replaceAll("[已隐藏]").replaceAll("[\\p{Cntrl}\\u2028\\u2029]", " ");
+        safe = QUERY.matcher(safe).replaceAll(Messages.log("log.modelprofile.modelRequestDiagnostics.clean.2"));
+        safe = SECRET.matcher(safe).replaceAll(Messages.log("text.tool.toolPayloadMapper.redact.1"));
+        safe = QUOTED.matcher(safe).replaceAll(Messages.log("text.tool.toolPayloadMapper.redact.1")).replaceAll("[\\p{Cntrl}\\u2028\\u2029]", " ");
         return safe.substring(0, Math.min(safe.length(), 1200));
     }
 

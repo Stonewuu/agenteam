@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectCommandRecord;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -64,11 +66,11 @@ public class UserSandboxLifecycle {
                 if (previous != null) {
                     if (!project.projectId().equals(previous.projectId()) || !hash.equals(previous.commandHash())) {
                         throw new ApiException(HttpStatus.CONFLICT, "PROJECT_COMMAND_CONFLICT",
-                            "此调用编号已用于其他命令。");
+                            Messages.text("error.project.userSandboxLifecycle.begin.1"));
                     }
                     if (previous.result() == null) {
                         throw new ApiException(HttpStatus.CONFLICT, "PROJECT_COMMAND_UNCONFIRMED",
-                            "上次命令的结果尚无法确认，请先检查已有结果。");
+                            Messages.text("error.project.userSandboxLifecycle.begin.2"));
                     }
                     return previous;
                 }
@@ -79,7 +81,7 @@ public class UserSandboxLifecycle {
                     String daemon = containers.daemon(DockerWorkspaceCommands.remaining(deadline), control);
                     if (state != null && !daemon.equals(state.daemonId())) {
                         throw new ApiException(HttpStatus.CONFLICT, "PROJECT_EXECUTION_HOST_CHANGED",
-                            "执行节点已变化，请先核实原节点的运行任务。");
+                            Messages.text("error.project.userSandboxLifecycle.begin.3"));
                     }
                     String before = containers.ownedId(project, DockerWorkspaceCommands.remaining(deadline));
                     boolean running = before != null && containers.running(before,
@@ -126,7 +128,7 @@ public class UserSandboxLifecycle {
             String daemon = containers.daemon(CHECK_TIMEOUT, control);
             if (state != null && !daemon.equals(state.daemonId())) {
                 throw new ApiException(HttpStatus.CONFLICT, "PROJECT_EXECUTION_HOST_CHANGED",
-                    "环境暂时无法连接，请联系管理员检查执行服务。");
+                    Messages.text("error.project.userSandboxLifecycle.environment.1"));
             }
             String id = containers.ownedId(project, CHECK_TIMEOUT);
             boolean running = id != null && containers.running(id, CHECK_TIMEOUT);
@@ -156,7 +158,7 @@ public class UserSandboxLifecycle {
             layout.requireRegistered(project);
             if (!registry.active(project.workspaceId()).isEmpty() || !registry.usages(project.workspaceId()).isEmpty()
                 || registry.interactive(project.workspaceId(), clock.millis())) {
-                throw new ApiException(HttpStatus.CONFLICT, "ENVIRONMENT_BUSY", "环境中仍有任务或命令正在运行，请结束后再停止。");
+                throw new ApiException(HttpStatus.CONFLICT, "ENVIRONMENT_BUSY", Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.2"));
             }
             state = registry.state(project.workspaceId());
             if (state != null && !"stopped".equals(state.status())) {
@@ -213,7 +215,7 @@ public class UserSandboxLifecycle {
                                          boolean exceeded) {
         if (!status.completed() || status.exitCode() == null) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_COMMAND_UNCONFIRMED",
-                "命令执行结果尚无法确认，请先检查项目中的已有文件。");
+                Messages.text("error.project.userSandboxLifecycle.result.1"));
         }
         return new SandboxExecutor.Result(status.exitCode(), status.timedOut(), exceeded,
             processes.output(record, "stdout"), processes.output(record, "stderr"));
@@ -226,11 +228,11 @@ public class UserSandboxLifecycle {
                 try {
                     collect(workspace);
                 } catch (IOException | RuntimeException failure) {
-                    LOG.warn("检查沙盒空闲回收失败，工作空间编号 {}", workspace, failure);
+                    LOG.warn(Messages.log("log.project.userSandboxLifecycle.poll.1"), workspace, failure);
                 }
             }
         } catch (IOException failure) {
-            LOG.warn("读取沙盒回收目录失败，任务编号 sandbox-idle-scan", failure);
+            LOG.warn(Messages.log("log.project.userSandboxLifecycle.poll.2"), failure);
         }
     }
 
@@ -297,7 +299,7 @@ public class UserSandboxLifecycle {
             String daemon = containers.daemon(CHECK_TIMEOUT, null);
             UserSandboxState state = registry.state(workspace);
             if (state == null || !daemon.equals(state.daemonId())) {
-                throw new IOException("原执行节点尚未确认，不回收运行记录");
+                throw new IOException(Messages.text("error.project.userSandboxLifecycle.reconcileCommands.1"));
             }
             if (!containers.running(record.containerId(), CHECK_TIMEOUT)) {
                 change(record, null, "interrupted");
@@ -319,7 +321,7 @@ public class UserSandboxLifecycle {
                         complete(record, result(record, status, false));
                     }
                 } else {
-                    throw new IOException("命令进程归属或清理结果尚未确认，调用编号 " + record.callId());
+                    throw new IOException(Messages.text("error.project.userSandboxLifecycle.reconcileCommands.2", record.callId()));
                 }
             }
         }
@@ -344,7 +346,7 @@ public class UserSandboxLifecycle {
                 }
             }
             if (!expected.daemonId().equals(containers.daemon(CHECK_TIMEOUT, null))) {
-                throw new IOException("容器所属执行节点已变化，停止操作已取消");
+                throw new IOException(Messages.text("error.project.userSandboxLifecycle.finishStopping.1"));
             }
             containers.stopInstance(expected.project(), expected.containerId(), settings.stopSeconds(),
                 Duration.ofSeconds(settings.stopSeconds() + 15L));

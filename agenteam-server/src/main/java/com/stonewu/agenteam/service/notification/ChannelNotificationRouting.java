@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.integration.IntegrationPublicUrls;
@@ -119,7 +121,7 @@ public class ChannelNotificationRouting {
         }
         var connection = policy.connection(notice.getEnterpriseId(), target.connectionId());
         if (connection == null) {
-            throw new IllegalStateException("通知所选的企业接入不存在");
+            throw new IllegalStateException(Messages.text("error.notification.channelNotificationRouting.enqueue.1"));
         }
         var binding = policy.binding(notice.getEnterpriseId(), target.connectionId(), notice.getUserId(), target.bindingId());
         var blocked = policy.check(notice, target, reason, connection, binding);
@@ -132,7 +134,7 @@ public class ChannelNotificationRouting {
         }
         String enterprise = requests.getFirst().notification().getEnterpriseId();
         if (requests.stream().anyMatch(request -> !enterprise.equals(request.notification().getEnterpriseId()))) {
-            throw new IllegalArgumentException("同一批定时通知必须属于同一企业");
+            throw new IllegalArgumentException(Messages.text("error.notification.channelNotificationRouting.scheduled.1"));
         }
         var users = requests.stream().map(request -> request.notification().getUserId()).distinct().toList();
         var active = members.selected(enterprise, users).stream().map(value -> value.getId()).collect(Collectors.toSet());
@@ -160,7 +162,7 @@ public class ChannelNotificationRouting {
             }
             var app = applications.get(target.connectionId());
             if (app == null) {
-                throw new IllegalStateException("定时通知的接入记录已丢失");
+                throw new IllegalStateException(Messages.text("error.notification.channelNotificationRouting.scheduled.2"));
             }
             var binding = target.bindingId() == null ? null : bound.get(target.bindingId());
             if (binding != null && (!notice.getUserId().equals(binding.getUserId()) || !target.connectionId().equals(binding.getConnectionId()))) {
@@ -170,9 +172,9 @@ public class ChannelNotificationRouting {
             boolean sender = senders.computeIfAbsent(new SenderKey(notice.getInitiatorUserId(), notice.getUserId().equals(notice.getInitiatorUserId())),
                 ignored -> policy.senderAllowed(enterprise, notice.getInitiatorUserId(), notice.getUserId(), "scheduled"));
             if (!active.contains(notice.getUserId())) {
-                blocked = new ChannelDeliveryPolicy.Block("blocked", "RECIPIENT_UNAVAILABLE", "接收人已不在企业中或账号已停用。");
+                blocked = new ChannelDeliveryPolicy.Block("blocked", "RECIPIENT_UNAVAILABLE", Messages.text("text.notification.channelDeliveryPolicy.check.1"));
             } else if (!sender) {
-                blocked = new ChannelDeliveryPolicy.Block("blocked", "NOTIFICATION_SENDER_DENIED", "发起人已无权向此成员发送通知。");
+                blocked = new ChannelDeliveryPolicy.Block("blocked", "NOTIFICATION_SENDER_DENIED", Messages.text("text.notification.channelDeliveryPolicy.check.3"));
             }
             var saved = persist(notice, target, "scheduled", request.expiresAt(), app, binding, blocked);
             previous.put(key, saved);
@@ -184,7 +186,7 @@ public class ChannelNotificationRouting {
     private NotificationChannelDeliveryRow persist(NotificationRow notice, ChannelDeliveryTarget target, String reason, Instant expires,
                                                     EnterpriseIntegrationRow connection, UserChannelBindingRow binding, ChannelDeliveryPolicy.Block blocked) {
         if (!expires.isAfter(clock.instant())) {
-            blocked = new ChannelDeliveryPolicy.Block("expired", "NOTIFICATION_EXPIRED", "此通知已超过发送有效期。");
+            blocked = new ChannelDeliveryPolicy.Block("expired", "NOTIFICATION_EXPIRED", Messages.text("text.notification.channelDeliveryTransactions.ready.2"));
         }
         var row = new NotificationChannelDeliveryRow();
         row.setId(UUID.randomUUID().toString());

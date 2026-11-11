@@ -13,19 +13,19 @@ import java.util.Map;
  * 管理员明确配置的原生参数与计量能力，不按型号名称猜测厂商能力。
  */
 public record ModelProtocolOptions(
-    @Pattern(regexp = "(?:effort|budget|adaptive|level)", message = "请选择支持的思考方式。") String reasoningMode,
-    @Size(max = 7, message = "思考等级数量超出允许范围。")
-    Map<@Pattern(regexp = ReasoningEffort.PATTERN, message = "请选择支持的思考等级。") String,
-        @Min(value = 0, message = "思考预算不能为负数。") @Max(value = 1000000, message = "思考预算超出允许范围。") Integer> thinkingBudgets,
-    @Size(max = 7, message = "思考等级数量超出允许范围。")
-    Map<@Pattern(regexp = ReasoningEffort.PATTERN, message = "请选择支持的思考等级。") String,
-        @Pattern(regexp = "(?:minimal|low|medium|high|max)", message = "请选择支持的按思考强度设置。") String> thinkingLevels,
-    @Min(value = 0, message = "缓存有效期不能为负数。") @Max(value = 3600, message = "缓存有效期超出允许范围。") Integer cacheTtlSeconds,
-    @Pattern(regexp = "(?:standard|deepseek)", message = "请选择支持的用量格式。") String usageFormat,
-    @Size(max = 4, message = "用量字段数量超出允许范围。") @UniqueElements(message = "用量字段不能重复。")
-    List<@Pattern(regexp = "(?:cache_read|cache_write|reasoning|tool_use_prompt)", message = "请选择支持的用量字段。") String> notApplicableUsage,
-    @Pattern(regexp = "(?:default|auto|flex|priority|standard_only)", message = "请选择支持的服务档位。") String serviceTier,
-    @Min(value = 1, message = "协议配置版本不受支持。") @Max(value = 1, message = "协议配置版本不受支持。") Integer version) {
+    @Pattern(regexp = "(?:effort|budget|adaptive|level)", message = "{error.modelprofile.modelProtocolOptions.reasoningMode.1}") String reasoningMode,
+    @Size(max = 7, message = "{error.modelprofile.modelCapabilities.reasoningEfforts.1}")
+    Map<@Pattern(regexp = ReasoningEffort.PATTERN, message = "{validation.modelprofile.modelCapabilities.reasoningEfforts.2}") String,
+        @Min(value = 0, message = "{validation.modelprofile.modelProtocolOptions.thinkingBudgets.1}") @Max(value = 1000000, message = "{validation.modelprofile.modelProtocolOptions.thinkingBudgets.2}") Integer> thinkingBudgets,
+    @Size(max = 7, message = "{error.modelprofile.modelCapabilities.reasoningEfforts.1}")
+    Map<@Pattern(regexp = ReasoningEffort.PATTERN, message = "{validation.modelprofile.modelCapabilities.reasoningEfforts.2}") String,
+        @Pattern(regexp = "(?:minimal|low|medium|high|max)", message = "{validation.modelprofile.modelProtocolOptions.thinkingLevels.1}") String> thinkingLevels,
+    @Min(value = 0, message = "{error.modelprofile.modelProtocolOptions.cacheTtlSeconds.1}") @Max(value = 3600, message = "{error.modelprofile.modelProtocolOptions.cacheTtlSeconds.2}") Integer cacheTtlSeconds,
+    @Pattern(regexp = "(?:standard|deepseek)", message = "{error.modelprofile.modelProtocolOptions.usageFormat.1}") String usageFormat,
+    @Size(max = 4, message = "{error.modelprofile.modelProtocolOptions.notApplicableUsage.1}") @UniqueElements(message = "{error.modelprofile.modelProtocolOptions.notApplicableUsage.2}")
+    List<@Pattern(regexp = "(?:cache_read|cache_write|reasoning|tool_use_prompt)", message = "{validation.modelprofile.modelProtocolOptions.notApplicableUsage.1}") String> notApplicableUsage,
+    @Pattern(regexp = "(?:default|auto|flex|priority|standard_only)", message = "{error.modelprofile.modelProtocolOptions.serviceTier.1}") String serviceTier,
+    @Min(value = 1, message = "{error.modelprofile.modelProtocolOptions.version.1}") @Max(value = 1, message = "{error.modelprofile.modelProtocolOptions.version.1}") Integer version) {
 
     public ModelProtocolOptions {
         version = version == null ? 1 : version;

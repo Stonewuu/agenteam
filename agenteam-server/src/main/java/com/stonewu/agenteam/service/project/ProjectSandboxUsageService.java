@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.mapper.execution.RunJobMapper;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
@@ -109,7 +111,7 @@ public class ProjectSandboxUsageService {
                 }
             }
         } catch (IOException | RuntimeException failure) {
-            LOG.warn("更新沙盒任务使用登记失败，执行编号 {}，工作编号 {}", lease.runId(), lease.id(), failure);
+            LOG.warn(Messages.log("log.project.projectSandboxUsageService.update.1"), lease.runId(), lease.id(), failure);
         }
     }
 
@@ -120,11 +122,11 @@ public class ProjectSandboxUsageService {
                 try {
                     reconcile(workspace);
                 } catch (IOException | RuntimeException failure) {
-                    LOG.warn("核实沙盒任务使用登记失败，工作空间编号 {}", workspace, failure);
+                    LOG.warn(Messages.log("log.project.projectSandboxUsageService.reconcile.1"), workspace, failure);
                 }
             }
         } catch (IOException failure) {
-            LOG.warn("读取沙盒任务登记目录失败，任务编号 sandbox-usage-reconcile", failure);
+            LOG.warn(Messages.log("log.project.projectSandboxUsageService.reconcile.2"), failure);
         }
     }
 

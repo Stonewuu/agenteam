@@ -1,6 +1,7 @@
 "use client";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {resourceDisplayName} from "../lib/resource-localization";
 
 import {Button} from "@/components/ui/button";
 
@@ -54,10 +55,10 @@ export function ResourceActions({
         <Button className={ui.primary} type="button" disabled={dirty} title={dirty ? uiText("请先保存草稿") : undefined}
                 onClick={() => setOperation("publish")}><IconUpload size={16}/>{uiText("发布")}</Button>}
       {quickCopy && available.includes("copy") &&
-        <Button className="icon-button" type="button" aria-label={uiText("复制{0}", [resource.name])}
+        <Button className="icon-button" type="button" aria-label={uiText("复制{0}", [resourceDisplayName(resource, uiText)])}
                 onClick={() => setOperation("copy")}><IconCopy size={17}/></Button>}
       {available.length > 0 &&
-        <DropdownMenu><DropdownMenuTrigger className={compact ? "icon-button" : ui.button} aria-label={uiText("{0}的更多操作", [resource.name])}
+        <DropdownMenu><DropdownMenuTrigger className={compact ? "icon-button" : ui.button} aria-label={uiText("{0}的更多操作", [resourceDisplayName(resource, uiText)])}
                                            disabled={dirty}><IconDots size={compact ? 19 : 16}/>{!compact && uiText("更多")}</DropdownMenuTrigger>
           <DropdownMenuContent align="end"
                                className="agenteam-menu agenteam-popup">{available.filter((value) => compact || value !== "publish").map((value) =>

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data.mysql;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.persistence.DataQueryControlInterceptor;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
@@ -33,11 +35,11 @@ public final class ExternalMysqlSessions {
         String resource = "mapper-external/mysql/ExternalMysqlSqlMapper.xml";
         try (var input = ExternalMysqlSessions.class.getClassLoader().getResourceAsStream(resource)) {
             if (input == null) {
-                throw new IllegalStateException("外部数据库映射文件不存在");
+                throw new IllegalStateException(Messages.text("error.data.externalMysqlSessions.createFactory.1"));
             }
             new XMLMapperBuilder(input, configuration, resource, configuration.getSqlFragments()).parse();
         } catch (IOException failure) {
-            throw new IllegalStateException("外部数据库映射文件无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.data.externalMysqlSessions.createFactory.2"), failure);
         }
         return new SqlSessionFactoryBuilder().build(configuration);
     }

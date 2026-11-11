@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -30,12 +32,12 @@ public class JavaPluginSources {
         registry.matchPlugin(row, source.path("id").asText());
         var configuration = source.path("configuration");
         if (!configuration.isObject()) {
-            throw ApiException.invalidField("config.sources", "请填写插件配置。");
+            throw ApiException.invalidField("config.sources", Messages.text("error.plugin.javaPluginSources.require.1"));
         }
         try {
             schemas.arguments(json.read(row.getConfigurationSchema()), configuration);
         } catch (ApiException failure) {
-            throw ApiException.invalidField("config.sources", "插件配置不符合要求，请核对必填项及字段格式。", failure);
+            throw ApiException.invalidField("config.sources", Messages.text("error.plugin.javaPluginSources.require.2"), failure);
         }
         return row;
     }
@@ -43,7 +45,7 @@ public class JavaPluginSources {
     public PluginToolSources.Resolved resolve(AuthContext actor, JsonNode source, JsonNode selection, int timeout) {
         var row = require(actor, source);
         var tool = registry.tools(row).stream().filter(value -> value.name().equals(selection.path("name").asText()))
-            .findFirst().orElseThrow(() -> ApiException.invalidField("config.tools", "所选工具不在此插件版本中。"));
+            .findFirst().orElseThrow(() -> ApiException.invalidField("config.tools", Messages.text("error.plugin.javaPluginSources.resolve.1")));
         ObjectNode config = source.deepCopy();
         config.put("pluginType", "java").put("timeoutSeconds", timeout);
         var fixed = new PluginToolSource("java", row.getPluginId(), row.getId(), row.getPluginVersion(), row.getName(), config);

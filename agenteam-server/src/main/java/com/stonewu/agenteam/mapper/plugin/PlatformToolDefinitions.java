@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.tool.entity.ToolDefinition;
@@ -22,90 +24,90 @@ public class PlatformToolDefinitions {
     }
 
     public List<ToolDefinition> basics() {
-        return List.of(tool("platform_context", "读取当前企业、本人和企业时区。", false, Map.of()),
-            tool("platform_time", "读取当前准确时间、日期及企业时区。安排日期前先读取，不猜测今天的日期。", false,
+        return List.of(tool("platform_context", Messages.source("text.plugin.platformToolDefinitions.basics.1"), false, Map.of()),
+            tool("platform_time", Messages.source("text.plugin.platformToolDefinitions.basics.2"), false,
                 Map.of()),
-            tool("platform_search", "在当前用户可见的工作空间中搜索，返回实际资源及页面入口。", false,
+            tool("platform_search", Messages.source("text.plugin.platformToolDefinitions.basics.3"), false,
                 Map.of("query", text(100)), "query"));
     }
 
     public List<ToolDefinition> todos() {
         var result = new ArrayList<ToolDefinition>();
-        result.add(tool("todo_list", "查询本人或有权查看的团队待办。截止日期不代表到点提醒。", false,
+        result.add(tool("todo_list", Messages.source("text.plugin.platformToolDefinitions.todos.1"), false,
             fields(page(), "scope", choice("mine", "team"), "status",
                 choice("open", "pending", "in_progress", "completed", "cancelled"), "teamId", nullableText(100))));
         result.add(
-            tool("todo_get", "读取一条有权查看的待办及当前修改版本，修改前先读取。", false, Map.of("todoId", text(100)),
+            tool("todo_get", Messages.source("text.plugin.platformToolDefinitions.todos.2"), false, Map.of("todoId", text(100)),
                 "todoId"));
         result.add(
-            tool("todo_history", "查询待办的真实修改历史。", false, fields(page(), "todoId", text(100)), "todoId"));
-        result.add(tool("todo_assignees", "查询当前待办可以选择的真实负责人，不要猜测成员编号。", false,
+            tool("todo_history", Messages.source("text.plugin.platformToolDefinitions.todos.3"), false, fields(page(), "todoId", text(100)), "todoId"));
+        result.add(tool("todo_assignees", Messages.source("text.plugin.platformToolDefinitions.todos.4"), false,
             fields(page(), "todoId", nullableText(100), "teamId", nullableText(100))));
-        result.add(tool("todo_teams", "查询当前用户有权筛选或分配待办的团队。", false,
+        result.add(tool("todo_teams", Messages.source("text.plugin.platformToolDefinitions.todos.5"), false,
             fields(page(), "purpose", choice("filter", "assign"))));
         result.add(
-            tool("todo_create", "创建待办。负责人省略时归本人；截止日期只是日期，不会产生定时提醒。确认后才保存。", true,
+            tool("todo_create", Messages.source("text.plugin.platformToolDefinitions.todos.6"), true,
                 todoFields(), "title"));
         result.add(
-            tool("todo_update", "修改待办。先读取当前版本；未提交的内容保留原值，明确提交空值可清除团队和截止日期。", true,
+            tool("todo_update", Messages.source("text.plugin.platformToolDefinitions.todos.7"), true,
                 fields(todoFields(), "todoId", text(100), "revision", revision()), "todoId", "revision"));
-        result.add(tool("todo_set_status", "将待办标为待处理、进行中、完成或取消，确认后按当前版本修改。", true,
+        result.add(tool("todo_set_status", Messages.source("text.plugin.platformToolDefinitions.todos.8"), true,
             fields(identity("todoId"), "status", choice("pending", "in_progress", "completed", "cancelled"), "reason",
                 text(500)), "todoId", "revision", "status"));
-        result.add(tool("todo_transfer", "转交待办负责人，不转交来源对话的访问权限。", true,
+        result.add(tool("todo_transfer", Messages.source("text.plugin.platformToolDefinitions.todos.9"), true,
             fields(identity("todoId"), "ownerUserId", text(100), "reason", text(500)), "todoId", "revision",
             "ownerUserId"));
-        result.add(tool("todo_delete", "删除指定待办，按当前版本执行。", "destructive", identity("todoId"), "todoId",
+        result.add(tool("todo_delete", Messages.source("text.plugin.platformToolDefinitions.todos.10"), "destructive", identity("todoId"), "todoId",
             "revision"));
         return List.copyOf(result);
     }
 
     public List<ToolDefinition> schedules() {
         var result = new ArrayList<ToolDefinition>();
-        result.add(tool("schedule_list", "查询本人定时任务，不能查询其他成员的私有计划。", false, page()));
+        result.add(tool("schedule_list", Messages.source("text.plugin.platformToolDefinitions.schedules.1"), false, page()));
         result.add(
-            tool("schedule_get", "读取本人定时任务及当前修改版本，修改前先读取。", false, Map.of("scheduleId", text(100)),
+            tool("schedule_get", Messages.source("text.plugin.platformToolDefinitions.schedules.2"), false, Map.of("scheduleId", text(100)),
                 "scheduleId"));
-        result.add(tool("schedule_occurrences", "查询本人定时任务的实际触发与执行记录。", false,
+        result.add(tool("schedule_occurrences", Messages.source("text.plugin.platformToolDefinitions.schedules.3"), false,
             fields(page(), "scheduleId", text(100)), "scheduleId"));
         result.add(
-            tool("schedule_employees", "查询本人已雇佣且可运行的员工，创建计划时使用返回的 hireId，不会自动雇佣员工。",
+            tool("schedule_employees", Messages.source("text.plugin.platformToolDefinitions.schedules.4"),
                 false, page()));
         result.add(
-            tool("schedule_preview_times", "预览规则对应的未来五次实际执行时间，不创建计划。省略时区时使用企业时区。",
+            tool("schedule_preview_times", Messages.source("text.plugin.platformToolDefinitions.schedules.5"),
                 false, scheduleRule(), "frequency", "localTime"));
         var definition = fields(scheduleRule(), "name", text(80), "hireId", text(100), "agentVersionId",
             nullableText(100), "inputText", text(20000),
             "enabled", Map.of("type", "boolean"), "maxRetries", integer(0, 2));
         result.add(tool("schedule_create",
-            "创建本人定时任务。先选择已雇佣员工并核对未来执行时间；enabled 明确决定是否启用。确认后保存。", true,
+            Messages.source("text.plugin.platformToolDefinitions.schedules.6"), true,
             definition, "name", "hireId", "inputText", "frequency", "localTime", "enabled"));
         result.add(
-            tool("schedule_update", "修改本人定时任务的完整设置。先读取当前内容和修改版本，修改只影响未来执行。", true,
+            tool("schedule_update", Messages.source("text.plugin.platformToolDefinitions.schedules.7"), true,
                 fields(definition, "scheduleId", text(100), "revision", revision()), "scheduleId", "revision", "name",
                 "hireId", "inputText", "frequency", "localTime", "enabled"));
-        result.add(tool("schedule_set_enabled", "启用或暂停本人计划的未来触发，不停止已经开始的执行。", true,
+        result.add(tool("schedule_set_enabled", Messages.source("text.plugin.platformToolDefinitions.schedules.8"), true,
             fields(identity("scheduleId"), "enabled", Map.of("type", "boolean")), "scheduleId", "revision", "enabled"));
-        result.add(tool("schedule_upgrade_version", "将本人计划未来使用的员工更新为当前可用的发布版本。", true,
+        result.add(tool("schedule_upgrade_version", Messages.source("text.plugin.platformToolDefinitions.schedules.9"), true,
             identity("scheduleId"), "scheduleId", "revision"));
         result.add(tool("schedule_run_once",
-            "请求立即执行一次本人已有定时任务；结果以实际排队或阻止状态为准，不表示任务已经完成。", true,
+            Messages.source("text.plugin.platformToolDefinitions.schedules.10"), true,
             Map.of("scheduleId", text(100)), "scheduleId"));
-        result.add(tool("schedule_delete", "删除本人已暂停且没有活动执行的计划，不删除历史执行记录。", "destructive",
+        result.add(tool("schedule_delete", Messages.source("text.plugin.platformToolDefinitions.schedules.11"), "destructive",
             identity("scheduleId"), "scheduleId", "revision"));
         // 保留已有智能体工具的参数结构，新操作使用独立入口，已发布插件版本仍可调用。
-        result.add(tool("schedule_actions", "读取当前可用的定时操作及参数格式，创建通用操作前先读取。", false, Map.of()));
-        result.add(tool("schedule_recipients", "查询可以选择的通知接收成员及其已绑定渠道，不要猜测成员或应用编号。", false, page()));
-        result.add(tool("schedule_occurrence_get", "读取本人计划某次执行的固定内容及实际接收结果。", false,
+        result.add(tool("schedule_actions", Messages.source("text.plugin.platformToolDefinitions.schedules.12"), false, Map.of()));
+        result.add(tool("schedule_recipients", Messages.source("text.plugin.platformToolDefinitions.schedules.13"), false, page()));
+        result.add(tool("schedule_occurrence_get", Messages.source("text.plugin.platformToolDefinitions.schedules.14"), false,
             Map.of("scheduleId", text(100), "occurrenceId", text(100)), "scheduleId", "occurrenceId"));
         var action = Map.of("type", "object", "additionalProperties", false, "required", List.of("type", "schemaVersion", "config"),
             "properties", Map.of("type", text(64), "schemaVersion", integer(1, 1000), "config", Map.of("type", "object")));
         var general = fields(scheduleRule(), "name", text(80), "action", action, "enabled", Map.of("type", "boolean"), "maxRetries", integer(0, 2));
-        result.add(tool("schedule_action_create", "创建本人定时操作。先读可用操作、真实接收人和未来时间；通知须明确标题、正文与接收人。通知 maxRetries 为零。确认后保存。",
+        result.add(tool("schedule_action_create", Messages.source("text.plugin.platformToolDefinitions.schedules.15"),
             true, general, "name", "action", "frequency", "localTime", "enabled"));
-        result.add(tool("schedule_action_update", "完整修改本人定时操作，仅影响未来触发；先读当前计划、可用操作和接收人，使用当前版本并在确认后保存。",
+        result.add(tool("schedule_action_update", Messages.source("text.plugin.platformToolDefinitions.schedules.16"),
             true, fields(general, "scheduleId", text(100), "revision", revision()), "scheduleId", "revision", "name", "action", "frequency", "localTime", "enabled"));
-        result.add(tool("schedule_cancel_occurrence", "停止本人计划指定的一次执行。已保存的通知和平台已接受的消息保留；正在请求时等待真实结果。确认后操作。",
+        result.add(tool("schedule_cancel_occurrence", Messages.source("text.plugin.platformToolDefinitions.schedules.17"),
             true, Map.of("scheduleId", text(100), "occurrenceId", text(100)), "scheduleId", "occurrenceId"));
         return List.copyOf(result);
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.background.BackgroundJobSqlMapper;
@@ -69,7 +71,7 @@ public class ScheduleOccurrenceCancellation {
                     .set(BackgroundJobRow::getLeaseOwner, null).set(BackgroundJobRow::getLeaseUntil, null).set(BackgroundJobRow::getHeartbeatAt, null)
                     .set(BackgroundJobRow::getUpdatedAt, clock.instant()));
                 if (stopped != 1) {
-                    throw new IllegalStateException("定时操作准备工作状态已变化，停止操作未提交");
+                    throw new IllegalStateException(Messages.text("error.schedule.scheduleOccurrenceCancellation.cancel.1"));
                 }
             } else {
                 row.setActionResultJson(json.write(result));
@@ -79,7 +81,7 @@ public class ScheduleOccurrenceCancellation {
                 var refreshed = store.lock(actor.enterpriseId(), schedule, id);
                 handler.reconcile(refreshed).ifPresent(outcome -> store.apply(refreshed, outcome));
             }
-            audit.record(actor.enterpriseId(), actor.user(), "schedule.cancel", "schedule", schedule, "停止本次定时操作",
+            audit.record(actor.enterpriseId(), actor.user(), "schedule.cancel", "schedule", schedule, Messages.text("error.schedule.scheduleOccurrenceCancellation.cancel.2"),
                 Map.of("occurrenceId", id, "userActivity", userActivity));
         }
         return views.view(occurrences.active(actor.enterpriseId(), schedule, id).orElseThrow());

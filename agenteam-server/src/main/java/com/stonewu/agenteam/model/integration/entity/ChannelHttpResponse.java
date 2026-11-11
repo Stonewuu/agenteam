@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.integration.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -8,6 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 public record ChannelHttpResponse(int status, JsonNode body, Long retryAfterSeconds, String traceId) {
     @Override
     public String toString() {
-        return "ChannelHttpResponse[status=" + status + ", 响应正文已隐藏]";
+        return Messages.log("log.integration.channelHttpResponse.toString.1", status);
     }
 }

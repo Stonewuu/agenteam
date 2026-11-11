@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -47,7 +49,7 @@ public final class ModelLibraryLogging extends TurboFilter implements Initializi
                 failure = cause;
             }
             // 不传递开发库参数或拼接后的消息，防止异常格式及工具名称回显正文。
-            LOG.warn("模型开发库报告问题，组件={}，原因类别={}", name, category(format),
+            LOG.warn(Messages.log("log.modelprofile.modelLibraryLogging.decide.1"), name, category(format),
                 stack(failure, new IdentityHashMap<>()));
         }
         return FilterReply.DENY;
@@ -56,22 +58,22 @@ public final class ModelLibraryLogging extends TurboFilter implements Initializi
     private String category(String format) {
         String value = format == null ? "" : format.toLowerCase(Locale.ROOT);
         if (value.contains("parse") || value.contains("json") || value.contains("serialize")) {
-            return "响应格式处理失败";
+            return Messages.log("log.modelprofile.modelLibraryLogging.category.1");
         }
         if (value.contains("missing") || value.contains("empty")) {
-            return "响应缺少必要字段";
+            return Messages.log("log.modelprofile.modelLibraryLogging.category.2");
         }
         if (value.contains("http") || value.contains("request") || value.contains("connect")) {
-            return "请求处理异常";
+            return Messages.log("log.modelprofile.modelLibraryLogging.category.3");
         }
-        return "开发库处理异常";
+        return Messages.log("log.modelprofile.modelLibraryLogging.category.4");
     }
 
     private Throwable stack(Throwable original, Map<Throwable, Throwable> visited) {
         if (original == null || visited.containsKey(original)) {
             return null;
         }
-        var safe = new IllegalStateException(original.getClass().getName() + "：模型开发库处理异常");
+        var safe = new IllegalStateException(Messages.log("error.modelprofile.modelLibraryLogging.stack.1", original.getClass().getName()));
         visited.put(original, safe);
         safe.setStackTrace(original.getStackTrace());
         var cause = stack(original.getCause(), visited);

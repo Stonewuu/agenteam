@@ -29,3 +29,9 @@ export function detectLocale(header: string | null): Locale {
   }
   return defaultLocale;
 }
+
+export function localeFromHeaders(headers: Headers): Locale {
+  const saved = (headers.get("cookie") ?? "").split(";").map((item) => item.trim())
+    .find((item) => item.startsWith(`${localeCookie}=`))?.slice(localeCookie.length + 1);
+  return isLocale(saved) ? saved : detectLocale(headers.get("accept-language"));
+}

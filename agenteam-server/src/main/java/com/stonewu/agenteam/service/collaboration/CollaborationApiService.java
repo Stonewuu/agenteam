@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.Map;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -97,7 +99,7 @@ public class CollaborationApiService {
     public ApiOperationResult retry(String enterprise, String task, CollaborationActionRequest input, HttpServletRequest request) {
         InputValidation.request(request, CollaborationActionRequest.class);
         if (input.workItemId() == null || input.workItemId().isBlank()) {
-            throw ApiException.invalidField("workItemId", "请选择需要重试的工作。");
+            throw ApiException.invalidField("workItemId", Messages.text("error.collaboration.collaborationApiService.retry.1"));
         }
         return execute(enterprise, task, request, actor -> ApiOperationResult.of(202, json.object(retries.retry(actor, task, input.workItemId(), input.expectedRevision(),
             operation(actor, input.requestId())))));

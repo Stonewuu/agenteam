@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file.parser;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.io.IOException;
 
 /**
@@ -9,7 +11,7 @@ public class DocumentParseFailure extends IOException {
     private final String code;
 
     public DocumentParseFailure(String code) {
-        super("文件无法完成解析");
+        super(Messages.text("error.file.documentParseFailure.init.1"));
         this.code = code;
     }
 

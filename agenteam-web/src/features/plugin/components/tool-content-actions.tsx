@@ -75,7 +75,7 @@ export function ToolContentActions({source, raw, document, locate, label: provid
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        console.error("复制文件内容失败", {path: source.url.split(/[?#]/)[0], part: source.part, error});
+        console.error("Failed to copy file content", {path: source.url.split(/[?#]/)[0], part: source.part, error});
         setNotice(errorMessage(error));
       }
     } finally {

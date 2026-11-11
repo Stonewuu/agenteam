@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.integration.IntegrationPublicUrls;
 import com.stonewu.agenteam.model.integration.entity.FeishuSetupJobRow;
@@ -62,24 +64,24 @@ public class FeishuSetupProcessor {
                 case "publishing" -> publish(row);
                 case "waiting_approval" -> approved(row);
                 case "binding" -> bind(row);
-                default -> throw new IllegalStateException("创建流程阶段不可执行");
+                default -> throw new IllegalStateException(Messages.text("error.integration.feishuSetupProcessor.process.1"));
             }
         } catch (RuntimeException failure) {
-            LOG.warn("飞书快捷创建未完成，企业={}，创建记录={}，阶段={}", row.getEnterpriseId(), row.getId(), stage, failure);
+            LOG.warn(Messages.log("log.integration.feishuSetupProcessor.process.1"), row.getEnterpriseId(), row.getId(), stage, failure);
             // 已取得外部结果时保存下一步，不能再用已消费的注册凭据轮询。
             row.setResumeStage(row.getStage());
             String code = failure instanceof ChannelProviderException known ? known.code()
                 : failure instanceof ApiException known ? known.code() : "FEISHU_SETUP_FAILED";
             row.setErrorCode(code);
             row.setErrorSummary(failure instanceof ChannelProviderException ? failure.getMessage()
-                : failure instanceof ApiException known ? known.getReason() : "当前步骤未完成，请稍后重试。");
+                : failure instanceof ApiException known ? known.getReason() : Messages.text("error.integration.feishuSetupProcessor.process.2"));
             if (code.equals("FEISHU_AUTHORIZATION_REQUIRED")) {
                 row.setStage("authorization_required");
             } else if (row.getResumeStage().equals("awaiting_scan") && row.getRegistrationExpiresAt() != null
                     && !row.getRegistrationExpiresAt().isAfter(clock.instant())) {
                 row.setStage("registration_unknown");
                 row.setResumeStage(null);
-                row.setErrorSummary("无法确认飞书创建结果，请先核对飞书应用，避免重复创建。");
+                row.setErrorSummary(Messages.text("error.integration.feishuSetupProcessor.process.3"));
             } else if (!List.of("expired", "cancelled", "registration_unknown").contains(row.getStage())) {
                 row.setStage("failed");
             }
@@ -88,7 +90,7 @@ public class FeishuSetupProcessor {
                     store.save(row);
                 }
             } catch (RuntimeException persistenceFailure) {
-                LOG.error("飞书创建失败状态保存失败，创建记录={}", row.getId(), persistenceFailure);
+                LOG.error(Messages.log("log.integration.feishuSetupProcessor.process.2"), row.getId(), persistenceFailure);
             }
         }
     }
@@ -126,7 +128,7 @@ public class FeishuSetupProcessor {
             default -> {
                 if (!row.getRegistrationExpiresAt().isAfter(clock.instant())) {
                     row.setStage("registration_unknown");
-                    row.setErrorSummary("创建入口已结束，但结果尚未确认，请先检查飞书应用。");
+                    row.setErrorSummary(Messages.text("error.integration.feishuSetupProcessor.poll.1"));
                 } else {
                     if (result.state().equals("slow_down")) {
                         row.setPollInterval(Math.min(120, row.getPollInterval() + 5));
@@ -146,7 +148,7 @@ public class FeishuSetupProcessor {
             var tenant = client.get(row.getId(), "/open-apis/tenant/v2/tenant/query", Map.of(), token).path("data").path("tenant");
             String tenantId = FeishuAppClient.required(tenant, "tenant_key");
             if (existing.getExternalTenantId() != null && !existing.getExternalTenantId().equals(tenantId)) {
-                throw new ChannelProviderException("FEISHU_TENANT_MISMATCH", "此应用与已保存的飞书企业不一致，请检查接入配置。");
+                throw new ChannelProviderException("FEISHU_TENANT_MISMATCH", Messages.text("error.integration.feishuSetupProcessor.prepare.1"));
             }
             String name = FeishuAppClient.required(client.app(row.getId(), existing.getExternalAppId(), token), "app_name");
             transactions.prepareExisting(row, store.actor(row), tenantId, FeishuAppClient.required(tenant, "name"), name);
@@ -157,7 +159,7 @@ public class FeishuSetupProcessor {
         var tenant = client.get(row.getId(), "/open-apis/tenant/v2/tenant/query", Map.of(), token).path("data").path("tenant");
         String tenantId = FeishuAppClient.required(tenant, "tenant_key");
         if (row.getKind().equals("bot") && !store.manager(row.getEnterpriseId(), row.getManagerConnectionId()).getExternalTenantId().equals(tenantId)) {
-            throw new ChannelProviderException("FEISHU_TENANT_MISMATCH", "新应用与管理应用不属于同一飞书企业，请核对创建时选择的账号。");
+            throw new ChannelProviderException("FEISHU_TENANT_MISMATCH", Messages.text("error.integration.feishuSetupProcessor.prepare.2"));
         }
         String confirmedName = FeishuAppClient.required(client.app(row.getId(), material.appId(), token), "app_name");
         transactions.install(row, store.actor(row), tenantId, FeishuAppClient.required(tenant, "name"), confirmedName);
@@ -183,7 +185,7 @@ public class FeishuSetupProcessor {
         String pending = app.path("unaudit_version_id").asText("");
         if (row.getExternalVersion() == null) {
             if (!pending.isBlank()) {
-                throw new ChannelProviderException("FEISHU_APP_UNDER_REVIEW", "飞书应用已有待审核版本，请处理后继续。");
+                throw new ChannelProviderException("FEISHU_APP_UNDER_REVIEW", Messages.text("error.integration.feishuSetupProcessor.publish.1"));
             }
             String previous = online.isBlank() ? "0.0.0" : client.version(row.getId(), connection.getExternalAppId(), online, own).path("version").asText();
             row.setExternalVersion(nextVersion(previous));
@@ -199,11 +201,11 @@ public class FeishuSetupProcessor {
             }
         }
         if (!pending.isBlank()) {
-            throw new ChannelProviderException("FEISHU_APP_UNDER_REVIEW", "飞书应用正在审核其他版本，请处理后继续。");
+            throw new ChannelProviderException("FEISHU_APP_UNDER_REVIEW", Messages.text("error.integration.feishuSetupProcessor.publish.2"));
         }
         var body = json.createObjectNode().put("mobile_default_ability", "bot").put("pc_default_ability", "bot")
-            .put("remark", row.getKind().equals("enterprise") ? "接入群策企业" : "接入群策机器人")
-            .put("changelog", row.getKind().equals("enterprise") ? "配置企业账号、通知与应用管理" : "配置机器人消息接收和交互能力")
+            .put("remark", row.getKind().equals("enterprise") ? Messages.text("text.integration.feishuSetupProcessor.publish.1") : Messages.text("text.integration.feishuSetupProcessor.publish.2"))
+            .put("changelog", row.getKind().equals("enterprise") ? Messages.text("text.integration.feishuSetupProcessor.publish.3") : Messages.text("text.integration.feishuSetupProcessor.publish.4"))
             .put("version", row.getExternalVersion());
         var result = client.post(row.getId(), "/open-apis/application/v7/applications/" + connection.getExternalAppId() + "/publish",
             body, mutationToken(row, connection)).path("data");
@@ -224,7 +226,7 @@ public class FeishuSetupProcessor {
             row.setResumeStage("configuring");
             row.setStage("failed");
             row.setErrorCode("FEISHU_RELEASE_REJECTED");
-            row.setErrorSummary("飞书未通过此版本审核，请处理审核意见后重试。");
+            row.setErrorSummary(Messages.text("error.integration.feishuSetupProcessor.approved.1"));
         } else if (row.getExternalVersionId().equals(app.path("online_version_id").asText()) && version.path("status").asInt() == 1) {
             client.requireScopes(row.getId(), token, row.getKind());
             transactions.approved(row, store.actor(row));
@@ -244,10 +246,10 @@ public class FeishuSetupProcessor {
     private EnterpriseIntegrationRow connection(FeishuSetupJobRow row) {
         var value = integrations.require(row.getEnterpriseId(), row.getConnectionId());
         if (!value.getRevision().equals(row.getConnectionRevision()) || !value.getCredentialRevision().equals(row.getCredentialRevision())) {
-            throw new ChannelProviderException("FEISHU_CONNECTION_CHANGED", "接入配置已被修改，请取消本流程并重新发起快捷配置。");
+            throw new ChannelProviderException("FEISHU_CONNECTION_CHANGED", Messages.text("error.integration.feishuSetupProcessor.connection.1"));
         }
         if (!List.of("draft", "enabled").contains(value.getStatus())) {
-            throw new ChannelProviderException("FEISHU_CONNECTION_DISABLED", "飞书接入已停用，请恢复后继续。");
+            throw new ChannelProviderException("FEISHU_CONNECTION_DISABLED", Messages.text("error.integration.feishuSetupProcessor.connection.2"));
         }
         return value;
     }
@@ -263,7 +265,7 @@ public class FeishuSetupProcessor {
 
     static String nextVersion(String version) {
         if (version == null || !version.matches("[0-9]{1,6}\\.[0-9]{1,6}\\.[0-9]{1,6}")) {
-            throw new ChannelProviderException("FEISHU_VERSION_INVALID", "飞书应用的版本号无法自动递增，请先核对版本设置。");
+            throw new ChannelProviderException("FEISHU_VERSION_INVALID", Messages.text("error.integration.feishuSetupProcessor.nextVersion.1"));
         }
         String[] parts = version.split("\\.");
         return parts[0] + "." + parts[1] + "." + (Integer.parseInt(parts[2]) + 1);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -56,7 +58,7 @@ public class ProjectMetadataService {
         authorization.require(actor, "workspace.view");
         String search = query == null ? "" : query.strip();
         if (search.length() > 100) {
-            throw ApiException.invalidField("query", "搜索内容不能超过 100 个字符。");
+            throw ApiException.invalidField("query", Messages.text("error.project.projectMetadataService.list.1"));
         }
         int size = pagination.limit(limit);
         var binding = new ListPagination.Binding(actor.userId(), actor.enterpriseId(), "projects", search,
@@ -126,11 +128,11 @@ public class ProjectMetadataService {
         }
         String prefix = normalized.replace("=", "==").replace("%", "=%").replace("_", "=_") + "/%";
         if (projects.conflictingDirectory(workspace.getId(), parents, prefix) != null) {
-            throw ApiException.invalidField("directory", "此目录已由其他项目使用，请选择已有项目或另填目录。");
+            throw ApiException.invalidField("directory", Messages.text("error.project.projectMetadataService.createOwned.1"));
         }
-        String title = name == null || name.isBlank() ? "新项目" : name.strip();
+        String title = name == null || name.isBlank() ? Messages.text("text.project.projectMetadataService.createOwned.1") : name.strip();
         if (title.length() > 100) {
-            throw ApiException.invalidField("name", "项目名称不能超过 100 个字符。");
+            throw ApiException.invalidField("name", Messages.text("error.project.createProjectInput.name.2"));
         }
         var row = new WorkspaceProjectRow();
         row.setId(id);
@@ -167,7 +169,7 @@ public class ProjectMetadataService {
         try {
             workspaces.insert(row);
         } catch (DuplicateKeyException concurrent) {
-            LOG.debug("用户工作空间已由并发请求创建，工作空间编号 {}", id, concurrent);
+            LOG.debug(Messages.log("log.project.projectMetadataService.ensureWorkspace.1"), id, concurrent);
         }
     }
 
@@ -188,7 +190,7 @@ public class ProjectMetadataService {
                 .isNull(WorkspaceProjectRow::getInitializedAt).set(WorkspaceProjectRow::getInitializedAt, now));
         if (projectChanged != 1 && require(project.getEnterpriseId(), project.getUserId(),
             project.getId()).getInitializedAt() == null) {
-            throw new IllegalStateException("项目目录初始化结果未保存");
+            throw new IllegalStateException(Messages.text("error.project.projectMetadataService.initialized.1"));
         }
     }
 
@@ -200,7 +202,7 @@ public class ProjectMetadataService {
                 .isNull(UserWorkspaceRow::getInitializedAt).set(UserWorkspaceRow::getInitializedAt, clock.instant()));
         if (workspaceChanged != 1 && workspace(workspace.getEnterpriseId(), workspace.getUserId(),
             workspace.getId()).getInitializedAt() == null) {
-            throw new IllegalStateException("用户工作空间初始化结果未保存");
+            throw new IllegalStateException(Messages.text("error.project.projectMetadataService.initializedWorkspace.1"));
         }
     }
 

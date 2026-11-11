@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -52,11 +54,11 @@ public final class ToolFailureRecovery {
     public static ToolResultBlock result(String runId, String session, ToolUseBlock use, Exception error) {
         var privateValues = ToolFailureDetails.inputValues(use.getInput());
         var safe = ToolFailureDetails.safe(error, privateValues);
-        LOG.warn("工具调用未完成，将错误交回模型继续处理，执行编号 {}，会话编号 {}，调用编号 {}", runId, session,
+        LOG.warn(Messages.log("log.agent.toolFailureRecovery.result.1"), runId, session,
             use.getId(), safe);
         String code = error instanceof ApiException known ? known.code() : "TOOL_EXECUTION_FAILED";
         String message = error instanceof ApiException known ? ToolFailureDetails.clean(known.getReason(), privateValues)
-            : "工具未能完成本次调用，请检查参数、缩小范围或改用其他工具继续。";
+            : Messages.text("error.agent.toolFailureRecovery.result.1");
         var value = JsonNodeFactory.instance.objectNode().put("isError", true).put("code", code).put("content", message);
         return ToolResultBlock.builder().id(use.getId()).name(use.getName())
             .output(TextBlock.builder().text(value.toString()).build()).state(ToolResultState.ERROR).build();
@@ -66,7 +68,7 @@ public final class ToolFailureRecovery {
                                ToolUseBlock use, UnaryOperator<AgentEvent> stamp) {
         var state = RuntimeContext.resolveAgentState(context, agent);
         if (state == null) {
-            throw new IllegalStateException("工具错误缺少所属智能体状态，无法继续推理");
+            throw new IllegalStateException(Messages.text("error.agent.toolFailureRecovery.observe.1"));
         }
         state.contextMutable().add(ToolResultMessageBuilder.buildToolResultMsg(result, use, agent.getName()));
         String reply = UUID.randomUUID().toString();

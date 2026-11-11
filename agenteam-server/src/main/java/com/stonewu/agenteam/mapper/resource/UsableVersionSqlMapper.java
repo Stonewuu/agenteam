@@ -17,7 +17,8 @@ public interface UsableVersionSqlMapper {
                                              @Param("cursor") PagePosition cursor, @Param("limit") int limit,
                                              @Param("subagentsOnly") boolean subagentsOnly,
                                              @Param("resourceId") String resourceId,
-                                             @Param("latestOnly") boolean latestOnly);
+                                             @Param("latestOnly") boolean latestOnly,
+                                             @Param("builtinCodes") List<String> builtinCodes);
 
     List<UsableVersionQueryRow> selectedVersions(@Param("scope") ResourceQueryScope scope,
                                                  @Param("ids") List<String> ids);

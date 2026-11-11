@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentHireApplicationMapper;
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
@@ -97,15 +99,15 @@ public class AgentHireService {
             var created = applications.create(actor.enterpriseId(), actor.userId(), agentId, note, now,
                 now.plus(Duration.ofDays(7)));
             audit.record(actor.enterpriseId(), actor.user(), "agent.hire.request", "agent_hire_request", created.id(),
-                "申请雇佣数字员工", Map.of("agentId", agentId));
+                Messages.text("text.agent.agentHireService.hire.1"), Map.of("agentId", agentId));
             return new ApprovalRequired(applicationView(actor, created));
         }
         var hire = hires.establish(actor.enterpriseId(), actor.userId(), agentId, now);
         if (pending != null) {
-            applications.finish(pending, "approved", actor.userId(), "当前设置允许自行雇佣，已建立使用关系。", now);
+            applications.finish(pending, "approved", actor.userId(), Messages.text("text.agent.agentHireService.hire.2"), now);
             notifications.decided(pending, true);
         }
-        audit.record(actor.enterpriseId(), actor.user(), "agent.hire.create", "agent_hire", hire.id(), "雇佣数字员工",
+        audit.record(actor.enterpriseId(), actor.user(), "agent.hire.create", "agent_hire", hire.id(), Messages.text("text.agent.agentHireService.hire.3"),
             Map.of("agentId", agentId));
         return new Hired(hires.view(hire));
     }
@@ -119,13 +121,13 @@ public class AgentHireService {
             throw ApiException.versionConflict(hire.revision());
         }
         if (status == null || !Set.of("active", "paused", "terminated").contains(status)) {
-            throw ApiException.invalidField("status", "请选择恢复、暂停或解除雇佣。");
+            throw ApiException.invalidField("status", Messages.text("error.agent.agentHireService.status.1"));
         }
         if (hire.status().equals(status)) {
             return hires.view(hire);
         }
         if (hire.status().equals("terminated")) {
-            throw new ApiException(HttpStatus.CONFLICT, "HIRE_TERMINATED", "雇佣已经解除，请重新雇佣该员工。");
+            throw new ApiException(HttpStatus.CONFLICT, "HIRE_TERMINATED", Messages.text("error.agent.agentHireService.status.2"));
         }
         if (status.equals("active")) {
             employees.requireAvailable(actor, hire.agentId(), "agent.hire", false);
@@ -134,7 +136,7 @@ public class AgentHireService {
         if (!status.equals("active")) {
             executions.stopForResource(actor.enterpriseId(), hire.agentId(), actor.userId());
         }
-        audit.record(actor.enterpriseId(), actor.user(), "agent.hire.status", "agent_hire", id, "修改本人雇佣状态",
+        audit.record(actor.enterpriseId(), actor.user(), "agent.hire.status", "agent_hire", id, Messages.text("text.agent.agentHireService.status.1"),
             Map.of("before", hire.status(), "after", status, "agentId", hire.agentId()));
         return hires.view(hires.find(actor.enterpriseId(), actor.userId(), id, false).orElseThrow());
     }
@@ -146,7 +148,7 @@ public class AgentHireService {
             .orElseThrow(ResourceAuthorizationService::unavailable);
         pending(application, revision);
         if (value == null || value.decision() == null || !Set.of("approve", "reject").contains(value.decision())) {
-            throw ApiException.invalidField("decision", "请选择批准或拒绝。");
+            throw ApiException.invalidField("decision", Messages.text("error.agent.agentHireService.decide.1"));
         }
         boolean approve = value.decision().equals("approve");
         String reason = ResourceInput.text(value.reason() == null ? "" : value.reason(), "reason", 500, !approve);
@@ -162,7 +164,7 @@ public class AgentHireService {
             reason.isEmpty() ? null : reason, now);
         notifications.decided(application, approve);
         audit.record(actor.enterpriseId(), actor.user(), "agent.hire.decision", "agent_hire_request", id,
-            approve ? "批准雇佣申请" : "拒绝雇佣申请",
+            approve ? Messages.text("text.agent.agentHireService.decide.1") : Messages.text("text.agent.agentHireService.decide.2"),
             Map.of("agentId", application.agentId(), "applicantId", application.userId(), "decision",
                 value.decision()));
         return applications.view(applications.find(actor.enterpriseId(), id, false).orElseThrow(), now, false, false);
@@ -178,7 +180,7 @@ public class AgentHireService {
         var now = clock.instant();
         applications.finish(application, "withdrawn", actor.userId(), null, now);
         audit.record(actor.enterpriseId(), actor.user(), "agent.hire.withdraw", "agent_hire_request", id,
-            "撤回本人雇佣申请", Map.of("agentId", application.agentId()));
+            Messages.text("text.agent.agentHireService.withdraw.1"), Map.of("agentId", application.agentId()));
         return applications.view(applications.find(actor.enterpriseId(), id, false).orElseThrow(), now, false, false);
     }
 
@@ -187,14 +189,14 @@ public class AgentHireService {
             throw ApiException.versionConflict(application.revision());
         }
         if (application.status().equals("expired")) {
-            throw new ApiException(HttpStatus.CONFLICT, "HIRE_APPLICATION_EXPIRED", "雇佣申请已过期，请重新申请。");
+            throw new ApiException(HttpStatus.CONFLICT, "HIRE_APPLICATION_EXPIRED", Messages.text("error.agent.agentHireService.pending.1"));
         }
         if (!application.status().equals("pending")) {
             throw new ApiException(HttpStatus.CONFLICT, "HIRE_APPLICATION_FINISHED",
-                "这条申请已经处理，请重新加载列表。");
+                Messages.text("error.agent.agentHireService.pending.2"));
         }
         if (!application.expiresAt().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "HIRE_APPLICATION_EXPIRED", "雇佣申请已过期，请重新申请。");
+            throw new ApiException(HttpStatus.CONFLICT, "HIRE_APPLICATION_EXPIRED", Messages.text("error.agent.agentHireService.pending.1"));
         }
     }
 

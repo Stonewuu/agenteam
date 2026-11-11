@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
@@ -126,7 +128,7 @@ public class AgentExecutionFactory {
         }
         if (config.path("agentType").asText().equals("workflow") || unsupported) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                "该员工暂时无法使用所配置的能力，请联系维护者。");
+                Messages.text("error.agent.agentExecutionFactory.create.1"));
         }
         var states = store(run);
         boolean restored = checkpoints.restore(run, states);
@@ -153,7 +155,7 @@ public class AgentExecutionFactory {
                                   Consumer<RuntimeContext> checkpoint, String workflowNodeId) {
         if (!Set.of("chat", "task").contains(config.path("agentType").asText())) {
             throw new ApiException(HttpStatus.CONFLICT,
-                "RESOURCE_DEPENDENCY_UNAVAILABLE", "当前流程节点需要对话型或任务型智能体。");
+                "RESOURCE_DEPENDENCY_UNAVAILABLE", Messages.text("error.agent.agentExecutionFactory.createScoped.1"));
         }
         ConfiguredModel model = models.create(run.enterpriseId(), config.path("modelProfileId").asText());
         var callContext = ModelCallContext.fromRun(run, agentId, workflowNodeId);
@@ -308,7 +310,7 @@ public class AgentExecutionFactory {
                     for (var entry : state.getToolContext().getSpawnRegistry().entrySet()) {
                         var child = entry.getValue();
                         if (child.depth() != 1) {
-                            throw new IllegalStateException("保存的子任务超出当前执行范围");
+                            throw new IllegalStateException(Messages.text("error.agent.agentExecutionFactory.initializeHistory.1"));
                         }
                         // 已删除或修改职责的助手不复用旧上下文，避免新配置继续执行旧任务。
                         var definition = currentDefinitions.get(child.agentId());
@@ -357,7 +359,7 @@ public class AgentExecutionFactory {
         try {
             return Files.createDirectories(directory);
         } catch (IOException error) {
-            throw new UncheckedIOException("无法准备本次执行的工作目录", error);
+            throw new UncheckedIOException(Messages.text("error.agent.agentExecutionFactory.prepare.1"), error);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -43,7 +45,7 @@ public class RequestForgeryProtection {
         if (!(current instanceof String expected) || submitted == null || submitted.length() > 256
             || !MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
             submitted.getBytes(StandardCharsets.UTF_8))) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "CSRF_INVALID", "请求验证已失效，请刷新页面后重试。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "CSRF_INVALID", Messages.text("error.auth.requestForgeryProtection.verify.1"));
         }
     }
 

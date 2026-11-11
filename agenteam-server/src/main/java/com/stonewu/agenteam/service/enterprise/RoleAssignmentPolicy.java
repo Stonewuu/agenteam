@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.enterprise.response.EnterpriseRoleResponse;
@@ -32,12 +34,12 @@ public class RoleAssignmentPolicy {
         for (String id : roleIds) {
             EnterpriseRoleResponse role = findRole(context.enterpriseId(), id);
             if (!"active".equals(role.status())) {
-                throw invalid("不能分配已停用的角色");
+                throw invalid(Messages.text("error.enterprise.roleAssignmentPolicy.validateAssignments.1"));
             }
             validateDelegation(context, Set.copyOf(role.permissionCodes()), DataScope.fromCode(role.dataScope()));
             if (role.builtin() && role.code().equals("enterprise-admin") && !permissions.isEnterpriseAdmin(
                 context.userId(), context.enterpriseId())) {
-                throw forbidden("只有企业管理员可以分配管理员角色");
+                throw forbidden(Messages.text("error.enterprise.roleAssignmentPolicy.validateAssignments.2"));
             }
         }
     }
@@ -53,12 +55,12 @@ public class RoleAssignmentPolicy {
         boolean administrator = permissions.isEnterpriseAdmin(context.userId(), context.enterpriseId());
         for (String code : codes) {
             if (catalog.protectedPermission(code) && !administrator) {
-                throw forbidden("只有企业管理员可以委派受保护的管理权限");
+                throw forbidden(Messages.text("error.enterprise.roleAssignmentPolicy.validateDelegation.1"));
             }
             DataScope held = permissions.operationScope(context.userId(), context.enterpriseId(), code)
-                .orElseThrow(() -> forbidden("不能分配自己没有的权限"));
+                .orElseThrow(() -> forbidden(Messages.text("error.permission.cannotDelegate")));
             if (!held.covers(requestedScope)) {
-                throw forbidden("不能分配超出自身数据范围的权限");
+                throw forbidden(Messages.text("error.enterprise.roleAssignmentPolicy.validateDelegation.2"));
             }
         }
     }
@@ -66,19 +68,19 @@ public class RoleAssignmentPolicy {
     public Set<String> requestedPermissions(List<String> values) {
         if (values == null || values.size() > 200 || values.stream()
             .anyMatch(value -> value == null || value.isBlank())) {
-            throw invalid("请提供有效的角色权限列表，最多两百项");
+            throw invalid(Messages.text("error.enterprise.roleAssignmentPolicy.requestedPermissions.1"));
         }
         Set<String> available = permissions.listPermissions().stream().map(PermissionResponse::code)
             .filter(catalog::availablePermission)
             .collect(Collectors.toSet());
         Set<String> requested = new HashSet<>(values);
         if (requested.size() != values.size() || !available.containsAll(requested)) {
-            throw invalid("权限列表包含重复或不存在的操作");
+            throw invalid(Messages.text("error.enterprise.roleAssignmentPolicy.requestedPermissions.2"));
         }
         return Set.copyOf(requested);
     }
 
     private EnterpriseRoleResponse findRole(String enterpriseId, String id) {
-        return permissions.findRole(enterpriseId, id).orElseThrow(() -> missing("角色不存在"));
+        return permissions.findRole(enterpriseId, id).orElseThrow(() -> missing(Messages.text("error.role.notFound")));
     }
 }

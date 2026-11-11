@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.workflow.WorkflowNodes;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -108,7 +110,7 @@ public class ExecutionToolCatalog {
         }
         if (result.values().stream().map(ExecutionToolBinding::identity).distinct().count() > 100) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                "本次任务可用工具超过允许数量。");
+                Messages.text("error.tool.executionToolCatalog.list.1"));
         }
         result.putAll(workspace.list(run));
         result.putAll(questions.list(run));
@@ -187,14 +189,14 @@ public class ExecutionToolCatalog {
                         if (omitUnavailableJava) {
                             return null;
                         }
-                        throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_REQUIRED", "此工具只在协作任务中可用。");
+                        throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_REQUIRED", Messages.text("error.tool.executionToolCatalog.tool.1"));
                     }
                     return binding;
                 }
             }
         }
         throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-            "本次流程节点使用的工具已不可用。");
+            Messages.text("error.tool.executionToolCatalog.tool.2"));
     }
 
     public ExecutionToolBinding requireCurrent(RunRecord run, ExecutionToolBinding expected) {
@@ -204,7 +206,7 @@ public class ExecutionToolCatalog {
         var current = all(run).get(expected.alias());
         if (current == null || !current.definition().schemaHash().equals(expected.definition().schemaHash())) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                "本次任务使用的工具已不可用。");
+                Messages.text("error.tool.executionToolCatalog.requireCurrent.1"));
         }
         return current;
     }

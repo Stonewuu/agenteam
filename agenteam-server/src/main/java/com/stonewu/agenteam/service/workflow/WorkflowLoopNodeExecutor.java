@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -52,7 +54,7 @@ public class WorkflowLoopNodeExecutor {
             String group = context.frames().read(mapper -> mapper.presentation()
                 .id("workflow-node:" + identity.id() + ":" + node.id()));
             var childIdentity = new Identity(id, identity.resourceId(), identity.versionId(),
-                node.name() + " · 第 " + (index + 1) + " 次", group, group);
+                Messages.text("text.workflow.workflowLoopNodeExecutor.iteration.1", node.name(), (index + 1)), group, group);
             var graph = graphs.compile(node.config().path("body"));
             var saved = context.savedInvocation(id);
             if (saved == null) {
@@ -69,12 +71,12 @@ public class WorkflowLoopNodeExecutor {
                     return Mono.empty();
                 }
                 if (!child.snapshot().status().equals("completed")) {
-                    return Mono.error(new ApiException(HttpStatus.CONFLICT, "WORKFLOW_LOOP_INCOMPLETE", "循环中的步骤没有完成。"));
+                    return Mono.error(new ApiException(HttpStatus.CONFLICT, "WORKFLOW_LOOP_INCOMPLETE", Messages.text("error.workflow.workflowLoopNodeExecutor.iteration.1")));
                 }
                 results.add(values.read(child.node(graph.endId()).output()));
                 if (values.write(results).getBytes(StandardCharsets.UTF_8).length > WorkflowExpressions.MAX_VALUE_BYTES) {
                     return Mono.error(new ApiException(HttpStatus.CONFLICT, "WORKFLOW_OUTPUT_TOO_LARGE",
-                        "循环结果过大，请减少处理条目或只保留所需字段。"));
+                        Messages.text("error.workflow.workflowLoopNodeExecutor.iteration.2")));
                 }
                 return iteration(context, identity, parent, node, input, execute, index + 1, results);
             }));

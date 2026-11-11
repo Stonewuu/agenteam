@@ -1,5 +1,8 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.service.plugin.BuiltinPluginPresentation;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
@@ -67,7 +70,7 @@ public class ResourceQueryService {
         };
         String subtype = option(request.subtype(), "subtype", subtypes);
         if ("unlisted".equals(status) && kind != ResourceKind.AGENT) {
-            throw ApiException.invalidField("status", "只有数字员工可以按下架状态筛选。");
+            throw ApiException.invalidField("status", Messages.text("error.resource.resourceQueryService.list.1"));
         }
         String sort = option(request.sort() == null ? "updated_desc" : request.sort(), "sort",
             Set.of("updated_desc", "created_desc", "name_asc"));
@@ -83,10 +86,10 @@ public class ResourceQueryService {
             filters, sort);
         var cursor = pagination.read(request.cursor(), binding);
         if (cursor != null && sort.equals("name_asc") && cursor.sortValue() == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "CURSOR_INVALID", "分页位置无法使用，请重新加载列表。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CURSOR_INVALID", Messages.text("error.resource.resourceQueryService.list.2"));
         }
         var rows = resources.list(scope, query, status, source, subtype, tags, sort, cursor, limit,
-            deleted ? clock.instant().minus(Duration.ofDays(30)) : null);
+            deleted ? clock.instant().minus(Duration.ofDays(30)) : null, BuiltinPluginPresentation.matchingCodes(query));
         var page = pagination.page(rows, limit, binding,
             resource -> new PagePosition(sort.equals("created_desc") ? resource.createdAt() : resource.updatedAt(),
                 resource.id(), sort.equals("name_asc") ? resource.name() : null));
@@ -119,7 +122,7 @@ public class ResourceQueryService {
 
     private String option(String value, String field, Set<String> allowed) {
         if (value != null && !allowed.contains(value)) {
-            throw ApiException.invalidField(field, "请选择当前资源类型支持的筛选条件。");
+            throw ApiException.invalidField(field, Messages.text("error.resource.resourceQueryService.option.1"));
         }
         return value;
     }

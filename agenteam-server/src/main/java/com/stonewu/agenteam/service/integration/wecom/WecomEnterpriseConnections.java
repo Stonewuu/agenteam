@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
 import com.stonewu.agenteam.mapper.integration.WecomBotEnterpriseMapper;
@@ -28,7 +30,7 @@ public class WecomEnterpriseConnections {
         var row = connections.selectOne(new LambdaQueryWrapper<EnterpriseIntegrationRow>()
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise).eq(EnterpriseIntegrationRow::getId, id));
         if (!ready(row)) {
-            throw new ApiException(HttpStatus.CONFLICT, "WECOM_ENTERPRISE_REQUIRED", "请先配置并启用企业微信的企业接入。");
+            throw new ApiException(HttpStatus.CONFLICT, "WECOM_ENTERPRISE_REQUIRED", Messages.text("error.integration.wecomEnterpriseConnections.require.1"));
         }
         return row;
     }
@@ -49,7 +51,7 @@ public class WecomEnterpriseConnections {
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise).eq(EnterpriseIntegrationRow::getProviderCode, "wecom_aibot")
             .ne(currentConnection != null, EnterpriseIntegrationRow::getId, currentConnection)
             .eq(EnterpriseIntegrationRow::getName, name).ne(EnterpriseIntegrationRow::getStatus, "deleted"))) {
-            throw ApiException.invalidField("name", "已有同名企微机器人，请换一个便于区分的名称。");
+            throw ApiException.invalidField("name", Messages.text("error.integration.wecomEnterpriseConnections.requireAvailableName.1"));
         }
     }
 

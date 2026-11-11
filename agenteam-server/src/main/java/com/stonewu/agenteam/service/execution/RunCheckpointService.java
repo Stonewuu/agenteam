@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
@@ -186,6 +188,6 @@ public class RunCheckpointService {
 
     private static ApiException unavailable(Throwable cause) {
         return new ApiException(HttpStatus.CONFLICT, "EXECUTION_STATE_UNAVAILABLE",
-            "此对话的执行状态暂时无法读取，已保存的消息仍可查看，请联系维护者。", cause);
+            Messages.text("error.execution.runCheckpointService.unavailable.1"), cause);
     }
 }

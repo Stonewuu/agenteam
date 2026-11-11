@@ -11,7 +11,8 @@ import {ResourceAvatar} from "@/components/ui/resource-avatar";
 import {useApiQuery} from "@/lib/http/use-api-query";
 import type {PluginConfig, PluginSource, PluginToolSelection} from "@/features/resource/types/resource";
 import type {ToolSource} from "../types/plugin";
-import {cleanCollection} from "../lib/plugin-collection";
+import {asUsableVersion, cleanCollection} from "../lib/plugin-collection";
+import {resourceDisplayName} from "@/features/resource/lib/resource-localization";
 import {ToolSelectionDialog, toolSourcePath} from "./tool-selection-dialog";
 import {toolDisplayDescription, toolDisplayName, toolOperationLabel} from "../lib/tool-display-name";
 import styles from "./tool-collection.module.css";
@@ -64,7 +65,7 @@ function SelectedSource({enterpriseId, source, known, selections, readOnly, onRe
   const value = known ?? request.data;
   return <div className={styles.selectedGroup} data-selected-tool-source={source.id}>
     <header>{value && <ResourceAvatar icon={value.icon} color={value.color}
-                                      size="small"/>}<strong>{value?.name ?? (request.loading ? uiText("正在读取工具来源…") : uiText("原工具来源不可用"))}</strong>
+                                      size="small"/>}<strong>{value ? resourceDisplayName(asUsableVersion(value), uiText) : request.loading ? uiText("正在读取工具来源…") : uiText("原工具来源不可用")}</strong>
       {value && <span className={styles.versionLabel}>{uiText("版本 ")}{value.versionNo}</span>}</header>
     {request.error &&
       <p className={ui.error} role="alert">{localizeUiMessage(request.error ?? "", uiText)}<Button type="button"

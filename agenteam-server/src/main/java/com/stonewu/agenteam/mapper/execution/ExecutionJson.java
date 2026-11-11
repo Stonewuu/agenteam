@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,7 +30,7 @@ public class ExecutionJson {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("执行内容无法保存", error);
+            throw new IllegalStateException(Messages.text("error.execution.executionJson.write.1"), error);
         }
     }
 
@@ -36,7 +38,7 @@ public class ExecutionJson {
         try {
             return json.readTree(value);
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("已保存的执行内容无法读取", error);
+            throw new IllegalStateException(Messages.text("error.execution.executionJson.tree.1"), error);
         }
     }
 
@@ -47,7 +49,7 @@ public class ExecutionJson {
         try {
             return json.readValue(value, type);
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("已保存的执行内容无法读取", error);
+            throw new IllegalStateException(Messages.text("error.execution.executionJson.tree.1"), error);
         }
     }
 
@@ -56,7 +58,7 @@ public class ExecutionJson {
             return json.readValue(value, new TypeReference<>() {
             });
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("已保存的消息块无法读取", error);
+            throw new IllegalStateException(Messages.text("error.execution.executionJson.blocks.1"), error);
         }
     }
 

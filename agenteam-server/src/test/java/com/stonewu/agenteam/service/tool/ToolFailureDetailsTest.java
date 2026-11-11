@@ -34,7 +34,7 @@ class ToolFailureDetailsTest {
         var failure = assertThrows(IOException.class, () -> new ObjectMapper().readTree("{private-response-fragment"));
         var safe = ToolFailureDetails.safe(failure, List.of());
         assertFalse(safe.toString().contains("private-response-fragment"));
-        assertTrue(safe.toString().contains("响应解析失败"));
+        assertTrue(safe.toString().contains("Response parsing failed"));
         assertArrayEquals(failure.getStackTrace(), safe.getStackTrace());
     }
 }

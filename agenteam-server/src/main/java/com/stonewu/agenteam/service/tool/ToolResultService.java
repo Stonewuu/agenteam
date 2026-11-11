@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
@@ -47,12 +49,12 @@ public class ToolResultService {
         int size = Utf8Text.size(safe.toString());
         if (size > settings.maxFileBytes()) {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "TOOL_RESULT_TOO_LARGE",
-                "工具返回内容超过保存上限，请缩小查询范围或使用分页后继续。");
+                Messages.text("error.tool.toolResultService.prepare.1"));
         }
         if (WorkspaceToolDefinitions.handles(binding) && WorkspaceToolDefinitions.READ_TOOLS.contains(
             binding.definition().name())) {
             if (size > maximumBytes) {
-                throw new IllegalStateException("文件工具的返回内容超过已分配的大小");
+                throw new IllegalStateException(Messages.text("error.tool.toolResultService.prepare.2"));
             }
             return new Prepared(safe, safe, null);
         }
@@ -61,7 +63,7 @@ public class ToolResultService {
         }
         if (callId == null) {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "TOOL_RESULT_TOO_LARGE",
-                "工具返回内容过多，请缩小查询范围后继续。");
+                Messages.text("error.tool.toolResultService.prepare.3"));
         }
         // 路径按需读取已有调用记录，不创建文件；尽量利用本轮空间直接提供原文。
         var reference = ToolResultContent.reference(callId, null, safe, size, maximumBytes);

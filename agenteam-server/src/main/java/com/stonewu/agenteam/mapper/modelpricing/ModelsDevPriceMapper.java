@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration.Rate;
@@ -16,7 +18,7 @@ import java.util.TreeSet;
 /** 只转换语义明确的文本单价；没有有效期的缓存创建价不能作为所有缓存时长的通用价。 */
 @Component
 public class ModelsDevPriceMapper {
-    public static final String CACHE_NOTICE = "来源未注明缓存创建价格的有效期，该项未导入；如有缓存创建用量，请在草稿中补充。";
+    public static final String CACHE_NOTICE = Messages.source("text.modelpricing.modelsDevPriceMapper.CACHE_NOTICE.1");
     private static final Map<String, String> METERS = Map.of("input", "input_uncached", "output", "output", "cache_read", "cache_read");
     private static final List<String> FIELDS = List.of("input", "output", "cache_read");
 
@@ -26,7 +28,7 @@ public class ModelsDevPriceMapper {
         }
         var notices = new TreeSet<String>();
         var rules = new ArrayList<Rule>();
-        rules.add(rule("基础价格", 0, true, 0, null, cost));
+        rules.add(rule(Messages.text("text.modelpricing.modelsDevPriceMapper.map.1"), 0, true, 0, null, cost));
         notice(cost, notices);
         var tiers = new ArrayList<JsonNode>();
         if (cost.has("tiers")) {
@@ -56,7 +58,7 @@ public class ModelsDevPriceMapper {
             var tier = tiers.get(index);
             long threshold = tier.path("tier").path("size").longValue();
             Long upper = index + 1 < tiers.size() ? tiers.get(index + 1).path("tier").path("size").longValue() + 1 : null;
-            rules.add(rule("上下文超过 " + threshold + " Token", 10, false, threshold + 1, upper, tier));
+            rules.add(rule(Messages.text("text.modelpricing.modelsDevPriceMapper.map.2", threshold), 10, false, threshold + 1, upper, tier));
             notice(tier, notices);
         }
         return new Prices(List.copyOf(rules), List.copyOf(notices));
@@ -98,7 +100,7 @@ public class ModelsDevPriceMapper {
             notices.add(CACHE_NOTICE);
         }
         if (cost.has("input_audio") || cost.has("output_audio")) {
-            notices.add("本次仅导入文本价格，不包含音频价格。");
+            notices.add(Messages.text("text.modelpricing.modelsDevPriceMapper.notice.1"));
         }
     }
 

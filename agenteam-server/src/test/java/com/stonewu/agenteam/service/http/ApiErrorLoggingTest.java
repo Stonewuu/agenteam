@@ -58,8 +58,8 @@ class ApiErrorLoggingTest {
         assertEquals(status, result.getStatusCode().value());
         assertEquals(responses.requestId(request), result.getBody().error().requestId());
         assertTrue(output.getOut().contains(status >= 500 ? "ERROR" : "WARN"));
-        assertTrue(output.getOut().contains("请求编号 " + responses.requestId(request)));
-        assertTrue(output.getOut().contains("请求方法 POST，请求路径 /api/v1/example，响应状态 " + status));
+        assertTrue(output.getOut().contains("requestId=" + responses.requestId(request)));
+        assertTrue(output.getOut().contains("method=POST, path=/api/v1/example, status=" + status));
         assertTrue(output.getOut().contains(failure.getClass().getName()));
         assertTrue(output.getOut().contains("at " + ApiErrorLoggingTest.class.getName() + ".failures("));
         if (failure.getCause() != null) {
@@ -116,7 +116,7 @@ class ApiErrorLoggingTest {
         var failure = new AsyncRequestNotUsableException("事件连接已关闭", new IOException("测试连接中断"));
         handler.disconnected(failure, request, response);
         responses.logFailure(failure, request, response.getStatus());
-        assertEquals(1, output.getOut().lines().filter(line -> line.contains("请求未能完成，请求编号 ")).count());
+        assertEquals(1, output.getOut().lines().filter(line -> line.contains("Request did not complete; requestId=")).count());
         assertTrue(output.getOut().contains("Caused by: " + IOException.class.getName() + ": 测试连接中断"));
         assertEquals(0, response.getContentAsByteArray().length);
         assertEquals("text/event-stream", response.getContentType());

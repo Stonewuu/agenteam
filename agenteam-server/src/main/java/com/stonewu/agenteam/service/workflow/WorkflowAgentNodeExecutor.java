@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.agent.AgentPublicEventMapper.Scope;
@@ -51,7 +53,7 @@ public class WorkflowAgentNodeExecutor {
             task -> task.completion().then(Mono.fromCallable(() -> {
                 if (!task.externalCalls().isEmpty()) {
                     throw new ApiException(HttpStatus.CONFLICT, "WORKFLOW_NESTING_UNSUPPORTED",
-                        "工作流节点不能再启动其他工作流。");
+                        Messages.text("error.workflow.workflowAgentNodeExecutor.execute.1"));
                 }
                 if (!task.pendingApprovals().isEmpty()) {
                     return new WorkflowNodeResult(null, null,
@@ -59,7 +61,7 @@ public class WorkflowAgentNodeExecutor {
                 }
                 if (task.result() == null || task.result().getTextContent().isBlank()) {
                     throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_EMPTY_RESULT",
-                        "当前节点没有返回可用的结果。");
+                        Messages.text("error.workflow.workflowAgentNodeExecutor.execute.2"));
                 }
                 var result = json.createObjectNode().put("text", task.result().getTextContent());
                 try {
@@ -101,7 +103,7 @@ public class WorkflowAgentNodeExecutor {
         var config = dependency.path("config");
         if (!config.path("workflowVersionIds").isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "WORKFLOW_NESTING_UNSUPPORTED",
-                "工作流节点不能再启动其他工作流。");
+                Messages.text("error.workflow.workflowAgentNodeExecutor.execute.1"));
         }
         String content = values.write(input);
         if (node.type().equals("skill")) {

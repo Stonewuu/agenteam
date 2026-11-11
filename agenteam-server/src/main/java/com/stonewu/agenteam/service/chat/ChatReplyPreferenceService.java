@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -75,7 +77,7 @@ public class ChatReplyPreferenceService {
         if (!participated && tasks.selectCount(new LambdaQueryWrapper<CollaborationTaskRow>()
                 .eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId()).eq(CollaborationTaskRow::getConversationId, id)
                 .eq(CollaborationTaskRow::getInitiatorUserId, actor.userId())) == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_CONVERSATION_UNAVAILABLE", "会话不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_CONVERSATION_UNAVAILABLE", Messages.text("error.chat.chatConversationService.require.1"));
         }
         return group;
     }
@@ -137,7 +139,7 @@ public class ChatReplyPreferenceService {
             row.setConversationId(conversation);
             row.setOutputVisibility(visibility);
             if (preferences.insert(row) != 1) {
-                throw new IllegalStateException("回复偏好保存失败");
+                throw new IllegalStateException(Messages.text("error.chat.chatReplyPreferenceService.save.1"));
             }
         } else if (!visibility.equals(row.getOutputVisibility())) {
             if (preferences.update(new LambdaUpdateWrapper<ChatReplyPreferenceRow>()
@@ -159,10 +161,10 @@ public class ChatReplyPreferenceService {
 
     public static void validate(ChatConversationRow group, String visibility) {
         if (visibility == null || !Set.of("summary_link", "chat_full").contains(visibility)) {
-            throw ApiException.invalidField("outputVisibility", "请选择有效的回复方式。");
+            throw ApiException.invalidField("outputVisibility", Messages.text("error.chat.chatReplyPreferenceRequest.outputVisibility.2"));
         }
         if ("chat_full".equals(visibility) && !fullAllowed(group)) {
-            throw ApiException.invalidField("outputVisibility", "本群已设为仅发送链接。");
+            throw ApiException.invalidField("outputVisibility", Messages.text("error.chat.chatReplyPreferenceService.validate.1"));
         }
     }
 

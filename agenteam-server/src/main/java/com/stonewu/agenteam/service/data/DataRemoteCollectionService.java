@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.data.DataCollectionMapper;
 import com.stonewu.agenteam.mapper.data.HttpDataResponseMapper;
 import com.stonewu.agenteam.mapper.data.MysqlSourceSchema;
@@ -63,7 +65,7 @@ public class DataRemoteCollectionService {
             return;
         }
         if (!resource.config().path("sourceType").asText().equals("mysql")) {
-            throw ApiException.invalidField("sourceName", "文件集合请使用导入。");
+            throw ApiException.invalidField("sourceName", Messages.text("error.data.dataRemoteCollectionService.inspect.1"));
         }
         try (var session = mysql.open(resource.enterpriseId(), resource.config(), deadline)) {
             schema.require(session, input.sourceName(), fields);
@@ -71,7 +73,7 @@ public class DataRemoteCollectionService {
             throw invalid;
         } catch (Exception unavailable) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "DATA_SOURCE_SCHEMA_UNAVAILABLE",
-                "暂时无法读取所选库表和字段，请稍后重新检查。");
+                Messages.text("error.data.dataRemoteCollectionService.inspect.2"));
         }
     }
 
@@ -87,15 +89,15 @@ public class DataRemoteCollectionService {
         if (current != null) {
             policy.revision(current, revision);
             if (!current.sourceName().equals(input.sourceName())) {
-                throw ApiException.invalidField("sourceName", "已有集合不能改为另一来源，请建立新的集合。");
+                throw ApiException.invalidField("sourceName", Messages.text("error.data.dataRemoteCollectionService.save.1"));
             }
             if (current.activeGeneration() == Integer.MAX_VALUE) {
                 throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_LIMIT",
-                    "集合版本数量达到上限，请建立新集合。");
+                    Messages.text("error.data.dataCollectionTransactions.updateFile.2"));
             }
         } else if (collections.all(actor.enterpriseId(), resource.id()).stream()
             .anyMatch(row -> row.sourceName().equals(input.sourceName()))) {
-            throw new ApiException(HttpStatus.CONFLICT, "DATA_COLLECTION_EXISTS", "这个来源已经登记，请修改已有集合。");
+            throw new ApiException(HttpStatus.CONFLICT, "DATA_COLLECTION_EXISTS", Messages.text("error.data.dataRemoteCollectionService.save.2"));
         }
         String id = current == null ? UUID.randomUUID().toString() : current.id();
         int generation = current == null ? 1 : current.activeGeneration() + 1;
@@ -110,7 +112,7 @@ public class DataRemoteCollectionService {
             collections.activate(current, name, current.sourceName(), generation, null, null, clock.instant());
         }
         audit.record(actor.enterpriseId(), actor.user(), "data.collection.update", "data_collection", id,
-            "保存远程数据集合与允许字段", Map.of("generation", generation));
+            Messages.text("text.data.dataRemoteCollectionService.save.1"), Map.of("generation", generation));
         return DataCollectionMapper.view(collections.find(actor.enterpriseId(), id, false).orElseThrow(), fields);
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stonewu.agenteam.mapper.modelusage.ModelUsageCostItemMapper;
@@ -75,7 +77,7 @@ public class ModelUsageProtocolRepairService {
             .set(ModelUsageRecordRow::getNextCalculationAt, now).set(ModelUsageRecordRow::getCalculationLeaseUntil, null)
             .set(ModelUsageRecordRow::getUpdatedAt, now).setIncrBy(ModelUsageRecordRow::getRevision, 1));
         if (changed != 1) {
-            throw new IllegalStateException("修正模型用量时记录已变更。");
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageProtocolRepairService.repair.1"));
         }
         // 不在修正后的用量旁继续显示旧金额，下一步由现有计算任务使用原价格版本重新计算。
         items.delete(Wrappers.<ModelUsageCostItemRow>lambdaQuery().eq(ModelUsageCostItemRow::getEnterpriseId, candidate.enterprise())

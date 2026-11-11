@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +34,16 @@ public class ClamAvScanService {
                              @Value("${files.scan.host:}") String host,
                              @Value("${files.scan.port:3310}") int port, FileContentStorage storage) {
         if (port < 1 || port > 65535) {
-            throw new IllegalArgumentException("文件检查服务端口不正确");
+            throw new IllegalArgumentException(Messages.text("error.file.clamAvScanService.init.1"));
         }
         this.enabled = enabled;
         this.host = host;
         this.port = port;
         this.storage = storage;
         if (!enabled) {
-            LOG.info("病毒扫描已关闭，上传文件继续进行完整性校验和文档处理。");
+            LOG.info(Messages.log("log.file.clamAvScanService.init.1"));
         } else if (host.isBlank()) {
-            LOG.info("未配置病毒扫描服务，上传文件将跳过病毒扫描，继续进行文件校验和解析。");
+            LOG.info(Messages.log("log.file.clamAvScanService.init.2"));
         }
     }
 
@@ -51,7 +53,7 @@ public class ClamAvScanService {
         }
         var result = new CompletableFuture<Result>();
         try (var socket = new Socket()) {
-            Thread scanner = Thread.ofVirtual().name("文件内容检查").start(() -> {
+            Thread scanner = Thread.ofVirtual().name(Messages.log("log.file.clamAvScanService.scan.1")).start(() -> {
                 try {
                     socket.connect(new InetSocketAddress(host, port), 5000);
                     socket.setSoTimeout(15000);
@@ -67,13 +69,13 @@ public class ClamAvScanService {
                             }
                             sent += length;
                             if (sent > 20L * 1024 * 1024 || Thread.currentThread().isInterrupted()) {
-                                throw new IllegalStateException("文件检查超过限制");
+                                throw new IllegalStateException(Messages.text("error.file.clamAvScanService.scan.1"));
                             }
                             output.writeInt(length);
                             output.write(buffer, 0, length);
                         }
                         if (sent != file.sizeBytes()) {
-                            throw new IllegalStateException("文件内容发生变化");
+                            throw new IllegalStateException(Messages.text("error.file.clamAvScanService.scan.2"));
                         }
                     }
                     output.writeInt(0);
@@ -82,7 +84,7 @@ public class ClamAvScanService {
                     int next;
                     while ((next = socket.getInputStream().read()) >= 0) {
                         if (reply.size() >= 4096) {
-                            throw new IllegalStateException("文件检查回复过大");
+                            throw new IllegalStateException(Messages.text("error.file.clamAvScanService.scan.3"));
                         }
                         reply.write(next);
                     }
@@ -112,15 +114,15 @@ public class ClamAvScanService {
             } catch (InterruptedException cancelled) {
                 scanner.interrupt();
                 Thread.currentThread().interrupt();
-                LOG.warn("文件内容检查已中断，文件编号 {}", file.id(), cancelled);
+                LOG.warn(Messages.log("log.file.clamAvScanService.scan.2"), file.id(), cancelled);
                 return Result.UNAVAILABLE;
             } catch (Exception unavailable) {
                 scanner.interrupt();
-                LOG.warn("文件内容检查失败，文件编号 {}", file.id(), unavailable);
+                LOG.warn(Messages.log("log.file.clamAvScanService.scan.3"), file.id(), unavailable);
                 return Result.UNAVAILABLE;
             }
         } catch (Exception unavailable) {
-            LOG.warn("文件内容检查连接失败，文件编号 {}", file.id(), unavailable);
+            LOG.warn(Messages.log("log.file.clamAvScanService.scan.4"), file.id(), unavailable);
             return Result.UNAVAILABLE;
         }
     }

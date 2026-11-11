@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.integration.IntegrationRetentionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +25,7 @@ public class IntegrationRetentionScheduling {
         try {
             retention.sweep();
         } catch (RuntimeException failure) {
-            LOG.warn("渠道临时资料与过期发送记录清理未完成，任务 integration-retention", failure);
+            LOG.warn(Messages.log("log.integration.integrationRetentionScheduling.sweep.1"), failure);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource.validation;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.data.request.DataConfigurationInput;
@@ -35,7 +37,7 @@ public class DataConfigurationValidator implements ResourceConfigValidator {
             case "file" -> {
                 InputValidation.fields(connection, "config.connection");
                 if (!config.path("credentialId").isNull()) {
-                    throw ApiException.invalidField("config.credentialId", "文件数据源不能设置连接凭据。");
+                    throw ApiException.invalidField("config.credentialId", Messages.text("error.resource.dataConfigurationValidator.draft.1"));
                 }
             }
             case "mysql" -> {
@@ -46,10 +48,10 @@ public class DataConfigurationValidator implements ResourceConfigValidator {
                 InputValidation.fields(connection, "config.connection", "endpoint", "queryParameters");
                 InputValidation.required(connection, "config.connection", "endpoint", "queryParameters");
                 if (!connection.path("endpoint").asText().startsWith("https://")) {
-                    throw ApiException.invalidField("config.connection.endpoint", "数据接口需要使用加密网页地址。");
+                    throw ApiException.invalidField("config.connection.endpoint", Messages.text("error.resource.dataConfigurationValidator.draft.2"));
                 }
             }
-            default -> throw ApiException.invalidField("config.sourceType", "请选择支持的数据源类型。");
+            default -> throw ApiException.invalidField("config.sourceType", Messages.text("error.resource.dataConfigurationValidator.draft.3"));
         }
     }
 
@@ -57,7 +59,7 @@ public class DataConfigurationValidator implements ResourceConfigValidator {
     public void validatePublished(JsonNode config) {
         draft(config);
         if (config.path("sourceType").asText().equals("mysql") && !config.path("credentialId").isTextual()) {
-            throw ApiException.invalidField("config.credentialId", "请选择数据库连接凭据。");
+            throw ApiException.invalidField("config.credentialId", Messages.text("error.resource.dataConfigurationValidator.validatePublished.1"));
         }
     }
 

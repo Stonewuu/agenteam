@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.stonewu.agenteam.mapper.modelpricing.ModelPriceStore;
 import com.stonewu.agenteam.mapper.modelusage.ModelUsageCostItemMapper;
@@ -102,7 +104,7 @@ public class ModelUsageRecoveryService {
             .set(ModelUsageRecordRow::getCalculationLeaseUntil, null).set(ModelUsageRecordRow::getNextCalculationAt, null)
             .set(ModelUsageRecordRow::getUpdatedAt, clock.instant()).setIncrBy(ModelUsageRecordRow::getRevision, 1));
         if (changed != 1) {
-            throw new IllegalStateException("模型金额保存时记录已变更。");
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageRecoveryService.calculate.1"));
         }
     }
 

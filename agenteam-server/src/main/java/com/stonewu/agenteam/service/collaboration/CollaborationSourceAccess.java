@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationArtifactMapper;
@@ -113,6 +115,6 @@ public class CollaborationSourceAccess {
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.FORBIDDEN, "ARTIFACT_ACCESS_DENIED", "文件不在当前岗位已授权的固定成果范围内。");
+        return new ApiException(HttpStatus.FORBIDDEN, "ARTIFACT_ACCESS_DENIED", Messages.text("error.collaboration.collaborationSourceAccess.unavailable.1"));
     }
 }

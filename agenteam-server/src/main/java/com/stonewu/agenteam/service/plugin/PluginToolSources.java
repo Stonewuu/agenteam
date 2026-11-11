@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
@@ -96,7 +98,7 @@ public class PluginToolSources {
                 definition = definitions.get(source.path("id").asText()).stream()
                     .filter(tool -> tool.name().equals(name))
                     .findFirst().orElseThrow(
-                        () -> ApiException.invalidField("config.tools", "所选版本已不再提供这个工具，请重新选择。"));
+                        () -> ApiException.invalidField("config.tools", Messages.text("error.plugin.pluginToolSources.resolve.1")));
                 ObjectNode execution = builtin.version().config().deepCopy();
                 execution.put("timeoutSeconds", timeout);
                 fixed = new PluginToolSource("builtin", builtin.resource().id(), builtin.version().id(),
@@ -106,7 +108,7 @@ public class PluginToolSources {
                 definition = definitions.get(source.path("id").asText()).stream()
                     .filter(tool -> tool.name().equals(name)).findFirst()
                     .orElseThrow(
-                        () -> ApiException.invalidField("config.tools", "所选工具不在连接检查结果中，请重新检查。"));
+                        () -> ApiException.invalidField("config.tools", Messages.text("error.plugin.pluginToolSources.resolve.2")));
                 ObjectNode execution = PluginConfigurationMapper.connection(config).deepCopy();
                 execution.put("timeoutSeconds", timeout);
                 fixed = new PluginToolSource("mcp", resource.id(), evidence.connectionHash(config), null,

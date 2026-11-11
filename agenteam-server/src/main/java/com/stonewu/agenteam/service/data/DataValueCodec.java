@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -86,7 +88,7 @@ public class DataValueCodec {
             };
         } catch (Exception invalid) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_VALUE_TYPE_INVALID",
-                "数据值与字段类型不符，请检查对应行列。",
+                Messages.text("error.data.dataValueCodec.csv.1"),
                 Map.of("row", row, "column", field.ordinal() + 1, "field", field.name(), "expectedType",
                     field.valueType()), Map.of());
         }
@@ -97,7 +99,7 @@ public class DataValueCodec {
             return parameterValue(field, value);
         } catch (ApiException invalid) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_FILTER_TYPE_INVALID",
-                "筛选值与字段类型不符，请检查筛选条件。",
+                Messages.text("error.data.dataValueCodec.parameter.1"),
                 Map.of("field", field.name(), "expectedType", field.valueType()), Map.of());
         }
     }
@@ -108,12 +110,12 @@ public class DataValueCodec {
         }
         if (field.valueType().equals("object")) {
             if (!value.isObject()) {
-                throw ApiException.invalidField("filters", "JSON 对象字段的比较值必须是对象。");
+                throw ApiException.invalidField("filters", Messages.text("error.data.dataValueCodec.parameterValue.1"));
             }
             return csv(field, value.toString(), 0);
         }
         if (value.isContainerNode() || (field.valueType().equals("string") && !value.isTextual())) {
-            throw ApiException.invalidField("filters", "筛选值与字段类型不一致。");
+            throw ApiException.invalidField("filters", Messages.text("error.data.dataValueCodec.parameterValue.2"));
         }
         return csv(field, value.asText(), 0);
     }

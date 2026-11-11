@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.audit;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.audit.AuditEventMapper;
@@ -46,7 +48,7 @@ public class AuditEventService {
             mapper.append(enterpriseId, actor.id(), actor.displayName(), action, objectType, objectId, summary,
                 json.writeValueAsString(recorded), requestId(), clock.instant(), operator);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("无法保存操作审计，当前变更未提交", exception);
+            throw new IllegalStateException(Messages.text("error.audit.auditEventService.record.1"), exception);
         }
     }
 

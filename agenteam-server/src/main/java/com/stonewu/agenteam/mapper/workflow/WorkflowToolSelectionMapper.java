@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
@@ -28,11 +30,11 @@ public class WorkflowToolSelectionMapper {
             }
             if (!settings.hasNonNull("toolId")) {
                 String name = settings.path("toolName").asText();
-                if (settings.hasNonNull("pluginVersionId") && !name.isBlank() && !name.equals("待选择")) {
+                if (settings.hasNonNull("pluginVersionId") && !name.isBlank() && !name.equals(Messages.source("text.workflow.workflowToolSelectionMapper.normalize.1"))) {
                     var matches = tools.list(actor.enterpriseId(), settings.path("pluginVersionId").asText()).stream()
                         .filter(tool -> tool.definition().name().equals(name)).toList();
                     if (matches.size() != 1) {
-                        throw ApiException.invalidField("config.nodes", "无法在当前版本中确定要使用的工具，请重新选择工具。");
+                        throw ApiException.invalidField("config.nodes", Messages.text("error.workflow.workflowToolSelectionMapper.normalize.1"));
                     }
                     var tool = matches.getFirst();
                     settings.put("toolId", tool.entryId() == null ? tool.id() : tool.entryId());

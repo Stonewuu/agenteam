@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -48,13 +50,13 @@ public class FileUploadTransactions {
     public FileRecord claim(AuthContext actor, String id, String lease) {
         var file = access.uploadOwner(actor, id, true);
         if (!file.status().equals("pending")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_ALREADY_UPLOADED", "文件已上传，无需重复上传。请查看文件状态。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_ALREADY_UPLOADED", Messages.text("error.file.fileUploadTransactions.claim.1"));
         }
         if (file.uploadExpiresAt() == null || !file.uploadExpiresAt().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.GONE, "UPLOAD_EXPIRED", "上传地址已过期，请重新选择文件。");
+            throw new ApiException(HttpStatus.GONE, "UPLOAD_EXPIRED", Messages.text("error.file.fileUploadTransactions.claim.2"));
         }
         if (!files.claimUpload(file, lease, clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "UPLOAD_IN_PROGRESS", "文件正在上传，请等待当前上传结束。");
+            throw new ApiException(HttpStatus.CONFLICT, "UPLOAD_IN_PROGRESS", Messages.text("error.file.fileUploadTransactions.claim.3"));
         }
         return files.find(actor.enterpriseId(), id, false).orElseThrow();
     }
@@ -66,7 +68,7 @@ public class FileUploadTransactions {
             throw mismatch();
         }
         if (!files.uploaded(file, lease, content.key(), content.size(), content.sha256(), clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "UPLOAD_EXPIRED", "本次上传已失效，请重新读取文件状态。");
+            throw new ApiException(HttpStatus.CONFLICT, "UPLOAD_EXPIRED", Messages.text("error.file.fileUploadTransactions.uploaded.1"));
         }
     }
 
@@ -79,7 +81,7 @@ public class FileUploadTransactions {
             throw mismatch();
         }
         if (file.status().equals("pending")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_UPLOADED", "请先完成文件上传。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_UPLOADED", Messages.text("error.file.fileApiService.complete.1"));
         }
         if (file.status().equals("uploaded")) {
             files.scanning(file, clock.instant());
@@ -93,6 +95,6 @@ public class FileUploadTransactions {
 
     private static ApiException mismatch() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_CONTENT_MISMATCH",
-            "上传内容与选择的文件不一致，请重新上传。");
+            Messages.text("error.file.fileUploadService.mismatch.1"));
     }
 }

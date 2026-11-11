@@ -16,7 +16,7 @@ export function storedEnterprise(userId: string, revision: string, path: string)
     const value = window.sessionStorage.getItem(`${namespace}:${userId}:${revision}`);
     return value || undefined;
   } catch (failure) {
-    console.warn("无法恢复当前标签页的企业选择", failure);
+    console.warn("Failed to restore the organization selection for this tab", failure);
     return current?.userId === userId && current.revision === revision ? current.enterpriseId : undefined;
   }
 }
@@ -27,7 +27,7 @@ export function rememberWorkspace(userId: string, revision: string, enterpriseId
     window.sessionStorage.setItem(`${namespace}:${userId}:${revision}`, enterpriseId);
     window.history.replaceState({...window.history.state, [namespace]: current}, "", window.location.href);
   } catch (failure) {
-    console.warn("无法保存当前标签页的企业选择", failure);
+    console.warn("Failed to persist the organization selection for this tab", failure);
   }
 }
 

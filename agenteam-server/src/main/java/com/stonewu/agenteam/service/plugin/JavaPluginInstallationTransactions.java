@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.plugin.JavaPluginInstallationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -71,7 +73,7 @@ public class JavaPluginInstallationTransactions {
         }
         if (current != null) {
             if (current.getPluginVersion().equals(candidate.getPluginVersion())) {
-                throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_VERSION_EXISTS", "此插件版本已安装，请使用新的版本号。");
+                throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_VERSION_EXISTS", Messages.text("error.plugin.javaPluginInstallationTransactions.activate.1"));
             }
             retire(actor.enterpriseId(), current.getId(), "upgraded");
         }
@@ -84,7 +86,7 @@ public class JavaPluginInstallationTransactions {
             throw conflict();
         }
         audit.record(actor.enterpriseId(), actor.user(), "java_plugin.install", "java_plugin", id,
-            "安装扩展插件", Map.of("pluginId", candidate.getPluginId(), "version", candidate.getPluginVersion()));
+            Messages.text("text.plugin.javaPluginInstallationTransactions.activate.1"), Map.of("pluginId", candidate.getPluginId(), "version", candidate.getPluginVersion()));
         return registry.view(registry.require(actor.enterpriseId(), id));
     }
 
@@ -101,7 +103,7 @@ public class JavaPluginInstallationTransactions {
         }
         retire(actor.enterpriseId(), id, "uninstalled");
         audit.record(actor.enterpriseId(), actor.user(), "java_plugin.uninstall", "java_plugin", id,
-            "卸载扩展插件", Map.of("pluginId", row.getPluginId(), "version", row.getPluginVersion()));
+            Messages.text("text.plugin.javaPluginInstallationTransactions.uninstall.1"), Map.of("pluginId", row.getPluginId(), "version", row.getPluginVersion()));
     }
 
     private void retire(String enterprise, String id, String status) {
@@ -122,6 +124,6 @@ public class JavaPluginInstallationTransactions {
     }
 
     private static ApiException conflict() {
-        return new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_INSTALLATION_CHANGED", "插件安装状态已变化，请重新读取后操作。");
+        return new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_INSTALLATION_CHANGED", Messages.text("error.plugin.javaPluginInstallationTransactions.conflict.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -46,7 +48,7 @@ public class CollaborationActionService {
             return Optional.empty();
         }
         if (!existing.getTaskId().equals(task) || !existing.getArgumentsHash().equals(json.hash(arguments))) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_ACTION_CONFLICT", "相同操作编号不能更改任务或参数。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_ACTION_CONFLICT", Messages.text("error.collaboration.collaborationActionService.replay.1"));
         }
         return Optional.of(cipher.decrypt(enterprise, "action-result", existing.getId(), existing.getResultEncrypted()));
     }
@@ -70,7 +72,7 @@ public class CollaborationActionService {
         if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationTaskRow::getId, task.getId()).eq(CollaborationTaskRow::getNextSequence, current.getNextSequence())
             .setIncrBy(CollaborationTaskRow::getNextSequence, 1)) != 1) {
-            throw new IllegalStateException("协作任务动作顺序已发生变化");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationActionService.begin.1"));
         }
         actions.insert(action);
         return action;
@@ -81,7 +83,7 @@ public class CollaborationActionService {
         if (actions.update(new LambdaUpdateWrapper<CollaborationActionRow>().eq(CollaborationActionRow::getEnterpriseId, action.getEnterpriseId())
             .eq(CollaborationActionRow::getId, action.getId()).set(CollaborationActionRow::getResultEncrypted,
                 cipher.encrypt(action.getEnterpriseId(), "action-result", action.getId(), node))) != 1) {
-            throw new IllegalStateException("协作动作不存在，当前修改不能提交");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationActionService.finish.1"));
         }
         return node;
     }

@@ -40,7 +40,7 @@ export function ImpersonationButton({enterpriseId, userId, displayName, status, 
       broadcastIdentityChange();
       window.location.replace(enterpriseEntryPath(enterpriseId));
     } catch (failure) {
-      console.error("切换用户身份失败", failure);
+      console.error("Failed to switch user identity", failure);
       setError(errorMessage(failure));
       setBusy(false);
     }

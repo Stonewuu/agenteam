@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
@@ -58,7 +60,7 @@ public class WecomMemberAliases {
 
     public void prepare(ChatReceiptLease lease) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("企微成员转换不能在数据库事务中执行");
+            throw new IllegalStateException(Messages.text("error.integration.wecomMemberAliases.prepare.1"));
         }
         var receipt = receipts.selectById(lease.receiptId());
         if (receipt == null || !lease.enterpriseId().equals(receipt.getEnterpriseId())
@@ -90,7 +92,7 @@ public class WecomMemberAliases {
         String subject = frame.path("body").path("from").path("userid").asText();
         String reportedTenant = frame.path("body").path("from").path("corpid").asText(null);
         if (reportedTenant != null && !reportedTenant.isBlank() && !context.enterprise().getExternalTenantId().equals(reportedTenant)) {
-            throw new ChannelProviderException("WECOM_ENTERPRISE_MISMATCH", "消息不属于已接入的企微企业。");
+            throw new ChannelProviderException("WECOM_ENTERPRISE_MISMATCH", Messages.text("error.integration.wecomMemberAliases.prepare.2"));
         }
         if (find(lease.enterpriseId(), bot.getConnectionId(), "wecom_aibot_userid", subject).isPresent()) {
             return;
@@ -181,7 +183,7 @@ public class WecomMemberAliases {
     }
 
     private static ChannelProviderException unavailable() {
-        return new ChannelProviderException("WECOM_ENTERPRISE_CHANGED", "企微接入已变化，请重新核验后继续。");
+        return new ChannelProviderException("WECOM_ENTERPRISE_CHANGED", Messages.text("error.integration.wecomMemberAliases.unavailable.1"));
     }
 
     public record Member(String connectionId, String subjectId) {

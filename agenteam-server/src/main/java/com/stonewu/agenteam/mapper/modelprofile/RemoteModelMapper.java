@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.modelprofile.response.RemoteModelView;
@@ -133,6 +135,6 @@ public class RemoteModelMapper {
 
     private ApiException invalidResponse(Throwable cause) {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MODEL_LIST_INVALID",
-            "提供方未返回有效的模型列表，可重试或手动填写模型标识。", cause);
+            Messages.text("error.modelprofile.remoteModelMapper.invalidResponse.1"), cause);
     }
 }

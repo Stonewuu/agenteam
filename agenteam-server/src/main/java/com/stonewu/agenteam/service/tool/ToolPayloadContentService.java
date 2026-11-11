@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
 import com.stonewu.agenteam.mapper.tool.ToolResultContent;
@@ -66,14 +68,14 @@ public class ToolPayloadContentService {
 
     private void checkWindow(int offset, int limit) {
         if (offset < 0 || limit < 4 || limit > 256 * 1024) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "TOOL_CONTENT_RANGE_INVALID", "读取范围不正确。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "TOOL_CONTENT_RANGE_INVALID", Messages.text("error.file.textFileDocument.read.1"));
         }
     }
 
     private TextFileDocument document(AuthContext actor, ToolCallRecord call, String part, String view, String revision,
                                       boolean logAuthorized) {
         if (!Set.of("input", "result").contains(part) || !Set.of("readable", "raw").contains(view)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "TOOL_CONTENT_RANGE_INVALID", "内容类型或读取范围不正确。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "TOOL_CONTENT_RANGE_INVALID", Messages.text("error.tool.toolPayloadContentService.document.1"));
         }
         if (!logAuthorized) {
             var run = runs.find(actor.enterpriseId(), call.runId(), false)
@@ -96,12 +98,12 @@ public class ToolPayloadContentService {
             return new TextFileDocument(path, Utf8Text.revision(path, text), text);
         });
         if (revision != null && !document.revision().equals(revision)) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_CONTENT_CHANGED", "工具内容已经更新，请重新展开查看。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_CONTENT_CHANGED", Messages.text("error.tool.nativeToolContentService.open.1"));
         }
         return document;
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "TOOL_CONTENT_UNAVAILABLE", "工具内容不存在或已不可读取。");
+        return new ApiException(HttpStatus.NOT_FOUND, "TOOL_CONTENT_UNAVAILABLE", Messages.text("error.tool.nativeToolContentService.unavailable.1"));
     }
 }

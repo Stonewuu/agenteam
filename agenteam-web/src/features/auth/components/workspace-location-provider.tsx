@@ -149,7 +149,7 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
           router.replace(loginPath(key));
           return;
         }
-        console.error("读取页面所属企业失败", error);
+        console.error("Failed to read the organization for the current page", error);
         setFailure({key, message: errorMessage(error), enterprise, user});
       }
     }

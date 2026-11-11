@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.permission;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
 import com.stonewu.agenteam.model.permission.entity.ResourceAccessRecord;
@@ -77,7 +79,7 @@ public class ResourceAuthorizationMapper {
     public void advanceRevision(String enterpriseId, String id, long revision, Instant now) {
         int changed = resourceSqlMapper.advanceAuthorizationRevision(Timestamp.from(now), enterpriseId, id, revision);
         if (changed != 1) {
-            throw new IllegalStateException("资源已经变化，授权修改未提交");
+            throw new IllegalStateException(Messages.text("error.permission.resourceAuthorizationMapper.advanceRevision.1"));
         }
     }
 

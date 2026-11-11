@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
@@ -40,7 +42,7 @@ public class ListPagination {
     public int limit(Integer value) {
         int limit = value == null ? 30 : value;
         if (limit < 1 || limit > 100) {
-            throw ApiException.invalidField("limit", "每页条数需要在 1～100 之间。");
+            throw ApiException.invalidField("limit", Messages.text("error.http.listPagination.limit.1"));
         }
         return limit;
     }
@@ -48,7 +50,7 @@ public class ListPagination {
     public String query(String value) {
         String query = value == null ? "" : value.trim();
         if (query.codePointCount(0, query.length()) > 100 || query.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("query", "搜索内容不能超过 100 个字符或包含控制字符。");
+            throw ApiException.invalidField("query", Messages.text("error.http.listPagination.query.1"));
         }
         return query;
     }
@@ -103,11 +105,11 @@ public class ListPagination {
                 .encodeToString(mac.doFinal(("pagination:" + payload).getBytes(StandardCharsets.UTF_8)));
             return payload + "." + signature;
         } catch (Exception exception) {
-            throw new IllegalStateException("分页位置无法生成");
+            throw new IllegalStateException(Messages.text("error.http.listPagination.encode.1"));
         }
     }
 
     private ApiException invalid() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "CURSOR_INVALID", "分页位置已失效，请重新加载列表。");
+        return new ApiException(HttpStatus.BAD_REQUEST, "CURSOR_INVALID", Messages.text("error.http.listPagination.invalid.1"));
     }
 }

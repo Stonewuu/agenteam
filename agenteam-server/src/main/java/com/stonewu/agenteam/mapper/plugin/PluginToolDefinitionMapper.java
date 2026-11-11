@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -70,6 +72,6 @@ public class PluginToolDefinitionMapper {
 
     private static ApiException invalid() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MCP_TOOL_STRUCTURE_INVALID",
-            "工具清单包含不支持的名称、重复条目或执行方式。");
+            Messages.text("error.plugin.pluginToolDefinitionMapper.invalid.1"));
     }
 }

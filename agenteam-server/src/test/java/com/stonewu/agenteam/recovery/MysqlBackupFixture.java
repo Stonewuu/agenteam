@@ -67,12 +67,12 @@ public final class MysqlBackupFixture implements AutoCloseable {
     public void fullBackup() throws Exception {
         Files.createDirectories(root);
         clientFile(source);
-        LOGGER.info("恢复演练：开始生成完整数据库备份");
+        LOGGER.info("Recovery drill: creating a full database backup");
         execute(source, "mysqldump", "--defaults-extra-file=/tmp/recovery-client.cnf", "--single-transaction", "--source-data=2", "--set-gtid-purged=OFF", "--hex-blob", "--default-character-set=utf8mb4", "--routines", "--events", "--triggers", "--databases", database, "--result-file=/tmp/recovery-full.sql");
-        LOGGER.info("恢复演练：开始从源容器复制完整备份");
+        LOGGER.info("Recovery drill: copying the full backup from the source container");
         source.copyFileFromContainer("/tmp/recovery-full.sql", root.resolve("full.sql").toString());
         start = readBackupPosition(root.resolve("full.sql"));
-        LOGGER.info("恢复演练：完整备份已保存，共 {} 字节，已读取日志位置", Files.size(root.resolve("full.sql")));
+        LOGGER.info("Recovery drill: full backup saved, {} bytes; binary log position read", Files.size(root.resolve("full.sql")));
     }
 
     static Position readBackupPosition(Path file) throws IOException {
@@ -137,19 +137,19 @@ public final class MysqlBackupFixture implements AutoCloseable {
         restored.withCommand("--default-time-zone=+00:00", "--innodb-buffer-pool-size=" + cache);
         restored.start();
         clientFile(restored);
-        LOGGER.info("恢复演练：开始向新容器传送完整备份，共 {} 字节", Files.size(root.resolve("full.sql")));
+        LOGGER.info("Recovery drill: transferring the full backup to a new container, {} bytes", Files.size(root.resolve("full.sql")));
         restored.copyFileToContainer(MountableFile.forHostPath(root.resolve("full.sql")), "/tmp/recovery-full.sql");
-        LOGGER.info("恢复演练：文件传送完成，开始执行数据库导入");
+        LOGGER.info("Recovery drill: transfer complete; importing the database");
         execute(restored, "sh", "-c", "exec mysql --defaults-extra-file=/tmp/recovery-client.cnf --binary-mode --default-character-set=utf8mb4 < /tmp/recovery-full.sql");
-        LOGGER.info("恢复演练：完整数据库导入完成");
+        LOGGER.info("Recovery drill: full database import complete");
         return restoredAccess();
     }
 
     public void restoreChanges() throws Exception {
-        LOGGER.info("恢复演练：开始恢复完整备份之后的日志变更");
+        LOGGER.info("Recovery drill: replaying binary logs recorded after the full backup");
         restored.copyFileToContainer(MountableFile.forHostPath(root.resolve("incremental.sql")), "/tmp/recovery-incremental.sql");
         execute(restored, "sh", "-c", "exec mysql --defaults-extra-file=/tmp/recovery-client.cnf --binary-mode --default-character-set=utf8mb4 < /tmp/recovery-incremental.sql");
-        LOGGER.info("恢复演练：日志变更恢复完成");
+        LOGGER.info("Recovery drill: binary log replay complete");
     }
 
     public String restoredUrl() {
@@ -169,7 +169,7 @@ public final class MysqlBackupFixture implements AutoCloseable {
         var json = new ObjectMapper().findAndRegisterModules();
         var metadata = tableDatabaseAccess.mapper(BackupFixtureMapper.class);
         var tables = metadata.tables();
-        LOGGER.info("恢复演练：开始逐表计算内容摘要，共 {} 张表", tables.size());
+        LOGGER.info("Recovery drill: calculating content digests for {} tables", tables.size());
         for (String table : tables) {
             if (!table.matches("[a-z_]+")) {
                 throw new IllegalStateException("恢复检查遇到未定义的表名");
@@ -197,7 +197,7 @@ public final class MysqlBackupFixture implements AutoCloseable {
             });
             result.put(table, Map.of("rows", count[0], "sha256", HexFormat.of().formatHex(digest.digest())));
             if (count[0] >= 100_000) {
-                LOGGER.info("恢复演练：{} 内容摘要计算完成，共 {} 行", table, count[0]);
+                LOGGER.info("Recovery drill: content digest calculated for {}, {} rows", table, count[0]);
             }
         }
         return result;

@@ -5,6 +5,9 @@ import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.mapper.workflow.WorkflowToolDefinitions;
 import com.stonewu.agenteam.service.plugin.PlatformBuiltinPluginAdapter;
 import com.stonewu.agenteam.service.plugin.PlatformBusinessTools;
+import com.stonewu.agenteam.service.plugin.BuiltinPluginPresentation;
+import com.stonewu.agenteam.model.tool.entity.ToolDefinition;
+import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,35 +18,36 @@ public class PlatformBuiltinPlugins {
     @Bean
     public PlatformBuiltinPluginAdapter workflowManagement(WorkflowToolDefinitions tools,
                                                             ObjectProvider<PlatformBusinessTools> business) {
-        return new PlatformBuiltinPluginAdapter("workflow_management", "工作流管理",
-            "查询、创建和编辑已授权的工作流草稿，选择真实插件与智能体并检查流程。", tools.tools(), business);
+        return create("workflow_management", tools.tools(), business);
     }
 
     @Bean
     public PlatformBuiltinPluginAdapter groupCollaboration(CollaborationToolDefinitions tools,
                                                            ObjectProvider<PlatformBusinessTools> business) {
-        return new PlatformBuiltinPluginAdapter("group_collaboration", "团队协作",
-            "在当前协作任务中分配岗位工作、移交负责人、共享成果并等待其他岗位。", tools.tools(), business);
+        return create("group_collaboration", tools.tools(), business);
     }
 
     @Bean
     public PlatformBuiltinPluginAdapter platformBasics(PlatformToolDefinitions tools,
                                                        ObjectProvider<PlatformBusinessTools> business) {
-        return new PlatformBuiltinPluginAdapter("platform_basics", "平台基础",
-            "读取当前企业和时间，搜索本人有权访问的工作空间内容。", tools.basics(), business);
+        return create("platform_basics", tools.basics(), business);
     }
 
     @Bean
     public PlatformBuiltinPluginAdapter todoManagement(PlatformToolDefinitions tools,
                                                        ObjectProvider<PlatformBusinessTools> business) {
-        return new PlatformBuiltinPluginAdapter("todo_management", "待办管理",
-            "查询、创建和维护待办，选择负责人、修改状态与查看历史。修改前需确认。", tools.todos(), business);
+        return create("todo_management", tools.todos(), business);
     }
 
     @Bean
     public PlatformBuiltinPluginAdapter scheduleManagement(PlatformToolDefinitions tools,
                                                            ObjectProvider<PlatformBusinessTools> business) {
-        return new PlatformBuiltinPluginAdapter("schedule_management", "定时任务",
-            "查询和管理本人的执行计划，预览未来时间，启停计划或执行一次。修改前需确认。", tools.schedules(), business);
+        return create("schedule_management", tools.schedules(), business);
+    }
+
+    private PlatformBuiltinPluginAdapter create(String code, List<ToolDefinition> tools,
+                                                 ObjectProvider<PlatformBusinessTools> business) {
+        return new PlatformBuiltinPluginAdapter(code, BuiltinPluginPresentation.name(code),
+            BuiltinPluginPresentation.description(code), tools, business);
     }
 }

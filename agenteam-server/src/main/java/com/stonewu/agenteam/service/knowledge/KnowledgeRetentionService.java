@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeDocumentMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeRetentionMapper;
@@ -45,7 +47,7 @@ public class KnowledgeRetentionService {
         try {
             clean();
         } catch (RuntimeException failed) {
-            LOG.warn("知识资料清理暂未完成，稍后重试", failed);
+            LOG.warn(Messages.log("log.knowledge.knowledgeRetentionService.poll.1"), failed);
         }
     }
 

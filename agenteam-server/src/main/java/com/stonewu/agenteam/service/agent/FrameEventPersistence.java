@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentPublicEventMapper;
 import com.stonewu.agenteam.model.agent.entity.AgentEventRecord;
 import com.stonewu.agenteam.model.agent.entity.AgentStreamEvent;
@@ -57,7 +59,7 @@ public final class FrameEventPersistence implements AutoCloseable {
             try {
                 flushDelivery();
             } catch (RuntimeException failed) {
-                LOG.error("执行片段处理失败，执行编号 {}", run.id(), failed);
+                LOG.error(Messages.log("log.agent.frameEventPersistence.init.1"), run.id(), failed);
                 failure().tryEmitError(failed);
             }
         }, 50, 50, TimeUnit.MILLISECONDS);
@@ -246,7 +248,7 @@ public final class FrameEventPersistence implements AutoCloseable {
             }
         } catch (RuntimeException failed) {
             error = failed;
-            LOG.error("执行内容转换或保存失败，执行编号 {}", run.id(), failed);
+            LOG.error(Messages.log("log.agent.frameEventPersistence.process.1"), run.id(), failed);
             throw failed;
         }
     }
@@ -266,7 +268,7 @@ public final class FrameEventPersistence implements AutoCloseable {
         long textLength = content.stream().filter(block -> block.type().equals("text") && block.parentBlockId() == null)
             .mapToLong(block -> block.text().length() + 2L).sum();
         if (textLength > 1_000_002) {
-            throw new IllegalStateException("消息总长度超过允许范围");
+            throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.dispatch.1"));
         }
         live.publish(changes, content);
         var completed = new LinkedHashMap<String, ExecutionChange>();
@@ -298,7 +300,7 @@ public final class FrameEventPersistence implements AutoCloseable {
                     commit.accept(batch, changes);
                     return;
                 } catch (DataAccessException unavailable) {
-                    LOG.warn("执行内容暂时保存失败，执行编号 {}，保存批次 {}", run.id(), batch, unavailable);
+                    LOG.warn(Messages.log("log.agent.frameEventPersistence.legacySave.1"), run.id(), batch, unavailable);
                     if (System.nanoTime() >= deadline) {
                         throw unavailable;
                     }
@@ -341,7 +343,7 @@ public final class FrameEventPersistence implements AutoCloseable {
             throw error;
         }
         if (closed) {
-            throw new IllegalStateException("执行事件保存已结束");
+            throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.requireOpen.1"));
         }
         if (live != null) {
             live.requireOpen();

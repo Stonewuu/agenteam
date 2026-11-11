@@ -18,7 +18,7 @@ function persistLocale(locale: Locale) {
   try {
     localStorage.setItem(localeStorageKey, locale);
   } catch (failure) {
-    console.warn("无法保存本机界面语言，本次切换仍然生效。", failure);
+    console.warn("Failed to persist the local interface language; the current selection remains active.", failure);
   }
 }
 

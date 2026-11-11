@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.resource.UsableVersionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -9,6 +11,7 @@ import com.stonewu.agenteam.model.resource.entity.ResourceKind;
 import com.stonewu.agenteam.model.resource.response.UsableVersionView;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.http.ListPagination;
+import com.stonewu.agenteam.service.plugin.BuiltinPluginPresentation;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
 import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
 import org.springframework.http.HttpStatus;
@@ -66,26 +69,26 @@ public class UsableVersionService {
             kind -> List.of("create", "edit", "preview").stream()
                 .anyMatch(action -> held.contains(kind.permission(action))));
         if (!editsResources) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", "当前账号没有配置资源的权限。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", Messages.text("error.resource.usableVersionService.list.1"));
         }
         var kind = ResourceInput.kind(requestedKind);
         if (subagentsOnly && kind != ResourceKind.AGENT) {
-            throw ApiException.invalidField("kind", "请选择智能体资源。");
+            throw ApiException.invalidField("kind", Messages.text("error.resource.usableVersionService.list.2"));
         }
         var scope = access.usageScope(actor, kind.code());
         if (resourceId != null) {
             ResourceInput.text(resourceId, "resourceId", 100, true);
             if (selected != null) {
-                throw ApiException.invalidField("resourceId", "读取指定资源的版本时，不能同时提交已选版本列表。");
+                throw ApiException.invalidField("resourceId", Messages.text("error.resource.usableVersionService.list.3"));
             }
         }
         if (selected != null) {
             if (selected.isEmpty() || selected.size() > 100 || Set.copyOf(selected).size() != selected.size()) {
-                throw ApiException.invalidField("versionIds", "请选择 1～100 个不同的版本。");
+                throw ApiException.invalidField("versionIds", Messages.text("error.resource.usableVersionService.list.4"));
             }
             selected.forEach(id -> ResourceInput.text(id, "versionIds", 100, true));
             if (cursor != null || requestedQuery != null && !requestedQuery.isBlank()) {
-                throw ApiException.invalidField("versionIds", "读取已选版本时不能同时搜索或翻页。");
+                throw ApiException.invalidField("versionIds", Messages.text("error.resource.usableVersionService.list.5"));
             }
             return new PageResponse<>(versions.selected(scope, selected), null, false);
         }
@@ -97,7 +100,7 @@ public class UsableVersionService {
                 + (subagentsOnly ? "/subagents" : "") + (latest ? "/latest/" : "/versions/") + (resourceId == null ? "all" : resourceId),
             query, "published_desc");
         var rows = versions.list(scope, query, pagination.read(cursor, binding), limit, subagentsOnly, resourceId,
-            latest);
+            latest, BuiltinPluginPresentation.matchingCodes(query));
         var page = pagination.page(rows, limit, binding,
             row -> new PagePosition(row.publishedAt(), row.value().versionId()));
         return new PageResponse<>(page.items().stream().map(row -> row.value()).toList(), page.nextCursor(),

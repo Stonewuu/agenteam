@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule.action;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.notification.NotificationDeliveryMapper.Notice;
@@ -76,7 +78,7 @@ public class NotificationSendActionHandler implements ScheduleActionHandler {
 
     @Override
     public String name() {
-        return "发送通知";
+        return Messages.text("text.schedule.notificationSendActionHandler.name.1");
     }
 
     @Override
@@ -105,7 +107,7 @@ public class NotificationSendActionHandler implements ScheduleActionHandler {
         authorization.require(actor, "schedule.manage");
         var request = InputValidation.read(json.valueToTree(input.action().config()), NotificationScheduleActionRequest.class, "action.config");
         if (input.maxRetries() != 0) {
-            throw ApiException.invalidField("maxRetries", "通知操作不使用智能体重试次数，请填写零。");
+            throw ApiException.invalidField("maxRetries", Messages.text("error.schedule.notificationSendActionHandler.prepare.1"));
         }
         String title = ResourceInput.text(request.title(), "action.config.title", 100, true);
         String body = ResourceInput.text(request.body(), "action.config.body", 500, false);
@@ -120,7 +122,7 @@ public class NotificationSendActionHandler implements ScheduleActionHandler {
         authorization.require(actor, "schedule.manage");
         var recipients = targets.list(actor.enterpriseId(), schedule.id());
         if (recipients.isEmpty() || recipients.size() > 50) {
-            throw ApiException.invalidField("action.config.recipients", "此通知计划没有有效的接收设置，请重新编辑计划。");
+            throw ApiException.invalidField("action.config.recipients", Messages.text("error.schedule.notificationSendActionHandler.validateCurrent.1"));
         }
         targets.requireExecutionScope(actor, recipients.stream().map(NotificationScheduleRecipient::userId).toList());
         content(schedule);
@@ -150,10 +152,10 @@ public class NotificationSendActionHandler implements ScheduleActionHandler {
         var expires = occurrence.getScheduledFor().plusSeconds(3600);
         if (!expires.isAfter(clock.instant())) {
             for (var recipient : snapshot.recipients()) {
-                blocked.addObject().put("userId", recipient.userId()).put("reasonCode", "NOTIFICATION_EXPIRED").put("reason", "本次通知已超过发送有效期。");
+                blocked.addObject().put("userId", recipient.userId()).put("reasonCode", "NOTIFICATION_EXPIRED").put("reason", Messages.text("error.schedule.scheduleViewMapper.reason.11"));
             }
             result.put("inAppCount", 0);
-            return new ScheduleActionSubmission("blocked", "SCHEDULE_NOTIFICATION_EXPIRED", "本次通知已超过发送有效期。", null, result);
+            return new ScheduleActionSubmission("blocked", "SCHEDULE_NOTIFICATION_EXPIRED", Messages.text("error.schedule.scheduleViewMapper.reason.11"), null, result);
         }
         int inAppCount = 0;
         var channels = new ArrayList<ScheduledChannelNotification>();
@@ -162,7 +164,7 @@ public class NotificationSendActionHandler implements ScheduleActionHandler {
                 snapshot.title(), snapshot.body(), null, null), occurrence.getId(), actor.userId());
             if (written.isEmpty()) {
                 blocked.addObject().put("userId", recipient.userId()).put("reasonCode", "RECIPIENT_UNAVAILABLE")
-                    .put("reason", "此成员已不在企业中或账号已停用。");
+                    .put("reason", Messages.text("error.schedule.notificationSendActionHandler.submit.1"));
                 continue;
             }
             inAppCount++;
@@ -205,7 +207,7 @@ public class NotificationSendActionHandler implements ScheduleActionHandler {
 
     private void requireEnabled() {
         if (!enabled) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_NOTIFICATIONS_DISABLED", "通知计划已暂时关闭，请稍后再试。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_NOTIFICATIONS_DISABLED", Messages.text("error.schedule.notificationSendActionHandler.requireEnabled.1"));
         }
     }
 

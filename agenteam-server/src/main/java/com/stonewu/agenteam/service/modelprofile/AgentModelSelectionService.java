@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
@@ -31,7 +33,7 @@ public class AgentModelSelectionService {
         }
         InputValidation.validate(selection);
         if ("workflow".equals(config.path("agentType").asText())) {
-            throw ApiException.invalidField("modelSelection", "流程型员工不能在对话中切换模型。");
+            throw ApiException.invalidField("modelSelection", Messages.text("error.modelprofile.agentModelSelectionService.apply.1"));
         }
         var model = models.requireAvailable(actor.enterpriseId(), selection.modelProfileId());
         if (!selection.modelProfileId().equals(config.path("modelProfileId").asText())
@@ -50,7 +52,7 @@ public class AgentModelSelectionService {
 
     public static String unavailableReason(JsonNode config, ModelCapabilities capabilities) {
         if (!capabilities.inputTypes().contains("text")) {
-            return "不支持文字输入";
+            return Messages.text("error.modelprofile.agentModelSelectionService.unavailableReason.1");
         }
         boolean tools = List.of("pluginVersionIds", "knowledgeVersionIds", "dataVersionIds", "workflowVersionIds",
                 "subagentVersionIds")
@@ -58,7 +60,7 @@ public class AgentModelSelectionService {
         tools = tools || config.path("dynamicSubagentEnabled").asBoolean() || !AgentSubagentConfigurationMapper.read(
             config).isEmpty();
         if (tools && !capabilities.supportsTools()) {
-            return "不支持此员工所需的工具调用";
+            return Messages.text("error.modelprofile.agentModelSelectionService.unavailableReason.2");
         }
         return null;
     }
@@ -66,7 +68,7 @@ public class AgentModelSelectionService {
     public static void validateReasoning(ModelCapabilities capabilities, String effort) {
         if (effort != null && !capabilities.reasoningEfforts().contains(effort)) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "MODEL_REASONING_UNSUPPORTED",
-                "当前模型不支持所选思考强度，请重新选择。");
+                Messages.text("error.modelprofile.agentModelSelectionService.validateReasoning.1"));
         }
     }
 }

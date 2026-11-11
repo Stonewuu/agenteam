@@ -6,9 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ModelProfileWriteRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 100, message = "文字长度不符合要求。") String providerId,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 80, message = "文字长度不符合要求。") String name,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 128, message = "文字长度不符合要求。") String modelName,
-    @NotNull(message = "请填写必填项。") @Valid ModelCapabilities capabilities,
-    @NotNull(message = "请填写必填项。") Boolean enabled) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 100, message = "{validation.textLength}") String providerId,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 80, message = "{validation.textLength}") String name,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 128, message = "{validation.textLength}") String modelName,
+    @NotNull(message = "{validation.required}") @Valid ModelCapabilities capabilities,
+    @NotNull(message = "{validation.required}") Boolean enabled) {
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +26,7 @@ public class IntegrationConfigurationMapper {
         try {
             return json.writeValueAsString(providers.require(provider).normalizeConfiguration(configuration));
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("接入参数无法保存", failure);
+            throw new IllegalStateException(Messages.text("error.integration.integrationConfigurationMapper.encode.1"), failure);
         }
     }
 
@@ -34,7 +36,7 @@ public class IntegrationConfigurationMapper {
             });
             return providers.require(row.getProviderCode()).normalizeConfiguration(configuration);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("接入参数无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.integration.integrationConfigurationMapper.read.1"), failure);
         }
     }
 }

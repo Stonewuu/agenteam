@@ -12,7 +12,7 @@ export function PageUnavailable({error, retry}: { error?: Error & { digest?: str
   const uiText = useT();
   useEffect(() => {
     if (error) {
-      console.error("页面未能显示", {path: window.location.pathname, requestId: error.digest}, error.stack);
+      console.error("Failed to render the page", {path: window.location.pathname, requestId: error.digest}, error.stack);
     }
   }, [error]);
   return <section className="page-unavailable"><span className="page-unavailable-icon" data-icon-surface>{retry ?

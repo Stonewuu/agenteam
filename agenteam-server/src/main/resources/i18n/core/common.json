@@ -1,0 +1,50 @@
+{
+  "validation.required": {
+    "zh-CN": "请填写必填项。",
+    "en": "Fill in the required fields."
+  },
+  "validation.textLength": {
+    "zh-CN": "文字长度不符合要求。",
+    "en": "The text length does not meet the requirements."
+  },
+  "validation.option": {
+    "zh-CN": "请选择支持的选项或格式。",
+    "en": "Choose a supported option or format."
+  },
+  "validation.range": {
+    "zh-CN": "数值超出允许范围。",
+    "en": "The value is outside the allowed range."
+  },
+  "http.checkFields": {
+    "zh-CN": "请检查填写的内容。",
+    "en": "Check the information you entered."
+  },
+  "http.serviceUnavailable": {
+    "zh-CN": "服务暂时不可用，请稍后重试。",
+    "en": "The service is temporarily unavailable. Try again later."
+  },
+  "http.requestFailed": {
+    "zh-CN": "请求暂时无法完成，请稍后重试。",
+    "en": "The request could not be completed. Try again later."
+  },
+  "http.requestRejected": {
+    "zh-CN": "请求无法完成。",
+    "en": "The request could not be completed."
+  },
+  "http.invalidJson": {
+    "zh-CN": "请求内容格式不正确，请检查括号、引号和字段分隔符。",
+    "en": "The request format is invalid. Check brackets, quotes, and field separators."
+  },
+  "http.notFound": {
+    "zh-CN": "记录不存在或无法访问。",
+    "en": "The record is missing or inaccessible."
+  },
+  "http.invalidRequest": {
+    "zh-CN": "请求格式或操作方式不正确，请重新操作。",
+    "en": "The request format or action is invalid. Try again."
+  },
+  "http.versionConflict": {
+    "zh-CN": "内容已被其他操作更新，请重新加载后继续编辑。",
+    "en": "Another action updated the content. Reload before continuing to edit."
+  }
+}

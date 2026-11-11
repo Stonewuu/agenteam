@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.EmployeeMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -60,7 +62,7 @@ public class EmployeeQueryService {
                                            List<String> selectedTags, String cursor, Integer requestedLimit) {
         String tab = requestedTab == null ? "market" : requestedTab;
         if (!Set.of("market", "mine").contains(tab)) {
-            throw ApiException.invalidField("tab", "请选择员工广场或我的员工。");
+            throw ApiException.invalidField("tab", Messages.text("error.agent.employeeQueryService.list.1"));
         }
         String query = pagination.query(requestedQuery);
         var tagIds = ResourceInput.tags(selectedTags == null ? List.of() : selectedTags);
@@ -163,23 +165,23 @@ public class EmployeeQueryService {
 
     private String unavailable(EmployeeRecord employee, boolean allowed, boolean canHire) {
         if (employee.resourceStatus().equals("deleted")) {
-            return "该员工已删除，无法开始任务。";
+            return Messages.text("error.agent.employeeQueryService.unavailable.1");
         }
         if (!employee.resourceStatus().equals("active")) {
-            return "该员工已停用。";
+            return Messages.text("error.agent.employeeQueryService.unavailable.2");
         }
         if (!employee.ownerActive() || !employee.versionStatus().equals("available")) {
-            return "该员工暂时不可使用，请联系管理员。";
+            return Messages.text("error.agent.employeeQueryService.unavailable.3");
         }
         if (!allowed) {
-            return "当前没有使用该员工的权限。";
+            return Messages.text("error.agent.employeeQueryService.unavailable.4");
         }
         return switch (employee.hireStatus()) {
             case "active" -> null;
-            case "paused" -> "雇佣已暂停。";
-            case "pending" -> "雇佣申请仍待审批。";
-            case "terminated" -> employee.listed() ? "雇佣已解除。" : "该员工尚未重新上架，暂时不能再次雇佣。";
-            default -> canHire ? "请先雇佣该员工。" : "当前没有雇佣该员工的权限。";
+            case "paused" -> Messages.text("error.agent.employeeQueryService.unavailable.5");
+            case "pending" -> Messages.text("error.agent.employeeQueryService.unavailable.6");
+            case "terminated" -> employee.listed() ? Messages.text("error.agent.employeeQueryService.unavailable.7") : Messages.text("error.agent.employeeQueryService.unavailable.8");
+            default -> canHire ? Messages.text("error.agent.employeeQueryService.unavailable.9") : Messages.text("error.agent.employeeQueryService.unavailable.10");
         };
     }
 }

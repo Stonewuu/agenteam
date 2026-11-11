@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
@@ -46,20 +48,26 @@ public class ResourceMapper {
                                      String subtype,
                                      List<String> tags, String sort, PagePosition cursor, int limit,
                                      Instant deletedAfter) {
+        return list(scope, query, status, source, subtype, tags, sort, cursor, limit, deletedAfter, List.of());
+    }
+
+    public List<ResourceRecord> list(ResourceQueryScope scope, String query, String status, String source,
+                                     String subtype, List<String> tags, String sort, PagePosition cursor, int limit,
+                                     Instant deletedAfter, List<String> builtinCodes) {
         if (status != null) {
             switch (status) {
                 case "draft", "published", "unlisted", "disabled", "deleted" -> {
                 }
-                default -> throw new IllegalArgumentException("不支持的资源状态");
+                default -> throw new IllegalArgumentException(Messages.text("error.resource.resourceMapper.list.1"));
             }
         }
         switch (sort) {
             case "created_desc", "name_asc", "updated_desc" -> {
             }
-            default -> throw new IllegalArgumentException("不支持的资源排序");
+            default -> throw new IllegalArgumentException(Messages.text("error.resource.resourceMapper.list.2"));
         }
         return statements.listResources(scope, query, status, source, subtype, tags, sort, cursor, limit + 1,
-                deletedAfter)
+                deletedAfter, builtinCodes)
             .stream().map(this::map).toList();
     }
 
@@ -115,7 +123,7 @@ public class ResourceMapper {
 
     private void changed(int count) {
         if (count != 1) {
-            throw new IllegalStateException("已锁定资源的修改版本发生变化");
+            throw new IllegalStateException(Messages.text("error.resource.resourceMapper.changed.1"));
         }
     }
 

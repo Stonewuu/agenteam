@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -143,7 +145,7 @@ public class ChatRoutingService {
                     return;
                 }
                 status(message, "awaiting_clarification", null);
-                notice(message, group, bot.getId(), "mentioned_bot_pending", "部分被提及的机器人尚未收到本群消息，请分别 @ 这些机器人后重试。");
+                notice(message, group, bot.getId(), "mentioned_bot_pending", Messages.text("text.chat.chatRoutingService.route.1"));
                 return;
             }
         }
@@ -182,7 +184,7 @@ public class ChatRoutingService {
         }
         if (entry == null) {
             status(message, "awaiting_clarification", null);
-            notice(message, group, bot.getId(), "entry_required", "请先指定接收任务的岗位机器人。");
+            notice(message, group, bot.getId(), "entry_required", Messages.text("text.chat.chatRoutingService.route.2"));
             return;
         }
         var principal = bots.require(enterprise, entry);
@@ -190,7 +192,7 @@ public class ChatRoutingService {
         if (!principal.getStatus().equals("enabled") || !Boolean.TRUE.equals(principal.getChatEnabled())
             || entryMember == null || !entryMember.getMembershipStatus().equals("present") || !Boolean.TRUE.equals(entryMember.getReceiveEnabled())) {
             status(message, "awaiting_clarification", null);
-            notice(message, group, bot.getId(), "entry_unavailable", "原任务的入口机器人目前无法接收消息，请到群策任务详情补充要求。");
+            notice(message, group, bot.getId(), "entry_unavailable", Messages.text("text.chat.chatRoutingService.route.3"));
             return;
         }
         var platformIdentity = cipher.decrypt(enterprise, "message-senders", id, message.getSenderIdentitiesEncrypted()).path(principal.getId());
@@ -199,7 +201,7 @@ public class ChatRoutingService {
                 return;
             }
             status(message, "awaiting_clarification", null);
-            notice(message, group, bot.getId(), "entry_message_missing", "指定的入口机器人尚未收到完整消息，请 @ 该机器人重新发送任务。");
+            notice(message, group, bot.getId(), "entry_message_missing", Messages.text("text.chat.chatRoutingService.route.4"));
             return;
         }
         var binding = identities.find(enterprise, principal.getConnectionId(), platformIdentity.path("subjectType").asText(),
@@ -242,7 +244,7 @@ public class ChatRoutingService {
         message.setOriginBindingId(binding.get().getId());
         if (direct) {
             if (group.getDirectBindingId() != null && !group.getDirectBindingId().equals(binding.get().getId())) {
-                throw new ApiException(HttpStatus.CONFLICT, "CHAT_DIRECT_IDENTITY_CHANGED", "私聊身份已发生变化，请重新确认账号绑定。");
+                throw new ApiException(HttpStatus.CONFLICT, "CHAT_DIRECT_IDENTITY_CHANGED", Messages.text("error.chat.chatRoutingService.route.1"));
             }
             groupRows.update(new LambdaUpdateWrapper<ChatConversationRow>().eq(ChatConversationRow::getEnterpriseId, enterprise)
                 .eq(ChatConversationRow::getId, group.getId()).isNull(ChatConversationRow::getDirectBindingId)
@@ -258,7 +260,7 @@ public class ChatRoutingService {
             if (conversationCommand.input().isBlank() && content.path("quotedText").asText().isBlank()
                     && !resources.exists(new LambdaQueryWrapper<ChatMessageResourceRow>().eq(ChatMessageResourceRow::getEnterpriseId, enterprise)
                         .eq(ChatMessageResourceRow::getMessageId, message.getId()))) {
-                notice(message, group, entry, "conversation_selected", "已开启新会话，" + (direct ? "请" : "请 @ 我") + "发送问题。");
+                notice(message, group, entry, "conversation_selected", Messages.text("text.chat.chatRoutingService.route.5", (direct ? Messages.text("text.chat.chatRoutingService.route.6") : Messages.text("text.chat.chatRoutingService.route.7"))));
                 status(message, "routed", null);
                 return;
             }
@@ -272,7 +274,7 @@ public class ChatRoutingService {
         }
         if (!content.path("supported").asBoolean()) {
             status(message, "ignored", null);
-            notice(message, group, bot.getId(), "unsupported", "暂不支持这种消息，请改用文字或支持的附件发送任务。");
+            notice(message, group, bot.getId(), "unsupported", Messages.text("text.chat.chatRoutingService.route.8"));
             return;
         }
         var attached = replyAttachments.prepare(actor, principal, message, reference.orElse(null));
@@ -282,8 +284,8 @@ public class ChatRoutingService {
         if (files.stream().anyMatch(file -> Set.of("unsupported", "failed").contains(file.getStatus()))) {
             status(message, "failed", null);
             boolean unsupported = files.stream().anyMatch(file -> file.getStatus().equals("unsupported"));
-            notice(message, group, bot.getId(), "resource_failed", unsupported ? "暂不支持读取这种附件，请改用文字、表格或文档；任务尚未开始。"
-                : "附件未能读取，请检查附件权限或重新发送；任务尚未开始。");
+            notice(message, group, bot.getId(), "resource_failed", unsupported ? Messages.text("text.chat.chatRoutingService.route.9")
+                : Messages.text("text.chat.chatRoutingService.route.10"));
             return;
         }
         if (files.stream().anyMatch(file -> !file.getStatus().equals("ready"))) {
@@ -301,7 +303,7 @@ public class ChatRoutingService {
             }
             String supplement = ChatMessageText.withQuote(content);
             if (supplement.isBlank() && !files.isEmpty()) {
-                supplement = "原发起人补充了附件，请按原任务要求读取附件。";
+                supplement = Messages.text("text.chat.chatRoutingService.route.11");
             }
             inputs.append(actor, task.getId(), task.getRevision(), "message:" + id, supplement, id);
             if (usesSelections && selection == null) {
@@ -314,7 +316,7 @@ public class ChatRoutingService {
         if (requested.isEmpty()) {
             // 没有指定岗位的群消息，首期先明确确认工作意图，不凭闲聊内容执行业务。
             status(message, "awaiting_clarification", null);
-            notice(message, group, bot.getId(), "mention_required", "如需发起任务，请 @ 一个岗位并说明要完成的工作。");
+            notice(message, group, bot.getId(), "mention_required", Messages.text("text.chat.chatRoutingService.route.12"));
             return;
         }
         long active = tasks.selectCount(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, enterprise)
@@ -322,7 +324,7 @@ public class ChatRoutingService {
             .in(CollaborationTaskRow::getStatus, "active", "waiting_input", "waiting_approval", "blocked"));
         if (!usesSelections && active > 1 && !newTask) {
             status(message, "awaiting_clarification", null);
-            notice(message, group, bot.getId(), "task_required", "你在此会话有多项任务。请回复具体任务消息；另起任务时请以“新任务”开头。");
+            notice(message, group, bot.getId(), "task_required", Messages.text("text.chat.chatRoutingService.route.13"));
             return;
         }
         var task = creation.create(actor, message, group, entry, requested, content);
@@ -348,20 +350,20 @@ public class ChatRoutingService {
         if (group.getStatus().equals("enabled") && member != null && Boolean.TRUE.equals(member.getSendEnabled()) && bot.getStatus().equals("enabled")) {
             String text = switch (code) {
                 case "QUESTION_SELECTION_REQUIRED" -> "wecom_aibot".equals(group.getPlatformCode())
-                    ? ("group".equals(group.getConversationKind()) ? "请先点要回答的问题卡片中的“自己输入”，再 @ 我发送回答。" : "请先点要回答的问题卡片中的“自己输入”，再发送回答。")
-                    : "请回复要回答的问题消息，或先点击该问题的“自己输入”；群聊中请同时 @ 我。";
-                case "QUESTION_UNAVAILABLE" -> "这个问题已结束，请继续当前对话。";
-                case "COLLABORATION_TASK_UNAVAILABLE" -> "这项任务不能由当前账号补充，请 @ 岗位另起任务。";
-                case "COLLABORATION_TASK_CLOSED" -> "这项任务已结束或正在取消，请另起任务。";
-                case "AGENT_CHAT_APPROVAL_REQUIRED" -> "这位员工需要审批后才能使用，请在群策「数字员工」提交申请，审批通过后再发送任务。";
-                case "AGENT_CHAT_HIRE_PAUSED" -> "你已暂停使用这位员工，请在群策「数字员工 → 我的员工」恢复后再发送任务。";
-                case "AGENT_CHAT_HIRE_TERMINATED" -> "你已解除这位员工的雇佣，请在群策「数字员工」重新启用后再发送任务。";
-                case "ROLE_UNAVAILABLE" -> "所需岗位当前已停用、离群或没有可用版本，请联系管理员检查机器人设置。";
-                case "RESOURCE_UNAVAILABLE", "FORBIDDEN" -> "当前账号没有使用所需智能体或其依赖资源的权限，请联系管理员授权后再发送任务。";
-                case "CHAT_TASK_REFERENCE_AMBIGUOUS", "CHAT_TASK_REFERENCE_INVALID" -> "无法确定消息对应的任务，请回复一个具体任务或检查任务编号。";
-                case "COLLABORATION_NEW_TASK_RATE_LIMITED" -> "此会话的新任务较多，请一分钟后重试。";
-                case "CHAT_ATTACHMENT_REFERENCE_DENIED" -> "请在当前会话上传自己的附件，再回复这条文件消息并 @ 接收岗位；不要引用其他人的文件或另一任务的附件。";
-                default -> "这条消息暂时无法建立任务，请在群策检查账号绑定与岗位设置。";
+                    ? ("group".equals(group.getConversationKind()) ? Messages.text("error.chat.chatRoutingService.rejected.1") : Messages.text("error.chat.chatRoutingService.rejected.2"))
+                    : Messages.text("error.chat.chatRoutingService.rejected.3");
+                case "QUESTION_UNAVAILABLE" -> Messages.text("error.execution.runQuestionService.unavailable.1");
+                case "COLLABORATION_TASK_UNAVAILABLE" -> Messages.text("error.chat.chatRoutingService.rejected.4");
+                case "COLLABORATION_TASK_CLOSED" -> Messages.text("error.chat.chatRoutingService.rejected.5");
+                case "AGENT_CHAT_APPROVAL_REQUIRED" -> Messages.text("error.chat.chatRoutingService.rejected.6");
+                case "AGENT_CHAT_HIRE_PAUSED" -> Messages.text("error.agent.agentChatHireService.requireUsable.1");
+                case "AGENT_CHAT_HIRE_TERMINATED" -> Messages.text("error.agent.agentChatHireService.requireUsable.2");
+                case "ROLE_UNAVAILABLE" -> Messages.text("error.chat.chatRoutingService.rejected.7");
+                case "RESOURCE_UNAVAILABLE", "FORBIDDEN" -> Messages.text("error.chat.chatRoutingService.rejected.8");
+                case "CHAT_TASK_REFERENCE_AMBIGUOUS", "CHAT_TASK_REFERENCE_INVALID" -> Messages.text("error.chat.chatRoutingService.rejected.9");
+                case "COLLABORATION_NEW_TASK_RATE_LIMITED" -> Messages.text("error.collaboration.collaborationTaskCreationService.create.2");
+                case "CHAT_ATTACHMENT_REFERENCE_DENIED" -> Messages.text("error.chat.chatRoutingService.rejected.10");
+                default -> Messages.text("error.chat.chatRoutingService.rejected.11");
             };
             notice(message, group, bot.getId(), "rejected", text);
         }
@@ -370,7 +372,7 @@ public class ChatRoutingService {
     private ChatMessageRow message(String enterprise, String id) {
         var row = messages.selectOne(new LambdaQueryWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, enterprise).eq(ChatMessageRow::getId, id));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_UNAVAILABLE", "消息不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_UNAVAILABLE", Messages.text("error.chat.chatRoutingService.message.1"));
         }
         return row;
     }
@@ -379,10 +381,10 @@ public class ChatRoutingService {
         if (messages.update(new LambdaUpdateWrapper<ChatMessageRow>().eq(ChatMessageRow::getEnterpriseId, message.getEnterpriseId())
             .eq(ChatMessageRow::getId, message.getId()).set(ChatMessageRow::getRoutingStatus, status).set(ChatMessageRow::getTaskId, task)
             .set(status.equals("ignored") && task == null, ChatMessageRow::getContentEncrypted,
-                cipher.encrypt(message.getEnterpriseId(), "message", message.getId(), Map.of("reason", "未用于任务的消息正文不保留")))
+                cipher.encrypt(message.getEnterpriseId(), "message", message.getId(), Map.of("reason", Messages.text("text.chat.chatRoutingService.status.1"))))
             .set(ChatMessageRow::getSenderUserId, message.getSenderUserId()).set(ChatMessageRow::getOriginBindingId, message.getOriginBindingId())
             .set(ChatMessageRow::getUpdatedAt, clock.instant())) != 1) {
-            throw new IllegalStateException("消息接收记录已变化，当前路由不能提交");
+            throw new IllegalStateException(Messages.text("error.chat.chatRoutingService.status.1"));
         }
     }
 

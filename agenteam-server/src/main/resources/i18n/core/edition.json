@@ -1,0 +1,66 @@
+{
+  "error.edition.communityDatabasePreflight.verify.1": {
+    "zh-CN": "此数据库没有兼容的部署记录，请使用与现有数据匹配的程序；若另一节点正在首次初始化数据库，请等其完成后重启。",
+    "en": "This database has no compatible deployment record. Use the application matching the existing data. If another node is initializing the database, wait for it to finish and restart."
+  },
+  "error.edition.communityDatabasePreflight.verify.2": {
+    "zh-CN": "数据库缺少必要的企业或初始化记录，请先恢复完整备份。",
+    "en": "Required organization or initialization records are missing. Restore a complete backup first."
+  },
+  "error.edition.communityDatabasePreflight.validate.1": {
+    "zh-CN": "部署记录不完整，请恢复原部署记录，不能重新选择初始化企业。",
+    "en": "The deployment record is incomplete. Restore the original record; do not select another initial organization."
+  },
+  "error.edition.communityDatabasePreflight.validate.2": {
+    "zh-CN": "此数据库与当前安装包不兼容，请使用与现有部署匹配的程序启动；已有数据未修改。",
+    "en": "This database is incompatible with the installed package. Start the application matching the existing deployment. Existing data was not changed."
+  },
+  "error.edition.communityDatabasePreflight.validate.3": {
+    "zh-CN": "数据库已经包含业务数据，但缺少完整的初始化部署关系，请恢复完整的部署记录或备份。",
+    "en": "The database contains business data but has incomplete initial deployment relationships. Restore the complete deployment record or a backup."
+  },
+  "error.edition.communityDatabasePreflight.validate.4": {
+    "zh-CN": "保存的部署编号格式不正确，请恢复原部署记录。",
+    "en": "The saved deployment ID format is invalid. Restore the original deployment record."
+  },
+  "error.edition.communityDatabasePreflight.validate.5": {
+    "zh-CN": "社区版只支持初始化时建立的企业，当前数据库的企业或初始化记录不一致。",
+    "en": "The community edition supports only the organization created during initialization. This database's organization or initialization records are inconsistent."
+  },
+  "error.edition.communityDatabasePreflight.factory.1": {
+    "zh-CN": "无法检查数据库所属版本，应用启动已停止。",
+    "en": "The database edition could not be checked. Application startup was stopped."
+  },
+  "error.edition.installationService.lockBeforeBootstrap.1": {
+    "zh-CN": "当前数据库已有企业但初始化记录不完整，请先恢复完整的部署记录或备份。",
+    "en": "The database contains organizations but has incomplete initialization records. Restore complete deployment records or a backup first."
+  },
+  "error.edition.installationService.requireBootstrapAdministrator.1": {
+    "zh-CN": "初始企业必须由首次初始化的管理员创建。",
+    "en": "The initial organization must be created by the administrator performing first-time initialization."
+  },
+  "error.edition.installationService.recordInitialEnterprise.1": {
+    "zh-CN": "首次初始化必须在同一事务中创建且只创建一个企业",
+    "en": "First-time initialization must create exactly one organization in the same transaction."
+  },
+  "error.edition.installationService.recordInitialEnterprise.2": {
+    "zh-CN": "部署记录已经变化，首次初始化未提交",
+    "en": "The deployment record changed. First-time initialization was not committed."
+  },
+  "error.edition.installationService.requireRecord.1": {
+    "zh-CN": "部署记录不完整，请联系管理员恢复备份。",
+    "en": "The deployment record is incomplete. Contact an administrator to restore a backup."
+  },
+  "error.edition.installationService.requireRecord.2": {
+    "zh-CN": "数据库与当前安装版本不一致，请使用与现有部署匹配的程序启动。",
+    "en": "The database does not match the installed edition. Start the application matching the existing deployment."
+  },
+  "error.edition.singleEnterprisePolicy.requireAdditionalCreation.1": {
+    "zh-CN": "社区版只支持初始化时创建的企业。",
+    "en": "The community edition supports only the organization created during initialization."
+  },
+  "log.edition.communityDatabasePreflight.factory.1": {
+    "zh-CN": "启动前无法建立部署检查所需的数据库映射",
+    "en": "Could not initialize database mappings for deployment checks before startup"
+  }
+}

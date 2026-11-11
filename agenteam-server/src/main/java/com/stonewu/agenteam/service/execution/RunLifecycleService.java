@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -113,7 +115,7 @@ public class RunLifecycleService {
             return Optional.empty();
         }
         if (!activity.get(run).queuedAt().plus(Duration.ofMinutes(5)).isAfter(clock.instant())) {
-            finishLocked(run, "failed", "EXECUTION_QUEUE_TIMEOUT", "等待执行的时间过长，请重新发起任务。");
+            finishLocked(run, "failed", "EXECUTION_QUEUE_TIMEOUT", Messages.text("text.execution.runLifecycleService.start.1"));
             return Optional.empty();
         }
         access.actor(run);
@@ -147,7 +149,7 @@ public class RunLifecycleService {
         int maxSteps = ExecutionLimits.from(run).maxSteps();
         if (maxSteps > 0 && used > maxSteps) {
             throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_STEP_LIMIT",
-                "本次任务已达到允许的步骤上限，请缩小任务范围后重试。");
+                Messages.text("error.agent.executionGuardMiddleware.check.1"));
         }
     }
 
@@ -159,7 +161,7 @@ public class RunLifecycleService {
         long left = timeoutSeconds * 1000L - activity.get(run).elapsed(clock.instant());
         if (left <= 0) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "EXECUTION_TIMEOUT",
-                "本次执行已超时，已保存的内容仍可查看。");
+                Messages.text("error.execution.runLifecycleService.remaining.1"));
         }
         return Duration.ofMillis(left);
     }
@@ -213,7 +215,7 @@ public class RunLifecycleService {
         var run = locked(enterprise, id);
         if (!"collaboration".equals(run.executionConfig().path("sourceType").asText())
             || !task.equals(run.executionConfig().path("collaboration").path("taskId").asText())) {
-            throw new IllegalStateException("待停止执行不属于指定协作任务");
+            throw new IllegalStateException(Messages.text("error.execution.runLifecycleService.cancelCollaboration.1"));
         }
         cancelLocked(run);
     }
@@ -263,7 +265,7 @@ public class RunLifecycleService {
     public void expireQuestion(RunQuestionRow question) {
         var run = locked(question.getEnterpriseId(), question.getRunId());
         if (List.of("waiting_input", "waiting_approval").contains(run.status()) && questions.expired(question)) {
-            finishLocked(run, "cancelled", "QUESTION_EXPIRED", "等待回答已结束，可以在当前对话继续提问。");
+            finishLocked(run, "cancelled", "QUESTION_EXPIRED", Messages.text("text.execution.runLifecycleService.expireQuestion.1"));
         }
     }
 
@@ -275,7 +277,7 @@ public class RunLifecycleService {
         }
         if (approvals.forRun(run.enterpriseId(), run.id()).stream()
             .anyMatch(value -> value.status().equals("pending") && !value.expiresAt().isAfter(clock.instant()))) {
-            finishLocked(run, "failed", "APPROVAL_EXPIRED", "本次操作确认已过期，未发送请求。");
+            finishLocked(run, "failed", "APPROVAL_EXPIRED", Messages.text("error.execution.runApprovalService.decide.2"));
         }
     }
 
@@ -299,7 +301,7 @@ public class RunLifecycleService {
                 access.actor(run);
                 remaining(run);
             } catch (ResponseStatusException unavailable) {
-                finishLocked(run, "failed", "EXECUTION_ACCESS_REVOKED", "当前任务已不能继续执行。");
+                finishLocked(run, "failed", "EXECUTION_ACCESS_REVOKED", Messages.text("text.execution.runLifecycleService.recover.1"));
                 return;
             }
             toolCalls.recoverUnsentAndReads(run, clock.instant());
@@ -311,7 +313,7 @@ public class RunLifecycleService {
         } else {
             boolean cancelled = run.status().equals("cancelling");
             finishLocked(run, cancelled ? "cancelled" : "failed", cancelled ? null : "EXECUTION_INTERRUPTED",
-                cancelled ? null : "本次执行已中断，请重新执行。");
+                cancelled ? null : Messages.text("text.execution.runLifecycleService.recover.2"));
         }
     }
 
@@ -320,7 +322,7 @@ public class RunLifecycleService {
         var run = locked(lease.enterpriseId(), lease.runId());
         if (run.status().equals("queued") && !activity.get(run).queuedAt().plus(Duration.ofMinutes(5))
             .isAfter(clock.instant())) {
-            finishLocked(run, "failed", "EXECUTION_QUEUE_TIMEOUT", "等待执行的时间过长，请重新发起任务。");
+            finishLocked(run, "failed", "EXECUTION_QUEUE_TIMEOUT", Messages.text("text.execution.runLifecycleService.start.1"));
         }
     }
 
@@ -447,11 +449,11 @@ public class RunLifecycleService {
 
     private void finishLocked(RunRecord run, String status, String code, String message, boolean continuing) {
         if (!List.of("completed", "failed", "cancelled").contains(status)) {
-            throw new IllegalArgumentException("执行结束状态不合法");
+            throw new IllegalArgumentException(Messages.text("error.execution.runLifecycleService.finishLocked.1"));
         }
         for (var approval : approvals.forRun(run.enterpriseId(), run.id())) {
             if (approval.status().equals("pending")) {
-                approvals.decide(approval, "APPROVAL_EXPIRED".equals(code) ? "expired" : "revoked", "当前任务已经结束。",
+                approvals.decide(approval, "APPROVAL_EXPIRED".equals(code) ? "expired" : "revoked", Messages.text("text.execution.runLifecycleService.finishLocked.1"),
                     clock.instant());
                 events.append(run, "approval.resolved",
                     approvals.find(run.enterpriseId(), approval.id(), false).orElseThrow().view(), clock.instant());
@@ -466,13 +468,12 @@ public class RunLifecycleService {
             if (unknown && !(status.equals("completed") && call.status().equals("unknown") && call.resultEncrypted() != null)) {
                 status = "failed";
                 code = "TOOL_RESULT_UNKNOWN";
-                message = (stopMessage == null || stopMessage.isBlank() ? "" : stopMessage + " ")
-                    + "部分工具操作的结果尚未确认，请先核对这些操作，不要重复提交。";
+                message = Messages.text("text.execution.runLifecycleService.finishLocked.2", (stopMessage == null || stopMessage.isBlank() ? "" : stopMessage + " "));
                 if (!call.status().equals("unknown")) {
                     toolCalls.finish(call, "unknown", null, null, code, message, clock.instant());
                 }
             } else if (List.of("prepared", "waiting_approval", "waiting_input", "running").contains(call.status())) {
-                toolCalls.finish(call, "cancelled", null, null, "TOOL_CANCELLED", "本次调用没有完成，未继续发送。",
+                toolCalls.finish(call, "cancelled", null, null, "TOOL_CANCELLED", Messages.text("text.execution.runLifecycleService.finishLocked.3"),
                     clock.instant());
             }
         }
@@ -520,7 +521,7 @@ public class RunLifecycleService {
 
     public static final class ExecutionStoppedException extends RuntimeException {
         public ExecutionStoppedException() {
-            super("当前执行已停止或由其他进程接管。");
+            super(Messages.text("text.execution.runLifecycleService.init.1"));
         }
     }
 }

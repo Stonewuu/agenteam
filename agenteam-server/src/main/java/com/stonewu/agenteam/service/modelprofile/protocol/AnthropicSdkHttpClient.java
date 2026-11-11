@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.anthropic.backends.Backend;
 import com.anthropic.core.RequestOptions;
 import com.anthropic.core.http.Headers;
@@ -39,7 +41,7 @@ public final class AnthropicSdkHttpClient implements HttpClient {
                 throw failure;
             }
         } catch (IOException failure) {
-            throw new UncheckedIOException("模型服务请求失败。", failure);
+            throw new UncheckedIOException(Messages.text("error.modelprofile.anthropicSdkHttpClient.execute.1"), failure);
         }
     }
 

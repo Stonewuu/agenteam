@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.security;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -30,7 +32,7 @@ public class ApplicationSecretKeys {
                                  @Value("${agenteam.security.active-encryption-key:1}") String activeVersion,
                                  @Value("${agenteam.security.keys-file:.agenteam/security/application-keys.properties}") String keysFile) {
         if (!activeVersion.matches("[A-Za-z0-9_-]{1,64}")) {
-            throw new IllegalArgumentException("内容加密密钥版本格式不正确");
+            throw new IllegalArgumentException(Messages.text("error.security.applicationSecretKeys.init.1"));
         }
         SecretKey signing = signingKey.isBlank() ? null : decode(signingKey, "HmacSHA256");
         Map<String, SecretKey> keys = decodeEncryptionKeys(configuredKeys, activeVersion);
@@ -67,7 +69,7 @@ public class ApplicationSecretKeys {
                     throw new IllegalArgumentException();
                 }
             } catch (Exception exception) {
-                throw new IllegalArgumentException("内容加密密钥配置格式不正确");
+                throw new IllegalArgumentException(Messages.text("error.security.applicationSecretKeys.decodeEncryptionKeys.1"));
             }
         }
         return keys;
@@ -86,7 +88,7 @@ public class ApplicationSecretKeys {
         SecretKey key = encryptionKeys.get(version);
         if (key == null) {
             throw unavailable(
-                "未找到版本 " + version + " 的内容加密密钥，请检查 agenteam.security.encryption-keys 和 agenteam.security.active-encryption-key。");
+                Messages.text("error.security.applicationSecretKeys.encryptionKey.1", version));
         }
         return key;
     }
@@ -99,12 +101,12 @@ public class ApplicationSecretKeys {
             }
             return new SecretKeySpec(bytes, algorithm);
         } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("部署密钥必须是经过 Base64 编码的三十二字节随机值");
+            throw new IllegalArgumentException(Messages.text("error.security.applicationSecretKeys.decode.1"));
         }
     }
 
     private ApiException unavailable(String reason) {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
-            "暂时无法提交此操作，请联系管理员。", new IllegalStateException(reason));
+            Messages.text("error.security.applicationSecretKeys.unavailable.1"), new IllegalStateException(reason));
     }
 }

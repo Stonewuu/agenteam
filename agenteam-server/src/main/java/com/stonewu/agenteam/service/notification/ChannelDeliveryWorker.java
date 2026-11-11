@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import com.stonewu.agenteam.model.integration.entity.ChannelAccessToken;
 import com.stonewu.agenteam.model.integration.entity.ChannelSendResult;
@@ -48,7 +50,7 @@ public class ChannelDeliveryWorker {
             }
             lease = claimed.get();
         } catch (RuntimeException failure) {
-            LOG.warn("通知发送工作暂时无法领取", failure);
+            LOG.warn(Messages.log("log.notification.channelDeliveryWorker.runOnce.1"), failure);
             return false;
         }
         var current = new AtomicBoolean(true);
@@ -62,7 +64,7 @@ public class ChannelDeliveryWorker {
             ChannelAccessToken token = tokens.get(prepared.application());
             var delay = limiter.acquire(prepared.application(), prepared.recipient(), prepared.rateLimits());
             if (!delay.isZero()) {
-                transactions.defer(lease, delay.plusMillis(100), "CHANNEL_RATE_WAIT", "已达到此应用或接收人的发送频率，正在等待可发送时间。");
+                transactions.defer(lease, delay.plusMillis(100), "CHANNEL_RATE_WAIT", Messages.text("text.notification.channelDeliveryWorker.runOnce.1"));
                 return true;
             }
             if (!current.get() || !transactions.renew(lease)) {
@@ -79,10 +81,10 @@ public class ChannelDeliveryWorker {
             saveResult(lease, started.attemptId(), result);
         } catch (RuntimeException failure) {
             // 第三方异常先由适配器移除敏感文本，其他异常也不能直接带入公开结果。
-            LOG.warn("通知发送暂未完成，工作编号 {}", lease.id(), failure);
+            LOG.warn(Messages.log("log.notification.channelDeliveryWorker.runOnce.2"), lease.id(), failure);
             if (started != null) {
                 saveResult(lease, started.attemptId(), new ChannelSendResult(ChannelSendResult.Outcome.UNKNOWN, null, null,
-                    "CHANNEL_RESULT_UNKNOWN", "请求可能已发出，尚未取得可确认的结果。", null, null, null));
+                    "CHANNEL_RESULT_UNKNOWN", Messages.text("text.notification.channelDeliveryWorker.runOnce.2"), null, null, null));
             } else {
                 deferFailure(lease, failure instanceof ChannelProviderException channel ? channel.code() : "CHANNEL_PREPARATION_FAILED");
             }
@@ -99,15 +101,15 @@ public class ChannelDeliveryWorker {
             }
         } catch (RuntimeException failure) {
             current.set(false);
-            LOG.warn("通知发送工作无法续期，工作编号 {}", lease.id(), failure);
+            LOG.warn(Messages.log("log.notification.channelDeliveryWorker.renew.1"), lease.id(), failure);
         }
     }
 
     private void deferFailure(JobLease lease, String code) {
         try {
-            transactions.defer(lease, Duration.ofSeconds(30), code, "发送准备暂未完成，稍后会继续尝试。");
+            transactions.defer(lease, Duration.ofSeconds(30), code, Messages.text("error.notification.channelDeliveryWorker.deferFailure.1"));
         } catch (RuntimeException failure) {
-            LOG.warn("通知等待结果暂时无法保存，工作编号 {}", lease.id(), failure);
+            LOG.warn(Messages.log("log.notification.channelDeliveryWorker.deferFailure.1"), lease.id(), failure);
         }
     }
 
@@ -117,7 +119,7 @@ public class ChannelDeliveryWorker {
                 transactions.complete(lease, attempt, result);
                 return;
             } catch (RuntimeException failure) {
-                LOG.warn("通知平台结果第 {} 次保存失败，工作编号 {}", retry + 1, lease.id(), failure);
+                LOG.warn(Messages.log("log.notification.channelDeliveryWorker.saveResult.1"), retry + 1, lease.id(), failure);
             }
         }
     }

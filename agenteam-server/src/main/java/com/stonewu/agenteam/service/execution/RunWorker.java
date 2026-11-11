@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ModelFailureMapper;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
@@ -54,7 +56,7 @@ public class RunWorker implements AutoCloseable {
                      ProjectSandboxUsageService sandboxUsage,
                      @Value("${execution.worker.maximum-concurrent:10}") int maximumConcurrent) {
         if (maximumConcurrent < 1 || maximumConcurrent > 32) {
-            throw new IllegalArgumentException("每个工作进程的并发任务数量必须在 1 到 32 之间。");
+            throw new IllegalArgumentException(Messages.text("error.execution.runWorker.init.1"));
         }
         this.lifecycle = lifecycle;
         this.tasks = tasks;
@@ -88,7 +90,7 @@ public class RunWorker implements AutoCloseable {
                 try {
                     current.cancel();
                 } catch (RuntimeException failure) {
-                    LOG.warn("执行 {} 的底层取消未完成，继续结束任务", lease.runId(), failure);
+                    LOG.warn(Messages.log("log.execution.runWorker.cancel.1"), lease.runId(), failure);
                 }
             }
         }
@@ -125,7 +127,7 @@ public class RunWorker implements AutoCloseable {
                 executor.submit(() -> execute(running));
             }
         } catch (RuntimeException unavailable) {
-            LOG.warn("后台执行检查暂时未完成，下一轮将继续检查", unavailable);
+            LOG.warn(Messages.log("log.execution.runWorker.poll.1"), unavailable);
         }
     }
 
@@ -167,7 +169,7 @@ public class RunWorker implements AutoCloseable {
                     return;
                 }
                 if (closed.get()) {
-                    finish(running, "failed", "EXECUTION_INTERRUPTED", "本次执行已中断，请重新执行。");
+                    finish(running, "failed", "EXECUTION_INTERRUPTED", Messages.text("text.execution.runLifecycleService.recover.2"));
                 } else {
                     finish(running, task.cancelled() || running.stopping ? "cancelled" : "completed", null, null);
                 }
@@ -178,22 +180,22 @@ public class RunWorker implements AutoCloseable {
                 return;
             }
             if (!(cause instanceof ExecutionStoppedException)) {
-                LOG.error("对话执行失败，执行编号 {}，工作编号 {}", running.lease.runId(), running.lease.id(), failure);
+                LOG.error(Messages.log("log.execution.runWorker.execute.1"), running.lease.runId(), running.lease.id(), failure);
             }
             if (closed.get()) {
-                finish(running, "failed", "EXECUTION_INTERRUPTED", "本次执行已中断，请重新执行。");
+                finish(running, "failed", "EXECUTION_INTERRUPTED", Messages.text("text.execution.runLifecycleService.recover.2"));
             } else if (running.stopping || cause instanceof ExecutionStoppedException) {
                 finish(running, "cancelled", null, null);
             } else if (cause instanceof ApiException known) {
                 reject(running, known.code(), known.getReason());
             } else if (cause instanceof TimeoutException) {
-                reject(running, "EXECUTION_TIMEOUT", "本次执行已超时，已保存的内容仍可查看。");
+                reject(running, "EXECUTION_TIMEOUT", Messages.text("error.execution.runLifecycleService.remaining.1"));
             } else {
                 var model = ModelFailureMapper.map(cause);
                 if (model.isPresent()) {
                     reject(running, model.get().code(), model.get().getReason());
                 } else {
-                    reject(running, "EXECUTION_FAILED", "本次执行未能完成，请稍后重试。");
+                    reject(running, "EXECUTION_FAILED", Messages.text("error.tool.toolSchemaValidation.compile.1"));
                 }
             }
         } finally {
@@ -202,7 +204,7 @@ public class RunWorker implements AutoCloseable {
                     sandboxUsage.release(running.lease);
                 }
             } catch (RuntimeException failure) {
-                LOG.warn("执行 {} 的沙箱使用记录未及时释放，等待租约到期", running.lease.runId(), failure);
+                LOG.warn(Messages.log("log.execution.runWorker.execute.2"), running.lease.runId(), failure);
             } finally {
                 active.remove(running.lease.id());
             }
@@ -213,7 +215,7 @@ public class RunWorker implements AutoCloseable {
         try {
             lifecycle.finish(running.lease, status, code, message);
         } catch (RuntimeException unavailable) {
-            LOG.warn("执行 {} 的结束状态暂时无法保存，后台将继续检查", running.lease.runId(), unavailable);
+            LOG.warn(Messages.log("log.execution.runWorker.finish.1"), running.lease.runId(), unavailable);
         }
     }
 
@@ -221,7 +223,7 @@ public class RunWorker implements AutoCloseable {
         try {
             lifecycle.rejectClaim(running.lease, code, message);
         } catch (RuntimeException unavailable) {
-            LOG.warn("执行 {} 的失败状态暂时无法保存，后台将继续检查", running.lease.runId(), unavailable);
+            LOG.warn(Messages.log("log.execution.runWorker.reject.1"), running.lease.runId(), unavailable);
         }
     }
 

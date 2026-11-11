@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data.mysql;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.mariadb.jdbc.Configuration;
 import org.mariadb.jdbc.util.ConfigurableSocketFactory;
 
@@ -24,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class PinnedMysqlSocketFactory extends ConfigurableSocketFactory {
     private static final ThreadLocal<Scope> CURRENT = new ThreadLocal<>();
     private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor(
-        Thread.ofPlatform().daemon(true).name("数据库外部连接期限").factory());
+        Thread.ofPlatform().daemon(true).name(Messages.log("log.data.pinnedMysqlSocketFactory.TIMER.1")).factory());
     private String requestedHost;
 
     @Override
@@ -34,7 +36,7 @@ public class PinnedMysqlSocketFactory extends ConfigurableSocketFactory {
 
     public static Scope scope(String host, int port, List<InetAddress> addresses, long deadline) {
         if (CURRENT.get() != null) {
-            throw new IllegalStateException("数据库地址登记不能嵌套");
+            throw new IllegalStateException(Messages.text("error.data.pinnedMysqlSocketFactory.scope.1"));
         }
         var scope = new Scope(host, port, addresses, deadline);
         CURRENT.set(scope);
@@ -45,7 +47,7 @@ public class PinnedMysqlSocketFactory extends ConfigurableSocketFactory {
     public Socket createSocket() throws IOException {
         Scope scope = CURRENT.get();
         if (scope == null || !scope.host.equalsIgnoreCase(requestedHost)) {
-            throw new SocketException("数据库连接没有经过地址验证");
+            throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.createSocket.1"));
         }
         IOException failure = null;
         for (InetAddress address : scope.addresses) {
@@ -66,27 +68,27 @@ public class PinnedMysqlSocketFactory extends ConfigurableSocketFactory {
         if (failure != null) {
             throw failure;
         }
-        throw new SocketException("数据库没有可连接的地址");
+        throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.createSocket.2"));
     }
 
     @Override
     public Socket createSocket(String host, int port) throws IOException {
-        throw new SocketException("数据库连接必须使用经过验证的地址登记");
+        throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.createSocket.3"));
     }
 
     @Override
     public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
-        throw new SocketException("数据库连接必须使用经过验证的地址登记");
+        throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.createSocket.3"));
     }
 
     @Override
     public Socket createSocket(InetAddress host, int port) throws IOException {
-        throw new SocketException("数据库连接必须使用经过验证的地址登记");
+        throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.createSocket.3"));
     }
 
     @Override
     public Socket createSocket(InetAddress host, int port, InetAddress localHost, int localPort) throws IOException {
-        throw new SocketException("数据库连接必须使用经过验证的地址登记");
+        throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.createSocket.3"));
     }
 
     public static final class Scope implements AutoCloseable {
@@ -120,7 +122,7 @@ public class PinnedMysqlSocketFactory extends ConfigurableSocketFactory {
         private int remaining() throws SocketException {
             long remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
             if (remaining <= 0 || closed.get() || owner.isInterrupted()) {
-                throw new SocketException("数据库连接已取消或超过允许时间");
+                throw new SocketException(Messages.text("error.data.pinnedMysqlSocketFactory.remaining.1"));
             }
             return (int) Math.min(10000, remaining);
         }

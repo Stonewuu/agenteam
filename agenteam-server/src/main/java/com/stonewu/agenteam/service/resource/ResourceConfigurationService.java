@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,11 +44,11 @@ public class ResourceConfigurationService {
         this.workflowTools = workflowTools;
         for (var validator : validators) {
             if (this.validators.put(validator.kind(), validator) != null) {
-                throw new IllegalStateException("资源类型重复注册校验器");
+                throw new IllegalStateException(Messages.text("error.resource.resourceConfigurationService.init.1"));
             }
         }
         if (this.validators.size() != ResourceKind.values().length) {
-            throw new IllegalStateException("存在尚未配置校验器的资源类型");
+            throw new IllegalStateException(Messages.text("error.resource.resourceConfigurationService.init.2"));
         }
     }
 
@@ -75,12 +77,12 @@ public class ResourceConfigurationService {
         var pending = savedErrors(resource);
         if (!pending.isEmpty()) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_FAILED",
-                "请先处理副本中待修正的依赖并保存草稿。", Map.of(), pending);
+                Messages.text("error.resource.resourceConfigurationService.publish.1"), Map.of(), pending);
         }
         validators.get(resource.kind()).validatePublished(resource.config());
         if ((resource.kind() == ResourceKind.AGENT || resource.kind() == ResourceKind.PLUGIN) && resource.description()
             .isBlank()) {
-            throw ApiException.invalidField("description", "发布前请填写简介。");
+            throw ApiException.invalidField("description", Messages.text("error.resource.resourceConfigurationService.publish.2"));
         }
         validators.get(resource.kind()).publish(actor, resource);
     }

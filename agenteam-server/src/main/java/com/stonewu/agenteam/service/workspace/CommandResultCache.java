@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -88,7 +90,7 @@ public class CommandResultCache {
         } catch (ApiException failure) {
             if ("PROJECT_BUSY".equals(failure.code())) {
                 // 读取或清理尚未结束时留待下一轮统计，避免因文件正在删除而取消运行中的命令。
-                LOG.debug("缓存仍在使用，稍后检查容量，范围编号 {}", area.scope(), failure);
+                LOG.debug(Messages.log("log.workspace.commandResultCache.capacityExceeded.1"), area.scope(), failure);
                 return false;
             }
             throw failure;
@@ -205,7 +207,7 @@ public class CommandResultCache {
         requireCall(call);
         try (var lock = lock(area, control)) {
             if (Files.exists(recordPath(area, call), LinkOption.NOFOLLOW_LINKS)) {
-                throw new ApiException(HttpStatus.CONFLICT, "COMMAND_RESULT_EXISTS", "此命令结果已经登记，请先核实原执行结果。");
+                throw new ApiException(HttpStatus.CONFLICT, "COMMAND_RESULT_EXISTS", Messages.text("error.workspace.commandResultCache.prepare.1"));
             }
             // 大文件设置不要求命令一定输出同样多的内容，实际输出仍由容量监控检查。
             long reserved = cleanLocked(area, protectedScopes, 2L * workspace.fileBytes(), 1).reservedBytes();
@@ -261,7 +263,7 @@ public class CommandResultCache {
             }
             for (var entry : selected) {
                 if (entry.running()) {
-                    throw new ApiException(HttpStatus.CONFLICT, "COMMAND_RESULT_RUNNING", "命令仍在执行，请等待执行完成后读取输出。");
+                    throw new ApiException(HttpStatus.CONFLICT, "COMMAND_RESULT_RUNNING", Messages.text("error.workspace.commandResultCache.read.1"));
                 }
                 save(area, new Entry(entry.scope(), entry.call(), entry.createdAt(), entry.completedAt(), clock.millis(), 0));
             }
@@ -310,7 +312,7 @@ public class CommandResultCache {
         }
         if (reserve > 0 && (used >= settings.maximumBytes() || count + additional > settings.maximumEntries())) {
             throw new ApiException(HttpStatus.INSUFFICIENT_STORAGE, "COMMAND_RESULT_CAPACITY",
-                "命令结果缓存空间不足，现有任务仍在使用的输出已保留，请稍后重试或联系管理员调整容量。");
+                Messages.text("error.workspace.commandResultCache.cleanLocked.1"));
         }
         return new Cleanup(removed, Math.max(0, Math.min(reserve, settings.maximumBytes() - used)));
     }
@@ -397,6 +399,6 @@ public class CommandResultCache {
     }
 
     public static ApiException expired() {
-        return new ApiException(HttpStatus.GONE, "COMMAND_RESULT_EXPIRED", "命令完整输出已清理或不可用，请根据已有结果继续处理；需要再次执行时请先确认不会重复修改数据。");
+        return new ApiException(HttpStatus.GONE, "COMMAND_RESULT_EXPIRED", Messages.text("error.workspace.commandResultCache.expired.1"));
     }
 }

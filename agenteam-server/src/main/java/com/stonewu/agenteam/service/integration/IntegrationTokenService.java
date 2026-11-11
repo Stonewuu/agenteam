@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.ChannelAccessToken;
@@ -46,7 +48,7 @@ public class IntegrationTokenService {
 
     public ChannelAccessToken get(IntegrationApplication application) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("应用令牌刷新不能在数据库事务中执行");
+            throw new IllegalStateException(Messages.text("error.integration.integrationTokenService.get.1"));
         }
         String key = key(application);
         var cached = cached(key);
@@ -56,7 +58,7 @@ public class IntegrationTokenService {
         String lock = key + ":refresh";
         String owner = UUID.randomUUID().toString();
         if (!Boolean.TRUE.equals(redis.opsForValue().setIfAbsent(lock, owner, Duration.ofSeconds(30)))) {
-            throw new ChannelProviderException("CHANNEL_TOKEN_REFRESHING", "应用凭证正在刷新，请稍后重试。");
+            throw new ChannelProviderException("CHANNEL_TOKEN_REFRESHING", Messages.text("error.integration.integrationTokenService.get.2"));
         }
         try {
             cached = cached(key);
@@ -104,7 +106,7 @@ public class IntegrationTokenService {
         try {
             return encryption.decrypt(json.readValue(value, EncryptedPayload.class), key, CachedToken.class);
         } catch (JsonProcessingException failure) {
-            throw new ChannelProviderException("CHANNEL_TOKEN_CACHE_INVALID", "应用凭证缓存无法读取，请稍后重试。", failure);
+            throw new ChannelProviderException("CHANNEL_TOKEN_CACHE_INVALID", Messages.text("error.integration.integrationTokenService.decode.1"), failure);
         }
     }
 
@@ -112,7 +114,7 @@ public class IntegrationTokenService {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("应用凭证无法保存到加密缓存", failure);
+            throw new IllegalStateException(Messages.text("error.integration.integrationTokenService.encode.1"), failure);
         }
     }
 
@@ -123,7 +125,7 @@ public class IntegrationTokenService {
     private record CachedToken(String value, long expiresAtMillis) {
         @Override
         public String toString() {
-            return "CachedToken[应用凭证已隐藏]";
+            return Messages.log("log.integration.integrationTokenService.toString.1");
         }
     }
 }

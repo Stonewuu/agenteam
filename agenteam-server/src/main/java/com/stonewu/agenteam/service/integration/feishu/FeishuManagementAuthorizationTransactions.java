@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.integration.entity.FeishuManagementOauthRow;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
@@ -37,6 +39,6 @@ public class FeishuManagementAuthorizationTransactions {
         grants.authorize(flow.getEnterpriseId(), manager, actor.id(), result);
         flows.finish(flow.getId(), true);
         audit.record(flow.getEnterpriseId(), actor, "feishu.management_authorized", "integration", manager.getId(),
-            "授权群策管理飞书应用", Map.of());
+            Messages.text("text.integration.feishuManagementAuthorizationTransactions.complete.1"), Map.of());
     }
 }

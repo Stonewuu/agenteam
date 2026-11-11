@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
@@ -53,7 +55,7 @@ public class WorkspaceReadToolService {
         void requireActive() {
             control.requireActive();
             if (System.nanoTime() >= deadline) {
-                throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "FILE_READ_TIMEOUT", "文件读取超时，请缩小搜索范围。");
+                throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "FILE_READ_TIMEOUT", Messages.text("error.workspace.workspaceReadToolService.requireActive.1"));
             }
         }
 
@@ -77,7 +79,7 @@ public class WorkspaceReadToolService {
             case "list_files" -> list(scope, input);
             case "grep_files" -> search(scope, input);
             default ->
-                throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_TOOL_UNAVAILABLE", "当前文件操作不可用。");
+                throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_TOOL_UNAVAILABLE", Messages.text("error.workspace.workspaceReadToolService.invoke.1"));
         };
         return Utf8Text.size(result.toString()) <= maximum ? result : tooMany();
     }
@@ -228,7 +230,7 @@ public class WorkspaceReadToolService {
             if (!Set.of(403, 404).contains(failure.getStatusCode().value())) {
                 throw failure;
             }
-            LOG.debug("结果文件已不能列出，执行编号 {}，调用编号 {}", scope.run().id(), call.id(), failure);
+            LOG.debug(Messages.log("log.workspace.workspaceReadToolService.readable.1"), scope.run().id(), call.id(), failure);
             return false;
         }
     }
@@ -254,7 +256,7 @@ public class WorkspaceReadToolService {
             return "tool-results/";
         }
         if (!path.matches("tool-results/(?:[A-Za-z0-9_-]{1,100}/(?:content\\.(?:txt|json))?)?")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_PATH_INVALID", "请选择当前任务的结果文件。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_PATH_INVALID", Messages.text("error.workspace.workspaceReadToolService.root.1"));
         }
         return path;
     }
@@ -271,18 +273,18 @@ public class WorkspaceReadToolService {
         }
         try {
             if (value.length() > 2048) {
-                throw new IllegalArgumentException("续读位置过长");
+                throw new IllegalArgumentException(Messages.text("error.workspace.workspaceFileReader.position.1"));
             }
             var saved = json.read(new String(Base64.getUrlDecoder().decode(value), StandardCharsets.UTF_8));
             String after = saved.path("afterId").asText(null), file = saved.path("fileId").asText(null);
             int line = saved.path("line").asInt(1);
             if (!hash.equals(saved.path("hash").asText()) || after != null && !after.matches("[A-Za-z0-9_-]{1,100}")
                 || file != null && !file.matches("[A-Za-z0-9_-]{1,100}") || line < 1) {
-                throw new IllegalArgumentException("搜索条件或位置已经变化");
+                throw new IllegalArgumentException(Messages.text("error.workspace.workspaceReadToolService.decode.1"));
             }
             return new Position(hash, after, file, line);
         } catch (RuntimeException failure) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_CURSOR_INVALID", "续读位置无效，请重新开始本次查找。",
+            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_CURSOR_INVALID", Messages.text("error.workspace.workspaceReadToolService.decode.2"),
                 failure);
         }
     }
@@ -302,6 +304,6 @@ public class WorkspaceReadToolService {
     }
 
     private ObjectNode tooMany() {
-        return object().put("isError", true).put("content", "本轮同时读取的内容过多，请减少并行调用后继续读取。");
+        return object().put("isError", true).put("content", Messages.text("error.workspace.workspaceFileReader.tooMany.1"));
     }
 }

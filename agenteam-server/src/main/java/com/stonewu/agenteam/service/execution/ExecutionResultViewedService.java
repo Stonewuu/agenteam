@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.notification.ExecutionResultNoticeMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -33,7 +35,7 @@ public class ExecutionResultViewedService {
         var run = queries.run(actor, runId);
         if (!"completed".equals(run.status()) || "preview".equals(run.mode())) {
             throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_RESULT_NOT_COMPLETED",
-                "任务尚未完成，请稍后确认结果。");
+                Messages.text("error.execution.executionResultViewedService.viewed.1"));
         }
         notices.viewed(actor.enterpriseId(), actor.userId(), run.id(), run.conversationId(), clock.instant());
     }

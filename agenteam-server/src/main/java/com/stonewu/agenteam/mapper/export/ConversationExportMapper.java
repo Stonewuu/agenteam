@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionJson;
 import com.stonewu.agenteam.mapper.query.MappedCallbackFailures;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
@@ -27,7 +29,7 @@ public class ConversationExportMapper {
         try {
             statements.readMessages(enterprise, user, conversation, CsvExportMapper.MAX_ROWS + 1, context -> {
                 if (context.getResultCount() > CsvExportMapper.MAX_ROWS) {
-                    throw CsvExportMapper.limit("导出超过十万条消息，请缩小范围。");
+                    throw CsvExportMapper.limit(Messages.text("error.export.conversationExportMapper.append.1"));
                 }
                 var row = context.getResultObject();
                 Instant when = row.getCreatedAt();
@@ -35,7 +37,7 @@ public class ConversationExportMapper {
                     first[0] = when;
                 }
                 if (Duration.between(first[0], when).compareTo(Duration.ofDays(90)) > 0) {
-                    throw CsvExportMapper.limit("会话时间跨度超过九十天，无法一次导出。");
+                    throw CsvExportMapper.limit(Messages.text("error.export.conversationExportMapper.append.2"));
                 }
                 var blocks = json.blocks(row.getBlocksJson()).stream()
                     .sorted(Comparator.comparingInt(ContentBlock::displayOrder)).toList();

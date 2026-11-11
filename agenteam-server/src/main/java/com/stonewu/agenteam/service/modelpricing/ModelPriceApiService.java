@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.http.entity.ApiOperationResult;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPricePreviewView;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration;
@@ -63,7 +65,7 @@ public class ModelPriceApiService {
     public ApiOperationResult create(String enterprise, String model, ModelPriceDraftRequest body, HttpServletRequest request) {
         InputValidation.request(request, ModelPriceDraftRequest.class);
         if (body == null || (body.copyFromVersionId() == null) == (body.configuration() == null)) {
-            throw ApiException.invalidField("configuration", "请填写新价格，或选择要复制的历史版本。");
+            throw ApiException.invalidField("configuration", Messages.text("error.modelpricing.modelPriceApiService.create.1"));
         }
         return mutate(enterprise, request, actor -> ApiOperationResult.of(201, body.copyFromVersionId() == null
             ? prices.create(actor, model, body.configuration()) : prices.copy(actor, model, body.copyFromVersionId())));

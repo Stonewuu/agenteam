@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -63,10 +65,10 @@ public class ConversationManagementService {
         }
         String title = input.title() == null ? null : ResourceInput.text(input.title(), "title", 100, true);
         if (title != null && title.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("title", "对话名称不能包含换行或控制字符。");
+            throw ApiException.invalidField("title", Messages.text("error.execution.conversationManagementService.update.1"));
         }
         if (input.status() != null && !Set.of("active", "archived").contains(input.status())) {
-            throw ApiException.invalidField("status", "请选择有效的对话状态。");
+            throw ApiException.invalidField("status", Messages.text("error.execution.conversationManagementService.update.2"));
         }
         String status = input.status() == null ? row.status() : input.status();
         if (status.equals("archived")) {
@@ -75,14 +77,14 @@ public class ConversationManagementService {
         if (input.approvalPolicy() != null) {
             authorization.lockAndRequire(actor, "agent.run");
             if (!Set.of("default", "auto_approve", "full_access").contains(input.approvalPolicy())) {
-                throw ApiException.invalidField("approvalPolicy", "请选择有效的工具审批策略。");
+                throw ApiException.invalidField("approvalPolicy", Messages.text("error.execution.conversationUpdateInput.approvalPolicy.1"));
             }
             if (!row.mode().equals("normal") || !row.status().equals("active")) {
-                throw ApiException.invalidField("approvalPolicy", "此对话无法继续，不能修改工具审批策略。");
+                throw ApiException.invalidField("approvalPolicy", Messages.text("error.execution.conversationManagementService.update.3"));
             }
             if (row.activeRunId() != null) {
                 throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
-                    "请等待当前任务结束，或先停止任务，再修改工具审批策略。");
+                    Messages.text("error.execution.conversationManagementService.update.4"));
             }
         }
         boolean groupFavorite = groupFavorites.update(actor, row, input.favorite());
@@ -112,10 +114,10 @@ public class ConversationManagementService {
         var row = authorize(actor, id);
         revision(row, revision);
         if (!row.status().equals("deleted")) {
-            throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_NOT_DELETED", "此对话没有被删除，请重新加载列表。");
+            throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_NOT_DELETED", Messages.text("error.execution.conversationManagementService.restore.1"));
         }
         if (row.deletedAt() == null || !row.deletedAt().isAfter(clock.instant().minus(Duration.ofDays(30)))) {
-            throw new ApiException(HttpStatus.CONFLICT, "RESTORE_EXPIRED", "此对话已经超过可恢复时间。");
+            throw new ApiException(HttpStatus.CONFLICT, "RESTORE_EXPIRED", Messages.text("error.execution.conversationManagementService.restore.2"));
         }
         conversations.update(row, null, null, "active", clock.instant());
         return current(actor, id);
@@ -136,10 +138,10 @@ public class ConversationManagementService {
         String conversation = authorizeFeedback(actor, id);
         var message = messages.find(actor.enterpriseId(), conversation, id).orElseThrow();
         if (!message.role().equals("assistant") || Set.of("pending", "streaming").contains(message.status())) {
-            throw new ApiException(HttpStatus.CONFLICT, "FEEDBACK_UNAVAILABLE", "请在任务结束后评价回复。");
+            throw new ApiException(HttpStatus.CONFLICT, "FEEDBACK_UNAVAILABLE", Messages.text("error.execution.conversationManagementService.feedback.1"));
         }
         if (input.value() != null && !Set.of("positive", "negative").contains(input.value())) {
-            throw ApiException.invalidField("value", "请选择有效的反馈。");
+            throw ApiException.invalidField("value", Messages.text("error.execution.conversationManagementService.feedback.2"));
         }
         String comment = ResourceInput.text(input.comment() == null ? "" : input.comment(), "comment", 500, false);
         messages.feedback(actor.enterpriseId(), actor.userId(), id, input.value(), comment, clock.instant());
@@ -154,7 +156,7 @@ public class ConversationManagementService {
     private void inactive(ConversationRecord row) {
         if (row.activeRunId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
-                "请先停止或等待当前任务结束，再归档或删除对话。");
+                Messages.text("error.execution.conversationManagementService.inactive.1"));
         }
     }
 

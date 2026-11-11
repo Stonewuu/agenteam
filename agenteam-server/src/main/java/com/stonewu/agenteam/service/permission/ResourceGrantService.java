@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.permission;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -45,7 +47,7 @@ public class ResourceGrantService {
             String type = extension.subjectType();
             if (type == null || type.isBlank() || Set.of("enterprise", "user").contains(type)
                 || registered.putIfAbsent(type, extension) != null) {
-                throw new IllegalArgumentException("资源授权扩展类型无效、重复或试图替换基础授权类型");
+                throw new IllegalArgumentException(Messages.text("error.permission.resourceGrantService.init.1"));
             }
         }
         this.extensions = Map.copyOf(registered);
@@ -84,14 +86,14 @@ public class ResourceGrantService {
         String id = resource.id();
         var kind = ResourceKind.from(resource.kind());
         if (requested == null || requested.size() > 500) {
-            throw ApiException.invalidField("grants", kind.label() + "授权最多 500 项。");
+            throw ApiException.invalidField("grants", Messages.text("error.permission.resourceGrantService.apply.1", kind.localizedLabel()));
         }
         Set<ResourceGrantSpec> unique = new HashSet<>();
         for (var grant : requested) {
             if (grant == null || grant.subjectId() == null || grant.capability() == null || !Set.of("view", "use",
                 "edit").contains(grant.capability())
                 || !unique.add(grant)) {
-                throw ApiException.invalidField("grants", "授权内容无效或存在重复项。");
+                throw ApiException.invalidField("grants", Messages.text("error.permission.resourceGrantService.apply.2"));
             }
             boolean valid = switch (grant.subjectType() == null ? "" : grant.subjectType()) {
                 case "enterprise" -> actor.enterpriseId().equals(grant.subjectId());
@@ -99,7 +101,7 @@ public class ResourceGrantService {
                 default -> validateExtendedSubject(actor, grant);
             };
             if (!valid) {
-                throw ApiException.invalidField("grants", "授权对象必须是本企业当前有效的成员、企业或已支持的其他对象。");
+                throw ApiException.invalidField("grants", Messages.text("error.permission.resourceGrantService.apply.3"));
             }
         }
         var before = resources.grants(actor.enterpriseId(), id);
@@ -107,7 +109,7 @@ public class ResourceGrantService {
             extension.authorizeChange(actor, before, requested);
         }
         resources.replaceGrants(actor.enterpriseId(), id, actor.userId(), unique, clock.instant());
-        authorization.changed(actor, "resource.grants.update", "resource", id, "修改" + kind.label() + "授权",
+        authorization.changed(actor, "resource.grants.update", "resource", id, Messages.text("text.permission.resourceGrantService.apply.1", kind.localizedLabel()),
             Map.of("kind", kind.code(), "before", before, "after", requested));
     }
 

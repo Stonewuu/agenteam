@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.todo.TodoOptionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
@@ -35,7 +37,7 @@ public class TodoSelectionService {
                                               Integer count) {
         String use = purpose == null ? "filter" : purpose;
         if (!Set.of("filter", "assign").contains(use)) {
-            throw ApiException.invalidField("purpose", "请选择团队筛选或分配。");
+            throw ApiException.invalidField("purpose", Messages.text("error.todo.todoSelectionService.teams.1"));
         }
         policy.teamChoices(actor, use.equals("assign"));
         String search = pagination.query(query);

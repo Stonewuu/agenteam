@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -200,7 +202,7 @@ public class ModelsDevCatalogParser {
 
     private void require(boolean condition) throws IOException {
         if (!condition) {
-            throw new IOException("价格目录格式或大小不符合读取要求。");
+            throw new IOException(Messages.text("error.modelpricing.modelsDevCatalogParser.require.1"));
         }
     }
 
@@ -208,7 +210,7 @@ public class ModelsDevCatalogParser {
         private final JsonNode error;
 
         private SourceError(JsonNode error) {
-            super("价格目录返回业务错误。");
+            super(Messages.text("text.modelpricing.modelsDevCatalogParser.init.1"));
             this.error = error;
         }
 

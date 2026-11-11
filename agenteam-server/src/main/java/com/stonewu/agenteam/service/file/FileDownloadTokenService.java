@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -51,7 +53,7 @@ public class FileDownloadTokenService {
             return new Issued(
                 payload + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(signature(payload)), expires);
         } catch (Exception failure) {
-            throw new IllegalStateException("无法生成文件下载地址", failure);
+            throw new IllegalStateException(Messages.text("error.file.fileDownloadTokenService.issue.1"), failure);
         }
     }
 
@@ -83,6 +85,6 @@ public class FileDownloadTokenService {
     }
 
     private static ApiException invalid() {
-        return new ApiException(HttpStatus.GONE, "DOWNLOAD_EXPIRED", "下载地址已失效，请重新获取。");
+        return new ApiException(HttpStatus.GONE, "DOWNLOAD_EXPIRED", Messages.text("error.file.fileDownloadTokenService.invalid.1"));
     }
 }

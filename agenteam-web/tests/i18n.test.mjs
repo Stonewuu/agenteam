@@ -13,7 +13,60 @@ const { localizeUiMessage } = loadSource("lib/i18n/ui-message");
 const { en } = loadSource("lib/i18n/messages/en");
 const english = createTranslator("en");
 const chinese = createTranslator("zh-CN");
+const {resourceDisplayName, resourceDisplayDescription} = loadSource("features/resource/lib/resource-localization");
 const { notificationContent } = loadSource("features/notification/lib/notification-presentation");
+
+test("英文编辑菜单保持简短，单个资源操作使用单数且按钮保留空格", () => {
+  const {editorSections} = loadSource("features/resource/lib/editor-sections");
+  const expected = {
+    agent: ["Settings", "Capabilities", "Conversation", "Advanced"],
+    skill: ["Information", "Content", "Capabilities"],
+    plugin: ["Information", "Connections"],
+    workflow: ["Information", "Workflow"],
+    knowledge: ["Settings", "Documents"],
+    data: ["Settings", "Collections"],
+  };
+  for (const [kind, labels] of Object.entries(expected)) {
+    assert.deepEqual(editorSections[kind].map(section => english(section.label)), labels);
+  }
+  assert.equal(english("需要的能力"), "Capabilities");
+  assert.equal(english("新建{0}", [english("label.resource.skill")]), "New skill");
+  assert.equal(english("选择{0}", [english("插件")]), "Choose Plugins");
+  assert.equal(english("企业概览"), "Overview");
+  assert.equal(english("技能"), "Skills");
+  assert.equal(english("企业协作平台"), "Integrations");
+  assert.equal(english("工作空间设置"), "Workspace");
+});
+
+test("内置插件按代码翻译，用户同名插件和旧版本的原文不被覆盖", () => {
+  const catalog = loadSource("lib/i18n/generated/builtin-plugins.json");
+  for (const [builtinCode, descriptor] of Object.entries(catalog)) {
+    const value = {source: "builtin", builtinCode, name: descriptor.name.source, description: descriptor.description.source};
+    assert.equal(resourceDisplayName(value, english), descriptor.name.en);
+    assert.equal(resourceDisplayDescription(value, english), descriptor.description.en);
+    assert.equal(resourceDisplayName(value, chinese), descriptor.name["zh-CN"]);
+    for (const source of ["created", "imported", undefined]) {
+      assert.equal(resourceDisplayName({...value, source}, english), value.name);
+      assert.equal(resourceDisplayDescription({...value, source}, english), value.description);
+    }
+    assert.equal(resourceDisplayDescription({...value, description: "用户内容 {0} $1"}, english), "用户内容 {0} $1");
+  }
+});
+
+test("后端历史错误随语言双向切换，动态输入中的中文和占位符保持原文", () => {
+  const original = '未找到版本 中文{0} $1 \\ 的内容加密密钥，请检查 agenteam.security.encryption-keys 和 agenteam.security.active-encryption-key。';
+  const translated = localizeUiMessage(original, english);
+  assert.ok(translated.startsWith('Content encryption key version 中文{0} $1 \\'));
+  assert.equal(localizeUiMessage(translated, chinese), original);
+  assert.equal(localizeUiMessage(translated, english), translated);
+  assert.equal(localizeUiMessage("用户自定义说明，未提供翻译。", english), "用户自定义说明，未提供翻译。");
+});
+
+test("请求优先沿用页面选择的语言，未选择时读取浏览器偏好", () => {
+  const {localeFromHeaders} = loadSource("lib/i18n/locales");
+  assert.equal(localeFromHeaders(new Headers({cookie: "SESSION=test; agenteam-locale=en", "accept-language": "zh-CN"})), "en");
+  assert.equal(localeFromHeaders(new Headers({cookie: "agenteam-locale=unknown", "accept-language": "fr;q=1,en-GB;q=0.8,zh;q=0.2"})), "en");
+});
 
 test("内置任务通知随显示语言切换，名称中的中文和占位符保持原样", () => {
   const name = '工作助手 “设计” {0} <tag> $1';
@@ -59,7 +112,8 @@ test("自定义定时通知与公告即使内容等于系统文案也不翻译",
 test("计划暂停的服务端内置原因均有英文，重复显示不改变原记录", () => {
   const serverRoot = process.env.AGENTEAM_TEST_SERVER_ROOT ?? fileURLToPath(new URL("../../agenteam-server/", import.meta.url));
   const source = readFileSync(resolve(serverRoot, "src/main/java/com/stonewu/agenteam/mapper/schedule/ScheduleViewMapper.java"), "utf8");
-  const reasons = [...source.matchAll(/(?:case "[A-Z_]+"|default) -> "([^"]+)";/g)].map(match => match[1]);
+  const reasons = [...source.matchAll(/(?:case "[A-Z_]+"|default) -> Messages\.text\("([^"]+)"\);/g)]
+    .map(match => chinese(match[1]));
   assert.ok(reasons.length >= 18);
   for (const body of reasons) {
     const original = { category: "schedule", targetType: "schedule", title: "“Weekly report”已暂停", body };
@@ -223,6 +277,29 @@ test("日期、时区与执行规则使用界面语言，时间所属地区保�
   assert.equal(scheduleRuleText({ frequency: "monthly", monthDay: 12, localTime: "09:30:00" }, english), "Day 12 of each month 09:30");
 });
 
+test("前端控制台日志使用英文，变量和原始错误不被改写", () => {
+  const problems = [];
+  const root = new URL("../src/", import.meta.url);
+  for (const name of readdirSync(root, {recursive: true}).filter(name => /\.tsx?$/.test(name))) {
+    const content = readFileSync(new URL(name.replaceAll("\\", "/"), root), "utf8");
+    if (!content.includes("console.")) continue;
+    const source = ts.createSourceFile(name, content, ts.ScriptTarget.Latest, true);
+    const inspect = node => {
+      if (ts.isStringLiteralLike(node) && /[\p{Script=Han}]/u.test(node.text)) {
+        for (let parent = node.parent; parent && !ts.isFunctionLike(parent); parent = parent.parent) {
+          if (ts.isCallExpression(parent) && /^console\.(error|warn|info|debug|log|trace)$/.test(parent.expression.getText(source))) {
+            problems.push(`${name}: ${node.text}`);
+            break;
+          }
+        }
+      }
+      ts.forEachChild(node, inspect);
+    };
+    inspect(source);
+  }
+  assert.deepEqual(problems, []);
+});
+
 test("所有明确标记的界面文案均有英文，参数占位符完整保留", () => {
   const missing = [];
   const root = new URL("../src/", import.meta.url);
@@ -246,7 +323,7 @@ test("所有明确标记的界面文案均有英文，参数占位符完整保�
   assert.deepEqual(missing, []);
   for (const [key, translation] of Object.entries(en)) {
     const placeholders = text => [...new Set(text.match(/\{\d+\}/g) ?? [])].sort();
-    assert.deepEqual(placeholders(translation), placeholders(key), `占位符不一致：${key}`);
+    assert.deepEqual(placeholders(translation), placeholders(chinese(key)), `占位符不一致：${key}`);
     assert.ok(translation.trim(), `英文文案为空：${key}`);
   }
 });

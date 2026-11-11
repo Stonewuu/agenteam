@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -54,7 +56,7 @@ public final class RestrictedMcpTransport implements McpClientTransport {
     public RestrictedMcpTransport(RestrictedHttpClient http, ObjectMapper json, String endpoint, String transport,
                                   Map<String, String> credentials, Duration timeout, long responseBytes) {
         if (!transport.equals("streamable_http") && !transport.equals("legacy_sse")) {
-            throw ApiException.invalidField("config.transport", "请选择支持的远程连接方式。");
+            throw ApiException.invalidField("config.transport", Messages.text("error.plugin.restrictedMcpTransport.init.1"));
         }
         this.endpoint = endpoint;
         this.legacy = transport.equals("legacy_sse");
@@ -89,7 +91,7 @@ public final class RestrictedMcpTransport implements McpClientTransport {
             return Mono.empty();
         }
         return Mono.defer(() -> {
-            Thread.ofVirtual().name("插件事件读取").start(this::readLegacy);
+            Thread.ofVirtual().name(Messages.log("log.plugin.restrictedMcpTransport.connect.1")).start(this::readLegacy);
             return Mono.fromFuture(legacyEndpoint).then().doOnCancel(this::cancel);
         });
     }
@@ -240,7 +242,7 @@ public final class RestrictedMcpTransport implements McpClientTransport {
             // 本项目没有服务端采样、提问或其他主动请求能力，明确返回方法不可用。
             var rejected = json.createObjectNode().put("jsonrpc", "2.0");
             rejected.set("id", value.get("id"));
-            rejected.putObject("error").put("code", -32601).put("message", "此客户端不支持该请求");
+            rejected.putObject("error").put("code", -32601).put("message", Messages.text("error.plugin.restrictedMcpTransport.receive.1"));
             send(rejected);
             return false;
         }
@@ -286,7 +288,7 @@ public final class RestrictedMcpTransport implements McpClientTransport {
     private void successful(Response response) {
         if (response.code() == 401 || response.code() == 403) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_AUTH_FAILED",
-                "远程服务未接受当前凭据，请检查后重试。");
+                Messages.text("error.plugin.restrictedMcpTransport.successful.1"));
         }
         if (!response.isSuccessful()) {
             throw unavailable();
@@ -317,7 +319,7 @@ public final class RestrictedMcpTransport implements McpClientTransport {
 
     private static ApiException unavailable(Throwable cause) {
         return new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_CONNECTION_FAILED",
-            "无法完成远程工具连接，请检查服务配置或稍后重试。", cause);
+            Messages.text("error.plugin.remoteMcpSession.safeFailure.1"), cause);
     }
 
     private static final class Cursor {

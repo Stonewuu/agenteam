@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,7 +23,7 @@ public final class FeishuMessageCards {
         var elements = card.putObject("body").putArray("elements");
         if (source.hasNonNull("userQuestion")) {
             var header = card.putObject("header").put("template", "blue");
-            header.putObject("title").put("tag", "plain_text").put("content", "需要你的回答");
+            header.putObject("title").put("tag", "plain_text").put("content", Messages.text("text.chat.feishuMessageCards.prepare.1"));
             FeishuQuestionCard.elements(elements, source.path("userQuestion"), source.path("questionDirect").asBoolean());
             payload.put("messageType", "interactive").set("content", card);
             return payload;
@@ -32,11 +34,11 @@ public final class FeishuMessageCards {
         String settings = source.path("replySettingsUrl").asText();
         if (!settings.isBlank()) {
             elements.addObject().put("tag", "hr");
-            elements.addObject().put("tag", "markdown").put("content", "回复方式：" + (source.path("replyFull").asBoolean() ? "直接回复内容" : "仅发送链接"));
+            elements.addObject().put("tag", "markdown").put("content", Messages.text("text.chat.feishuMessageCards.prepare.2", (source.path("replyFull").asBoolean() ? Messages.text("text.chat.chatReplyCommandService.label.1") : Messages.text("text.chat.chatReplyCommandService.label.2"))));
             if (source.path("replyCallbackEnabled").asBoolean() && source.path("replySettingsEditing").asBoolean()) {
                 form(elements, source);
             } else {
-                var button = button(elements, "回复方式", "default");
+                var button = button(elements, Messages.text("text.chat.chatReplyCommandService.handle.1"), "default");
                 var behavior = button.putArray("behaviors").addObject();
                 if (source.path("replyCallbackEnabled").asBoolean()) {
                     behavior.put("type", "callback").putObject("value").put("action", "reply_mode_open");
@@ -46,7 +48,7 @@ public final class FeishuMessageCards {
             }
         }
         if (source.path("replyCardProbe").asBoolean()) {
-            button(elements, "确认卡片按钮", "primary").putArray("behaviors").addObject()
+            button(elements, Messages.text("text.chat.feishuMessageCards.prepare.3"), "primary").putArray("behaviors").addObject()
                 .put("type", "callback").putObject("value").put("action", "reply_mode_probe");
         }
         payload.put("messageType", "interactive_update".equals(type) ? type : "interactive").set("content", card);
@@ -56,26 +58,26 @@ public final class FeishuMessageCards {
     private static void form(ArrayNode elements, JsonNode source) {
         boolean allowed = source.path("replyFullAllowed").asBoolean();
         if (!allowed) {
-            elements.addObject().put("tag", "markdown").put("content", "本群已设为仅发送链接。");
+            elements.addObject().put("tag", "markdown").put("content", Messages.text("error.chat.chatReplyPreferenceService.validate.1"));
         }
         var controls = elements.addObject().put("tag", "form").put("name", "reply_mode_form").putArray("elements");
         var defaultChoice = controls.addObject().put("tag", "checker").put("name", "saveDefault").put("checked", false);
         defaultChoice.putObject("text").put("tag", "plain_text").put("content", source.path("replyDirect").asBoolean()
-            ? "设为我在此私聊的默认方式" : "设为我在本群的默认方式");
+            ? Messages.text("text.chat.feishuMessageCards.form.1") : Messages.text("text.chat.feishuMessageCards.form.2"));
         for (String mode : new String[]{"chat_full", "summary_link"}) {
             boolean full = "chat_full".equals(mode);
             boolean selected = source.path("replyFull").asBoolean() == full;
-            var choice = button(controls, (full ? "直接回复内容" : "仅发送链接") + (selected ? " · 当前" : ""), selected ? "primary" : "default")
+            var choice = button(controls, (full ? Messages.text("text.chat.chatReplyCommandService.label.1") : Messages.text("text.chat.chatReplyCommandService.label.2")) + (selected ? Messages.text("text.chat.feishuMessageCards.form.3") : ""), selected ? "primary" : "default")
                 .put("name", mode).put("action_type", "form_submit").put("disabled", full && !allowed);
             if (full && !allowed) {
-                choice.putObject("disabled_tips").put("tag", "plain_text").put("content", "本群已设为仅发送链接");
+                choice.putObject("disabled_tips").put("tag", "plain_text").put("content", Messages.text("text.chat.feishuMessageCards.form.4"));
             }
             choice.putArray("behaviors").addObject().put("type", "callback").putObject("value")
                 .put("action", "reply_mode_save").put("outputVisibility", mode)
                 .put("expectedRevision", source.path("replyModeRevision").asLong())
                 .put("expectedDefaultRevision", source.path("replyDefaultRevision").asLong());
         }
-        button(controls, "收起", "default").put("name", "close").put("action_type", "form_submit")
+        button(controls, Messages.text("text.chat.feishuMessageCards.form.5"), "default").put("name", "close").put("action_type", "form_submit")
             .putArray("behaviors").addObject().put("type", "callback").putObject("value").put("action", "reply_mode_close");
     }
 

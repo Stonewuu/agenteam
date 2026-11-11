@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.workspace.WorkspaceSearchMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -28,27 +30,27 @@ public class WorkspaceSearchService {
     }
 
     private static final List<SearchMenu> MENUS = List.of(
-        menu("user", "home", "工作台", "workspace.view"),
-        menu("user", "conversations", "对话任务", "conversation.view"),
-        menu("user", "new", "新建任务", "agent.run"),
-        menu("user", "employees", "数字员工", "agent.market_view", "agent.run", "agent.hire", "agent.hire_approve"),
-        menu("user", "schedules", "定时任务", "schedule.view"),
-        menu("user", "todos", "我的待办", "todo.view"),
-        menu("user", "environment", "我的环境", "agent.run"),
-        menu("capabilities", "capabilities/agents", "智能体", "agent.view", "agent.create"),
-        menu("capabilities", "capabilities/skills", "技能", "skill.view", "skill.create"),
-        menu("capabilities", "capabilities/plugins", "插件", "plugin.view", "plugin.create"),
-        menu("capabilities", "capabilities/workflows", "工作流", "workflow.view", "workflow.create"),
-        menu("capabilities", "capabilities/knowledge", "知识库", "knowledge.view", "knowledge.create"),
-        menu("capabilities", "capabilities/data", "数据源", "data.view", "data.create"),
-        menu("admin", "admin/overview", "企业概览", "enterprise.view"),
-        menu("admin", "admin/members", "成员管理", "enterprise.members.view"),
-        menu("admin", "admin/invitations", "成员邀请", "enterprise.members.view"),
-        menu("admin", "admin/teams", "团队管理", "enterprise.teams.view"),
-        menu("admin", "admin/roles", "角色管理", "enterprise.roles.view"),
-        menu("admin", "admin/credentials", "连接凭据", "credential.manage"),
-        menu("admin", "admin/usage", "执行用量", "usage.view"),
-        menu("admin", "admin/tool-logs", "调用日志", "tool_log.view"));
+        menu("user", "home", Messages.source("text.enterprise.enterpriseContextService.get.1"), "workspace.view"),
+        menu("user", "conversations", Messages.source("text.workspace.workspaceSearchService.MENUS.1"), "conversation.view"),
+        menu("user", "new", Messages.source("text.workspace.workspaceSearchService.MENUS.2"), "agent.run"),
+        menu("user", "employees", Messages.source("text.workspace.workspaceSearchService.MENUS.3"), "agent.market_view", "agent.run", "agent.hire", "agent.hire_approve"),
+        menu("user", "schedules", Messages.source("text.workspace.workspaceSearchService.MENUS.4"), "schedule.view"),
+        menu("user", "todos", Messages.source("text.workspace.workspaceSearchService.MENUS.5"), "todo.view"),
+        menu("user", "environment", Messages.source("text.workspace.workspaceSearchService.MENUS.6"), "agent.run"),
+        menu("capabilities", "capabilities/agents", Messages.source("label.resource.agent"), "agent.view", "agent.create"),
+        menu("capabilities", "capabilities/skills", Messages.source("label.resource.skill"), "skill.view", "skill.create"),
+        menu("capabilities", "capabilities/plugins", Messages.source("label.resource.plugin"), "plugin.view", "plugin.create"),
+        menu("capabilities", "capabilities/workflows", Messages.source("label.resource.workflow"), "workflow.view", "workflow.create"),
+        menu("capabilities", "capabilities/knowledge", Messages.source("label.resource.knowledge"), "knowledge.view", "knowledge.create"),
+        menu("capabilities", "capabilities/data", Messages.source("label.resource.data"), "data.view", "data.create"),
+        menu("admin", "admin/overview", Messages.source("text.workspace.workspaceSearchService.MENUS.7"), "enterprise.view"),
+        menu("admin", "admin/members", Messages.source("text.workspace.workspaceSearchService.MENUS.8"), "enterprise.members.view"),
+        menu("admin", "admin/invitations", Messages.source("text.workspace.workspaceSearchService.MENUS.9"), "enterprise.members.view"),
+        menu("admin", "admin/teams", Messages.source("text.workspace.workspaceSearchService.MENUS.10"), "enterprise.teams.view"),
+        menu("admin", "admin/roles", Messages.source("text.workspace.workspaceSearchService.MENUS.11"), "enterprise.roles.view"),
+        menu("admin", "admin/credentials", Messages.source("text.workspace.workspaceSearchService.MENUS.12"), "credential.manage"),
+        menu("admin", "admin/usage", Messages.source("text.workspace.workspaceSearchService.MENUS.13"), "usage.view"),
+        menu("admin", "admin/tool-logs", Messages.source("text.workspace.workspaceSearchService.MENUS.14"), "tool_log.view"));
     private final PermissionMapper permissions;
     private final ResourceAuthorizationService access;
     private final WorkspaceSearchMapper search;
@@ -85,9 +87,9 @@ public class WorkspaceSearchService {
                 .limit(10).map(menu -> new Item(menu.path(), menu.label(), "", "menu", menu.path(), null, null, null))
                 .toList();
             add(groups, area, switch (area) {
-                case "user" -> "用户端";
-                case "capabilities" -> "能力中心";
-                default -> "管理端";
+                case "user" -> Messages.text("text.workspace.workspaceSearchService.get.1");
+                case "capabilities" -> Messages.text("text.workspace.workspaceSearchService.get.2");
+                default -> Messages.text("text.workspace.workspaceSearchService.get.3");
             }, items);
         }
         // 空输入只提供已有菜单，不主动列出个人内容。
@@ -96,16 +98,16 @@ public class WorkspaceSearchService {
         }
         if (codes.contains("workspace.view")) {
             if (codes.contains("conversation.view")) {
-                add(groups, "conversations", "对话", conversations.search(actor, query).stream().map(value ->
+                add(groups, "conversations", Messages.text("text.execution.userQuestionTool.list.1"), conversations.search(actor, query).stream().map(value ->
                     new Item(value.key(), value.title(), value.collaboration() == null ? value.conversation().agentName()
-                        : "协作任务 · " + String.join("、", value.collaboration().roles().stream().map(role -> role.name()).toList()),
+                        : Messages.text("text.workspace.workspaceSearchService.get.4", String.join("、", value.collaboration().roles().stream().map(role -> role.name()).toList())),
                         "conversation", value.conversation().id(), null, value.conversation().agentIcon(), value.conversation().agentColor())).toList());
             }
             boolean mine = codes.contains("agent.run");
             var market = codes.contains("agent.market_view") ? access.scope(actor, "agent", "agent.market_view",
                 ResourceCapability.USE) : null;
             if (mine || market != null) {
-                add(groups, "employees", "数字员工",
+                add(groups, "employees", Messages.text("text.workspace.workspaceSearchService.MENUS.3"),
                     search.employees(actor.enterpriseId(), actor.userId(), query, mine, market));
             }
         }
@@ -116,7 +118,7 @@ public class WorkspaceSearchService {
                     scopes.add(access.scope(actor, kind, kind + ".view", ResourceCapability.VIEW));
                 }
             }
-            add(groups, "resources", "能力中心", search.resources(scopes, query));
+            add(groups, "resources", Messages.text("text.workspace.workspaceSearchService.get.2"), search.resources(scopes, query));
         }
         return new SearchResultView(List.copyOf(groups));
     }

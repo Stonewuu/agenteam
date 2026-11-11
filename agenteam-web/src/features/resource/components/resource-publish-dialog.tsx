@@ -3,6 +3,7 @@
 import {localizeUiMessage} from "@/lib/i18n/ui-message";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {resourceDisplayName, resourceDisplayDescription} from "../lib/resource-localization";
 
 import {Fieldset} from "@/components/ui/fieldset";
 import {Checkbox} from "@/components/ui/checkbox";
@@ -20,7 +21,7 @@ import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {useConfirmClose} from "@/features/workspace/components/use-confirm-close";
 import type {Grant, Listing, ResourceDetail, ResourceSummary} from "../types/resource";
-import {resourceLabel} from "../lib/resource-display";
+import {resourceSingularLabel} from "../lib/resource-display";
 import {TextField} from "./resource-fields";
 import {GrantFields} from "./resource-access-dialog";
 import {AgentUseScopeFields} from "./agent-use-scope-fields";
@@ -37,7 +38,7 @@ export function ResourcePublishDialog({enterpriseId, resource, onClose, onChange
   const uiText = useT();
   const detail = useApiQuery<ResourceDetail>(organizationPath(enterpriseId, `/resources/${encodeURIComponent(resource.id)}`));
   if (!detail.data) {
-    return <Dialog title={uiText("发布{0}“{1}”", [resourceLabel(resource.kind), resource.name])}
+    return <Dialog title={uiText("发布{0}“{1}”", [resourceSingularLabel(resource.kind, uiText), resourceDisplayName(resource, uiText)])}
                    onClose={onClose}><QueryState {...detail} hasData={false}
                                                  empty={uiText("无法读取待发布内容。")}/></Dialog>;
   }
@@ -67,7 +68,7 @@ function PublishForm({enterpriseId, detail, onClose, onChanged}: {
   const {resource} = detail;
   const publishUseGrants = resource.kind === "agent" && listing.listed && resource.allowedActions.includes("grants");
   const errors = [...Object.values(detail.fieldErrors), ...Object.values(action.fieldErrors)].flat();
-  return <Dialog title={uiText("发布{0}“{1}”", [resourceLabel(resource.kind), resource.name])} onClose={onClose}
+  return <Dialog title={uiText("发布{0}“{1}”", [resourceSingularLabel(resource.kind, uiText), resourceDisplayName(resource, uiText)])} onClose={onClose}
                  dialogRef={closing.dialogRef} onRequestClose={closing.canClose} busy={action.busy}>
     <DialogForm className={ui.form} onSubmit={(event) => {
       event.preventDefault();
@@ -82,7 +83,7 @@ function PublishForm({enterpriseId, detail, onClose, onChanged}: {
         });
       });
     }}>
-      <p className={ui.description}>{resource.description}</p>
+      <p className={ui.description}>{resourceDisplayDescription(resource, uiText)}</p>
       <TextField label={uiText("发布说明")} name="releaseNote" value={note} onChange={setNote} maximum={500} required
                  multiline errors={action.fieldErrors}/>
       <Fieldset className={styles.editorFields} disabled={action.busy}>

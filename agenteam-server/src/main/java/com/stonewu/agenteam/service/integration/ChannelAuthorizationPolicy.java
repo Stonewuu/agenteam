@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
@@ -35,7 +37,7 @@ public class ChannelAuthorizationPolicy {
         if (row == null || !"enabled".equals(row.getStatus()) || row.getIdentityVerifiedAt() == null
             || row.getExternalTenantId() == null || "bind".equals(purpose) && !Boolean.TRUE.equals(row.getBindingEnabled())
             || "login".equals(purpose) && (!Boolean.TRUE.equals(row.getLoginEnabled()) || !"enterprise".equals(row.getPurpose()))) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHANNEL_UNAVAILABLE", "此接入暂时无法授权，请联系企业管理员。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHANNEL_UNAVAILABLE", Messages.text("error.integration.channelAuthorizationPolicy.connection.1"));
         }
         var enterprise = enterprises.findById(row.getEnterpriseId());
         if (enterprise.isEmpty() || !"active".equals(enterprise.get().status())) {
@@ -71,6 +73,6 @@ public class ChannelAuthorizationPolicy {
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "CHANNEL_AUTHORIZATION_EXPIRED", "本次授权已失效，请重新发起。");
+        return new ApiException(HttpStatus.CONFLICT, "CHANNEL_AUTHORIZATION_EXPIRED", Messages.text("error.integration.channelAuthorizationPolicy.unavailable.1"));
     }
 }

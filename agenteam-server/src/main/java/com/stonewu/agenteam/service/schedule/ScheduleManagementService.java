@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.schedule.ScheduleMapper;
 import com.stonewu.agenteam.mapper.schedule.ScheduleRuleMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -66,7 +68,7 @@ public class ScheduleManagementService {
         String id = UUID.randomUUID().toString();
         schedules.create(id, actor.enterpriseId(), actor.userId(), definition.schedule(), clock.instant());
         targets.replace(actor.enterpriseId(), id, definition.action().recipients());
-        audit.record(actor.enterpriseId(), actor.user(), "schedule.create", "schedule", id, "创建本人定时任务",
+        audit.record(actor.enterpriseId(), actor.user(), "schedule.create", "schedule", id, Messages.text("text.schedule.scheduleManagementService.create.1"),
             Map.of("enabled", input.enabled(), "userActivity", userActivity));
         return queries.view(policy.require(actor, id, false, false));
     }
@@ -84,7 +86,7 @@ public class ScheduleManagementService {
         schedules.update(before, definition.schedule(), clock.instant());
         targets.replace(actor.enterpriseId(), id, definition.action().recipients());
         audit.record(actor.enterpriseId(), actor.user(), "schedule.update", "schedule", id,
-            "修改本人计划的未来执行设置",
+            Messages.text("text.schedule.scheduleManagementService.update.1"),
             Map.of("enabled", input.enabled(), "maxRetries", input.maxRetries(), "userActivity", userActivity));
         return queries.view(policy.require(actor, id, false, false));
     }
@@ -105,7 +107,7 @@ public class ScheduleManagementService {
         }
         schedules.enabled(before, enabled, enabled ? next(before.rule()) : null, clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "schedule.enabled", "schedule", id,
-            enabled ? "启用本人定时任务" : "暂停本人计划的未来触发",
+            enabled ? Messages.text("text.schedule.scheduleManagementService.enabled.1") : Messages.text("text.schedule.scheduleManagementService.enabled.2"),
             Map.of("enabled", enabled, "userActivity", userActivity));
         return queries.view(policy.require(actor, id, false, false));
     }
@@ -119,7 +121,7 @@ public class ScheduleManagementService {
         var before = policy.require(actor, id, true, false);
         policy.revision(before, revision);
         if (!actions.require(before.actionType(), before.actionSchemaVersion()).usesAgent()) {
-            throw ApiException.invalidField("action.type", "此操作不使用智能体版本，无需升级员工版本。");
+            throw ApiException.invalidField("action.type", Messages.text("error.schedule.scheduleManagementService.upgrade.1"));
         }
         var selected = policy.select(actor, before.hireId(), null);
         if (selected.versionId().equals(before.agentVersionId())) {
@@ -127,7 +129,7 @@ public class ScheduleManagementService {
         }
         schedules.upgrade(before, selected.versionId(), clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "schedule.upgrade", "schedule", id,
-            "更新本人计划未来使用的员工版本",
+            Messages.text("text.schedule.scheduleManagementService.upgrade.1"),
             Map.of("beforeVersionId", before.agentVersionId(), "afterVersionId", selected.versionId(), "userActivity",
                 userActivity));
         return queries.view(policy.require(actor, id, false, false));
@@ -142,13 +144,13 @@ public class ScheduleManagementService {
         var before = policy.require(actor, id, true, false);
         policy.revision(before, revision);
         if (before.enabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_ENABLED", "请先暂停计划，再执行删除。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_ENABLED", Messages.text("error.schedule.scheduleManagementService.delete.1"));
         }
         if (before.activeOccurrenceId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_BUSY", "此计划还有未结束的任务，请先停止或等待结束。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_BUSY", Messages.text("error.schedule.scheduleManagementService.delete.2"));
         }
         schedules.delete(before, clock.instant());
-        audit.record(actor.enterpriseId(), actor.user(), "schedule.delete", "schedule", id, "删除本人已暂停的定时任务",
+        audit.record(actor.enterpriseId(), actor.user(), "schedule.delete", "schedule", id, Messages.text("text.schedule.scheduleManagementService.delete.1"),
             Map.of("userActivity", userActivity));
     }
 
@@ -166,7 +168,7 @@ public class ScheduleManagementService {
     private Instant next(ScheduleRule rule) {
         var upcoming = times.next(rule, clock.instant(), 1);
         if (upcoming.isEmpty()) {
-            throw ApiException.invalidField("localDate", "此计划已经没有未来执行时间，请修改日期后再启用。");
+            throw ApiException.invalidField("localDate", Messages.text("error.schedule.scheduleManagementService.next.1"));
         }
         return upcoming.getFirst().instant();
     }

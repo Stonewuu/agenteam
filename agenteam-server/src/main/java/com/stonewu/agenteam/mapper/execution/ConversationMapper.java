@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.execution.entity.ConversationQueryRow;
 import com.stonewu.agenteam.model.execution.entity.ConversationRecord;
 import com.stonewu.agenteam.model.execution.entity.ModelSelection;
@@ -107,7 +109,7 @@ public class ConversationMapper {
     public void activate(String enterprise, String id, String run, Instant now) {
         int changed = statements.activateAgentConversation(run, timestamp(now), enterprise, id);
         if (changed != 1) {
-            throw new IllegalStateException("会话已被其他执行占用，当前提交未保存");
+            throw new IllegalStateException(Messages.text("error.execution.conversationMapper.activate.1"));
         }
     }
 
@@ -163,7 +165,7 @@ public class ConversationMapper {
 
     public void enableLiveEvents(ConversationRecord row) {
         if (!row.liveEvents() && statements.enableLiveEvents(row.enterpriseId(), row.userId(), row.id()) != 1) {
-            throw new IllegalStateException("对话仍有进行中的执行，不能切换事件读取方式");
+            throw new IllegalStateException(Messages.text("error.execution.conversationMapper.enableLiveEvents.1"));
         }
     }
 }

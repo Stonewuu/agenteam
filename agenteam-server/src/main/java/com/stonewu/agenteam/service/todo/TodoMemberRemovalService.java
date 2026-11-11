@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.todo.TodoMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -47,7 +49,7 @@ public class TodoMemberRemovalService {
         var rows = todos.ownedOpen(actor.enterpriseId(), owner);
         var actual = rows.stream().map(row -> new TodoItem(row.id(), row.revision(), row.teamId())).toList();
         if (!actual.equals(expected)) {
-            throw new ApiException(HttpStatus.CONFLICT, "DEPENDENCIES_CHANGED", "未结束待办已变化，请重新查看移除影响。");
+            throw new ApiException(HttpStatus.CONFLICT, "DEPENDENCIES_CHANGED", Messages.text("error.todo.todoMemberRemovalService.process.1"));
         }
         if (rows.isEmpty()) {
             return;
@@ -56,7 +58,7 @@ public class TodoMemberRemovalService {
             if (Objects.equals(owner, recipient) || recipient == null || permissions.operationScope(recipient,
                 actor.enterpriseId(), "todo.manage").isEmpty()
                 || permissions.operationScope(recipient, actor.enterpriseId(), "todo.view").isEmpty()) {
-                throw ApiException.invalidField("todoOwnerId", "请选择仍可查看和处理本人待办的有效成员。");
+                throw ApiException.invalidField("todoOwnerId", Messages.text("error.todo.todoMemberRemovalService.process.2"));
             }
             for (var row : rows) {
                 try {
@@ -74,7 +76,7 @@ public class TodoMemberRemovalService {
             }
             var after = todos.current(actor.enterpriseId(), before.id()).orElseThrow();
             history.record(actor, cancel ? "cancel" : "transfer", before, after,
-                cancel ? "成员移除时取消未结束待办" : "成员移除时转交待办");
+                cancel ? Messages.text("text.todo.todoMemberRemovalService.process.1") : Messages.text("text.todo.todoMemberRemovalService.process.2"));
             if (!cancel) {
                 notifications.assigned(actor, after, false);
             }

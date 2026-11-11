@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRule;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRule.Frequency;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleTime;
@@ -17,7 +19,7 @@ import java.util.TreeMap;
 public class ScheduleTimeCalculator {
     public List<ScheduleTime> next(ScheduleRule rule, Instant after, int count) {
         if (count < 1 || count > 100) {
-            throw new IllegalArgumentException("读取的计划时间数量必须在一至一百之间");
+            throw new IllegalArgumentException(Messages.text("error.schedule.scheduleTimeCalculator.next.1"));
         }
         if (rule.frequency() == Frequency.ONCE) {
             var time = resolve(rule.date().atTime(rule.time()), rule.timezone());
@@ -46,7 +48,7 @@ public class ScheduleTimeCalculator {
             return List.of();
         }
         if (Duration.between(from, through).compareTo(Duration.ofDays(30)) > 0) {
-            throw new IllegalArgumentException("超过三十天的计划需要重新确认时间");
+            throw new IllegalArgumentException(Messages.text("error.schedule.scheduleTimeCalculator.between.1"));
         }
         return next(rule, from.minusNanos(1), 33).stream().filter(time -> !time.instant().isAfter(through)).toList();
     }
@@ -63,7 +65,7 @@ public class ScheduleTimeCalculator {
         }
         var transition = rules.getTransition(requested);
         if (transition == null || !transition.isGap()) {
-            throw new IllegalArgumentException("无法计算所选时间的时区变化");
+            throw new IllegalArgumentException(Messages.text("error.schedule.scheduleTimeCalculator.resolve.1"));
         }
         var actual = requested.plus(transition.getDuration());
         return new ScheduleTime(actual.toInstant(transition.getOffsetAfter()), requested, actual,

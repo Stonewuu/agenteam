@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.security;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.security.ApplicationSecretKeys;
 import com.stonewu.agenteam.model.security.entity.EncryptedPayload;
@@ -37,7 +39,7 @@ public class PayloadEncryption {
             return new EncryptedPayload(version, Base64.getEncoder().encodeToString(nonce),
                 Base64.getEncoder().encodeToString(encrypted));
         } catch (Exception exception) {
-            throw new IllegalStateException("敏感内容无法加密保存", exception);
+            throw new IllegalStateException(Messages.text("error.security.payloadEncryption.encrypt.1"), exception);
         }
     }
 
@@ -54,7 +56,7 @@ public class PayloadEncryption {
             byte[] plain = cipher.doFinal(Base64.getDecoder().decode(payload.ciphertext()));
             return json.readValue(plain, type);
         } catch (Exception exception) {
-            throw new IllegalStateException("已保存的敏感内容无法读取", exception);
+            throw new IllegalStateException(Messages.text("error.security.payloadEncryption.decrypt.1"), exception);
         }
     }
 }

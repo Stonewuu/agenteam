@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.chat.ChatBotBindingMapper;
@@ -38,7 +40,7 @@ public class ChatWebhookService {
             .eq(ChatBotBindingRow::getPublicCallbackKey, key).eq(ChatBotBindingRow::getTransport, "webhook")
             .eq(ChatBotBindingRow::getStatus, "enabled")) : null;
         if (bot == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_CALLBACK_UNAVAILABLE", "平台回调入口不可用。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "CHAT_CALLBACK_UNAVAILABLE", Messages.text("error.chat.chatWebhookService.accept.1"));
         }
         var app = bots.application(bot);
         if (!app.providerCode().equals("feishu")) {

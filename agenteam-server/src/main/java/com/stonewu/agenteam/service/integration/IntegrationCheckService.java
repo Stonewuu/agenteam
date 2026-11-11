@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.integration.entity.ChannelApplicationCheck;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -33,7 +35,7 @@ public class IntegrationCheckService {
 
     public PreparedCheck prepare(UserEntity actor, String enterprise, boolean system, String id, long revision) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("应用网络校验不能在数据库事务内执行");
+            throw new IllegalStateException(Messages.text("error.integration.integrationCheckService.prepare.1"));
         }
         policy.require(actor, enterprise, system, "integration.test", false);
         var row = queries.require(enterprise, id);
@@ -45,7 +47,7 @@ public class IntegrationCheckService {
             var provider = providers.require(row.getProviderCode());
             return new PreparedCheck(enterprise, id, revision, provider.verify(application, secrets.load(enterprise, id)), null, null);
         } catch (ChannelProviderException failure) {
-            LOG.warn("企业应用校验失败，企业={}，接入={}", enterprise, id, failure);
+            LOG.warn(Messages.log("log.integration.integrationCheckService.prepare.1"), enterprise, id, failure);
             return new PreparedCheck(enterprise, id, revision, null, failure.code(), failure.getMessage());
         }
     }

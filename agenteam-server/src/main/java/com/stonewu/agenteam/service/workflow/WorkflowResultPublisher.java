@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,7 +48,7 @@ public class WorkflowResultPublisher {
             ids.removeAll(state.blocks().keySet());
             if (state.blocks().size() + ids.size() > 500) {
                 throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_OUTPUT_LIMIT",
-                    "本次输出已达到允许的长度，请缩小任务范围后重试。");
+                    Messages.text("error.agent.agentPublicEventMapper.outputLimit.1"));
             }
             return null;
         });
@@ -91,7 +93,7 @@ public class WorkflowResultPublisher {
         String text = text(output);
         if (text.length() > 200000) {
             throw new ApiException(HttpStatus.CONFLICT, "WORKFLOW_OUTPUT_TOO_LARGE",
-                "流程最终正文过长，请减少结果或通过附件返回。");
+                Messages.text("error.workflow.workflowResultPublisher.prepare.1"));
         }
         var input = messages.find(context.run().enterpriseId(), context.run().conversationId(),
             context.run().inputMessageId()).orElseThrow();
@@ -131,7 +133,7 @@ public class WorkflowResultPublisher {
             return "```json\n" + json.writerWithDefaultPrettyPrinter()
                 .writeValueAsString(output.has("result") ? output.get("result") : output) + "\n```";
         } catch (Exception invalid) {
-            throw new IllegalStateException("流程最终结果无法显示", invalid);
+            throw new IllegalStateException(Messages.text("error.workflow.workflowResultPublisher.text.1"), invalid);
         }
     }
 
@@ -141,7 +143,7 @@ public class WorkflowResultPublisher {
         }
         if (blocks.size() >= 500) {
             throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_OUTPUT_LIMIT",
-                "本次输出已达到允许的长度，请缩小任务范围后重试。");
+                Messages.text("error.agent.agentPublicEventMapper.outputLimit.1"));
         }
         blocks.put(block.id(), block);
         changes.add(ExecutionChange.replace(block));
@@ -149,6 +151,6 @@ public class WorkflowResultPublisher {
 
     private static ApiException invalidReference() {
         return new ApiException(HttpStatus.CONFLICT, "WORKFLOW_REFERENCE_INVALID",
-            "流程返回的附件或引用不属于本次已经取得的资料。");
+            Messages.text("error.workflow.workflowResultPublisher.invalidReference.1"));
     }
 }

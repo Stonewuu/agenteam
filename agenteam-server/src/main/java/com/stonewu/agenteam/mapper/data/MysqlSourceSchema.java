@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.data.entity.DataField;
 import com.stonewu.agenteam.model.data.entity.DataQueryBudget;
 import com.stonewu.agenteam.service.data.mysql.MysqlReadOnlyConnections;
@@ -23,7 +25,7 @@ public class MysqlSourceSchema {
                                        List<DataField> fields) throws SQLException {
         if (table == null || table.isBlank() || table.codePointCount(0, table.length()) > 64 || table.codePoints()
             .anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("sourceName", "请填写真实的表名或视图名。");
+            throw ApiException.invalidField("sourceName", Messages.text("error.data.mysqlSourceSchema.require.1"));
         }
         var budget = new DataQueryBudget(session.deadline());
         if (session.mapper().findTables(session.database(), table, budget).stream().noneMatch(table::equals)) {
@@ -51,10 +53,10 @@ public class MysqlSourceSchema {
             var column = columns.get(field.name());
             if (column == null || column.type().equals("unsupported") || !compatible(column, field)) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_SOURCE_FIELD_MISMATCH",
-                    "所选字段不存在或与数据库类型不匹配，请重新检查集合字段。", Map.of("field", field.name()), Map.of());
+                    Messages.text("error.data.mysqlSourceSchema.require.2"), Map.of("field", field.name()), Map.of());
             }
             if (!field.nullable() && column.nullable()) {
-                throw ApiException.invalidField("fields", "数据库允许空值的字段不能声明为非空。");
+                throw ApiException.invalidField("fields", Messages.text("error.data.mysqlSourceSchema.require.3"));
             }
         }
         return Map.copyOf(columns);
@@ -83,6 +85,6 @@ public class MysqlSourceSchema {
 
     private ApiException unavailable() {
         return new ApiException(HttpStatus.NOT_FOUND, "DATA_SOURCE_TABLE_UNAVAILABLE",
-            "所选数据表或视图不存在，或连接账号没有读取权限。");
+            Messages.text("error.data.mysqlSourceSchema.unavailable.1"));
     }
 }

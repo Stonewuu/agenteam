@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
@@ -83,8 +85,8 @@ public class WecomQuestionCardService {
         if (answer == null) {
             sessions.select(actor, group.getId(), bot.getId(), source.getTaskId(), receipt.getReceivedAt());
         }
-        String notice = answer == null ? ("group".equals(group.getConversationKind()) ? "请 @ 我输入这个问题的回答。" : "请输入这个问题的回答。")
-            : "已收到你的回答。";
+        String notice = answer == null ? ("group".equals(group.getConversationKind()) ? Messages.text("text.chat.chatCardInteractionTransactions.accept.3") : Messages.text("text.chat.chatCardInteractionTransactions.accept.2"))
+            : Messages.text("text.chat.chatCardInteractionTransactions.accept.4");
         outbound.text(bot.getEnterpriseId(), group.getId(), bot.getId(), source.getTaskId(), null,
             "question-reply:" + (answer == null ? receipt.getId() : answer.id()), "question_answered", notice, null);
         return true;
@@ -100,7 +102,7 @@ public class WecomQuestionCardService {
         } catch (ApiException unavailable) {
             return;
         }
-        String notice = "QUESTION_ALREADY_ANSWERED".equals(code) ? "这个问题已经回答，无需再次选择。" : "这个问题已结束，请继续当前对话。";
+        String notice = "QUESTION_ALREADY_ANSWERED".equals(code) ? Messages.text("error.chat.wecomQuestionCardService.rejected.1") : Messages.text("error.execution.runQuestionService.unavailable.1");
         // 提示属于当前已核验会话，不依赖已经取消或结束的任务仍允许发送。
         outbound.text(bot.getEnterpriseId(), target.group().getId(), bot.getId(), null, null,
             "question-rejected:" + receipt.getId(), "question_rejected", notice, null);

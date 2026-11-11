@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -16,7 +18,7 @@ public final class ExceptionDiagnostics {
         if (failure == null || visited.containsKey(failure)) {
             return null;
         }
-        var safe = new IllegalStateException("响应解析失败，原异常类型：" + failure.getClass().getName());
+        var safe = new IllegalStateException(Messages.log("error.http.exceptionDiagnostics.copy.1", failure.getClass().getName()));
         visited.put(failure, safe);
         safe.setStackTrace(failure.getStackTrace());
         var cause = copy(failure.getCause(), visited);

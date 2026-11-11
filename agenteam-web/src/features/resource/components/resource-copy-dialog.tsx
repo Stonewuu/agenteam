@@ -1,6 +1,7 @@
 "use client";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {resourceDisplayName} from "../lib/resource-localization";
 
 import {Button} from "@/components/ui/button";
 
@@ -12,7 +13,7 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {useConfirmClose} from "@/features/workspace/components/use-confirm-close";
 import type {ResourceDetail, ResourceSummary} from "../types/resource";
-import {resourceLabel, resourcePage} from "../lib/resource-display";
+import {resourceSingularLabel, resourcePage} from "../lib/resource-display";
 import {TextField} from "./resource-fields";
 import ui from "@/components/ui/surface.module.css";
 
@@ -23,11 +24,11 @@ export function ResourceCopyDialog({enterpriseId, resource, onClose}: {
 }) {
   const uiText = useT();
   const router = useRouter();
-  const initial = uiText("{0} 副本", [resource.name.slice(0, 77)]);
+  const initial = uiText("{0} 副本", [resourceDisplayName(resource, uiText).slice(0, 77)]);
   const [name, setName] = useState(initial);
   const action = useFormAction();
   const closing = useConfirmClose(name !== initial, action.busy, onClose);
-  return <Dialog title={uiText("复制{0}“{1}”", [resourceLabel(resource.kind), resource.name])} onClose={onClose}
+  return <Dialog title={uiText("复制{0}“{1}”", [resourceSingularLabel(resource.kind, uiText), resourceDisplayName(resource, uiText)])} onClose={onClose}
                  dialogRef={closing.dialogRef} onRequestClose={closing.canClose} busy={action.busy}><DialogForm
     className={ui.form} onSubmit={(event) => {
     event.preventDefault();

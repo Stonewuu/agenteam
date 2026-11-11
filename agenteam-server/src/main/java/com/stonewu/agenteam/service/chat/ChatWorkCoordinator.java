@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested;
 import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
@@ -51,7 +53,7 @@ public class ChatWorkCoordinator implements MessageListener, AutoCloseable {
                 try {
                     redis.convertAndSend(topic, instance);
                 } catch (RuntimeException unavailable) {
-                    LOG.debug("聊天发送通知暂未送达，数据库工作仍会由定时检查处理");
+                    LOG.debug(Messages.log("log.chat.chatWorkCoordinator.init.1"));
                 }
             }
             return false;

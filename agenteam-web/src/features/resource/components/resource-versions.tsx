@@ -14,6 +14,7 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import {useConfirmClose} from "@/features/workspace/components/use-confirm-close";
 import type {ResourceDetail, ResourceSummary, ResourceVersion, VersionSummary} from "../types/resource";
+import {resourceDisplayName} from "../lib/resource-localization";
 import {ResourceConfigForm} from "./resource-config-form";
 import {TextField} from "./resource-fields";
 import {EnterpriseDateTime} from "@/features/auth/components/enterprise-date-time";
@@ -38,7 +39,7 @@ export function ResourceVersions({enterpriseId, resource, permissions, onLoaded,
                                                                                       key={version.id}>
         <div className={styles.line}><h3>{uiText("版本 ")}{version.versionNo}</h3><span
           className={ui.chip}>{version.status === "revoked" ? uiText("已撤销") : uiText("已发布")}</span></div>
-        <p className={ui.description}>{version.releaseNote}</p><p
+        <p className={ui.description}>{resource.source === "builtin" ? uiText(version.releaseNote) : version.releaseNote}</p><p
         className={styles.secondary}>{version.publishedBy.displayName} · <EnterpriseDateTime
         value={version.publishedAt}/></p>
         <div className={ui.footer}><Button className={ui.button} type="button" onClick={() => {
@@ -79,7 +80,7 @@ function VersionContent({enterpriseId, resource, version, permissions, onClose}:
 }) {
   const uiText = useT();
   const detail = useApiQuery<ResourceVersion>(organizationPath(enterpriseId, `/resources/${encodeURIComponent(resource.id)}/versions/${encodeURIComponent(version.id)}`));
-  return <Dialog title={uiText("版本 {0} · {1}", [version.versionNo, version.name])} onClose={onClose}
+  return <Dialog title={uiText("版本 {0} · {1}", [version.versionNo, resourceDisplayName({...resource, name: version.name}, uiText)])} onClose={onClose}
                  wide={resource.kind === "workflow"}>
     <QueryState {...detail} hasData={Boolean(detail.data)} empty={uiText("无法读取此版本。")}>{detail.data &&
       <Fieldset className={styles.editorFields} disabled={resource.kind !== "workflow"}>
@@ -87,7 +88,7 @@ function VersionContent({enterpriseId, resource, version, permissions, onClose}:
                             onChange={() => {
                             }} permissions={permissions} errors={{}} readOnly/>
         {detail.data.dependencies.length > 0 && <section className={styles.section}>
-          <h2>{uiText("引用内容")}</h2>{detail.data.dependencies.map((value, index) => <p key={index}>{value.name}</p>)}
+          <h2>{uiText("引用内容")}</h2>{detail.data.dependencies.map((value, index) => <p key={index}>{resourceDisplayName(value, uiText)}</p>)}
         </section>}
       </Fieldset>}</QueryState>
   </Dialog>;

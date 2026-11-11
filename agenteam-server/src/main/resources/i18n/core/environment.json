@@ -1,0 +1,142 @@
+{
+  "error.environment.dockerUserEnvironmentRuntime.manage.1": {
+    "zh-CN": "不支持此环境操作。",
+    "en": "This environment operation is unsupported."
+  },
+  "error.environment.dockerUserTerminalRuntime.exchange.1": {
+    "zh-CN": "请先连接环境，再打开终端。",
+    "en": "Connect to your environment before opening the terminal."
+  },
+  "error.environment.dockerUserTerminalRuntime.exchange.2": {
+    "zh-CN": "请重新连接终端。",
+    "en": "Reconnect to the terminal."
+  },
+  "error.environment.dockerUserTerminalRuntime.update.1": {
+    "zh-CN": "其他窗口已连接此终端，请重新连接后操作。",
+    "en": "Another window has connected to this terminal. Reconnect to continue."
+  },
+  "error.environment.dockerUserTerminalRuntime.update.2": {
+    "zh-CN": "终端正在处理输入，请稍后再试。",
+    "en": "The terminal is processing input. Try again shortly."
+  },
+  "error.environment.environmentFileService.list.1": {
+    "zh-CN": "请重新加载文件列表。",
+    "en": "Reload the file list."
+  },
+  "error.environment.environmentFileService.list.2": {
+    "zh-CN": "搜索内容不能超过 200 个字符。",
+    "en": "Search text must not exceed 200 characters."
+  },
+  "error.environment.environmentTerminalProcess.start.1": {
+    "zh-CN": "缺少终端管理程序",
+    "en": "The terminal manager is missing."
+  },
+  "error.environment.environmentTerminalStore.require.1": {
+    "zh-CN": "终端连接已变化，请重新连接。",
+    "en": "The terminal connection has changed. Reconnect to continue."
+  },
+  "error.environment.environmentTerminalStore.readFully.1": {
+    "zh-CN": "终端输出未完整保存",
+    "en": "Terminal output was not saved completely."
+  },
+  "error.environment.environmentTerminalWorker.readFrame.1": {
+    "zh-CN": "终端数据超过允许范围",
+    "en": "Terminal data exceeds the allowed range."
+  },
+  "error.environment.environmentWorkspaceService.prepare.1": {
+    "zh-CN": "当前工作空间暂未开放环境连接，请联系管理员。",
+    "en": "Environment connections are not enabled for this workspace. Contact an administrator."
+  },
+  "error.environment.remoteUserEnvironmentRuntime.init.1": {
+    "zh-CN": "独立环境管理需要有效的服务地址和访问凭据。",
+    "en": "Standalone environment management requires a valid service URL and access credential."
+  },
+  "error.environment.remoteUserEnvironmentRuntime.manage.1": {
+    "zh-CN": "独立环境管理响应超过允许范围",
+    "en": "The standalone environment management response exceeds the allowed range."
+  },
+  "error.environment.remoteUserEnvironmentRuntime.manage.2": {
+    "zh-CN": "环境中仍有任务或命令正在运行，请结束后再停止。",
+    "en": "Tasks or commands are still running in this environment. End them before stopping it."
+  },
+  "error.environment.remoteUserEnvironmentRuntime.manage.3": {
+    "zh-CN": "暂无可用执行环境，请稍后连接。",
+    "en": "No execution environment is available. Connect again later."
+  },
+  "error.environment.remoteUserEnvironmentRuntime.manage.4": {
+    "zh-CN": "环境暂时无法连接，请稍后重试。",
+    "en": "The environment cannot be connected right now. Try again later."
+  },
+  "error.environment.remoteUserEnvironmentRuntime.manage.5": {
+    "zh-CN": "独立环境管理响应缺少有效状态",
+    "en": "The standalone environment management response has no valid status."
+  },
+  "error.environment.remoteUserTerminalRuntime.init.1": {
+    "zh-CN": "独立终端需要有效的服务地址和访问凭据。",
+    "en": "The standalone terminal requires a valid service URL and access credential."
+  },
+  "error.environment.remoteUserTerminalRuntime.exchange.1": {
+    "zh-CN": "独立终端响应超过允许范围",
+    "en": "The standalone terminal response exceeds the allowed range."
+  },
+  "error.environment.remoteUserTerminalRuntime.exchange.2": {
+    "zh-CN": "终端连接暂时不可用，请重新连接。",
+    "en": "The terminal connection is unavailable. Reconnect to continue."
+  },
+  "error.environment.remoteUserTerminalRuntime.exchange.3": {
+    "zh-CN": "独立终端响应缺少有效状态",
+    "en": "The standalone terminal response has no valid status."
+  },
+  "error.environment.remoteUserTerminalRuntime.exchange.4": {
+    "zh-CN": "终端暂时无法连接，请稍后重试。",
+    "en": "The terminal is temporarily unavailable. Try again shortly."
+  },
+  "text.environment.dockerUserTerminalRuntime.exchange.1": {
+    "zh-CN": "终端连接已中断，请重新连接。",
+    "en": "The terminal connection was interrupted. Reconnect to continue."
+  },
+  "log.environment.environmentTerminalWorker.run.1": {
+    "zh-CN": "终端诊断流读取失败，工作空间编号 {}，终端编号 {}",
+    "en": "Could not read terminal diagnostics; workspaceId={}, terminalId={}"
+  },
+  "text.environment.environmentTerminalWorker.run.1": {
+    "zh-CN": "环境文件已达到容量限制，请清理后继续。",
+    "en": "Your environment has reached its file limit. Free up space to continue."
+  },
+  "log.environment.environmentTerminalWorker.run.2": {
+    "zh-CN": "终端连接结束，工作空间编号 {}，终端编号 {}",
+    "en": "Terminal connection ended; workspaceId={}, terminalId={}"
+  },
+  "log.environment.environmentTerminalWorker.run.3": {
+    "zh-CN": "终端管理进程退出，工作空间编号 {}，终端编号 {}，退出码 {}",
+    "en": "Terminal manager exited; workspaceId={}, terminalId={}, exitCode={}"
+  },
+  "log.environment.environmentTerminalWorker.run.4": {
+    "zh-CN": "关闭终端连接失败，工作空间编号 {}，终端编号 {}",
+    "en": "Could not close the terminal connection; workspaceId={}, terminalId={}"
+  },
+  "log.environment.environmentTerminalWorker.read.1": {
+    "zh-CN": "终端输出读取失败，工作空间编号 {}，终端编号 {}",
+    "en": "Could not read terminal output; workspaceId={}, terminalId={}"
+  },
+  "log.environment.environmentTerminalWorker.finish.1": {
+    "zh-CN": "保存终端结束状态失败，工作空间编号 {}，终端编号 {}",
+    "en": "Could not save terminal end status; workspaceId={}, terminalId={}"
+  },
+  "log.environment.remoteUserEnvironmentRuntime.manage.1": {
+    "zh-CN": "独立环境管理失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}，错误码 {}",
+    "en": "Standalone environment management failed; workspaceId={}, method=POST, path={}, httpStatus={}, errorCode={}"
+  },
+  "log.environment.remoteUserEnvironmentRuntime.manage.2": {
+    "zh-CN": "独立环境管理请求失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}",
+    "en": "Standalone environment management request failed; workspaceId={}, method=POST, path={}, httpStatus={}"
+  },
+  "log.environment.remoteUserTerminalRuntime.exchange.1": {
+    "zh-CN": "独立终端失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}，错误码 {}",
+    "en": "Standalone terminal operation failed; workspaceId={}, method=POST, path={}, httpStatus={}, errorCode={}"
+  },
+  "log.environment.remoteUserTerminalRuntime.exchange.2": {
+    "zh-CN": "独立终端请求失败，工作空间编号 {}，方法 POST，路径 {}，HTTP 状态 {}",
+    "en": "Standalone terminal request failed; workspaceId={}, method=POST, path={}, httpStatus={}"
+  }
+}

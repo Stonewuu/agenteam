@@ -92,7 +92,7 @@ class RunWorkerLoggingTest {
             assertTrue(finished.await(3, TimeUnit.SECONDS), "后台执行应记录失败并完成原有状态处理");
         }
         verify(lifecycle).rejectClaim(lease, "MODEL_TEMPORARY_FAILURE", "模型暂不可用。");
-        assertTrue(output.getOut().contains("对话执行失败，执行编号 test-run，工作编号 test-job"));
+        assertTrue(output.getOut().contains("Conversation execution failed; executionId=test-run, jobId=test-job"));
         assertTrue(output.getOut().contains("Caused by: " + IOException.class.getName() + ": 测试模型连接失败"));
         assertTrue(output.getOut().contains("at " + RunWorker.class.getName() + ".execute("));
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.execution.response.RunApprovalView;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
@@ -21,12 +23,12 @@ public class ToolApprovalSummaryMapper {
             JsonNode value = redacted.get(key);
             if (value != null && !value.isNull()) {
                 String label = switch (key) {
-                    case "path" -> "文件";
-                    case "working_directory" -> "工作目录";
-                    case "recipient", "recipients", "to" -> "收件人";
-                    case "url" -> "地址";
-                    case "recordId", "recordIds" -> "记录";
-                    default -> "目标";
+                    case "path" -> Messages.text("text.tool.toolApprovalSummaryMapper.map.1");
+                    case "working_directory" -> Messages.text("text.tool.toolApprovalSummaryMapper.map.2");
+                    case "recipient", "recipients", "to" -> Messages.text("text.tool.toolApprovalSummaryMapper.map.3");
+                    case "url" -> Messages.text("text.tool.toolApprovalSummaryMapper.map.4");
+                    case "recordId", "recordIds" -> Messages.text("text.tool.toolApprovalSummaryMapper.map.5");
+                    default -> Messages.text("text.tool.toolApprovalSummaryMapper.map.6");
                 };
                 target = label + "：" + (value.isTextual() ? value.asText() : value.toString());
                 break;
@@ -37,8 +39,8 @@ public class ToolApprovalSummaryMapper {
             .contains(binding.config().path("builtinCode").asText());
         // 工具定义说明面向模型；用户确认只展示实际操作及可能产生的影响。
         String description = binding.readOnly() || WorkspaceToolDefinitions.handles(binding) ? ""
-            : platform ? "确认后将修改平台中的待办或定时任务，请核对操作内容。"
-            : "此工具可能修改外部数据，请核对全部参数后再决定。";
+            : platform ? Messages.text("text.tool.toolApprovalSummaryMapper.map.7")
+            : Messages.text("text.tool.toolApprovalSummaryMapper.map.8");
         return new RunApprovalView.Summary(abbreviate(title, 100),
             abbreviate(target, 500), description, redacted.toString(), null);
     }

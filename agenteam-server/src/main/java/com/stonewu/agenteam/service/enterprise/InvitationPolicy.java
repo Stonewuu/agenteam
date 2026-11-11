@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.enterprise.MemberTeamMapper;
@@ -37,13 +39,13 @@ public class InvitationPolicy {
 
     public void pending(InvitationEntity invitation, Instant now) {
         if (invitation.status().equals("revoked")) {
-            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_REVOKED", "邀请已撤回，请联系邀请人。");
+            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_REVOKED", Messages.text("error.enterprise.invitationPolicy.pending.1"));
         }
         if (invitation.status().equals("accepted")) {
-            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_ACCEPTED", "邀请已经接受，请登录后打开企业。");
+            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_ACCEPTED", Messages.text("error.enterprise.invitationPolicy.pending.2"));
         }
         if (invitation.status().equals("expired") || !invitation.expiresAt().isAfter(now)) {
-            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_EXPIRED", "邀请已过期，请联系邀请人重新邀请。");
+            throw new ApiException(HttpStatus.CONFLICT, "INVITATION_EXPIRED", Messages.text("error.enterprise.invitationPolicy.pending.3"));
         }
     }
 
@@ -56,7 +58,7 @@ public class InvitationPolicy {
             validateTeams(invitation.enterpriseId(), Set.copyOf(invitation.teamIds()), null, false);
         } catch (ResponseStatusException exception) {
             throw new ApiException(HttpStatus.CONFLICT, "INVITATION_CHANGED",
-                "邀请所需的权限、角色或团队已变化，请联系邀请人重新邀请。");
+                Messages.text("error.enterprise.invitationPolicy.validateIssuer.1"));
         }
     }
 
@@ -64,17 +66,17 @@ public class InvitationPolicy {
         Set<String> existing = userId == null ? Set.of() : memberships.teams(enterpriseId, userId);
         for (String id : teamIds) {
             var team = enterprises.findTeam(enterpriseId, id)
-                .orElseThrow(() -> ApiException.invalidField("teamIds", "所选团队不存在或不属于当前企业。"));
+                .orElseThrow(() -> ApiException.invalidField("teamIds", Messages.text("error.enterprise.invitationPolicy.validateTeams.1")));
             if (!team.status().equals("active")) {
-                throw ApiException.invalidField("teamIds", "所选团队已停用，请选择其他团队。");
+                throw ApiException.invalidField("teamIds", Messages.text("error.enterprise.invitationPolicy.validateTeams.2"));
             }
             if (checkCapacity && !existing.contains(id) && memberships.count(enterpriseId, id) >= 500) {
-                throw new ApiException(HttpStatus.CONFLICT, "TEAM_MEMBER_LIMIT", "所选团队人数已满，请联系邀请人调整。");
+                throw new ApiException(HttpStatus.CONFLICT, "TEAM_MEMBER_LIMIT", Messages.text("error.enterprise.invitationPolicy.validateTeams.3"));
             }
         }
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "邀请不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", Messages.text("error.enterprise.invitationPolicy.unavailable.1"));
     }
 }

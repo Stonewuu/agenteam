@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionEventSqlMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionEventStorageMapper;
@@ -83,7 +85,7 @@ public class ExecutionEventCompactionService {
         var removedIds = rows.stream().skip(1).map(AgentEventRow::getEventId).toList();
         if (statements.deleteMergedRows(first.getEnterpriseId(), first.getConversationId(),
             removedIds) != removedIds.size()) {
-            throw new IllegalStateException("历史事件在合并前已经变化，当前事务必须回滚");
+            throw new IllegalStateException(Messages.text("error.execution.executionEventCompactionService.save.1"));
         }
         storage.replace(first, values, rows.getLast().getSequenceNo());
         return new Result((int) rows.stream().filter(row -> row.getStorageVersion() == 1).count(), removedIds.size());

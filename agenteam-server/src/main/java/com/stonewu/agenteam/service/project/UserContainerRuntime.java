@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -61,7 +63,7 @@ public class UserContainerRuntime {
     public String daemon(Duration timeout, ToolCallControl control) {
         String id = docker.require(List.of("info", "--format={{.ID}}"), timeout, control).output().trim();
         if (id.isBlank()) {
-            throw DockerWorkspaceCommands.unavailable(new IOException("无法识别当前 Docker 执行节点"));
+            throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerRuntime.daemon.1")));
         }
         return id;
     }
@@ -95,7 +97,7 @@ public class UserContainerRuntime {
             if (!found.output().trim().equals(signature)) {
                 if (running(existing, remaining(deadline))) {
                     throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_CONFIGURATION_CHANGED",
-                        "执行环境配置已变化，请等待现有任务完成并回收后重试。");
+                        Messages.text("error.project.userContainerRuntime.startLocked.1"));
                 }
                 docker.remove(existing, remaining(deadline));
                 existing = null;
@@ -109,7 +111,7 @@ public class UserContainerRuntime {
         }
         String id = UserContainerOwnership.ownedId(docker, storagePath(location), remaining(deadline), control);
         if (id == null) {
-            throw DockerWorkspaceCommands.unavailable(new IOException("创建后未能确认用户容器归属"));
+            throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerRuntime.startLocked.2")));
         }
         if (!running(id, remaining(deadline))) {
             String active = docker.require(
@@ -117,7 +119,7 @@ public class UserContainerRuntime {
                 remaining(deadline), control).output();
             if (active.lines().filter(value -> !value.isBlank()).count() >= lifecycle.maximumRunning()) {
                 throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "SANDBOX_CAPACITY",
-                    "执行环境正在被其他任务使用，请稍后重试。");
+                    Messages.text("error.project.userContainerRuntime.startLocked.3"));
             }
             preparePermissions(location, deadline, control);
             docker.require(List.of("start", id), remaining(deadline), control);
@@ -134,7 +136,7 @@ public class UserContainerRuntime {
             return false;
         }
         if (result.exitCode() != 0) {
-            throw DockerWorkspaceCommands.unavailable(new IOException("无法确认容器运行状态"));
+            throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerRuntime.running.1")));
         }
         return "true".equals(result.output().trim());
     }
@@ -147,7 +149,7 @@ public class UserContainerRuntime {
         }
         docker.require(List.of("stop", "--time=" + graceSeconds, id), remaining(deadline), null);
         if (running(id, remaining(deadline))) {
-            throw DockerWorkspaceCommands.unavailable(new IOException("容器停止后仍在运行"));
+            throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerRuntime.stopInstance.1")));
         }
     }
 
@@ -159,7 +161,7 @@ public class UserContainerRuntime {
         }
         var result = docker.run(List.of("stop", "--time=0", id), remaining(deadline));
         if (result.exitCode() != 0 && !result.output().contains("No such container")) {
-            throw DockerWorkspaceCommands.unavailable(new IOException("用户容器停止失败：" + result.output()));
+            throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerRuntime.stop.1", result.output())));
         }
         var state = docker.run(List.of("inspect", "--type=container", "--format={{.State.Running}}", id),
             remaining(deadline));
@@ -174,7 +176,7 @@ public class UserContainerRuntime {
         if (state.exitCode() != 0 && state.output().contains("No such")) {
             return;
         }
-        throw DockerWorkspaceCommands.unavailable(new IOException("未能确认用户容器已经停止"));
+        throw DockerWorkspaceCommands.unavailable(new IOException(Messages.text("error.project.userContainerRuntime.stop.2")));
     }
 
     public void requireLegacyStopped(ProjectLocation location, Duration timeout) {
@@ -188,7 +190,7 @@ public class UserContainerRuntime {
             return;
         }
         throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_EXECUTION_HOST_CHANGED",
-            "旧版命令容器尚未确认停止，请核对原运行环境并完成恢复；当前部署未操作该容器。");
+            Messages.text("error.project.userContainerRuntime.requireLegacyStopped.1"));
     }
 
     private ArrayList<String> create(ProjectLocation location, String image) throws IOException {

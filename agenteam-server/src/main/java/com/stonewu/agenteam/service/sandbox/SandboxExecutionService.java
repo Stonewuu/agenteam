@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.mapper.sandbox.SandboxArchiveMapper;
@@ -73,7 +75,7 @@ public final class SandboxExecutionService implements AutoCloseable {
         }
         if (owner == null) {
             ownership.close();
-            throw new IOException("独立执行目录已被另一个进程使用");
+            throw new IOException(Messages.text("error.sandbox.sandboxExecutionService.init.1"));
         }
         try {
             recoverAbandoned();
@@ -121,10 +123,10 @@ public final class SandboxExecutionService implements AutoCloseable {
                 SandboxExecutionRequest.class, job.control());
             if (!settings.network().equals(request.networkPolicy())) {
                 throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_NETWORK_MISMATCH",
-                    "调用方与执行节点的联网设置不一致");
+                    Messages.text("error.sandbox.sandboxExecutionService.execute.1"));
             }
             if (request.timeoutMillis() < 1 || request.timeoutMillis() > settings.timeoutSeconds() * 1000L) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_TIMEOUT_INVALID", "执行时间超过节点允许范围");
+                throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_TIMEOUT_INVALID", Messages.text("error.sandbox.sandboxExecutionService.execute.2"));
             }
             Path output = job.directory().resolve("result");
             long remaining = Math.min(request.timeoutMillis(),
@@ -152,15 +154,15 @@ public final class SandboxExecutionService implements AutoCloseable {
             byte[] body = job.control().track(input).readNBytes(131073);
             if (body.length > 131072) {
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "SANDBOX_REQUEST_TOO_LARGE",
-                    "执行请求超过允许范围");
+                    Messages.text("error.sandbox.sandboxExecutionService.executeProject.1"));
             }
             var request = json.readValue(body, ProjectExecutionRequest.class);
             if (!settings.network().equals(request.networkPolicy())) {
                 throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_NETWORK_MISMATCH",
-                    "调用方与执行节点的联网设置不一致");
+                    Messages.text("error.sandbox.sandboxExecutionService.execute.1"));
             }
             if (request.project() == null || request.timeoutMillis() < 1 || request.timeoutMillis() > settings.timeoutSeconds() * 1000L) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_REQUEST_INVALID", "项目或执行时间不正确");
+                throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_REQUEST_INVALID", Messages.text("error.sandbox.sandboxExecutionService.executeProject.2"));
             }
             var timeout = Duration.ofMillis(Math.min(request.timeoutMillis(),
                 Math.max(1, TimeUnit.NANOSECONDS.toMillis(job.deadline() - System.nanoTime()))));
@@ -177,13 +179,13 @@ public final class SandboxExecutionService implements AutoCloseable {
 
     private synchronized Active acquire(String id) throws IOException {
         if (cancelled.containsKey(id)) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_CANCELLED", "执行请求已经取消");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_CANCELLED", Messages.text("error.sandbox.sandboxExecutionService.acquire.1"));
         }
         if (active.size() >= maximum) {
-            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "SANDBOX_BUSY", "执行节点已达到任务数量上限");
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "SANDBOX_BUSY", Messages.text("error.sandbox.sandboxExecutionService.acquire.2"));
         }
         if (active.containsKey(id)) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_REQUEST_EXISTS", "此执行请求已经存在");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_REQUEST_EXISTS", Messages.text("error.sandbox.sandboxExecutionService.acquire.3"));
         }
         Path directory = Files.createDirectory(root.resolve(id));
         var job = new Active(new ToolCallControl(() -> {
@@ -213,7 +215,7 @@ public final class SandboxExecutionService implements AutoCloseable {
                 }
                 WorkspaceStore.deleteTree(root, job.directory());
             } catch (IOException | RuntimeException failure) {
-                LOG.warn("独立执行目录清理失败，执行编号 {}", id, failure);
+                LOG.warn(Messages.log("log.sandbox.sandboxExecutionService.release.1"), id, failure);
             } finally {
                 active.remove(id, job);
             }
@@ -243,7 +245,7 @@ public final class SandboxExecutionService implements AutoCloseable {
             owner.close();
             ownership.close();
         } catch (IOException failure) {
-            LOG.warn("独立执行目录的进程锁释放失败，工作编号 sandbox-server-close", failure);
+            LOG.warn(Messages.log("log.sandbox.sandboxExecutionService.close.1"), failure);
         }
     }
 }

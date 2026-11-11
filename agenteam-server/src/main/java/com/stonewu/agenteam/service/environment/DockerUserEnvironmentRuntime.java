@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.environment.response.EnvironmentView;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -23,7 +25,7 @@ public class DockerUserEnvironmentRuntime implements UserEnvironmentRuntime {
             case "status" -> lifecycle.environment(project, false);
             case "connect" -> lifecycle.environment(project, true);
             case "stop" -> lifecycle.stopEnvironment(project);
-            default -> throw ApiException.invalidField("action", "不支持此环境操作。");
+            default -> throw ApiException.invalidField("action", Messages.text("error.environment.dockerUserEnvironmentRuntime.manage.1"));
         };
     }
 }

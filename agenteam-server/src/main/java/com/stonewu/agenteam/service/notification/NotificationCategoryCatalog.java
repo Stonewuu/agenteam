@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.notification;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.notification.entity.NotificationRow;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.stereotype.Component;
@@ -10,9 +12,9 @@ import java.util.List;
 /** 自动通知偏好只开放现有业务实际产生的类别，未知类别不自动发送到外部。 */
 @Component
 public class NotificationCategoryCatalog {
-    private static final List<Category> CATEGORIES = List.of(new Category("execution", "任务执行结果"),
-        new Category("approval", "待确认操作"), new Category("permission", "任务访问变化"),
-        new Category("hire", "员工申请结果"), new Category("todo", "待办分配"), new Category("schedule", "定时任务状态"));
+    private static final List<Category> CATEGORIES = List.of(new Category("execution", Messages.source("text.notification.notificationCategoryCatalog.CATEGORIES.1")),
+        new Category("approval", Messages.source("text.notification.notificationCategoryCatalog.CATEGORIES.2")), new Category("permission", Messages.source("text.notification.notificationCategoryCatalog.CATEGORIES.3")),
+        new Category("hire", Messages.source("text.notification.notificationCategoryCatalog.CATEGORIES.4")), new Category("todo", Messages.source("text.notification.notificationCategoryCatalog.CATEGORIES.5")), new Category("schedule", Messages.source("text.notification.notificationCategoryCatalog.CATEGORIES.6")));
 
     public List<Category> categories() {
         return CATEGORIES;
@@ -24,7 +26,7 @@ public class NotificationCategoryCatalog {
 
     public void require(String code) {
         if (!supports(code)) {
-            throw ApiException.invalidField("category", "请选择已有的通知类别。");
+            throw ApiException.invalidField("category", Messages.text("error.notification.notificationCategoryCatalog.require.1"));
         }
     }
 

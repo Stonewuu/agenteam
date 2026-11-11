@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.agent.entity.SubagentDefinition;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -49,7 +51,7 @@ public final class AgentSubagentConfigurationMapper {
                 .contains(selected.path("config").path("agentType").asText()) || !selected.path("config")
                 .path("workflowVersionIds").isEmpty()) {
                 throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                    "所选子智能体版本无法使用，请重新选择。");
+                    Messages.text("error.agent.agentSubagentConfigurationMapper.resolve.1"));
             }
             var child = selected.path("config");
             var definition = new SubagentDefinition(referenceId(id.asText()), selected.path("name").asText(),
@@ -73,9 +75,9 @@ public final class AgentSubagentConfigurationMapper {
         }
         var result = new ArrayList<SubagentDefinition>();
         if (config.path("dynamicSubagentEnabled").asBoolean()) {
-            result.add(new SubagentDefinition(DYNAMIC_ID, "临时助手",
-                "根据当前任务临时承担一种职责。调用时通过 label 指定助手名称，在 task 中明确职责、工作要求、必要资料和预期结果。",
-                "根据父任务在本次任务说明中指定的职责与要求工作，返回清晰的成果和必要依据。只处理分配的任务，不创建子智能体。",
+            result.add(new SubagentDefinition(DYNAMIC_ID, Messages.source("text.agent.agentSubagentConfigurationMapper.read.1"),
+                Messages.source("text.agent.agentSubagentConfigurationMapper.read.2"),
+                Messages.source("text.agent.agentSubagentConfigurationMapper.read.3"),
                 config.path("maxSteps").asInt()));
         }
         return List.copyOf(result);

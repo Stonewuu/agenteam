@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.schedule.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -20,7 +22,7 @@ public record ScheduleRule(Frequency frequency, LocalDate date, LocalTime time, 
         Objects.requireNonNull(timezone);
         weekdays = Set.copyOf(weekdays);
         if (time.getSecond() != 0 || time.getNano() != 0) {
-            throw new IllegalArgumentException("计划时间必须精确到分钟");
+            throw new IllegalArgumentException(Messages.text("error.schedule.scheduleRule.init.1"));
         }
         boolean valid = switch (frequency) {
             case ONCE -> date != null && weekdays.isEmpty() && monthDay == null;
@@ -29,7 +31,7 @@ public record ScheduleRule(Frequency frequency, LocalDate date, LocalTime time, 
             case MONTHLY -> date == null && weekdays.isEmpty() && monthDay != null && monthDay >= 1 && monthDay <= 31;
         };
         if (!valid) {
-            throw new IllegalArgumentException("日期、星期和月日必须符合所选重复方式");
+            throw new IllegalArgumentException(Messages.text("error.schedule.scheduleRule.init.2"));
         }
     }
 }

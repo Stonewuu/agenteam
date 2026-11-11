@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
 import com.stonewu.agenteam.mapper.permission.MemberRoleQueryMapper;
 import com.stonewu.agenteam.mapper.usage.QuotaPolicySqlMapper;
@@ -68,7 +70,7 @@ public class EnterpriseMapper {
 
     public void createDefaultQuota(String enterpriseId, Long initialLimit, Instant now) {
         if (quotaPolicySqlMapper.createDefaultQuota(UUID.randomUUID().toString(), enterpriseId, initialLimit, now) != 1) {
-            throw new IllegalStateException("企业初始计数规则未保存");
+            throw new IllegalStateException(Messages.text("error.enterprise.enterpriseMapper.createDefaultQuota.1"));
         }
     }
 

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
@@ -48,12 +50,12 @@ public class FeishuIntegrationProvider implements IntegrationProvider, ChannelId
 
     @Override
     public String name() {
-        return "飞书";
+        return Messages.text("text.integration.feishuIntegrationProvider.name.1");
     }
 
     @Override
     public List<IntegrationProviderView.Field> publicFields() {
-        return List.of(new IntegrationProviderView.Field("externalAppId", "应用编号（App ID）", "text", true, null, 191, null, null));
+        return List.of(new IntegrationProviderView.Field("externalAppId", Messages.text("text.integration.feishuIntegrationProvider.publicFields.1"), "text", true, null, 191, null, null));
     }
 
     @Override
@@ -82,7 +84,7 @@ public class FeishuIntegrationProvider implements IntegrationProvider, ChannelId
             Map.of(), token.value()), true).path("data").path("tenant");
         String tenantId = responses.required(tenant, "tenant_key");
         if (app.externalTenantId() != null && !app.externalTenantId().equals(tenantId)) {
-            throw new ChannelProviderException("CHANNEL_TENANT_MISMATCH", "应用对应的飞书企业与当前接入配置不一致。");
+            throw new ChannelProviderException("CHANNEL_TENANT_MISMATCH", Messages.text("error.integration.feishuIntegrationProvider.checkApplication.1"));
         }
         return new ChannelApplicationCheck(tenantId, responses.required(tenant, "name"));
     }

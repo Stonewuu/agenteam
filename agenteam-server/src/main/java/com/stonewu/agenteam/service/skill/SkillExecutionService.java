@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.skill;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.execution.request.MessageInput;
@@ -34,7 +36,7 @@ public class SkillExecutionService {
         var blocks = new ArrayList<ContentBlock>();
         for (var skill : selected(fixed)) {
             blocks.add(new ContentBlock(UUID.randomUUID().toString(), "execution_summary", null, blocks.size(), "1",
-                skill.path("name").asText(), "completed", null, null, null, null, "技能", null));
+                skill.path("name").asText(), "completed", null, null, null, null, Messages.text("label.resource.skill"), null));
         }
         return List.copyOf(blocks);
     }
@@ -64,6 +66,6 @@ public class SkillExecutionService {
 
     private static ApiException unavailable() {
         return new ApiException(HttpStatus.CONFLICT, "SKILL_DEPENDENCY_UNAVAILABLE",
-            "所选技能不在该员工的可用能力中，请重新选择。");
+            Messages.text("error.skill.skillExecutionService.unavailable.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -85,7 +87,7 @@ public class FeishuManagementGrantStore {
             .set(FeishuManagementGrantRow::getRefreshLeaseUntil, clock.instant().plusSeconds(30))
             .set(FeishuManagementGrantRow::getRevision, row.getRevision() + 1));
         if (changed != 1) {
-            throw new ChannelProviderException("FEISHU_AUTHORIZATION_REFRESHING", "正在更新飞书授权，请稍后继续。");
+            throw new ChannelProviderException("FEISHU_AUTHORIZATION_REFRESHING", Messages.text("error.integration.feishuManagementGrantStore.claimRefresh.1"));
         }
         return grants.selectById(row.getId());
     }
@@ -151,6 +153,6 @@ public class FeishuManagementGrantStore {
     }
 
     public static ChannelProviderException authorizationRequired() {
-        return new ChannelProviderException("FEISHU_AUTHORIZATION_REQUIRED", "请先授权飞书管理应用，再继续创建。");
+        return new ChannelProviderException("FEISHU_AUTHORIZATION_REQUIRED", Messages.text("error.integration.feishuManagementGrantStore.authorizationRequired.1"));
     }
 }

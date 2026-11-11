@@ -31,7 +31,7 @@ export function useFormAction() {
       toast.success(notice);
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        console.error("提交操作失败", {path: window.location.pathname}, error);
+        console.error("Failed to submit the operation", {path: window.location.pathname}, error);
       }
       const text = errorMessage(error);
       const hasConflict = error instanceof ApiError && ["VERSION_CONFLICT", "DATA_GENERATION_CHANGED", "DATA_SOURCE_CHANGED", "DATA_FIELD_UNAVAILABLE"].includes(error.code);

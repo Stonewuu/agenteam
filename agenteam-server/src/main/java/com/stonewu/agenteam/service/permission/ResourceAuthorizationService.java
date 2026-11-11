@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.permission;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -36,7 +38,7 @@ public class ResourceAuthorizationService {
     public ResourceAccessRecord require(AuthContext actor, String id, String operation, ResourceCapability capability) {
         int separator = operation.indexOf('.');
         if (separator < 1) {
-            throw new IllegalArgumentException("资源操作需要明确类型");
+            throw new IllegalArgumentException(Messages.text("error.permission.resourceAuthorizationService.require.1"));
         }
         return resources.visible(id, scope(actor, operation.substring(0, separator), operation, capability))
             .orElseThrow(ResourceAuthorizationService::unavailable);
@@ -51,10 +53,10 @@ public class ResourceAuthorizationService {
         boolean workflowExecution = "workflow".equals(kind) && operation.equals(
             "agent.run") && capability == ResourceCapability.USE;
         if (!KINDS.contains(kind) || (!operation.startsWith(kind + ".") && !workflowExecution)) {
-            throw new IllegalArgumentException("资源操作必须匹配资源类型");
+            throw new IllegalArgumentException(Messages.text("error.permission.resourceAuthorizationService.scope.1"));
         }
         if (includeDeleted && capability == ResourceCapability.USE) {
-            throw new IllegalArgumentException("已删除资源不能用于执行");
+            throw new IllegalArgumentException(Messages.text("error.permission.resourceAuthorizationService.scope.2"));
         }
         var range = authorization.require(actor, operation);
         boolean maintainAll = capability != ResourceCapability.USE
@@ -75,7 +77,7 @@ public class ResourceAuthorizationService {
             case "plugin" -> "plugin.invoke";
             case "knowledge" -> "knowledge.search";
             case "data" -> "data.query";
-            default -> throw new IllegalArgumentException("不支持的资源类型");
+            default -> throw new IllegalArgumentException(Messages.text("error.permission.resourceAuthorizationService.usageScope.1"));
         };
         return scope(actor, kind, operation, ResourceCapability.USE);
     }
@@ -110,6 +112,6 @@ public class ResourceAuthorizationService {
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "记录不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", Messages.text("http.notFound"));
     }
 }

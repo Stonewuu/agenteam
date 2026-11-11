@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.data.DataCollectionMapper;
 import com.stonewu.agenteam.mapper.data.DataRecordMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -48,10 +50,10 @@ public class DataCollectionTransactions {
         var current = policy.collection(actor.enterpriseId(), resource, id, true);
         policy.revision(current, revision);
         if (!current.sourceName().equals(input.sourceName())) {
-            throw ApiException.invalidField("sourceName", "已有集合不能改为其他来源，请建立新的集合。");
+            throw ApiException.invalidField("sourceName", Messages.text("error.data.dataCollectionTransactions.updateFile.1"));
         }
         if (current.activeGeneration() == Integer.MAX_VALUE) {
-            throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_LIMIT", "集合版本数量达到上限，请建立新集合。");
+            throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_LIMIT", Messages.text("error.data.dataCollectionTransactions.updateFile.2"));
         }
         int generation = current.activeGeneration() + 1;
         String name = ResourceInput.text(input.name(), "name", 80, true);
@@ -61,7 +63,7 @@ public class DataCollectionTransactions {
         collections.activate(current, name, current.sourceName(), generation, current.fileId(), prepared.rowCount(),
             clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "data.collection.update", "data_collection", id,
-            "修改数据集合字段",
+            Messages.text("text.data.dataCollectionTransactions.updateFile.1"),
             Map.of("generation", generation, "fields", prepared.fields().stream().map(DataField::name).toList()));
         return DataCollectionMapper.view(collections.find(actor.enterpriseId(), id, false).orElseThrow(),
             prepared.fields());

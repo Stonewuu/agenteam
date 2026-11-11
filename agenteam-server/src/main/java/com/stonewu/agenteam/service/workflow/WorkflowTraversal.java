@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.workflow.entity.WorkflowGraph;
 import com.stonewu.agenteam.model.workflow.entity.WorkflowGraph.Edge;
@@ -31,7 +33,7 @@ public final class WorkflowTraversal {
         this.clock = clock;
         identity = saved;
         if (!saved.nodes().keySet().equals(graph.nodes().keySet())) {
-            throw new IllegalStateException("工作流进度与固定版本节点不一致");
+            throw new IllegalStateException(Messages.text("error.workflow.workflowTraversal.init.1"));
         }
         nodes.putAll(saved.nodes());
         status = saved.status();
@@ -72,7 +74,7 @@ public final class WorkflowTraversal {
 
     public synchronized void start(String id, JsonNode input) {
         if (!status.equals("running") || !nodes.get(id).status().equals("pending") || !eligible(id)) {
-            throw new IllegalStateException("当前工作流节点尚不能开始");
+            throw new IllegalStateException(Messages.text("error.workflow.workflowTraversal.start.1"));
         }
         long now = clock.millis();
         nodes.put(id,
@@ -86,7 +88,7 @@ public final class WorkflowTraversal {
         var type = graph.nodes().get(id).type();
         if (type.equals("condition") ? !Set.of("true", "false").contains(branch)
             : type.equals("approval") ? !Set.of("approve", "reject").contains(branch) : !"default".equals(branch)) {
-            throw new IllegalArgumentException("节点完成时必须选择该类型允许的后续分支");
+            throw new IllegalArgumentException(Messages.text("error.workflow.workflowTraversal.complete.1"));
         }
         finish(id, "completed", values.write(output), branch, null, null);
         if (id.equals(graph.endId())) {
@@ -116,7 +118,7 @@ public final class WorkflowTraversal {
 
     public synchronized boolean suspend(String id, String waiting) {
         if (!Set.of("waiting_input", "waiting_approval").contains(waiting)) {
-            throw new IllegalArgumentException("节点等待状态无效");
+            throw new IllegalArgumentException(Messages.text("error.workflow.workflowTraversal.suspend.1"));
         }
         if (!active(id) || !nodes.get(id).status().equals("running")) {
             return false;
@@ -132,7 +134,7 @@ public final class WorkflowTraversal {
     public synchronized void resume(String id) {
         var before = nodes.get(id);
         if (!status.equals("running") || !Set.of("waiting_approval", "waiting_input").contains(before.status())) {
-            throw new IllegalStateException("当前节点没有等待确认");
+            throw new IllegalStateException(Messages.text("error.workflow.workflowTraversal.resume.1"));
         }
         nodes.put(id,
             new NodeProgress("running", before.input(), null, null, before.attempts(), before.startedAt(), null,
@@ -143,7 +145,7 @@ public final class WorkflowTraversal {
         var before = nodes.get(id);
         if (!active(id) || !graph.nodes().get(id).type()
             .equals("tool") || before.attempts() >= 3 || before.retryAt() != null) {
-            throw new IllegalStateException("当前节点不能再次自动重试");
+            throw new IllegalStateException(Messages.text("error.workflow.workflowTraversal.scheduleRetry.1"));
         }
         nodes.put(id,
             new NodeProgress("running", before.input(), null, null, before.attempts() + 1, before.startedAt(), null,
@@ -153,7 +155,7 @@ public final class WorkflowTraversal {
     public synchronized void startRetry(String id) {
         var before = nodes.get(id);
         if (!active(id) || before.retryAt() == null || before.retryAt() > clock.millis()) {
-            throw new IllegalStateException("尚未到达再次读取的时间");
+            throw new IllegalStateException(Messages.text("error.workflow.workflowTraversal.startRetry.1"));
         }
         nodes.put(id,
             new NodeProgress("running", before.input(), null, null, before.attempts(), before.startedAt(), null,

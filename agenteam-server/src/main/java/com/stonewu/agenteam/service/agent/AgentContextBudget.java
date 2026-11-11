@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import io.agentscope.core.middleware.ModelCallInput;
 import io.agentscope.core.util.JsonUtils;
@@ -17,11 +19,11 @@ public final class AgentContextBudget {
         int maximum = input.model().getContextWindowSize();
         if (maximum <= 0) {
             throw new ApiException(HttpStatus.CONFLICT, "MODEL_PROFILE_UNAVAILABLE",
-                "当前模型未设置有效的上下文长度上限，请联系管理员检查模型配置。");
+                Messages.text("error.agent.agentContextBudget.requireFits.1"));
         }
         if (estimatedTokens(input) > maximum) {
             throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_CONTEXT_LIMIT",
-                "本次对话内容过长，请缩短输入或新建对话后重试。");
+                Messages.text("error.agent.agentContextBudget.requireFits.2"));
         }
     }
 

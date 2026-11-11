@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -105,7 +107,7 @@ public class CollaborationInputService {
         access.actor(task);
         ChatInputValidation.size(text, fileIds.size());
         if (text.isBlank() && fileIds.isEmpty()) {
-            throw ApiException.invalidField("text", "请输入补充要求。");
+            throw ApiException.invalidField("text", Messages.text("error.collaboration.collaborationInputRequest.text.1"));
         }
         var input = (ObjectNode) json.tree(Map.of("text", text, "messageId", messageId == null ? "" : messageId));
         input.set("options", options);
@@ -127,7 +129,7 @@ public class CollaborationInputService {
                 .eq(ChatMessageRow::getId, messageId).eq(ChatMessageRow::getConversationId, task.getConversationId())
                 .eq(ChatMessageRow::getSenderUserId, actor.userId()));
             if (message == null || message.getTaskId() != null && !message.getTaskId().equals(taskId)) {
-                throw ApiException.invalidField("messageId", "补充消息不属于当前用户与会话。");
+                throw ApiException.invalidField("messageId", Messages.text("error.collaboration.collaborationInputService.append.1"));
             }
         }
         var objective = (ObjectNode) cipher.decrypt(actor.enterpriseId(), "task-objective", taskId, task.getObjectiveEncrypted());
@@ -199,10 +201,10 @@ public class CollaborationInputService {
             .eq(CollaborationTaskRow::getId, taskId).set(CollaborationTaskRow::getObjectiveEncrypted,
                 cipher.encrypt(actor.enterpriseId(), "task-objective", taskId, objective))));
         if (uncertain) {
-            notify(task, action.getId(), "input_added", "已收到补充要求。仍有操作结果尚未确认，请先在群策核实。");
+            notify(task, action.getId(), "input_added", Messages.text("text.collaboration.collaborationInputService.append.1"));
         } else if (!task.fromWebRoom()) {
             outbound.send(task, null, action.getId(),
-                "action:" + action.getId(), "input_added", "任务 【" + task.getShortCode() + "】：已收到补充要求，将继续处理。", true, null);
+                "action:" + action.getId(), "input_added", Messages.text("text.collaboration.collaborationInputService.append.2", task.getShortCode()), true, null);
         }
         String status = uncertain ? "blocked" : "active";
         return actions.finish(action, webEntry == null ? Map.of("taskId", taskId, "inputRevision", revision, "status", status)
@@ -241,8 +243,7 @@ public class CollaborationInputService {
             .eq(ChatOutboundMessageRow::getTaskId, taskId).in(ChatOutboundMessageRow::getStatus, "pending", "retry_wait", "leased")
             .set(ChatOutboundMessageRow::getStatus, "cancelled").set(ChatOutboundMessageRow::getLeaseOwner, null).set(ChatOutboundMessageRow::getLeaseUntil, null));
         if (active == 0) {
-            notify(task, action.getId(), "cancelled", "任务 【" + task.getShortCode() + "】：已取消。已完成的业务操作与成果保留。"
-                + (uncertain ? "仍有操作结果尚未确认，请先在群策核实。" : ""));
+            notify(task, action.getId(), "cancelled", Messages.text("error.collaboration.collaborationInputService.cancel.1", task.getShortCode(), (uncertain ? Messages.text("error.collaboration.collaborationInputService.cancel.2") : "")));
         }
         return actions.finish(action, Map.of("taskId", taskId, "status", status));
     }
@@ -277,13 +278,13 @@ public class CollaborationInputService {
             throw ApiException.versionConflict(task.getRevision());
         }
         if ((!allowCompleted && "completed".equals(task.getStatus())) || Set.of("cancelled", "failed", "cancelling").contains(task.getStatus())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_TASK_CLOSED", "任务已结束或正在取消，请另起任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_TASK_CLOSED", Messages.text("error.collaboration.collaborationInputService.mutable.1"));
         }
     }
 
     private void changed(int count) {
         if (count != 1) {
-            throw new IllegalStateException("协作要求状态已发生变化，当前操作不能提交");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationInputService.changed.1"));
         }
     }
 }

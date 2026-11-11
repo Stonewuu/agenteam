@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
 import com.stonewu.agenteam.model.environment.response.EnvironmentTerminalView;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -57,7 +59,7 @@ public class EnvironmentTerminalStore {
 
     public EnvironmentTerminalState require(EnvironmentTerminalState state, String id) {
         if (state == null || !state.id.equals(id)) {
-            throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_REPLACED", "终端连接已变化，请重新连接。");
+            throw new ApiException(HttpStatus.CONFLICT, "TERMINAL_REPLACED", Messages.text("error.environment.environmentTerminalStore.require.1"));
         }
         return state;
     }
@@ -98,7 +100,7 @@ public class EnvironmentTerminalStore {
     private void readFully(FileChannel channel, ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
             if (channel.read(buffer) < 0) {
-                throw new IOException("终端输出未完整保存");
+                throw new IOException(Messages.text("error.environment.environmentTerminalStore.readFully.1"));
             }
         }
     }

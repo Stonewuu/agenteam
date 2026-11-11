@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.file.FileDataMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
@@ -38,7 +40,7 @@ public class CsvInspectionTransactions {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void append(JobLease lease, FileRecord file, List<CsvRow> batch) {
         if (batch.isEmpty() || batch.size() > 100) {
-            throw new IllegalArgumentException("CSV 写入批次不正确");
+            throw new IllegalArgumentException(Messages.text("error.file.csvInspectionTransactions.append.1"));
         }
         data.append(owned(lease, file), batch);
     }

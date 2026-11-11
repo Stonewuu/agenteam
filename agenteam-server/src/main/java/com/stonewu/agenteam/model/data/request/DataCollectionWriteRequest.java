@@ -11,7 +11,7 @@ import java.util.List;
  * 只配置明确的集合与字段，不接受查询语句或临时接口地址。
  */
 public record DataCollectionWriteRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 80, message = "文字长度不符合要求。") String name,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 128, message = "文字长度不符合要求。") String sourceName,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 100, message = "条目数量超出允许范围。") List<@NotNull(message = "请填写必填项。") @Valid DataField> fields) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 80, message = "{validation.textLength}") String name,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 128, message = "{validation.textLength}") String sourceName,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 100, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") List<@NotNull(message = "{validation.required}") @Valid DataField> fields) {
 }

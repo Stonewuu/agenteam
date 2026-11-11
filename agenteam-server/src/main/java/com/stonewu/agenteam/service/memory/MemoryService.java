@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.memory;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.memory.MemoryMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
@@ -86,7 +88,7 @@ public class MemoryService {
         memories.expire(actor.enterpriseId(), actor.userId(), agent, now);
         if (memories.count(actor.enterpriseId(), actor.userId(), agent) >= 20) {
             throw new ApiException(HttpStatus.CONFLICT, "MEMORY_LIMIT",
-                "这位员工最多保存 20 条个人偏好，请先删除不再需要的内容。");
+                Messages.text("error.memory.memoryService.create.1"));
         }
         var value = new MemoryRecord(UUID.randomUUID().toString(), actor.enterpriseId(), actor.userId(), agent, topic,
             content, input.sourceMessageId(), now.plus(Duration.ofDays(180)), 1, now, now);
@@ -94,7 +96,7 @@ public class MemoryService {
             memories.insert(value);
         } catch (DuplicateKeyException existing) {
             throw new ApiException(HttpStatus.CONFLICT, "MEMORY_TOPIC_EXISTS",
-                "此主题已有偏好，请编辑已保存的内容。");
+                Messages.text("error.memory.memoryService.create.2"));
         }
         return view(value);
     }
@@ -104,10 +106,10 @@ public class MemoryService {
         var before = current(actor, agent, id, true);
         revision(before, revision);
         if (!before.memoryKey().equals(input.memoryKey())) {
-            throw ApiException.invalidField("memoryKey", "编辑时不能更换偏好主题，请创建另一条偏好。");
+            throw ApiException.invalidField("memoryKey", Messages.text("error.memory.memoryService.update.1"));
         }
         if (input.sourceMessageId() != null) {
-            throw ApiException.invalidField("sourceMessageId", "编辑偏好时不能更改来源消息。");
+            throw ApiException.invalidField("sourceMessageId", Messages.text("error.memory.memoryService.update.2"));
         }
         String content = validation.content(input.content());
         var now = clock.instant();

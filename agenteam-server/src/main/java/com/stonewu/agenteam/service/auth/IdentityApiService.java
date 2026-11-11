@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.List;
 import com.stonewu.agenteam.model.auth.request.ApiBootstrapRequest;
 import com.stonewu.agenteam.model.auth.request.ApiLoginRequest;
@@ -59,7 +61,7 @@ public class IdentityApiService {
 
     public CurrentIdentityResponse login(ApiLoginRequest request, HttpServletRequest servletRequest) {
         if (request == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "请输入账号和密码。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", Messages.text("error.auth.identityApiService.login.1"));
         }
         authentication.login(request, servletRequest);
         return current(servletRequest.getSession(false));

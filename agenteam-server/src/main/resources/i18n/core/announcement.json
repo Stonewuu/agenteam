@@ -1,0 +1,158 @@
+{
+  "error.announcement.announcementReadAllRequest.throughSequence.1": {
+    "zh-CN": "请重新读取公告列表。",
+    "en": "Reload the announcement list."
+  },
+  "error.announcement.announcementReadAllRequest.throughSequence.2": {
+    "zh-CN": "请重新读取列表。",
+    "en": "Reload the list."
+  },
+  "error.announcement.announcementReadRequest.version.1": {
+    "zh-CN": "请重新打开公告。",
+    "en": "Reopen the announcement."
+  },
+  "error.announcement.announcementStatusRequest.enabled.1": {
+    "zh-CN": "请选择启用或停用。",
+    "en": "Select Enable or Disable."
+  },
+  "error.announcement.announcementWriteRequest.title.1": {
+    "zh-CN": "请填写公告标题。",
+    "en": "Enter an announcement title."
+  },
+  "error.announcement.announcementWriteRequest.title.2": {
+    "zh-CN": "标题最多160个字符。",
+    "en": "The title must not exceed 160 characters."
+  },
+  "error.announcement.announcementWriteRequest.content.1": {
+    "zh-CN": "请填写公告正文。",
+    "en": "Enter announcement content."
+  },
+  "error.announcement.announcementWriteRequest.content.2": {
+    "zh-CN": "正文格式过于复杂，请减少排版样式后重试。",
+    "en": "The formatting is too complex. Simplify it and try again."
+  },
+  "error.announcement.announcementWriteRequest.level.1": {
+    "zh-CN": "请选择提醒等级。",
+    "en": "Select an alert level."
+  },
+  "error.announcement.announcementWriteRequest.level.2": {
+    "zh-CN": "请选择有效的提醒等级。",
+    "en": "Select a valid notification level."
+  },
+  "error.announcement.announcementWriteRequest.contentFormat.1": {
+    "zh-CN": "请选择有效的正文格式。",
+    "en": "Select a valid content format."
+  },
+  "error.announcement.announcementContent.validate.1": {
+    "zh-CN": "正文格式无效，请重新编辑。",
+    "en": "The content format is invalid. Edit it again."
+  },
+  "error.announcement.announcementContent.node.1": {
+    "zh-CN": "正文包含不支持的排版，请重新编辑。",
+    "en": "The content contains unsupported formatting. Edit it again."
+  },
+  "error.announcement.announcementContent.node.2": {
+    "zh-CN": "正文最多20000个字符。",
+    "en": "Content can contain up to 20,000 characters."
+  },
+  "error.announcement.announcementContent.node.3": {
+    "zh-CN": "请选择有效的标题层级。",
+    "en": "Select a valid heading level."
+  },
+  "error.announcement.announcementContent.node.4": {
+    "zh-CN": "列表起始编号无效。",
+    "en": "The list start number is invalid."
+  },
+  "error.announcement.announcementContent.node.5": {
+    "zh-CN": "列表内容格式无效，请重新编辑。",
+    "en": "The list format is invalid. Edit it again."
+  },
+  "error.announcement.announcementContent.copyMarks.1": {
+    "zh-CN": "正文文字格式无效。",
+    "en": "The content text format is invalid."
+  },
+  "error.announcement.announcementContent.copyMarks.2": {
+    "zh-CN": "正文包含不支持的文字格式。",
+    "en": "The content contains unsupported text formatting."
+  },
+  "error.announcement.announcementContent.validateLink.1": {
+    "zh-CN": "请填写有效的网页或邮件链接。",
+    "en": "Enter a valid website or email link."
+  },
+  "error.announcement.announcementContent.validateLink.2": {
+    "zh-CN": "链接只支持网页地址和邮件地址。",
+    "en": "Links only support web and email addresses."
+  },
+  "error.announcement.announcementManagementService.create.1": {
+    "zh-CN": "公告未能保存",
+    "en": "The announcement could not be saved."
+  },
+  "error.announcement.announcementManagementService.update.1": {
+    "zh-CN": "请先停用公告，再修改内容。",
+    "en": "Disable the announcement before editing its content."
+  },
+  "error.announcement.announcementManagementService.checkUpdate.1": {
+    "zh-CN": "公告已变化，修改未能保存",
+    "en": "The announcement changed. The update could not be saved."
+  },
+  "error.announcement.announcementManagementService.denied.1": {
+    "zh-CN": "没有管理此范围公告的权限。",
+    "en": "You cannot manage announcements in this scope."
+  },
+  "error.announcement.announcementManagementService.missing.1": {
+    "zh-CN": "公告或所属企业不存在或无法访问。",
+    "en": "The announcement or its organization is missing or inaccessible."
+  },
+  "error.announcement.announcementUserService.list.1": {
+    "zh-CN": "请重新打开公告列表。",
+    "en": "Reopen the announcement list."
+  },
+  "error.announcement.announcementUserService.read.1": {
+    "zh-CN": "此公告已停用或无法访问。",
+    "en": "This announcement is disabled or inaccessible."
+  },
+  "error.announcement.announcementUserService.read.2": {
+    "zh-CN": "公告内容已更新，请阅读最新内容。",
+    "en": "The announcement has been updated. Read the latest version."
+  },
+  "log.announcement.announcementContent.validate.1": {
+    "zh-CN": "解析公告正文失败",
+    "en": "Could not parse announcement content"
+  },
+  "log.announcement.announcementContent.validateLink.1": {
+    "zh-CN": "解析公告链接失败",
+    "en": "Could not parse the announcement link"
+  },
+  "text.announcement.announcementLevelCatalog.LEVELS.1": {
+    "zh-CN": "紧急",
+    "en": "Urgent"
+  },
+  "text.announcement.announcementLevelCatalog.LEVELS.2": {
+    "zh-CN": "重要",
+    "en": "Important"
+  },
+  "text.announcement.announcementLevelCatalog.LEVELS.3": {
+    "zh-CN": "一般",
+    "en": "Normal"
+  },
+  "text.announcement.announcementManagementService.create.1": {
+    "zh-CN": "创建公告",
+    "en": "Create announcement"
+  },
+  "text.announcement.announcementManagementService.update.1": {
+    "zh-CN": "修改公告内容",
+    "en": "Update announcement content"
+  },
+  "text.announcement.announcementManagementService.delete.1": {
+    "zh-CN": "删除公告",
+    "en": "Delete announcement"
+  },
+  "text.announcement.announcementManagementService.status.1": {
+    "zh-CN": "启用公告",
+    "en": "Enable announcement"
+  },
+  "text.announcement.announcementManagementService.status.2": {
+    "zh-CN": "停用公告",
+    "en": "Disable announcement"
+  }
+}

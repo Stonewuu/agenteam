@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,16 +32,16 @@ public class HttpDataResponseMapper {
 
     public List<ObjectNode> rows(JsonNode response, String sourceName, List<DataField> fields, long deadline) {
         if (sourceName == null || !(sourceName.equals("$") || sourceName.startsWith("/"))) {
-            throw ApiException.invalidField("sourceName", "根数组填写 $，嵌套数组填写以 / 开始的 JSON 路径。");
+            throw ApiException.invalidField("sourceName", Messages.text("error.data.httpDataResponseMapper.rows.1"));
         }
         JsonNode source = sourceName.equals("$") ? response : response.at(pointer(sourceName));
         if (!source.isArray()) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_HTTP_ARRAY_UNAVAILABLE",
-                "保存的集合位置没有返回数组，请检查响应内容与集合位置。");
+                Messages.text("error.data.httpDataResponseMapper.rows.2"));
         }
         if (source.size() > 100000) {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "DATA_HTTP_ROW_LIMIT",
-                "数据接口单次返回不能超过十万行。");
+                Messages.text("error.data.httpDataResponseMapper.rows.3"));
         }
         fields.stream().filter(field -> field.name().startsWith("/")).forEach(field -> pointer(field.name()));
         List<ObjectNode> result = new ArrayList<>();
@@ -49,18 +51,18 @@ public class HttpDataResponseMapper {
             row++;
             if (!raw.isObject()) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_HTTP_ROW_INVALID",
-                    "集合中的每一行必须是 JSON 对象。");
+                    Messages.text("error.data.httpDataResponseMapper.rows.4"));
             }
             ObjectNode mapped = json.createObjectNode();
             for (var field : fields) {
                 JsonNode value = field.name().startsWith("/") ? raw.at(pointer(field.name())) : raw.path(field.name());
                 if (value.isMissingNode()) {
                     throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATA_SOURCE_FIELD_MISMATCH",
-                        "数据接口返回的行缺少已登记字段。", Map.of("field", field.name(), "row", row), Map.of());
+                        Messages.text("error.data.httpDataResponseMapper.rows.5"), Map.of("field", field.name(), "row", row), Map.of());
                 }
                 if (!value.isNull() && (field.valueType()
                     .equals("object") ? !value.isObject() : value.isContainerNode())) {
-                    throw ApiException.invalidField("fields", "接口中的字段值与登记类型不一致。");
+                    throw ApiException.invalidField("fields", Messages.text("error.data.httpDataResponseMapper.rows.6"));
                 }
                 mapped.set(field.name(), values.csv(field,
                     value.isNull() ? null : value.isContainerNode() ? value.toString() : value.asText(), row));
@@ -72,12 +74,12 @@ public class HttpDataResponseMapper {
 
     private JsonPointer pointer(String value) {
         if (value.matches(".*~(?:[^01]|$).*")) {
-            throw ApiException.invalidField("sourceName", "JSON 路径中的 ~ 必须写为 ~0，字段名中的 / 必须写为 ~1。");
+            throw ApiException.invalidField("sourceName", Messages.text("error.data.httpDataResponseMapper.pointer.1"));
         }
         try {
             return JsonPointer.compile(value);
         } catch (IllegalArgumentException invalid) {
-            throw ApiException.invalidField("sourceName", "请填写明确的 JSON 路径。");
+            throw ApiException.invalidField("sourceName", Messages.text("error.data.httpDataResponseMapper.pointer.2"));
         }
     }
 }

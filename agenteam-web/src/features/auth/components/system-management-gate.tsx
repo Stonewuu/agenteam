@@ -71,7 +71,7 @@ function LoadSystemManagementIdentity(props: ManagementProps) {
             if (controller.signal.aborted) {
               return;
             }
-            console.error("读取平台管理侧栏的企业信息失败", {
+            console.error("Failed to read organization information for the administration sidebar", {
               method: "GET",
               path: `/api/v1/enterprises/${enterprise.id}/context`
             }, failure);
@@ -84,7 +84,7 @@ function LoadSystemManagementIdentity(props: ManagementProps) {
         }
       } catch (failure) {
         if (!controller.signal.aborted) {
-          console.error("读取平台管理身份失败", {method: "GET", path: "/api/v1/auth/me"}, failure);
+          console.error("Failed to read the platform administrator identity", {method: "GET", path: "/api/v1/auth/me"}, failure);
           setError(errorMessage(failure));
         }
       } finally {

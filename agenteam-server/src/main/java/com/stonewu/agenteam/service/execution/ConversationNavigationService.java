@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
@@ -87,7 +89,7 @@ public class ConversationNavigationService {
         Boolean favorite, String agentId, String scope, String cursor, Integer limit) {
         String state = status == null ? "active" : status;
         if (!Set.of("active", "archived", "deleted").contains(state)) {
-            throw ApiException.invalidField("status", "请选择有效的对话状态。");
+            throw ApiException.invalidField("status", Messages.text("error.execution.conversationManagementService.update.2"));
         }
         return page(actor, query, List.of(state), favorite, agentId, scope, cursor, limit);
     }
@@ -101,7 +103,7 @@ public class ConversationNavigationService {
         authorization.require(actor, "conversation.view");
         String kind = scope == null ? "all" : scope;
         if (!Set.of("all", "standalone", "collaboration").contains(kind)) {
-            throw ApiException.invalidField("scope", "请选择有效的对话类型。");
+            throw ApiException.invalidField("scope", Messages.text("error.execution.conversationNavigationService.page.1"));
         }
         String text = pagination.query(query);
         String employee = agentId == null || agentId.isBlank() ? null : agentId;
@@ -190,7 +192,7 @@ public class ConversationNavigationService {
         for (int index = 0; index < owned.size(); index++) {
             var task = owned.get(index);
             String text = requirements.get(index).path("text").asText().replaceAll("\\s+", " ").trim();
-            String title = text.isEmpty() ? "协作任务" : text.substring(0, text.offsetByCodePoints(0, Math.min(100, text.codePointCount(0, text.length()))));
+            String title = text.isEmpty() ? Messages.text("text.execution.conversationNavigationService.groups.1") : text.substring(0, text.offsetByCodePoints(0, Math.min(100, text.codePointCount(0, text.length()))));
             var taskRoles = roles.stream().filter(role -> role.getTaskId().equals(task.getId()))
                 .sorted(Comparator.comparing(role -> !role.getId().equals(task.getOwnerParticipantId()))).map(role -> {
                 var currentWork = workByRole.getOrDefault(role.getId(), List.of()).stream()

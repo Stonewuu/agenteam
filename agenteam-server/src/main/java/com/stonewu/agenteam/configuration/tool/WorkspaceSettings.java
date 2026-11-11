@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -28,7 +30,7 @@ public record WorkspaceSettings(String root, String image, boolean executeEnable
         if (root == null || root.isBlank() || root.contains(
             ",") || image == null || image.isBlank() || workspaceMb < 16 || fileMb < 1 || fileMb > workspaceMb || maximumFiles < 10 || memoryMb < 128 || memoryMb > 8192 || cpus < 1 || cpus > 8 || processLimit < 16 || processLimit > 512 || timeoutSeconds < 1 || timeoutSeconds > 86400 || network == null || !network.matches(
             "[A-Za-z0-9_-]{1,100}") || network.equals("host")) {
-            throw new IllegalArgumentException("工作空间或容器配置超出允许范围");
+            throw new IllegalArgumentException(Messages.text("error.tool.workspaceSettings.init.1"));
         }
         this.root = root;
         this.image = image;

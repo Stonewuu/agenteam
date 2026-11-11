@@ -8,19 +8,19 @@ import jakarta.validation.constraints.*;
  * 工作流汇合节点的输入字段约束。
  */
 public record WorkflowJoinNodeInput(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 64, message = "文字长度不符合要求。") @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_-]*$", message = "请选择支持的选项或格式。") String nodeId,
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 50, message = "文字长度不符合要求。") String name,
-    @NotNull(message = "请填写必填项。") @Valid Position position,
-    @NotNull(message = "请填写必填项。") @Min(value = 1L, message = "数值超出允许范围。") @Max(value = 1800L, message = "数值超出允许范围。") Integer timeoutSeconds,
-    @NotNull(message = "请填写必填项。") @Pattern(regexp = "stop", message = "请选择支持的选项或格式。") String failurePolicy,
-    @NotNull(message = "请填写必填项。") @Pattern(regexp = "join", message = "请选择支持的选项或格式。") String type,
-    @NotNull(message = "请填写必填项。") @Valid Config config) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 64, message = "{validation.textLength}") @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_-]*$", message = "{validation.option}") String nodeId,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 50, message = "{validation.textLength}") String name,
+    @NotNull(message = "{validation.required}") @Valid Position position,
+    @NotNull(message = "{validation.required}") @Min(value = 1L, message = "{validation.range}") @Max(value = 1800L, message = "{validation.range}") Integer timeoutSeconds,
+    @NotNull(message = "{validation.required}") @Pattern(regexp = "stop", message = "{validation.option}") String failurePolicy,
+    @NotNull(message = "{validation.required}") @Pattern(regexp = "join", message = "{validation.option}") String type,
+    @NotNull(message = "{validation.required}") @Valid Config config) {
     public record Position(
-        @NotNull(message = "请填写必填项。") Double x,
-        @NotNull(message = "请填写必填项。") Double y) {
+        @NotNull(message = "{validation.required}") Double x,
+        @NotNull(message = "{validation.required}") Double y) {
     }
 
     public record Config(
-        @Size(min = 1, max = 64, message = "文字长度不符合要求。") String parallelNodeId) {
+        @Size(min = 1, max = 64, message = "{validation.textLength}") String parallelNodeId) {
     }
 }

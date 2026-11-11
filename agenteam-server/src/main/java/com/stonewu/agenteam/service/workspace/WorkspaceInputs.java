@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.mapper.file.MessageAttachmentMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -83,7 +85,7 @@ public class WorkspaceInputs {
                         output.write(bytes, 0, read);
                     }
                     if (total != file.sizeBytes() || !HexFormat.of().formatHex(digest.digest()).equals(file.sha256())) {
-                        throw new IOException("输入文件与保存记录不一致");
+                        throw new IOException(Messages.text("error.workspace.workspaceInputs.copyFiles.1"));
                     }
                 }
                 target.validate();
@@ -92,7 +94,7 @@ public class WorkspaceInputs {
             } catch (IOException cause) {
                 throw WorkspacePaths.io(cause);
             } catch (NoSuchAlgorithmException cause) {
-                throw new IllegalStateException("运行环境缺少文件摘要算法", cause);
+                throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), cause);
             } finally {
                 deleteTemporary(temporary);
             }

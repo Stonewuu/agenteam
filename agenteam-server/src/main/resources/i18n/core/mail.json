@@ -1,0 +1,126 @@
+{
+  "error.mail.smtpMailMapper.send.1": {
+    "zh-CN": "邮件服务暂不可用，请稍后重试。",
+    "en": "The email service is temporarily unavailable. Try again later."
+  },
+  "error.mail.smtpMailMapper.send.2": {
+    "zh-CN": "邮件服务未确认发送，请稍后重试。",
+    "en": "The email service did not confirm delivery. Try again later."
+  },
+  "error.mail.mailDeliveryService.resolveReset.1": {
+    "zh-CN": "全局找回请求不能携带企业归属",
+    "en": "Global password recovery requests must not carry organization ownership."
+  },
+  "error.mail.mailDeliveryService.resolveReset.2": {
+    "zh-CN": "找回邮件的领取资格已失效",
+    "en": "The recovery email claim authorization expired."
+  },
+  "error.mail.mailQueueService.previousInvitation.1": {
+    "zh-CN": "邀请投递记录不存在",
+    "en": "The invitation delivery record does not exist."
+  },
+  "error.mail.mailQueueService.previousInvitation.2": {
+    "zh-CN": "邀请投递内容不匹配",
+    "en": "The invitation delivery content does not match."
+  },
+  "error.mail.mailQueueService.parse.1": {
+    "zh-CN": "邮件投递记录无法读取",
+    "en": "The email delivery record could not be read."
+  },
+  "error.mail.mailQueueService.serialize.1": {
+    "zh-CN": "邮件投递记录无法保存",
+    "en": "The email delivery record could not be saved."
+  },
+  "error.mail.mailTemplates.init.1": {
+    "zh-CN": "邮件站点地址必须是完整且不带路径的站点来源",
+    "en": "The email site URL must be a complete origin without a path."
+  },
+  "error.mail.mailTemplates.render.1": {
+    "zh-CN": "邮件用途未定义",
+    "en": "The email purpose is undefined."
+  },
+  "error.mail.mailJobWorker.runOnce.1": {
+    "zh-CN": "邮件暂时无法处理，请重新发送。",
+    "en": "The email cannot be processed right now. Send it again."
+  },
+  "log.mail.mailDeliveryContent.toString.1": {
+    "zh-CN": "MailDeliveryContent[投递内容已隐藏]",
+    "en": "MailDeliveryContent[delivery content redacted]"
+  },
+  "log.mail.passwordResetLookupContent.toString.1": {
+    "zh-CN": "PasswordResetLookupContent[账号信息已隐藏]",
+    "en": "PasswordResetLookupContent[account information redacted]"
+  },
+  "log.mail.preparedMail.toString.1": {
+    "zh-CN": "PreparedMail[邮件内容已隐藏]",
+    "en": "PreparedMail[email content redacted]"
+  },
+  "text.mail.mailDeliveryService.prepare.1": {
+    "zh-CN": "邮件发送未完成，请重新发送。",
+    "en": "The email was not sent. Send it again."
+  },
+  "text.mail.mailDeliveryService.prepare.2": {
+    "zh-CN": "链接已失效或邀请已变更，未发送邮件。",
+    "en": "The link expired or the invitation changed. The email was not sent."
+  },
+  "log.mail.mailJobWorker.runOnce.1": {
+    "zh-CN": "暂时无法领取邮件工作",
+    "en": "Could not claim email work"
+  },
+  "log.mail.mailJobWorker.runOnce.2": {
+    "zh-CN": "邮件发送失败，工作编号 {}，错误代码 {}",
+    "en": "Email delivery failed; jobId={}, errorCode={}"
+  },
+  "log.mail.mailJobWorker.runOnce.3": {
+    "zh-CN": "邮件工作暂未完成，工作编号 {}",
+    "en": "Email work did not complete; jobId={}"
+  },
+  "log.mail.mailJobWorker.renew.1": {
+    "zh-CN": "邮件工作暂时无法续期，工作编号 {}",
+    "en": "Could not renew the email job lease; jobId={}"
+  },
+  "log.mail.mailJobWorker.recordFailure.1": {
+    "zh-CN": "邮件结果暂时无法保存，工作编号 {}",
+    "en": "Could not save the email result; jobId={}"
+  },
+  "log.mail.mailJobWorker.saveAcknowledgement.1": {
+    "zh-CN": "邮件服务已经确认发送，但第 {} 次保存结果失败，工作编号 {}",
+    "en": "The email service confirmed delivery, but saving the result failed on attempt {}; jobId={}"
+  },
+  "text.mail.mailTemplates.render.1": {
+    "zh-CN": "yyyy年M月d日 HH:mm（zzzz）",
+    "en": "MMM d, yyyy HH:mm (zzzz)"
+  },
+  "text.mail.mailTemplates.render.2": {
+    "zh-CN": "重置账号密码",
+    "en": "Reset your password"
+  },
+  "text.mail.mailTemplates.render.3": {
+    "zh-CN": "你申请了重置账号密码。请打开下方链接设置新密码。",
+    "en": "You requested a password reset. Open the link below to set a new password."
+  },
+  "text.mail.mailTemplates.render.4": {
+    "zh-CN": "验证账号邮箱",
+    "en": "Verify your email"
+  },
+  "text.mail.mailTemplates.render.5": {
+    "zh-CN": "请打开下方链接，确认将此邮箱用于你的账号。",
+    "en": "Open the link below to confirm this email address for your account."
+  },
+  "text.mail.mailTemplates.render.6": {
+    "zh-CN": "邀请你加入{0}",
+    "en": "Invitation to join {0}"
+  },
+  "text.mail.mailTemplates.render.7": {
+    "zh-CN": "{0}邀请你加入「{1}」。请打开下方链接查看并接受邀请。",
+    "en": "{0} invited you to join “{1}”. Open the link below to review and accept the invitation."
+  },
+  "text.mail.mailTemplates.render.8": {
+    "zh-CN": "\n\n邀请说明：\n{0}",
+    "en": "\n\nInvitation note:\n{0}"
+  },
+  "text.mail.mailTemplates.render.9": {
+    "zh-CN": "{0}\n\n{1}{2}#token={3}\n\n链接有效期至 {4}。\n如果这不是你的操作，请忽略此邮件。",
+    "en": "{0}\n\n{1}{2}#token={3}\n\nThis link expires at {4}.\nIf you did not request this, ignore this email."
+  }
+}

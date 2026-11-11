@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceCatalogEntry;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -47,8 +49,8 @@ public class ModelsDevCatalogCache {
                 acquired = refresh.tryLock(16, TimeUnit.SECONDS);
             } catch (InterruptedException failure) {
                 Thread.currentThread().interrupt();
-                LOG.warn("等待价格目录被中断，模型={}", modelId, failure);
-                throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MODEL_PRICE_CATALOG_UNAVAILABLE", "价格读取已中断，请重试。", failure);
+                LOG.warn(Messages.log("log.modelpricing.modelsDevCatalogCache.load.1"), modelId, failure);
+                throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MODEL_PRICE_CATALOG_UNAVAILABLE", Messages.text("error.modelpricing.modelsDevCatalogCache.load.1"), failure);
             }
         }
         if (!acquired) {
@@ -85,7 +87,7 @@ public class ModelsDevCatalogCache {
             return new Snapshot(current.entries(), current.fetchedAt(), true);
         }
         throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MODEL_PRICE_CATALOG_UNAVAILABLE",
-            "暂时无法读取 models.dev 价格，可稍后重试或手动配置。", lastFailure);
+            Messages.text("error.modelpricing.modelsDevCatalogCache.available.1"), lastFailure);
     }
 
     public record Snapshot(List<ModelPriceCatalogEntry> entries, Instant fetchedAt, boolean stale) {

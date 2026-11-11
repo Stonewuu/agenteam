@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
@@ -39,7 +41,7 @@ public class GeneratedFileService {
     public PreparedGeneratedFile skillExport(AuthContext actor, String resourceId, String versionId, String name,
                                              JsonNode content) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("文件写入不能占用数据库事务");
+            throw new IllegalStateException(Messages.text("error.file.generatedFileService.skillExport.1"));
         }
         try {
             byte[] bytes = json.writerWithDefaultPrettyPrinter().writeValueAsBytes(content);
@@ -50,7 +52,7 @@ public class GeneratedFileService {
                 resourceId, versionId, null, "export", fileName, "application/json", saved.key(), saved.size(),
                 saved.sha256());
         } catch (Exception failure) {
-            throw new IllegalStateException("技能导出文件无法保存", failure);
+            throw new IllegalStateException(Messages.text("error.file.generatedFileService.skillExport.2"), failure);
         }
     }
 
@@ -63,16 +65,16 @@ public class GeneratedFileService {
     /** 固定执行的长回答先写文件，再由协作终态事务重新验证并登记。 */
     public PreparedGeneratedFile collaborationText(AuthContext actor, String agentId, String versionId, String runId, String content) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("协作成果文件写入不能占用数据库事务");
+            throw new IllegalStateException(Messages.text("error.file.generatedFileService.collaborationText.1"));
         }
         try {
             byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
             var saved = storage.write(actor.enterpriseId(), new ByteArrayInputStream(bytes), 20L * 1024 * 1024);
             return new PreparedGeneratedFile(UUID.randomUUID().toString(), actor.enterpriseId(), actor.userId(), agentId, versionId,
-                runId, "collaboration_artifact", "岗位完整回答.txt", "text/plain", saved.key(), saved.size(), saved.sha256());
+                runId, "collaboration_artifact", Messages.text("text.file.generatedFileService.collaborationText.1"), "text/plain", saved.key(), saved.size(), saved.sha256());
         } catch (RuntimeException failure) {
-            var safe = new ChannelProviderException("COLLABORATION_FILE_FAILED", "岗位完整回答暂时无法保存为文件。", failure);
-            LOG.warn("协作成果文件保存失败，企业={}，执行={}", actor.enterpriseId(), runId, safe);
+            var safe = new ChannelProviderException("COLLABORATION_FILE_FAILED", Messages.text("error.file.generatedFileService.collaborationText.2"), failure);
+            LOG.warn(Messages.log("log.file.generatedFileService.collaborationText.1"), actor.enterpriseId(), runId, safe);
             throw safe;
         }
     }

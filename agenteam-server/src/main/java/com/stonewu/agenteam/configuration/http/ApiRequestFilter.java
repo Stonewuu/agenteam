@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -86,7 +88,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
             String path = request.getRequestURI().substring(request.getContextPath().length());
             if (!BEFORE_INITIALIZATION.contains(path) && !users.superAdminInitialized()) {
                 throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SYSTEM_NOT_INITIALIZED",
-                    "系统尚未初始化，请联系部署人员。");
+                    Messages.text("error.http.apiRequestFilter.doFilterInternal.1"));
             }
             // 身份变化必须先于防伪重试被识别；状态和恢复入口不依赖目标用户仍然有效。
             boolean identityEntry = path.startsWith("/api/v1/auth/")
@@ -98,7 +100,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
                 && SessionIdentityService.state(request.getSession(false)) != null
                 && Set.of("/api/v1/me/password", "/api/v1/me/email-change").contains(path)) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED",
-                    "此操作需要账号本人验证，请结束身份切换后使用本人账号登录。");
+                    Messages.text("error.http.apiRequestFilter.doFilterInternal.2"));
             }
             if (!SAFE_METHODS.contains(request.getMethod())) {
                 // 此唯一平台入口由专用服务验证签名、时间戳、校验令牌和加密正文。
@@ -120,7 +122,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
                     if (request.getContentType() == null || !request.getContentType().split(";", 2)[0].trim()
                         .equalsIgnoreCase("application/octet-stream")) {
                         throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "VALIDATION_FAILED",
-                            "请通过文件导入提交原始文件。");
+                            Messages.text("error.http.apiRequestFilter.doFilterInternal.3"));
                     }
                     if (request.getContentLengthLong() > binaryLimit) {
                         throw tooLarge();
@@ -145,18 +147,18 @@ public class ApiRequestFilter extends OncePerRequestFilter {
                     if (request.getContentType() == null || !request.getContentType().split(";", 2)[0].trim()
                         .equalsIgnoreCase("application/json")) {
                         throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "VALIDATION_FAILED",
-                            "请使用页面支持的请求格式。");
+                            Messages.text("error.http.apiRequestFilter.doFilterInternal.4"));
                     }
                     JsonNode tree;
                     try {
                         tree = json.readTree(body);
                     } catch (IOException exception) {
                         throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                            "请求内容格式不正确或包含重复字段。", exception);
+                            Messages.text("error.http.apiRequestFilter.doFilterInternal.5"), exception);
                     }
                     if (tree == null || !tree.isObject()) {
                         throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                            "提交内容格式不正确，请重新打开表单后提交。");
+                            Messages.text("error.http.apiRequestFilter.doFilterInternal.6"));
                     }
                     request.setAttribute(JSON_ATTRIBUTE, tree);
                 }
@@ -176,7 +178,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
     }
 
     private ApiException tooLarge() {
-        return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "REQUEST_TOO_LARGE", "提交内容过大，请缩减后重试。");
+        return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "REQUEST_TOO_LARGE", Messages.text("error.http.apiRequestFilter.tooLarge.1"));
     }
 
     private int binaryLimit(HttpServletRequest request) {
@@ -184,7 +186,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
         for (var policy : binaryPolicies) {
             int limit = policy.maximumBytes(request);
             if (limit < 0 || limit > MAX_BODY_BYTES || (limit > 0 && selected > 0)) {
-                throw new IllegalStateException("文件请求的大小限制或路径登记有冲突");
+                throw new IllegalStateException(Messages.text("error.http.apiRequestFilter.binaryLimit.1"));
             }
             if (limit > 0) {
                 selected = limit;

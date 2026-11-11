@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -78,7 +80,7 @@ public class RunMapper {
             .eq(AgentRunRow::getId, run.id()).eq(AgentRunRow::getStatus, "waiting_turn")
             .set(AgentRunRow::getQueuePosition, position));
         if (changed != 1) {
-            throw new IllegalStateException("这条补充消息已经离开队列。");
+            throw new IllegalStateException(Messages.text("error.execution.runMapper.moveWaiting.1"));
         }
     }
 
@@ -92,7 +94,7 @@ public class RunMapper {
             .set(AgentRunRow::getQueuePosition, null).set(AgentRunRow::getExecutionConfigJson, json.write(config))
             .set(AgentRunRow::getUpdatedAt, now));
         if (changed != 1) {
-            throw new IllegalStateException("这条补充消息已经交给智能体或被停止。");
+            throw new IllegalStateException(Messages.text("error.execution.runMapper.activateWaiting.1"));
         }
     }
 
@@ -104,7 +106,7 @@ public class RunMapper {
     public void start(RunRecord run, long lease, Instant now) {
         int changed = statements.startAgentRun(lease, timestamp(now), run.enterpriseId(), run.id());
         if (changed != 1) {
-            throw new IllegalStateException("执行已经变化，不能再次开始");
+            throw new IllegalStateException(Messages.text("error.execution.runMapper.start.1"));
         }
         statements.startRunAttempt(timestamp(now), run.enterpriseId(), run.id(), run.currentAttemptNo());
     }
@@ -117,7 +119,7 @@ public class RunMapper {
         int changed = statements.retryAgentRun(output, timestamp(available), timestamp(now), run.enterpriseId(),
             run.id(), run.currentAttemptNo());
         if (changed != 1) {
-            throw new IllegalStateException("当前执行已变化，不能安排新的尝试");
+            throw new IllegalStateException(Messages.text("error.execution.runMapper.retry.1"));
         }
     }
 
@@ -128,7 +130,7 @@ public class RunMapper {
     public void finish(RunRecord run, String status, String code, String message, Instant now) {
         int changed = statements.finishAgentRun(status, code, message, timestamp(now), run.enterpriseId(), run.id());
         if (changed != 1) {
-            throw new IllegalStateException("执行已经结束，不能改写终态");
+            throw new IllegalStateException(Messages.text("error.execution.runMapper.finish.1"));
         }
         runAttemptSqlMapper.finishRunAttempt(status, code, message, timestamp(now), run.enterpriseId(), run.id(),
             run.currentAttemptNo());

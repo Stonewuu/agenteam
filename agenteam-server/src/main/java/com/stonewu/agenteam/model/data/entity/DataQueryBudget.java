@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.data.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -11,7 +13,7 @@ public record DataQueryBudget(long deadline) {
         long millis = (deadline - System.nanoTime()) / 1_000_000;
         if (millis <= 0 || Thread.currentThread().isInterrupted()) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "DATA_QUERY_TIMEOUT",
-                "数据查询已取消或超过允许时间，请减少查询范围。");
+                Messages.text("error.data.dataQueryBudget.remainingMillis.1"));
         }
         return (int) Math.min(10000, millis);
     }

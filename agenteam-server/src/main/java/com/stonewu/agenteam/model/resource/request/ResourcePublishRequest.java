@@ -11,7 +11,7 @@ import java.util.List;
  * 省略授权或上架信息时保持原值；提交时与发布一起验证和保存。
  */
 public record ResourcePublishRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 500, message = "文字长度不符合要求。") String releaseNote,
-    @Size(min = 0, max = 500, message = "条目数量超出允许范围。") List<@NotNull(message = "请填写必填项。") @Valid ResourceGrantSpec> grants,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 500, message = "{validation.textLength}") String releaseNote,
+    @Size(min = 0, max = 500, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") List<@NotNull(message = "{validation.required}") @Valid ResourceGrantSpec> grants,
     @Valid AgentListingRequest listing) {
 }

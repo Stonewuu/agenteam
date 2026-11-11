@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -37,13 +39,13 @@ public final class WorkflowNodes {
 
     private static void collect(JsonNode graph, String prefix, int depth, List<Entry> result) {
         if (depth > 3) {
-            throw ApiException.invalidField("config.nodes", "循环最多嵌套三层。");
+            throw ApiException.invalidField("config.nodes", Messages.text("error.workflow.workflowNodes.collect.1"));
         }
         for (var node : graph.path("nodes")) {
             String path = prefix + "nodes/" + node.path("nodeId").asText();
             result.add(new Entry(node, path));
             if (result.size() > 50) {
-                throw ApiException.invalidField("config.nodes", "包含循环内部步骤在内，最多允许 50 个节点。");
+                throw ApiException.invalidField("config.nodes", Messages.text("error.workflow.workflowNodes.collect.2"));
             }
             if (node.path("type").asText().equals("loop")) {
                 collect(node.path("config").path("body"), path + "/config/body/", depth + 1, result);

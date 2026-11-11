@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule.action;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -58,7 +60,7 @@ public class AgentRunActionHandler implements ScheduleActionHandler {
 
     @Override
     public String name() {
-        return "执行智能体任务";
+        return Messages.text("text.schedule.agentRunActionHandler.name.1");
     }
 
     @Override
@@ -87,7 +89,7 @@ public class AgentRunActionHandler implements ScheduleActionHandler {
         String text = ResourceInput.text(action.inputText(), prefix + "inputText", 20000, true);
         String hire = ResourceInput.text(action.hireId(), prefix + "hireId", 100, true);
         if (input.maxRetries() < 0 || input.maxRetries() > 2) {
-            throw ApiException.invalidField("maxRetries", "智能体自动重试次数需要在零至两次之间。");
+            throw ApiException.invalidField("maxRetries", Messages.text("error.schedule.agentRunActionHandler.prepare.1"));
         }
         String version = action.agentVersionId();
         if (version == null && previous != null && type().equals(previous.actionType()) && Objects.equals(previous.hireId(), hire)) {
@@ -101,7 +103,7 @@ public class AgentRunActionHandler implements ScheduleActionHandler {
     public void validateCurrent(AuthContext actor, ScheduleRecord schedule) {
         policy.run(actor);
         if (hires.find(actor.enterpriseId(), actor.userId(), schedule.hireId(), false).filter(value -> "active".equals(value.status())).isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_HIRE_UNAVAILABLE", "员工雇佣已暂停或解除，计划暂时不能执行。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_HIRE_UNAVAILABLE", Messages.text("error.schedule.agentRunActionHandler.validateCurrent.1"));
         }
         policy.select(actor, schedule.hireId(), schedule.agentVersionId());
     }

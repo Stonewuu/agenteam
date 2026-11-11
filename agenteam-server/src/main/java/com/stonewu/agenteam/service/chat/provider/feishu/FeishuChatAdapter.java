@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat.provider.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
@@ -67,7 +69,7 @@ public class FeishuChatAdapter implements ChatPlatformAdapter {
         for (String name : new String[]{"receiveMention", "sendText", "readHistory", "threadReply", "uploadFile", "crossBotIdentity", "cardInteraction"}) {
             capabilities.putObject(name).put("status", "not_tested");
         }
-        return new BotIdentity(id, bot.path("app_name").asText("飞书机器人"), capabilities);
+        return new BotIdentity(id, bot.path("app_name").asText(Messages.text("text.chat.feishuChatAdapter.identity.1")), capabilities);
     }
 
     @Override
@@ -81,7 +83,7 @@ public class FeishuChatAdapter implements ChatPlatformAdapter {
             query, tokens.get(application).value()), true).path("data");
         var items = new ArrayList<ConversationIdentity>();
         for (var value : data.path("items")) {
-            items.add(new ConversationIdentity(responses.required(value, "chat_id"), value.path("name").asText("飞书群"), "group"));
+            items.add(new ConversationIdentity(responses.required(value, "chat_id"), value.path("name").asText(Messages.text("text.chat.feishuChatAdapter.conversations.1")), "group"));
         }
         return new ConversationPage(items, data.path("has_more").asBoolean() ? responses.required(data, "page_token") : null);
     }
@@ -109,7 +111,7 @@ public class FeishuChatAdapter implements ChatPlatformAdapter {
             .put("content", prepared.path("content").toString()).put("uuid", prepared.path("requestId").asText());
         if (!reply.isBlank()) {
             if (!reply.matches("[A-Za-z0-9_-]{1,191}")) {
-                throw new IllegalArgumentException("已准备的回复消息编号不正确");
+                throw new IllegalArgumentException(Messages.text("error.chat.feishuChatAdapter.send.1"));
             }
             path += "/" + reply + "/reply";
             payload.put("reply_in_thread", prepared.path("replyInThread").asBoolean(true));
@@ -130,7 +132,7 @@ public class FeishuChatAdapter implements ChatPlatformAdapter {
     private SendReceipt updateCard(IntegrationApplication application, JsonNode prepared, Runnable beforeSend) {
         String message = prepared.path("updateMessageId").asText();
         if (!message.matches("[A-Za-z0-9_-]{1,191}")) {
-            throw new IllegalArgumentException("待更新的卡片消息编号不正确");
+            throw new IllegalArgumentException(Messages.text("error.chat.feishuChatAdapter.updateCard.1"));
         }
         var token = tokens.get(application);
         var body = json.createObjectNode().put("content", prepared.path("content").toString());

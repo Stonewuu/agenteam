@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -41,7 +43,7 @@ public final class SandboxCapacity {
             control.requireActive();
             if (System.nanoTime() >= deadline) {
                 throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "SANDBOX_QUEUE_TIMEOUT",
-                    "执行环境仍在处理其他任务，请稍后重试。");
+                    Messages.text("error.workspace.sandboxCapacity.acquire.1"));
             }
             if (slots.tryAcquire()) {
                 try {

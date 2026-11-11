@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.execution.entity.ConversationRecord;
@@ -62,7 +64,7 @@ public class ConversationModelService {
         var selection = conversation == null || conversation.modelSelection() == null ? defaults : conversation.modelSelection();
         var options = models.list(actor).stream().map(model -> {
             String reason = model.enabled() ? AgentModelSelectionService.unavailableReason(config,
-                model.capabilities()) : "已停用";
+                model.capabilities()) : Messages.text("text.execution.conversationModelService.options.1");
             return new ConversationModelOptions.Option(model.id(), model.name(), model.modelName(),
                 model.capabilities().reasoningEfforts(), reason == null, reason);
         }).toList();
@@ -89,7 +91,7 @@ public class ConversationModelService {
         }
         if (conversation.activeRunId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
-                "请等待当前回复结束，或先停止任务，再切换模型或思考强度。");
+                Messages.text("error.execution.conversationModelService.select.1"));
         }
         configurations.normal(actor, conversation.agentId(), conversation.agentVersionId(), selection);
         if (!selection.equals(conversation.modelSelection())) {

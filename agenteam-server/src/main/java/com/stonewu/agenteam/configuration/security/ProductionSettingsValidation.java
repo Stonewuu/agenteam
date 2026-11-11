@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.security;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.auth.AccountInputValidation;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
@@ -23,15 +25,15 @@ public class ProductionSettingsValidation {
         if (!"https".equalsIgnoreCase(
             uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null || (uri.getRawPath() != null && !uri.getRawPath()
             .isEmpty())) {
-            throw new IllegalArgumentException("生产邮件链接地址必须使用 HTTPS，且不带路径、查询参数或片段");
+            throw new IllegalArgumentException(Messages.text("error.security.productionSettingsValidation.init.1"));
         }
         if (!environment.getProperty("server.servlet.session.cookie.secure", Boolean.class, false)) {
-            throw new IllegalArgumentException("生产登录 Cookie 必须仅通过加密连接发送");
+            throw new IllegalArgumentException(Messages.text("error.security.productionSettingsValidation.init.2"));
         }
         String proxies = required(environment, "server.tomcat.remoteip.internal-proxies");
         if (!Arrays.stream(proxies.split(",", -1)).allMatch(this::isSingleProxyAddress)) {
             throw new IllegalArgumentException(
-                "可信代理必须逐一填写实际地址，IPv4 使用 /32，IPv6 使用 /128，不能配置整个网络或任意正则表达式");
+                Messages.text("error.security.productionSettingsValidation.init.3"));
         }
         required(environment, "spring.mail.host");
         AccountInputValidation.email(required(environment, "agenteam.mail.from"), "from");
@@ -58,7 +60,7 @@ public class ProductionSettingsValidation {
     private String required(Environment environment, String name) {
         String value = environment.getRequiredProperty(name);
         if (value.isBlank()) {
-            throw new IllegalArgumentException("缺少生产配置：" + name);
+            throw new IllegalArgumentException(Messages.text("error.security.productionSettingsValidation.required.1", name));
         }
         return value;
     }

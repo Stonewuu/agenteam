@@ -223,12 +223,12 @@ class ModelsDevCatalogTest {
                         release.await(2, TimeUnit.SECONDS);
                     } catch (InterruptedException interrupted) {
                         Thread.currentThread().interrupt();
-                        LOG.warn("目录超时测试的等待被中断，模型=bounded-model", interrupted);
+                        LOG.warn("Catalog timeout test interrupted while waiting; model=bounded-model", interrupted);
                     }
                 }
             } catch (IOException expectedClose) {
                 // 超限或超时后客户端主动关闭，测试服务无需继续发送。
-                LOG.info("目录容量测试的客户端已关闭，模型=bounded-model", expectedClose);
+                LOG.info("Catalog capacity test client closed; model=bounded-model", expectedClose);
                 assertThat(expectedClose).hasStackTraceContaining("IOException");
             }
         });

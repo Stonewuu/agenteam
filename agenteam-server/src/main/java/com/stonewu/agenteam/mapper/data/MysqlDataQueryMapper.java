@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -64,7 +66,7 @@ public class MysqlDataQueryMapper {
                 }
             }
             throw new ApiException(HttpStatus.BAD_GATEWAY, "DATA_QUERY_FAILED",
-                "数据库查询暂时未完成，请检查当前字段和连接。", failed);
+                Messages.text("error.data.mysqlDataQueryMapper.query.1"), failed);
         }
     }
 
@@ -86,6 +88,6 @@ public class MysqlDataQueryMapper {
 
     private ApiException tooLarge() {
         return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "DATA_RESULT_TOO_LARGE",
-            "单行结果超过大小限制，请减少返回字段。");
+            Messages.text("error.data.mysqlDataQueryMapper.tooLarge.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource.validation;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.security.CredentialMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.resource.entity.ResourceRecord;
@@ -32,7 +34,7 @@ public class ConnectionValidationEvidence {
         }
         if (credentials.find(actor.enterpriseId(), id)
             .filter(value -> value.status().equals("active") && kinds.contains(value.kind())).isEmpty()) {
-            throw ApiException.invalidField("config.credentialId", "凭据已失效或不适用于此连接，请重新选择。");
+            throw ApiException.invalidField("config.credentialId", Messages.text("error.resource.connectionValidationEvidence.credential.1"));
         }
     }
 
@@ -42,7 +44,7 @@ public class ConnectionValidationEvidence {
             || !evidence.path("connection").path("status").asText().equals("succeeded") || !recent(
             evidence.path("connection").path("checkedAt").asText())) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_CHECK_REQUIRED",
-                "请先完成当前配置的连接检查，再发布此" + resource.kind().label() + "。");
+                Messages.text("error.resource.connectionValidationEvidence.checked.1", resource.kind().localizedLabel()));
         }
     }
 

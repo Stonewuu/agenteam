@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.RunJobMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -81,7 +83,7 @@ public class WorkspaceAccessService {
     public void requireStoredWorkspace(RunRecord run, String session, WorkspaceSession scope) {
         if (scope.manifest().version() == null && !scope.cleared() && calls.hasWorkspaceFiles(run, session)) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "WORKSPACE_STORAGE_UNAVAILABLE",
-                "当前节点无法读取此对话已保存的工作文件，请检查工作空间存储。");
+                Messages.text("error.workspace.workspaceAccessService.requireStoredWorkspace.1"));
         }
     }
 

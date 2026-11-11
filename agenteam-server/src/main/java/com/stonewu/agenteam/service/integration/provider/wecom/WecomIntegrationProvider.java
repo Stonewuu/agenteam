@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
@@ -51,21 +53,21 @@ public class WecomIntegrationProvider implements IntegrationProvider, ChannelIde
 
     @Override
     public String name() {
-        return "企业微信";
+        return Messages.text("text.integration.wecomIntegrationProvider.name.1");
     }
 
     @Override
     public List<IntegrationProviderView.Field> publicFields() {
-        return List.of(new IntegrationProviderView.Field("externalTenantId", "企业编号（CorpID）", "text", true, null, 191, null, null),
-            new IntegrationProviderView.Field("externalAppId", "应用编号（AgentId）", "text", true, null, 191, null, null),
-            new IntegrationProviderView.Field("configuration.dailyMessageLimit", "每日通知发送上限", "number", true, 1, 100_000_000, 200,
-                "按企业微信后台允许的每日消息量填写。"));
+        return List.of(new IntegrationProviderView.Field("externalTenantId", Messages.text("text.integration.wecomIntegrationProvider.publicFields.1"), "text", true, null, 191, null, null),
+            new IntegrationProviderView.Field("externalAppId", Messages.text("text.integration.wecomIntegrationProvider.publicFields.2"), "text", true, null, 191, null, null),
+            new IntegrationProviderView.Field("configuration.dailyMessageLimit", Messages.text("text.integration.wecomIntegrationProvider.publicFields.3"), "number", true, 1, 100_000_000, 200,
+                Messages.text("text.integration.wecomIntegrationProvider.publicFields.4")));
     }
 
     @Override
     public void validateApplicationId(String value) {
         if (!value.matches("[1-9][0-9]{0,9}")) {
-            throw ApiException.invalidField("externalAppId", "企业微信应用编号需要填写正整数。");
+            throw ApiException.invalidField("externalAppId", Messages.text("error.integration.wecomIntegrationProvider.validateApplicationId.1"));
         }
     }
 
@@ -75,11 +77,11 @@ public class WecomIntegrationProvider implements IntegrationProvider, ChannelIde
             return Map.of("dailyMessageLimit", 200);
         }
         if (!Set.of("dailyMessageLimit").containsAll(configuration.keySet())) {
-            throw ApiException.invalidField("configuration", "企业微信仅支持设置每日通知发送上限。");
+            throw ApiException.invalidField("configuration", Messages.text("error.integration.wecomIntegrationProvider.normalizeConfiguration.1"));
         }
         JsonNode limit = json.valueToTree(configuration).path("dailyMessageLimit");
         if (!limit.isIntegralNumber() || !limit.canConvertToInt() || limit.intValue() < 1 || limit.intValue() > 100_000_000) {
-            throw ApiException.invalidField("configuration.dailyMessageLimit", "每日发送上限需要填写 1 至 100000000 的整数。");
+            throw ApiException.invalidField("configuration.dailyMessageLimit", Messages.text("error.integration.wecomIntegrationProvider.normalizeConfiguration.2"));
         }
         return Map.of("dailyMessageLimit", limit.intValue());
     }
@@ -108,7 +110,7 @@ public class WecomIntegrationProvider implements IntegrationProvider, ChannelIde
         var body = responses.requireSuccess(http.get(app.id(), endpoints.wecom("/cgi-bin/agent/get"),
             Map.of("access_token", token.value(), "agentid", app.externalAppId()), null), false);
         if (!body.path("agentid").isIntegralNumber() || !body.path("agentid").asText().equals(app.externalAppId())) {
-            throw new ChannelProviderException("CHANNEL_APP_MISMATCH", "应用密钥与填写的企业微信应用编号不匹配。");
+            throw new ChannelProviderException("CHANNEL_APP_MISMATCH", Messages.text("error.integration.wecomIntegrationProvider.checkApplication.1"));
         }
         return new ChannelApplicationCheck(app.externalTenantId(), responses.required(body, "name"));
     }
@@ -138,13 +140,13 @@ public class WecomIntegrationProvider implements IntegrationProvider, ChannelIde
     public JsonNode render(IntegrationApplication app, String recipient, String title, String body,
                            URI detailLink, String requestId) {
         if (recipient == null || recipient.isBlank() || recipient.equalsIgnoreCase("@all") || recipient.contains("|")) {
-            throw new ChannelProviderException("CHANNEL_RECIPIENT_INVALID", "此通知只能发送给一个已绑定的成员。");
+            throw new ChannelProviderException("CHANNEL_RECIPIENT_INVALID", Messages.text("error.integration.wecomIntegrationProvider.render.1"));
         }
         var payload = json.createObjectNode().put("touser", recipient).put("agentid", Long.parseLong(app.externalAppId()))
             .put("msgtype", "textcard").put("enable_duplicate_check", 1).put("duplicate_check_interval", 3600);
         payload.putObject("textcard").put("title", title)
             .put("description", description(body))
-            .put("url", detailLink.toString()).put("btntxt", "查看详情");
+            .put("url", detailLink.toString()).put("btntxt", Messages.text("text.integration.wecomIntegrationProvider.render.1"));
         return payload;
     }
 

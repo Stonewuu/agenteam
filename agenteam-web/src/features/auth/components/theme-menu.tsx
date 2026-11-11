@@ -25,7 +25,7 @@ export function ThemeInitializer() {
     try {
       value = localStorage.getItem(themeStorageKey);
     } catch (failure) {
-      console.warn("无法读取本机主题偏好，将跟随系统。", failure);
+      console.warn("Failed to read the local theme preference; using the system theme.", failure);
     }
     applyTheme(value === "light" || value === "dark" ? value : "system");
     const storage = (event: StorageEvent) => {

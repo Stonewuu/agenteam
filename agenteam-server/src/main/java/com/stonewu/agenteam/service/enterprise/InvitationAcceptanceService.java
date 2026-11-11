@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.auth.IdentityViewMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -119,7 +121,7 @@ public class InvitationAcceptanceService {
         var existing = enterprises.findMember(invitation.enterpriseId(), account.id()).orElse(null);
         if (existing != null && existing.status().equals("disabled")) {
             throw new ApiException(HttpStatus.CONFLICT, "MEMBER_DISABLED",
-                "你在此企业的成员身份已停用，请联系管理员恢复。");
+                Messages.text("error.enterprise.invitationAcceptanceService.accept.1"));
         }
         boolean keepExisting = existing != null && existing.status().equals("active");
         if (!keepExisting) {
@@ -136,7 +138,7 @@ public class InvitationAcceptanceService {
         invitations.accept(invitation, account.id(), now);
         authorization.changed(new AuthContext(account, invitation.enterpriseId(), Set.of()), "invitation.accept",
             "invitation", invitation.id(),
-            keepExisting ? "接受邀请并保留已有成员权限" : "通过邀请加入企业",
+            keepExisting ? Messages.text("text.enterprise.invitationAcceptanceService.accept.1") : Messages.text("text.enterprise.invitationAcceptanceService.accept.2"),
             Map.of("keptExistingMembership", keepExisting, "createdAccount", createdAccount));
         return accepted(account, invitation.enterpriseId(), createdAccount);
     }
@@ -152,7 +154,7 @@ public class InvitationAcceptanceService {
         }
         String username = IdentityValidation.username(request.username());
         String displayName = request.displayName() == null || request.displayName().isBlank() ? username
-            : EnterpriseValidation.name(request.displayName(), "显示名", 50);
+            : EnterpriseValidation.name(request.displayName(), Messages.text("label.user.name"), 50);
         IdentityValidation.newPassword(request.password());
         String userId = UUID.randomUUID().toString();
         try {
@@ -162,7 +164,7 @@ public class InvitationAcceptanceService {
             }
         } catch (DuplicateKeyException exception) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_EXISTS",
-                "用户名或邮箱已被使用，请登录已有账号或调整用户名。", exception);
+                Messages.text("error.enterprise.invitationAcceptanceService.createAccount.1"), exception);
         }
         return users.findById(userId).orElseThrow();
     }
@@ -194,11 +196,11 @@ public class InvitationAcceptanceService {
         }
         if (user.emailVerifiedAt() == null || !invitation.email().equalsIgnoreCase(user.email())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "INVITATION_EMAIL_MISMATCH",
-                "请使用受邀邮箱已完成验证的账号接受邀请。");
+                Messages.text("error.enterprise.invitationAcceptanceService.matchEmail.1"));
         }
     }
 
     private static ApiException loginRequired() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "请登录受邀邮箱对应的账号后继续。");
+        return new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", Messages.text("error.enterprise.invitationAcceptanceService.loginRequired.1"));
     }
 }

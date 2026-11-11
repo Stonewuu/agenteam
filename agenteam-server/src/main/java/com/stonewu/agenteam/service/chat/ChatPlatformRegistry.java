@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -42,6 +44,6 @@ public class ChatPlatformRegistry {
     }
 
     public static ApiException unavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", "当前接入尚不具备此聊天能力。");
+        return new ApiException(HttpStatus.CONFLICT, "CHAT_CAPABILITY_UNAVAILABLE", Messages.text("error.chat.chatPlatformRegistry.unavailable.1"));
     }
 }

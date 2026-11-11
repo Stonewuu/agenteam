@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -81,7 +83,7 @@ public class JavaPluginManagementService {
     public void authorize(AuthContext actor, boolean mutation) {
         authorization.require(actor, "plugin.view");
         if (mutation && !users.findById(actor.userId()).map(user -> user.superAdmin()).orElse(false)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "JAVA_PLUGIN_ADMIN_REQUIRED", "只有平台管理员可以安装、升级或卸载扩展插件。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "JAVA_PLUGIN_ADMIN_REQUIRED", Messages.text("error.plugin.javaPluginManagementService.authorize.1"));
         }
     }
 
@@ -95,12 +97,12 @@ public class JavaPluginManagementService {
         try {
             hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (Exception failure) {
-            throw new IllegalStateException("无法计算插件包摘要", failure);
+            throw new IllegalStateException(Messages.text("error.plugin.javaPluginManagementService.prepare.1"), failure);
         }
         var existing = registry.find(actor.enterpriseId(), id);
         if (existing != null) {
             if (!existing.getArtifactHash().equals(hash)) {
-                throw ApiException.invalidField("package", "同一次上传不能更换程序包，请重新选择文件。");
+                throw ApiException.invalidField("package", Messages.text("error.plugin.javaPluginManagementService.prepare.2"));
             }
             return registry.view(existing);
         }
@@ -114,7 +116,7 @@ public class JavaPluginManagementService {
         } catch (ApiException failure) {
             throw failure;
         } catch (RuntimeException failure) {
-            throw ApiException.invalidField("package", "插件工具声明无法解析，请按平台接口规范重新构建。", failure);
+            throw ApiException.invalidField("package", Messages.text("error.plugin.javaPluginManagementService.prepare.3"), failure);
         }
         var row = new JavaPluginInstallationRow();
         row.setId(id);
@@ -144,20 +146,20 @@ public class JavaPluginManagementService {
         var existing = registry.find(actor.enterpriseId(), id);
         if (existing != null) {
             if (!existing.getArtifactHash().equals(hash)) {
-                throw ApiException.invalidField("package", "同一次上传不能更换程序包，请重新选择文件。");
+                throw ApiException.invalidField("package", Messages.text("error.plugin.javaPluginManagementService.prepare.2"));
             }
             return registry.view(existing);
         }
         requireCapacity(actor.enterpriseId());
         try {
             if (installations.insert(row) != 1) {
-                throw new IllegalStateException("插件安装记录未能保存");
+                throw new IllegalStateException(Messages.text("error.plugin.javaPluginManagementService.savePrepared.1"));
             }
         } catch (DuplicateKeyException duplicate) {
-            LOG.info("并发上传已保存相同请求，安装编号 {}", id, duplicate);
+            LOG.info(Messages.log("log.plugin.javaPluginManagementService.savePrepared.1"), id, duplicate);
             var saved = registry.find(actor.enterpriseId(), id);
             if (saved == null || !saved.getArtifactHash().equals(hash)) {
-                throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_UPLOAD_CHANGED", "同一次上传已提交其他程序包。", duplicate);
+                throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_UPLOAD_CHANGED", Messages.text("error.plugin.javaPluginManagementService.savePrepared.2"), duplicate);
             }
             return registry.view(saved);
         }
@@ -168,13 +170,13 @@ public class JavaPluginManagementService {
         if (installations.selectCount(new LambdaQueryWrapper<JavaPluginInstallationRow>()
             .eq(JavaPluginInstallationRow::getEnterpriseId, enterprise)
             .in(JavaPluginInstallationRow::getStatus, "active", "prepared")) >= 100) {
-            throw ApiException.invalidField("package", "已安装及待安装插件最多 100 个，请先移除不需要的程序包。");
+            throw ApiException.invalidField("package", Messages.text("error.plugin.javaPluginManagementService.requireCapacity.1"));
         }
     }
 
     private List<ToolDefinition> validateTools(JsonNode result) {
         if (!result.isArray() || result.isEmpty() || result.size() > 100) {
-            throw ApiException.invalidField("package", "插件需要提供 1 至 100 个工具。");
+            throw ApiException.invalidField("package", Messages.text("error.plugin.javaPluginManagementService.validateTools.1"));
         }
         List<ToolSpec> specs = mapper.convertValue(result, new TypeReference<>() {
         });
@@ -186,7 +188,7 @@ public class JavaPluginManagementService {
                 || tool.timeoutSeconds() < 1 || tool.timeoutSeconds() > 120
                 || tool.operationClass() == null || !Set.of("read", "write", "destructive", "unknown").contains(tool.operationClass())
                 || tool.supportsDeduplication() || tool.supportsResultQuery()) {
-                throw ApiException.invalidField("package", "插件工具定义不符合规范，当前接口不支持结果查询和自动重试声明。");
+                throw ApiException.invalidField("package", Messages.text("error.plugin.javaPluginManagementService.validateTools.2"));
             }
             schemas.compile(json.tree(tool.inputSchema()));
             if (tool.outputSchema() != null) {

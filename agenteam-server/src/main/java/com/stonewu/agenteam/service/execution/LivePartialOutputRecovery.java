@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
@@ -57,13 +59,13 @@ public class LivePartialOutputRecovery {
             String text = ordered.stream().filter(block -> block.type().equals("text") && block.parentBlockId() == null)
                 .map(ContentBlock::text).collect(Collectors.joining("\n\n"));
             if (ordered.size() > 500 || text.length() > 1_000_000) {
-                throw new IllegalStateException("待恢复的部分输出超过允许长度");
+                throw new IllegalStateException(Messages.text("error.execution.livePartialOutputRecovery.merge.1"));
             }
             return new MessageView(saved.id(), saved.runId(), saved.attemptNo(), saved.role(), text, saved.status(),
                 ordered,
                 saved.attachments(), saved.feedback(), saved.createdAt(), saved.updatedAt());
         } catch (RuntimeException unavailable) {
-            LOG.warn("结束执行时无法读取尚未保存的输出，保留数据库已有内容，执行编号 {}，会话编号 {}",
+            LOG.warn(Messages.log("log.execution.livePartialOutputRecovery.merge.1"),
                 run.id(), run.conversationId(), unavailable);
             return saved;
         }

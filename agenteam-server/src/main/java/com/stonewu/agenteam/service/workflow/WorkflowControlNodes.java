@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.workflow.entity.WorkflowGraph;
@@ -45,7 +47,7 @@ public class WorkflowControlNodes {
         var schema = graph.nodes().get(graph.startId()).config().path("inputSchema");
         if (input == null || !input.isObject() || !schemas.compile(schema).validate(input).isEmpty()) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKFLOW_INPUT_INVALID",
-                "输入不符合工作流开始节点要求，请检查必填字段与数据类型。");
+                Messages.text("error.workflow.workflowControlNodes.validateInput.1"));
         }
     }
 
@@ -64,7 +66,7 @@ public class WorkflowControlNodes {
             }
             if (!items.isArray() || items.size() > config.path("maxIterations").asInt()) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKFLOW_LOOP_INPUT_INVALID",
-                    "循环输入必须是列表，且条目数量不能超过循环上限。");
+                    Messages.text("error.workflow.workflowControlNodes.input.1"));
             }
             var input = json.createObjectNode();
             input.set("items", items);
@@ -95,7 +97,7 @@ public class WorkflowControlNodes {
                 new Result(expressions.transform(node.config().path("fields"), workflow.input(), workflow.outputs()),
                     "default");
             case "parallel", "join", "end" -> new Result(input, "default");
-            default -> throw new IllegalArgumentException("当前节点需要实际智能体、工具或用户确认");
+            default -> throw new IllegalArgumentException(Messages.text("error.workflow.workflowControlNodes.execute.1"));
         };
     }
 }

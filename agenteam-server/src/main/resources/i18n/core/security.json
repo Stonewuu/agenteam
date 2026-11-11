@@ -1,0 +1,122 @@
+{
+  "error.security.applicationSecretKeyFile.loadOrCreate.1": {
+    "zh-CN": "应用密钥文件路径不能为空",
+    "en": "The application key file path must not be empty."
+  },
+  "error.security.applicationSecretKeyFile.loadOrCreate.2": {
+    "zh-CN": "应用密钥文件无法读取或创建，请检查目录权限：{0}",
+    "en": "The application key file could not be read or created. Check directory permissions: {0}"
+  },
+  "error.security.applicationSecretKeyFile.read.1": {
+    "zh-CN": "应用密钥文件内容超出允许大小",
+    "en": "The application key file exceeds the allowed size."
+  },
+  "error.security.applicationSecretKeyFile.read.2": {
+    "zh-CN": "应用密钥文件不完整，请恢复原文件，不能用新密钥覆盖",
+    "en": "The application key file is incomplete. Restore the original file; do not overwrite it with new keys."
+  },
+  "error.security.applicationSecretKeys.init.1": {
+    "zh-CN": "内容加密密钥版本格式不正确",
+    "en": "The content encryption key version format is invalid."
+  },
+  "error.security.applicationSecretKeys.decodeEncryptionKeys.1": {
+    "zh-CN": "内容加密密钥配置格式不正确",
+    "en": "The content encryption key configuration format is invalid."
+  },
+  "error.security.applicationSecretKeys.encryptionKey.1": {
+    "zh-CN": "未找到版本 {0} 的内容加密密钥，请检查 agenteam.security.encryption-keys 和 agenteam.security.active-encryption-key。",
+    "en": "Content encryption key version {0} was not found. Check agenteam.security.encryption-keys and agenteam.security.active-encryption-key."
+  },
+  "error.security.applicationSecretKeys.decode.1": {
+    "zh-CN": "部署密钥必须是经过 Base64 编码的三十二字节随机值",
+    "en": "The deployment key must be a Base64-encoded random value of 32 bytes."
+  },
+  "error.security.applicationSecretKeys.unavailable.1": {
+    "zh-CN": "暂时无法提交此操作，请联系管理员。",
+    "en": "This action cannot be submitted right now. Contact the administrator."
+  },
+  "error.security.productionSettingsValidation.init.1": {
+    "zh-CN": "生产邮件链接地址必须使用 HTTPS，且不带路径、查询参数或片段",
+    "en": "Production email link origins must use HTTPS without a path, query, or fragment."
+  },
+  "error.security.productionSettingsValidation.init.2": {
+    "zh-CN": "生产登录 Cookie 必须仅通过加密连接发送",
+    "en": "Production login cookies must only be sent over encrypted connections."
+  },
+  "error.security.productionSettingsValidation.init.3": {
+    "zh-CN": "可信代理必须逐一填写实际地址，IPv4 使用 /32，IPv6 使用 /128，不能配置整个网络或任意正则表达式",
+    "en": "Specify each trusted proxy address individually: /32 for IPv4 or /128 for IPv6. Entire networks and arbitrary regular expressions are not allowed."
+  },
+  "error.security.productionSettingsValidation.required.1": {
+    "zh-CN": "缺少生产配置：{0}",
+    "en": "Missing production configuration: {0}"
+  },
+  "error.security.credentialSecretValidation.validate.1": {
+    "zh-CN": "请选择支持的凭据类型。",
+    "en": "Select a supported credential type."
+  },
+  "error.security.credentialSecretValidation.invalid.1": {
+    "zh-CN": "请填写当前认证类型要求的完整凭据，不能使用空值或控制字符。",
+    "en": "Provide all credentials required by this authentication type, without empty values or control characters."
+  },
+  "error.security.credentialService.rotate.1": {
+    "zh-CN": "该凭据已撤销，请创建新的凭据。",
+    "en": "This credential was revoked. Create a new credential."
+  },
+  "error.security.credentialService.revoke.1": {
+    "zh-CN": "仍有可用资源引用此凭据，请先替换引用或停用相关资源。",
+    "en": "Available resources still use this credential. Replace those references or disable the resources first."
+  },
+  "error.security.httpCredentialService.invalid.1": {
+    "zh-CN": "连接凭据已失效或格式不正确，请重新设置。",
+    "en": "The connection credential is invalid or incorrectly formatted. Set it again."
+  },
+  "error.security.payloadEncryption.encrypt.1": {
+    "zh-CN": "敏感内容无法加密保存",
+    "en": "Sensitive content could not be encrypted and saved."
+  },
+  "error.security.payloadEncryption.decrypt.1": {
+    "zh-CN": "已保存的敏感内容无法读取",
+    "en": "Saved sensitive content could not be read."
+  },
+  "log.security.applicationSecretKeyFile.loadOrCreate.1": {
+    "zh-CN": "已自动生成应用密钥并保存到 {}，后续启动将复用此文件。",
+    "en": "Application keys were generated and saved to {}; subsequent starts will reuse this file"
+  },
+  "text.security.applicationSecretKeyFile.write.1": {
+    "zh-CN": "应用自动生成的密钥，请与运行数据一起保留",
+    "en": "Application-generated keys; retain this file with the application data"
+  },
+  "log.security.applicationSecretKeyFile.write.1": {
+    "zh-CN": "应用密钥临时文件暂未删除，文件位置 {}",
+    "en": "The temporary application key file was not deleted; path={}"
+  },
+  "log.security.encryptedPayload.toString.1": {
+    "zh-CN": "EncryptedPayload[加密内容已隐藏]",
+    "en": "EncryptedPayload[encrypted content redacted]"
+  },
+  "log.security.httpConnectionCredentials.toString.1": {
+    "zh-CN": "HttpConnectionCredentials[认证内容已隐藏]",
+    "en": "HttpConnectionCredentials[authentication data redacted]"
+  },
+  "log.security.credentialRotateRequest.toString.1": {
+    "zh-CN": "CredentialRotateRequest[凭据内容已隐藏]",
+    "en": "CredentialRotateRequest[credential content redacted]"
+  },
+  "log.security.credentialWriteRequest.toString.1": {
+    "zh-CN": "CredentialWriteRequest[凭据内容已隐藏]",
+    "en": "CredentialWriteRequest[credential content redacted]"
+  },
+  "text.security.credentialService.create.1": {
+    "zh-CN": "创建连接凭据",
+    "en": "Create connection credentials"
+  },
+  "text.security.credentialService.rotate.1": {
+    "zh-CN": "轮换连接凭据",
+    "en": "Rotate connection credentials"
+  },
+  "text.security.credentialService.revoke.1": {
+    "zh-CN": "撤销未被使用的连接凭据",
+    "en": "Revoke unused connection credentials"
+  }
+}

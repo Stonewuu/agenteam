@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.yulichang.toolkit.JoinWrappers;
@@ -60,7 +62,7 @@ public class IntegrationQueryService {
                                              String purpose, String providerCode, boolean unboundBotOnly) {
         policy.require(actor, enterprise, system, "integration.view", false);
         if (purpose != null && !Set.of("enterprise", "chat_bot", "app_management").contains(purpose)) {
-            throw ApiException.invalidField("purpose", "请选择企业接入或机器人接入。");
+            throw ApiException.invalidField("purpose", Messages.text("error.integration.integrationQueryService.list.1"));
         }
         if (providerCode != null) {
             providers.require(providerCode);
@@ -102,7 +104,7 @@ public class IntegrationQueryService {
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise).eq(EnterpriseIntegrationRow::getId, id)
             .ne(EnterpriseIntegrationRow::getStatus, "deleted"));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "INTEGRATION_UNAVAILABLE", "接入不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "INTEGRATION_UNAVAILABLE", Messages.text("error.integration.integrationQueryService.require.1"));
         }
         return row;
     }

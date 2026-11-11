@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleActionDefinition;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRecord;
@@ -20,7 +22,7 @@ public class ScheduleActionRegistry {
         var registered = new LinkedHashMap<String, ScheduleActionHandler>();
         for (var handler : implementations) {
             if (registered.putIfAbsent(handler.type(), handler) != null) {
-                throw new IllegalStateException("定时操作重复注册：" + handler.type());
+                throw new IllegalStateException(Messages.text("error.schedule.scheduleActionRegistry.init.1", handler.type()));
             }
         }
         handlers = Map.copyOf(registered);
@@ -33,10 +35,10 @@ public class ScheduleActionRegistry {
     public ScheduleActionHandler require(String type, int schemaVersion) {
         var handler = type == null ? null : handlers.get(type);
         if (handler == null) {
-            throw ApiException.invalidField("action.type", "请选择当前支持的定时操作。");
+            throw ApiException.invalidField("action.type", Messages.text("error.schedule.scheduleActionRegistry.require.1"));
         }
         if (!handler.schemaVersions().contains(schemaVersion)) {
-            throw ApiException.invalidField("action.schemaVersion", "此操作参数版本暂不支持，请刷新页面后再试。");
+            throw ApiException.invalidField("action.schemaVersion", Messages.text("error.schedule.scheduleActionRegistry.require.2"));
         }
         return handler;
     }
@@ -44,10 +46,10 @@ public class ScheduleActionRegistry {
     public ScheduleActionDefinition prepare(AuthContext actor, ScheduleWriteRequest input, ScheduleRecord previous) {
         var action = input.action();
         if (action != null && (input.hireId() != null || input.agentVersionId() != null || input.inputText() != null)) {
-            throw ApiException.invalidField("action", "请选择一种操作参数格式，不要同时提交新旧两种参数。");
+            throw ApiException.invalidField("action", Messages.text("error.schedule.scheduleActionRegistry.prepare.1"));
         }
         if (action != null && action.schemaVersion() == null) {
-            throw ApiException.invalidField("action.schemaVersion", "请提供操作参数版本。");
+            throw ApiException.invalidField("action.schemaVersion", Messages.text("error.schedule.scheduleActionRegistry.prepare.2"));
         }
         return require(action == null ? "agent.run" : action.type(), action == null ? 1 : action.schemaVersion()).prepare(actor, input, previous);
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ModelFailureMapper;
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.ConversationTitleRequested;
@@ -41,7 +43,7 @@ public class ConversationTitleWorker {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicInteger active = new AtomicInteger();
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS,
-        new SynchronousQueue<>(), Thread.ofVirtual().name("对话标题-", 0).factory(), new ThreadPoolExecutor.AbortPolicy());
+        new SynchronousQueue<>(), Thread.ofVirtual().name(Messages.log("log.execution.conversationTitleWorker.executor.1"), 0).factory(), new ThreadPoolExecutor.AbortPolicy());
 
     public ConversationTitleWorker(BackgroundJobService jobs, BackgroundJobHeartbeat heartbeats,
                                    ConversationTitleService titles, ConversationTitleGenerator generator) {
@@ -66,7 +68,7 @@ public class ConversationTitleWorker {
                 executor.execute(this::drain);
             } catch (RejectedExecutionException rejected) {
                 active.decrementAndGet();
-                LOG.debug("标题工作暂未唤醒，数据库任务将在下一轮继续处理，工作进程 {}", owner, rejected);
+                LOG.debug(Messages.log("log.execution.conversationTitleWorker.wake.1"), owner, rejected);
                 return;
             }
         }
@@ -82,7 +84,7 @@ public class ConversationTitleWorker {
                 process(lease.get());
             }
         } catch (RuntimeException failure) {
-            LOG.warn("标题后台检查暂未完成，工作进程 {}", owner, failure);
+            LOG.warn(Messages.log("log.execution.conversationTitleWorker.drain.1"), owner, failure);
         } finally {
             active.decrementAndGet();
         }
@@ -98,7 +100,7 @@ public class ConversationTitleWorker {
                 }
             }
         } catch (RuntimeException failure) {
-            LOG.warn("自动标题未完成，工作编号 {}", lease.id(), failure);
+            LOG.warn(Messages.log("log.execution.conversationTitleWorker.process.1"), lease.id(), failure);
             if (!closed.get()) {
                 titles.failed(lease, retryable(Exceptions.unwrap(failure)));
             }

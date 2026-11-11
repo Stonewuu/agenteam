@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
@@ -36,7 +38,7 @@ public class RunCheckpointMapper {
             var state = json.read(row.getStateJson());
 
             if (!json.hash(state).equals(row.getStateHash())) {
-                throw new IllegalStateException("执行检查点内容不完整");
+                throw new IllegalStateException(Messages.text("error.execution.runCheckpointMapper.find.1"));
             }
 
             return new Checkpoint(row.getLeaseVersion(), row.getFrameworkStateKey(), state);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -45,7 +47,7 @@ public final class RemoteMcpSession implements AutoCloseable {
             if (!transport.protocolVersions().contains(initialized.path("protocolVersion").asText())
                 || !initialized.path("capabilities").path("tools").isObject()) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "MCP_CAPABILITY_UNSUPPORTED",
-                    "远程服务没有提供可用的工具协议，请检查服务配置。");
+                    Messages.text("error.plugin.remoteMcpSession.init.1"));
             }
             session.sendNotification("notifications/initialized", Map.of()).block(remaining());
         } catch (RuntimeException failure) {
@@ -100,7 +102,7 @@ public final class RemoteMcpSession implements AutoCloseable {
     private Duration remaining() {
         long nanos = deadline - System.nanoTime();
         if (nanos <= 0) {
-            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "REMOTE_TIMEOUT", "远程连接超过允许时间，请稍后重试。");
+            throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "REMOTE_TIMEOUT", Messages.text("error.plugin.remoteMcpSession.remaining.1"));
         }
         return Duration.ofNanos(nanos);
     }
@@ -113,7 +115,7 @@ public final class RemoteMcpSession implements AutoCloseable {
 
     private static ApiException invalidTools() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MCP_TOOL_STRUCTURE_INVALID",
-            "远程工具清单的格式或数量不符合要求。");
+            Messages.text("error.plugin.remoteMcpSession.invalidTools.1"));
     }
 
     private static ApiException safeFailure(RuntimeException failure) {
@@ -124,6 +126,6 @@ public final class RemoteMcpSession implements AutoCloseable {
             }
         }
         return new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_CONNECTION_FAILED",
-            "无法完成远程工具连接，请检查服务配置或稍后重试。", failure);
+            Messages.text("error.plugin.remoteMcpSession.safeFailure.1"), failure);
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.Limit;
@@ -87,7 +89,7 @@ public class ExecutionEventCache {
         var value = values.getFirst();
         String id = value.getId().getValue();
         if (!id.matches("[1-9][0-9]*-0")) {
-            throw new IllegalStateException("缓存事件编号不符合当前协议");
+            throw new IllegalStateException(Messages.text("error.execution.executionEventCache.last.1"));
         }
         return new Position(Long.parseLong(id.substring(0, id.length() - 2)), (String) value.getValue().get("hash"));
     }
@@ -119,7 +121,7 @@ public class ExecutionEventCache {
             var event = codec.decode((String) value.getValue().get("data"), (String) value.getValue().get("hash"));
             if (!value.getId().getValue().equals(event.sequence() + "-0") || !enterprise.equals(
                 event.enterpriseId()) || !conversation.equals(event.conversationId())) {
-                throw new IllegalStateException("缓存事件的会话或编号与正文不一致");
+                throw new IllegalStateException(Messages.text("error.execution.executionEventCache.after.1"));
             }
             return event;
         }).toList();

@@ -1,0 +1,1394 @@
+{
+  "error.chat.chatReplyPreferenceRequest.outputVisibility.1": {
+    "zh-CN": "请选择回复方式。",
+    "en": "Select a reply method."
+  },
+  "error.chat.chatReplyPreferenceRequest.outputVisibility.2": {
+    "zh-CN": "请选择有效的回复方式。",
+    "en": "Select a valid reply method."
+  },
+  "error.chat.chatReplyPreferenceRequest.expectedRevision.1": {
+    "zh-CN": "请重新打开设置后保存。",
+    "en": "Reopen settings before saving."
+  },
+  "error.chat.chatBotBindingService.prepare.1": {
+    "zh-CN": "机器人身份校验不能占用数据库事务",
+    "en": "Bot identity verification must not hold a database transaction."
+  },
+  "error.chat.chatBotBindingService.prepare.2": {
+    "zh-CN": "请选择飞书应用或企微智能机器人，普通企微自建应用不能用于群聊。",
+    "en": "Select a Feishu application or WeCom intelligent bot. Ordinary WeCom custom applications cannot be used in group chats."
+  },
+  "error.chat.chatBotBindingService.create.1": {
+    "zh-CN": "此平台机器人已绑定岗位，请编辑已有绑定。",
+    "en": "This platform bot is already assigned to a role. Edit its existing binding."
+  },
+  "error.chat.chatBotBindingService.update.1": {
+    "zh-CN": "请选择启用或停用机器人。",
+    "en": "Choose whether to enable or disable the bot."
+  },
+  "error.chat.chatBotBindingService.update.2": {
+    "zh-CN": "请先保存飞书回调校验令牌与加密密钥。",
+    "en": "Save the Feishu callback verification token and encryption key first."
+  },
+  "error.chat.chatBotBindingService.update.3": {
+    "zh-CN": "请先校验并启用应用接入。",
+    "en": "Verify and enable the application integration first."
+  },
+  "error.chat.chatBotBindingService.update.4": {
+    "zh-CN": "绑定的平台身份不能直接更换，请新建绑定。",
+    "en": "A bound platform identity cannot be replaced directly. Create a new binding."
+  },
+  "error.chat.chatBotBindingService.require.1": {
+    "zh-CN": "机器人绑定不存在或已停用。",
+    "en": "The bot binding does not exist or is disabled."
+  },
+  "error.chat.chatBotBindingService.application.1": {
+    "zh-CN": "此机器人的应用接入已停用。",
+    "en": "This bot's application integration is disabled."
+  },
+  "error.chat.chatBotBindingService.resolveAgentVersion.1": {
+    "zh-CN": "请选择固定版本或新任务使用最新版本。",
+    "en": "Select a fixed version or use the latest version for new tasks."
+  },
+  "error.chat.chatBotBindingService.resolveAgentVersion.2": {
+    "zh-CN": "请选择此岗位可用的已发布版本。",
+    "en": "Select a published version available to this role."
+  },
+  "error.chat.chatBotBindingService.transport.1": {
+    "zh-CN": "请选择平台支持的接收方式。",
+    "en": "Select a receiving method supported by the platform."
+  },
+  "error.chat.chatBotBindingService.transport.2": {
+    "zh-CN": "企微智能机器人使用长连接接收消息。",
+    "en": "WeCom intelligent bots receive messages over a persistent connection."
+  },
+  "error.chat.chatCapabilityService.prepare.1": {
+    "zh-CN": "请在“测试收发消息”中选择接收测试或发送测试。",
+    "en": "Choose a receive or send test under Test messaging."
+  },
+  "error.chat.chatCapabilityService.receive.1": {
+    "zh-CN": "请选择同一飞书企业的两个机器人，再选择已绑定飞书账号的成员参与测试。",
+    "en": "Choose two bots from the same Feishu organization, then select a participant with a linked Feishu account."
+  },
+  "error.chat.chatCapabilityService.receive.2": {
+    "zh-CN": "尚不能确认测试成员在另一机器人中的身份，请检查飞书账号绑定。",
+    "en": "The test member's identity in the other bot could not be confirmed. Check the Feishu account binding."
+  },
+  "error.chat.chatCapabilityService.receive.3": {
+    "zh-CN": "请参与测试的成员在“个人设置 → 企业账号绑定”绑定账号，并开启“允许通过此账号使用智能体”。",
+    "en": "Ask the test participant to link their account under Settings → Linked accounts and enable Use agents through this account."
+  },
+  "error.chat.chatCapabilityService.send.1": {
+    "zh-CN": "请选择要发送的测试消息。",
+    "en": "Select a test message to send."
+  },
+  "error.chat.chatCapabilityService.changed.1": {
+    "zh-CN": "机器人配置已变化，请刷新后重试。",
+    "en": "The bot configuration changed. Refresh and try again."
+  },
+  "error.chat.chatCardInteractionService.accept.1": {
+    "zh-CN": "卡片操作未完成。",
+    "en": "The card action did not complete."
+  },
+  "error.chat.chatCardInteractionTransactions.accept.1": {
+    "zh-CN": "请先在群策绑定当前飞书账号并开启机器人聊天。",
+    "en": "Link your current Feishu account in AgenTeam and enable bot chat first."
+  },
+  "error.chat.chatCardInteractionTransactions.accept.2": {
+    "zh-CN": "仅发起人可以修改此任务的回复方式。",
+    "en": "Only the initiator can change this task's reply method."
+  },
+  "error.chat.chatCardInteractionTransactions.unavailable.1": {
+    "zh-CN": "此卡片暂时无法操作，请打开群策任务详情修改。",
+    "en": "This card is temporarily unavailable. Open the task details in AgenTeam to make changes."
+  },
+  "error.chat.chatConnectionRegistry.require.1": {
+    "zh-CN": "当前进程没有此机器人的有效长连接。",
+    "en": "This process has no active persistent connection for the bot."
+  },
+  "error.chat.chatConnectionTransactions.require.1": {
+    "zh-CN": "当前机器人连接已失效。",
+    "en": "The bot connection is no longer valid."
+  },
+  "error.chat.chatConnectionTransactions.bot.1": {
+    "zh-CN": "机器人绑定不存在。",
+    "en": "The bot binding does not exist."
+  },
+  "error.chat.chatConversationService.update.1": {
+    "zh-CN": "会话设置包含不支持的选项。",
+    "en": "Conversation settings contain unsupported options."
+  },
+  "error.chat.chatConversationService.update.2": {
+    "zh-CN": "请选择已加入会话的参与岗位和接收任务的机器人，最多选择二十个岗位。",
+    "en": "Select participating roles that have joined this chat and a bot to receive tasks. You can select up to twenty roles."
+  },
+  "error.chat.chatConversationService.update.3": {
+    "zh-CN": "有岗位尚未确认加入此群，请先在平台加入机器人并检查。",
+    "en": "Some roles have not been confirmed in this group. Add their bots on the platform and check again."
+  },
+  "error.chat.chatConversationService.update.4": {
+    "zh-CN": "请至少选择两个岗位，并在机器人“连接检查”中完成共同接收测试，再启用多个机器人接收任务。",
+    "en": "Select at least two roles and complete their joint receive test under Connection checks before enabling multiple bots to receive tasks."
+  },
+  "error.chat.chatConversationService.update.5": {
+    "zh-CN": "部分机器人还不能共同接收消息，请在机器人“连接检查”中对所选机器人完成共同接收测试。",
+    "en": "Some bots are not ready to receive messages together. Complete the joint receive test for the selected bots under Connection checks."
+  },
+  "error.chat.chatConversationService.update.6": {
+    "zh-CN": "请使用 @ 机器人发起任务。",
+    "en": "Start a task by @ mentioning the bot."
+  },
+  "error.chat.chatConversationService.require.1": {
+    "zh-CN": "会话不存在或无法访问。",
+    "en": "The conversation does not exist or is inaccessible."
+  },
+  "error.chat.chatConversationService.validateLimits.1": {
+    "zh-CN": "任务限制超出服务端允许范围。",
+    "en": "The task limits exceed the server's allowed range."
+  },
+  "error.chat.chatFilePolicy.unsupported.1": {
+    "zh-CN": "暂不支持读取此类附件，请改用文字、表格或文档。",
+    "en": "This attachment type cannot be read. Use text, a spreadsheet, or a document."
+  },
+  "error.chat.chatFileSendService.file.1": {
+    "zh-CN": "此发送记录没有可公开的成果文件。",
+    "en": "This delivery record has no result file available for sharing."
+  },
+  "error.chat.chatFileSendService.file.2": {
+    "zh-CN": "当前回复方式不允许发送成果附件。",
+    "en": "The current reply method does not allow result attachments."
+  },
+  "error.chat.chatFileSendService.file.3": {
+    "zh-CN": "成果文件已变化，不能发送旧引用。",
+    "en": "The result file changed. The old reference cannot be sent."
+  },
+  "error.chat.chatIdentityService.select.1": {
+    "zh-CN": "此平台账号关联了不同群策账号，请在个人设置中检查原绑定。",
+    "en": "This platform account is linked to a different AgenTeam account. Check the existing binding in personal settings."
+  },
+  "error.chat.chatIdentityService.unavailable.1": {
+    "zh-CN": "请先绑定群策账号并开启聊天，或确认原账号仍可使用。",
+    "en": "Link your AgenTeam account and enable chat, or check that the original account is still available."
+  },
+  "error.chat.chatIngressService.acceptVerified.1": {
+    "zh-CN": "当前机器人接收配置已发生变化。",
+    "en": "The bot's receiving configuration changed."
+  },
+  "error.chat.chatIngressService.accept.1": {
+    "zh-CN": "机器人消息接收已关闭。",
+    "en": "Bot message receiving is disabled."
+  },
+  "error.chat.chatIngressService.accept.2": {
+    "zh-CN": "长连接接收必须提供当前连接凭据。",
+    "en": "Persistent connection receiving requires the current connection credential."
+  },
+  "error.chat.chatIngressService.accept.3": {
+    "zh-CN": "当前机器人连接已由其他进程接管。",
+    "en": "Another process took over this bot connection."
+  },
+  "error.chat.chatInputValidation.required.1": {
+    "zh-CN": "平台消息缺少有效的身份或消息编号。",
+    "en": "The platform message is missing a valid identity or message ID."
+  },
+  "error.chat.chatInputValidation.optional.1": {
+    "zh-CN": "平台消息编号长度不正确。",
+    "en": "The platform message ID length is invalid."
+  },
+  "error.chat.chatInputValidation.content.1": {
+    "zh-CN": "平台消息内容必须是对象。",
+    "en": "Platform message content must be an object."
+  },
+  "error.chat.chatInputValidation.content.2": {
+    "zh-CN": "平台消息内容格式无法解析。",
+    "en": "Platform message content could not be parsed."
+  },
+  "error.chat.chatInputValidation.time.1": {
+    "zh-CN": "平台消息时间不能为负数",
+    "en": "The platform message time must not be negative."
+  },
+  "error.chat.chatInputValidation.time.2": {
+    "zh-CN": "平台消息时间超过可保存范围",
+    "en": "The platform message time exceeds the storage range."
+  },
+  "error.chat.chatInputValidation.time.3": {
+    "zh-CN": "平台消息时间格式不正确。",
+    "en": "The platform message time format is invalid."
+  },
+  "error.chat.chatInputValidation.size.1": {
+    "zh-CN": "消息内容或附件过多，请拆分后发送。",
+    "en": "The message has too much content or too many attachments. Send it in smaller parts."
+  },
+  "error.chat.chatManagementApiService.actor.1": {
+    "zh-CN": "请先验证账号密码，再访问平台管理。",
+    "en": "Verify your account password before accessing platform administration."
+  },
+  "error.chat.chatMessageIdentity.canonical.1": {
+    "zh-CN": "普通消息必须包含真实消息编号和会话编号",
+    "en": "Ordinary messages require valid message and conversation IDs."
+  },
+  "error.chat.chatMessageIdentity.receipt.1": {
+    "zh-CN": "需要保存的事件缺少稳定的投递编号",
+    "en": "The event to save is missing a stable delivery ID."
+  },
+  "error.chat.chatNormalizationTransactions.normalize.1": {
+    "zh-CN": "企业账号绑定接收记录已变化",
+    "en": "The organization account binding receipt changed."
+  },
+  "error.chat.chatNormalizationTransactions.finish.1": {
+    "zh-CN": "接收处理已由其他进程接管，当前事务不能提交",
+    "en": "Another process took over receipt processing. The transaction cannot be committed."
+  },
+  "error.chat.chatNormalizationWorker.runOnce.1": {
+    "zh-CN": "聊天消息暂时无法处理。",
+    "en": "The chat message cannot be processed right now."
+  },
+  "error.chat.chatOutboundQueryService.retry.1": {
+    "zh-CN": "发送记录不存在。",
+    "en": "The delivery record does not exist."
+  },
+  "error.chat.chatOutboundQueryService.retry.2": {
+    "zh-CN": "仅明确未被平台接受的失败消息可以重试；发送结果未知时请先核实。",
+    "en": "Only messages explicitly rejected by the platform can be retried. Check messages with an unknown delivery result first."
+  },
+  "error.chat.chatOutboundService.file.1": {
+    "zh-CN": "同一发送请求不能更换成果。",
+    "en": "The result cannot change for the same delivery request."
+  },
+  "error.chat.chatOutboundService.file.2": {
+    "zh-CN": "成果发送记录保存失败",
+    "en": "The result delivery record could not be saved."
+  },
+  "error.chat.chatOutboundService.settings.1": {
+    "zh-CN": "回复方式入口保存失败",
+    "en": "The reply method entry could not be saved."
+  },
+  "error.chat.chatOutboundService.cardProbe.1": {
+    "zh-CN": "卡片检查消息保存失败",
+    "en": "The card check message could not be saved."
+  },
+  "error.chat.chatOutboundService.updateSettingsCard.1": {
+    "zh-CN": "卡片更新记录保存失败",
+    "en": "The card update record could not be saved."
+  },
+  "error.chat.chatOutboundService.textPart.1": {
+    "zh-CN": "同一发送请求不能更换内容。",
+    "en": "Content cannot change for the same delivery request."
+  },
+  "error.chat.chatOutboundService.textPart.2": {
+    "zh-CN": "任务不属于当前会话。",
+    "en": "The task does not belong to the current conversation."
+  },
+  "error.chat.chatOutboundService.textPart.3": {
+    "zh-CN": "协作任务发送顺序已发生变化",
+    "en": "The collaboration task delivery order changed."
+  },
+  "error.chat.chatOutboundService.replyTarget.1": {
+    "zh-CN": "原消息已不可用，请重新发起任务。",
+    "en": "The original message is unavailable. Start a new task."
+  },
+  "error.chat.chatPairingService.create.1": {
+    "zh-CN": "配对码申请过于频繁，请一分钟后重试。",
+    "en": "Pairing codes were requested too often. Try again in one minute."
+  },
+  "error.chat.chatPairingService.consume.1": {
+    "zh-CN": "聊天配对码消费失败",
+    "en": "The chat pairing code could not be consumed."
+  },
+  "error.chat.chatPlatformRegistry.unavailable.1": {
+    "zh-CN": "当前接入尚不具备此聊天能力。",
+    "en": "This integration does not yet support this chat capability."
+  },
+  "error.chat.chatPublicLinks.base.1": {
+    "zh-CN": "聊天公开访问地址配置不正确",
+    "en": "The public chat URL configuration is invalid."
+  },
+  "error.chat.chatPublicLinks.identifiers.1": {
+    "zh-CN": "聊天设置链接的记录编号不正确",
+    "en": "The chat settings link record ID is invalid."
+  },
+  "error.chat.chatQuestionMessages.update.1": {
+    "zh-CN": "提问消息保存失败",
+    "en": "The question message could not be saved."
+  },
+  "error.chat.chatQuestionReplyService.selectionRequired.1": {
+    "zh-CN": "请回复要回答的问题消息，或先点击该问题的“自己输入”。",
+    "en": "Reply to the question message, or select “Enter your answer” on that question first."
+  },
+  "error.chat.chatQuestionReplyService.unavailable.1": {
+    "zh-CN": "这个问题已结束或无法访问，请继续当前对话。",
+    "en": "This question has ended or is inaccessible. Continue the current conversation."
+  },
+  "error.chat.chatReplyAttachmentService.unavailable.1": {
+    "zh-CN": "只能引用当前会话中本人上传且未归属其他任务的附件。",
+    "en": "You can only reference attachments you uploaded in this conversation that do not belong to another task."
+  },
+  "error.chat.chatReplyDeliveryPolicy.prepare.1": {
+    "zh-CN": "已有更新的回复设置，旧卡片不再重复更新。",
+    "en": "Newer reply settings exist. The old card will not be updated again."
+  },
+  "error.chat.chatReplyDeliveryPolicy.prepare.2": {
+    "zh-CN": "原请求可能已经发送，已停止再次发送其中的内容。",
+    "en": "The original request may already have been sent. Its content will not be sent again."
+  },
+  "error.chat.chatReplyDeliveryPolicy.prepare.3": {
+    "zh-CN": "此任务仅发送链接。",
+    "en": "This task sends links only."
+  },
+  "error.chat.chatReplyDeliveryPolicy.prepare.4": {
+    "zh-CN": "问题已通过链接发送。",
+    "en": "The question was sent as a link."
+  },
+  "error.chat.chatReplyDeliveryPolicy.verify.1": {
+    "zh-CN": "回复方式已更新，正在按当前设置准备消息。",
+    "en": "The reply method was updated. Messages are being prepared using the current settings."
+  },
+  "error.chat.chatReplyPreferenceService.save.1": {
+    "zh-CN": "回复偏好保存失败",
+    "en": "Reply preferences could not be saved."
+  },
+  "error.chat.chatReplyPreferenceService.validate.1": {
+    "zh-CN": "本群已设为仅发送链接。",
+    "en": "This group is set to send links only."
+  },
+  "error.chat.chatResourceTransactions.prepare.1": {
+    "zh-CN": "此消息已停止处理，不再下载其他附件。",
+    "en": "This message has stopped processing. No more attachments will be downloaded."
+  },
+  "error.chat.chatResourceTransactions.prepare.2": {
+    "zh-CN": "原会话已不允许读取此附件。",
+    "en": "The original conversation no longer permits reading this attachment."
+  },
+  "error.chat.chatResourceTransactions.prepare.3": {
+    "zh-CN": "平台附件下载地址已过期，请重新发送附件。",
+    "en": "The platform attachment download URL expired. Send the attachment again."
+  },
+  "error.chat.chatResourceTransactions.downloaded.1": {
+    "zh-CN": "附件为空或超过二十 MiB，请重新发送。",
+    "en": "The attachment is empty or exceeds 20 MiB. Send it again."
+  },
+  "error.chat.chatResourceTransactions.downloaded.2": {
+    "zh-CN": "同一条消息的附件合计超过五十 MiB，请拆分发送。",
+    "en": "Attachments in one message exceed 50 MiB in total. Send them separately."
+  },
+  "error.chat.chatResourceTransactions.downloaded.3": {
+    "zh-CN": "平台附件登记未能完成",
+    "en": "Platform attachment registration did not complete."
+  },
+  "error.chat.chatResourceTransactions.expired.1": {
+    "zh-CN": "附件处理已由其他进程接管。",
+    "en": "Another process took over attachment processing."
+  },
+  "error.chat.chatResourceWorker.poll.1": {
+    "zh-CN": "附件处理稍后继续。",
+    "en": "Attachment processing will continue later."
+  },
+  "error.chat.chatResourceWorker.runOnce.1": {
+    "zh-CN": "平台附件暂时无法读取。",
+    "en": "The platform attachment cannot be read right now."
+  },
+  "error.chat.chatRoutingService.route.1": {
+    "zh-CN": "私聊身份已发生变化，请重新确认账号绑定。",
+    "en": "The direct chat identity changed. Confirm the account binding again."
+  },
+  "error.chat.chatRoutingService.message.1": {
+    "zh-CN": "消息不存在或无法访问。",
+    "en": "The message does not exist or is inaccessible."
+  },
+  "error.chat.chatRoutingService.status.1": {
+    "zh-CN": "消息接收记录已变化，当前路由不能提交",
+    "en": "The message receipt changed. The current routing cannot be committed."
+  },
+  "error.chat.chatRoutingWorker.processPending.1": {
+    "zh-CN": "消息暂时无法处理。",
+    "en": "The message cannot be processed right now."
+  },
+  "error.chat.chatSendTransactions.uploaded.1": {
+    "zh-CN": "平台文件编号无效",
+    "en": "The platform file ID is invalid."
+  },
+  "error.chat.chatSendTransactions.begin.1": {
+    "zh-CN": "消息可能已经发送，不能再次发送。",
+    "en": "The message may already have been sent and cannot be sent again."
+  },
+  "error.chat.chatSendTransactions.authorize.1": {
+    "zh-CN": "机器人或原会话的发送设置已发生变化。",
+    "en": "The bot or original conversation's delivery settings changed."
+  },
+  "error.chat.chatSendTransactions.authorize.2": {
+    "zh-CN": "任务或要求已发生变化，旧消息不再发送。",
+    "en": "The task or its requirements changed. The old message will not be sent."
+  },
+  "error.chat.chatSendTransactions.authorize.3": {
+    "zh-CN": "平台临时文件已过期，请从群策查看完整成果。",
+    "en": "The temporary platform file expired. View the complete result in AgenTeam."
+  },
+  "error.chat.chatSendTransactions.expired.1": {
+    "zh-CN": "发送工作已由其他进程接管。",
+    "en": "Another process took over the delivery job."
+  },
+  "error.chat.chatSendWorker.runOnce.1": {
+    "zh-CN": "聊天消息暂时无法发送。",
+    "en": "The chat message cannot be sent right now."
+  },
+  "error.chat.chatSessionSelectionService.select.1": {
+    "zh-CN": "对话选择未能保存",
+    "en": "The conversation selection could not be saved."
+  },
+  "error.chat.chatSessionSelectionService.bind.1": {
+    "zh-CN": "任务不属于当前成员的机器人对话",
+    "en": "The task does not belong to this member's bot conversation."
+  },
+  "error.chat.chatSessionSelectionService.bind.2": {
+    "zh-CN": "当前对话已经关联其他任务",
+    "en": "The conversation is already linked to another task."
+  },
+  "error.chat.chatSocket.connect.1": {
+    "zh-CN": "平台长连接暂时无法建立。",
+    "en": "The platform persistent connection cannot be established right now."
+  },
+  "error.chat.chatSocket.onText.1": {
+    "zh-CN": "平台文本帧超过允许大小",
+    "en": "The platform text frame exceeds the allowed size."
+  },
+  "error.chat.chatSocket.onBinary.1": {
+    "zh-CN": "平台二进制帧超过允许大小",
+    "en": "The platform binary frame exceeds the allowed size."
+  },
+  "error.chat.chatSocket.text.1": {
+    "zh-CN": "平台长连接发送结果尚未确认。",
+    "en": "The persistent connection delivery result has not been confirmed."
+  },
+  "error.chat.chatSocket.requireOpen.1": {
+    "zh-CN": "机器人长连接尚未就绪。",
+    "en": "The bot's persistent connection is not ready."
+  },
+  "error.chat.chatTaskReferenceService.resolve.1": {
+    "zh-CN": "此会话中没有这个任务，请检查任务编号。",
+    "en": "This task is not in this conversation. Check the task ID."
+  },
+  "error.chat.chatTaskReferenceService.resolve.2": {
+    "zh-CN": "消息关联了多个任务，请只回复其中一个任务。",
+    "en": "The message refers to multiple tasks. Reply to just one task."
+  },
+  "error.chat.chatWebhookService.accept.1": {
+    "zh-CN": "平台回调入口不可用。",
+    "en": "The platform callback endpoint is unavailable."
+  },
+  "error.chat.feishuChatAdapter.send.1": {
+    "zh-CN": "已准备的回复消息编号不正确",
+    "en": "The prepared reply message ID is invalid."
+  },
+  "error.chat.feishuChatAdapter.updateCard.1": {
+    "zh-CN": "待更新的卡片消息编号不正确",
+    "en": "The card message ID to update is invalid."
+  },
+  "error.chat.feishuConnectionProvider.address.1": {
+    "zh-CN": "飞书未返回允许的长连接地址",
+    "en": "Feishu did not return an allowed persistent connection URL."
+  },
+  "error.chat.feishuConnectionProvider.address.2": {
+    "zh-CN": "平台未返回有效的长连接地址。",
+    "en": "The platform did not return a valid persistent connection URL."
+  },
+  "error.chat.feishuConnectionProvider.serviceId.1": {
+    "zh-CN": "平台未返回长连接服务编号。",
+    "en": "The platform did not return a persistent connection service ID."
+  },
+  "error.chat.feishuConnectionProvider.text.1": {
+    "zh-CN": "飞书长连接返回了非二进制帧",
+    "en": "The Feishu persistent connection returned a non-binary frame."
+  },
+  "error.chat.feishuConnectionProvider.binary.1": {
+    "zh-CN": "飞书事件类型无效",
+    "en": "The Feishu event type is invalid."
+  },
+  "error.chat.feishuConnectionProvider.binary.2": {
+    "zh-CN": "飞书长连接帧处理失败。",
+    "en": "The Feishu persistent connection frame could not be processed."
+  },
+  "error.chat.feishuEventNormalizer.normalize.1": {
+    "zh-CN": "平台消息的会话类型无法识别。",
+    "en": "The platform message conversation type is unrecognized."
+  },
+  "error.chat.feishuEventNormalizer.verifyScope.1": {
+    "zh-CN": "平台消息不属于当前应用或企业。",
+    "en": "The platform message does not belong to this application or organization."
+  },
+  "error.chat.feishuFrameCodec.payload.1": {
+    "zh-CN": "飞书分片字段超出允许范围",
+    "en": "Feishu fragment fields exceed the allowed range."
+  },
+  "error.chat.feishuFrameCodec.payload.2": {
+    "zh-CN": "飞书未完成分片过多",
+    "en": "There are too many unfinished Feishu fragments."
+  },
+  "error.chat.feishuFrameCodec.payload.3": {
+    "zh-CN": "飞书相同分片编号内容发生变化",
+    "en": "Content changed for the same Feishu fragment ID."
+  },
+  "error.chat.feishuFrameCodec.payload.4": {
+    "zh-CN": "飞书分片内容超过允许大小",
+    "en": "Feishu fragment content exceeds the allowed size."
+  },
+  "error.chat.feishuFrameCodec.header.1": {
+    "zh-CN": "飞书帧缺少必要字段",
+    "en": "The Feishu frame is missing required fields."
+  },
+  "error.chat.feishuFrameCodec.number.1": {
+    "zh-CN": "飞书分片编号无效",
+    "en": "The Feishu fragment ID is invalid."
+  },
+  "error.chat.feishuWebhookVerifier.verify.1": {
+    "zh-CN": "平台回调认证未通过。",
+    "en": "Platform callback authentication failed."
+  },
+  "error.chat.feishuWebhookVerifier.verify.2": {
+    "zh-CN": "平台回调格式或加密验证失败。",
+    "en": "Platform callback format or encryption verification failed."
+  },
+  "error.chat.wecomAiBotChatAdapter.identity.1": {
+    "zh-CN": "请先检查企微智能机器人凭据。",
+    "en": "Check the WeCom intelligent bot credentials first."
+  },
+  "error.chat.wecomAiBotChatAdapter.upload.1": {
+    "zh-CN": "成果文件暂时无法读取。",
+    "en": "The result file cannot be read right now."
+  },
+  "error.chat.wecomAiBotChatAdapter.upload.2": {
+    "zh-CN": "成果文件大小不符合发送要求。",
+    "en": "The result file size does not meet delivery requirements."
+  },
+  "error.chat.wecomAiBotChatAdapter.successful.1": {
+    "zh-CN": "企微没有接受本次文件上传。",
+    "en": "WeCom did not accept this file upload."
+  },
+  "error.chat.wecomAiBotChatAdapter.field.1": {
+    "zh-CN": "企微未返回有效的文件上传编号。",
+    "en": "WeCom did not return a valid file upload ID."
+  },
+  "error.chat.wecomAiBotConnectionProvider.open.1": {
+    "zh-CN": "企微智能机器人认证未通过，请核对专用编号和密钥。",
+    "en": "WeCom intelligent bot authentication failed. Check its dedicated ID and secret."
+  },
+  "error.chat.wecomAiBotConnectionProvider.text.1": {
+    "zh-CN": "企微在认证完成前推送了业务事件。",
+    "en": "WeCom sent a business event before authentication completed."
+  },
+  "error.chat.wecomAiBotConnectionProvider.text.2": {
+    "zh-CN": "企微长连接帧处理失败。",
+    "en": "The WeCom persistent connection frame could not be processed."
+  },
+  "error.chat.wecomAiBotConnectionProvider.binary.1": {
+    "zh-CN": "企微长连接返回了非文本帧",
+    "en": "The WeCom persistent connection returned a non-text frame."
+  },
+  "error.chat.wecomAiBotConnectionProvider.request.1": {
+    "zh-CN": "机器人有较多未完成的发送，请稍后重试。",
+    "en": "The bot has too many pending deliveries. Try again later."
+  },
+  "error.chat.wecomAiBotConnectionProvider.request.2": {
+    "zh-CN": "此发送请求正在处理。",
+    "en": "This delivery request is being processed."
+  },
+  "error.chat.wecomAiBotConnectionProvider.request.3": {
+    "zh-CN": "企微尚未确认发送结果。",
+    "en": "WeCom has not confirmed the delivery result."
+  },
+  "error.chat.wecomAiBotConnectionProvider.closed.1": {
+    "zh-CN": "企微长连接已断开。",
+    "en": "The WeCom persistent connection was disconnected."
+  },
+  "error.chat.wecomAiBotEventNormalizer.normalize.1": {
+    "zh-CN": "平台消息不属于当前机器人。",
+    "en": "The platform message does not belong to this bot."
+  },
+  "error.chat.wecomAiBotEventNormalizer.normalize.2": {
+    "zh-CN": "企微卡片的会话类型无法识别。",
+    "en": "The WeCom card conversation type is unrecognized."
+  },
+  "error.chat.wecomAiBotEventNormalizer.normalize.3": {
+    "zh-CN": "企微消息的会话类型无法识别。",
+    "en": "The WeCom message conversation type is unrecognized."
+  },
+  "error.chat.wecomConversationHistoryService.show.1": {
+    "zh-CN": "会话列表保存失败",
+    "en": "The conversation list could not be saved."
+  },
+  "error.chat.chatPairingService.rejected.1": {
+    "zh-CN": "绑定指令不可用，请在群策重新获取，并在五分钟内发送到本企业已接入机器人的私聊。",
+    "en": "The binding command is unavailable. Get a new one in AgenTeam and send it within 5 minutes to a direct chat with a connected bot in this organization."
+  },
+  "error.chat.chatRoutingService.rejected.1": {
+    "zh-CN": "请先点要回答的问题卡片中的“自己输入”，再 @ 我发送回答。",
+    "en": "Select “Enter your answer” on the question card, then mention me to send your answer."
+  },
+  "error.chat.chatRoutingService.rejected.2": {
+    "zh-CN": "请先点要回答的问题卡片中的“自己输入”，再发送回答。",
+    "en": "Select “Enter your answer” on the question card, then send your answer."
+  },
+  "error.chat.chatRoutingService.rejected.3": {
+    "zh-CN": "请回复要回答的问题消息，或先点击该问题的“自己输入”；群聊中请同时 @ 我。",
+    "en": "Reply to the question message or select “Enter your answer” first. In group chats, also mention me."
+  },
+  "error.chat.chatRoutingService.rejected.4": {
+    "zh-CN": "这项任务不能由当前账号补充，请 @ 岗位另起任务。",
+    "en": "This account cannot add to the task. Mention a role to start a new task."
+  },
+  "error.chat.chatRoutingService.rejected.5": {
+    "zh-CN": "这项任务已结束或正在取消，请另起任务。",
+    "en": "This task has ended or is being canceled. Start a new task."
+  },
+  "error.chat.chatRoutingService.rejected.6": {
+    "zh-CN": "这位员工需要审批后才能使用，请在群策「数字员工」提交申请，审批通过后再发送任务。",
+    "en": "This employee requires approval. Submit a request under AgenTeam → Digital employees and wait for approval before sending tasks."
+  },
+  "error.chat.chatRoutingService.rejected.7": {
+    "zh-CN": "所需岗位当前已停用、离群或没有可用版本，请联系管理员检查机器人设置。",
+    "en": "The required role is disabled, has left the group, or has no available version. Ask an administrator to check the bot settings."
+  },
+  "error.chat.chatRoutingService.rejected.8": {
+    "zh-CN": "当前账号没有使用所需智能体或其依赖资源的权限，请联系管理员授权后再发送任务。",
+    "en": "Your account cannot use the required agent or its dependencies. Ask an administrator for permission before sending tasks."
+  },
+  "error.chat.chatRoutingService.rejected.9": {
+    "zh-CN": "无法确定消息对应的任务，请回复一个具体任务或检查任务编号。",
+    "en": "The message's task could not be identified. Reply to a specific task or check the task ID."
+  },
+  "error.chat.chatRoutingService.rejected.10": {
+    "zh-CN": "请在当前会话上传自己的附件，再回复这条文件消息并 @ 接收岗位；不要引用其他人的文件或另一任务的附件。",
+    "en": "Upload your own attachment in this conversation, then reply to its message and mention the receiving role. Do not reference someone else's file or another task's attachment."
+  },
+  "error.chat.chatRoutingService.rejected.11": {
+    "zh-CN": "这条消息暂时无法建立任务，请在群策检查账号绑定与岗位设置。",
+    "en": "This message cannot create a task right now. Check your account binding and role settings in AgenTeam."
+  },
+  "error.chat.chatSendTransactions.defer.1": {
+    "zh-CN": "消息未能发送，请重试。",
+    "en": "Unable to send the message. Please try again."
+  },
+  "error.chat.chatSocket.failed.1": {
+    "zh-CN": "平台长连接已中止。",
+    "en": "The platform persistent connection ended."
+  },
+  "error.chat.wecomQuestionCardService.rejected.1": {
+    "zh-CN": "这个问题已经回答，无需再次选择。",
+    "en": "This question was already answered. No further selection is needed."
+  },
+  "text.chat.chatBotBindingService.create.1": {
+    "zh-CN": "绑定岗位机器人",
+    "en": "Connect a role bot"
+  },
+  "text.chat.chatBotBindingService.update.1": {
+    "zh-CN": "更新岗位机器人",
+    "en": "Update role bot"
+  },
+  "text.chat.chatBotBindingService.callbackSettings.1": {
+    "zh-CN": "更新机器人回调认证材料",
+    "en": "Update bot callback authentication material"
+  },
+  "log.chat.chatCallbackTiming.current.1": {
+    "zh-CN": "启动事务",
+    "en": "Begin transaction"
+  },
+  "text.chat.feishuConnectionProvider.binary.1": {
+    "zh-CN": "无有效事件编号",
+    "en": "No valid event ID"
+  },
+  "protocol.chat.chatCapabilityService.RECEIVE_MARKER.1": {
+    "zh-CN": "群策能力验证-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?![a-f0-9-])",
+    "en": "群策能力验证-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?![a-f0-9-])"
+  },
+  "log.chat.chatCapabilityService.prepare.1": {
+    "zh-CN": "机器人能力检查失败，企业={}，机器人={}，能力={}，错误代码={}",
+    "en": "Bot capability check failed; enterpriseId={}, botId={}, capability={}, errorCode={}"
+  },
+  "protocol.chat.chatCapabilityService.receive.1": {
+    "zh-CN": "群策能力验证-{0}",
+    "en": "群策能力验证-{0}"
+  },
+  "protocol.chat.chatCapabilityService.consume.1": {
+    "zh-CN": "群策能力验证-",
+    "en": "群策能力验证-"
+  },
+  "text.chat.chatCapabilityService.send.1": {
+    "zh-CN": "群策连接测试：这是一条测试消息，无需回复。",
+    "en": "AgenTeam connection test: This is a test message. No reply is needed."
+  },
+  "text.chat.chatCardInteractionService.accept.1": {
+    "zh-CN": "成功",
+    "en": "Succeeded"
+  },
+  "text.chat.chatCardInteractionService.accept.2": {
+    "zh-CN": "处理失败",
+    "en": "Processing failed"
+  },
+  "log.chat.chatCardInteractionService.accept.1": {
+    "zh-CN": "处理飞书卡片操作失败，企业={}，机器人={}",
+    "en": "Feishu card action processing failed; enterpriseId={}, botId={}"
+  },
+  "text.chat.chatCardInteractionService.accept.3": {
+    "zh-CN": "设置已发生变化，请重新打开回复方式后再选择。",
+    "en": "The settings changed. Reopen reply settings before choosing again."
+  },
+  "text.chat.chatCardInteractionService.accept.4": {
+    "zh-CN": "暂时无法保存，请稍后重试或在群策中修改。",
+    "en": "The settings cannot be saved right now. Try again later or edit them in AgenTeam."
+  },
+  "log.chat.chatCardInteractionService.accept.2": {
+    "zh-CN": "飞书卡片操作耗时，企业={}，机器人={}，事件={}，结果={}，总计={}ms，分段毫秒={}",
+    "en": "Feishu card action timing; enterpriseId={}, botId={}, eventId={}, result={}, total={}ms, stagesMs={}"
+  },
+  "log.chat.chatCardInteractionTransactions.accept.1": {
+    "zh-CN": "等待企业锁",
+    "en": "Wait for organization lock"
+  },
+  "log.chat.chatCardInteractionTransactions.accept.2": {
+    "zh-CN": "核对身份和消息",
+    "en": "Verify identity and message"
+  },
+  "text.chat.chatCardInteractionTransactions.accept.1": {
+    "zh-CN": "此操作已处理，请重新打开设置。",
+    "en": "This action was already handled. Reopen settings."
+  },
+  "log.chat.chatCardInteractionTransactions.accept.3": {
+    "zh-CN": "提交事务",
+    "en": "Commit transaction"
+  },
+  "log.chat.chatCardInteractionTransactions.accept.4": {
+    "zh-CN": "保存业务结果",
+    "en": "Save business result"
+  },
+  "text.chat.chatCardInteractionTransactions.accept.2": {
+    "zh-CN": "请输入这个问题的回答。",
+    "en": "Enter your answer to this question."
+  },
+  "text.chat.chatCardInteractionTransactions.accept.3": {
+    "zh-CN": "请 @ 我输入这个问题的回答。",
+    "en": "Mention me and enter your answer to this question."
+  },
+  "text.chat.chatCardInteractionTransactions.accept.4": {
+    "zh-CN": "已收到你的回答。",
+    "en": "Your answer was received."
+  },
+  "text.chat.chatCardInteractionTransactions.accept.5": {
+    "zh-CN": "卡片按钮已可以使用。",
+    "en": "The card buttons are now available."
+  },
+  "text.chat.chatCardInteractionTransactions.accept.6": {
+    "zh-CN": "本任务将直接回复内容。",
+    "en": "This task will reply with content directly."
+  },
+  "text.chat.chatCardInteractionTransactions.accept.7": {
+    "zh-CN": "本任务将仅发送链接。",
+    "en": "This task will send links only."
+  },
+  "log.chat.chatCardInteractionTransactions.accept.5": {
+    "zh-CN": "保存操作记录",
+    "en": "Save operation record"
+  },
+  "protocol.chat.chatCommandText.newTask.1": {
+    "zh-CN": "新任务",
+    "en": "New task"
+  },
+  "log.chat.chatConnectionManager.poll.1": {
+    "zh-CN": "机器人连接续约失败，机器人={}",
+    "en": "Bot connection lease renewal failed; botId={}"
+  },
+  "text.chat.chatConnectionManager.poll.1": {
+    "zh-CN": "旧连接停止工作。",
+    "en": "The previous connection stopped."
+  },
+  "log.chat.chatConnectionManager.poll.2": {
+    "zh-CN": "机器人连接领取失败",
+    "en": "Bot connection claim failed"
+  },
+  "text.chat.chatConnectionManager.poll.2": {
+    "zh-CN": "稍后再次领取连接。",
+    "en": "The connection will be claimed again later."
+  },
+  "log.chat.chatConnectionManager.advance.1": {
+    "zh-CN": "机器人连接暂时不可用，机器人={}",
+    "en": "Bot connection is temporarily unavailable; botId={}"
+  },
+  "text.chat.chatConnectionManager.advance.1": {
+    "zh-CN": "连接将在退避后重试。",
+    "en": "The connection will retry after a delay."
+  },
+  "log.chat.chatConnectionManager.stop.1": {
+    "zh-CN": "机器人连接释放失败，机器人={}",
+    "en": "Bot connection release failed; botId={}"
+  },
+  "text.chat.chatConnectionManager.stop.1": {
+    "zh-CN": "连接租约到期后由其他进程处理。",
+    "en": "Another process will handle the connection after its lease expires."
+  },
+  "text.chat.chatConversationService.observe.1": {
+    "zh-CN": "机器人私聊",
+    "en": "Direct chat"
+  },
+  "text.chat.chatConversationService.observe.2": {
+    "zh-CN": "群聊",
+    "en": "Group chat"
+  },
+  "text.chat.chatConversationService.update.1": {
+    "zh-CN": "更新机器人会话设置",
+    "en": "Update bot conversation settings"
+  },
+  "text.chat.chatConversationService.view.1": {
+    "zh-CN": "已停用岗位",
+    "en": "Disabled role"
+  },
+  "protocol.chat.chatFileSendService.file.1": {
+    "zh-CN": "群策能力验证.csv",
+    "en": "群策能力验证.csv"
+  },
+  "text.chat.chatGroupActivationService.guideReceiver.1": {
+    "zh-CN": "本群目前由“{0}”接收任务，请 @ 该机器人继续。",
+    "en": "This group currently receives tasks through “{0}”. Mention that bot to continue."
+  },
+  "text.chat.chatIdentityService.bindingNotice.1": {
+    "zh-CN": "飞书账号",
+    "en": "Feishu account"
+  },
+  "text.chat.chatIdentityService.bindingNotice.2": {
+    "zh-CN": "企业微信账号",
+    "en": "WeCom account"
+  },
+  "text.chat.chatIdentityService.bindingNotice.3": {
+    "zh-CN": "机器人企业接入尚未完成，请联系管理员检查后重试。",
+    "en": "The bot's organization integration is incomplete. Ask an administrator to check it and try again."
+  },
+  "text.chat.chatIdentityService.bindingNotice.4": {
+    "zh-CN": "你的{0}已绑定，但尚未允许使用智能体。请打开群策「个人设置 → 企业账号绑定」，开启「允许通过此账号使用智能体」，然后重新发送消息。",
+    "en": "Your {0} is linked, but agent use is not enabled. Open AgenTeam → Settings → Linked accounts, enable agent use through this account, and send your message again."
+  },
+  "text.chat.chatIdentityService.bindingNotice.5": {
+    "zh-CN": "还未将你的{0}与群策账号绑定。请登录群策，打开「个人设置 → 企业账号绑定」，找到对应平台并点击「授权并绑定」。完成后回到这里重新发送消息。",
+    "en": "Your {0} is not linked to an AgenTeam account. Sign in to AgenTeam, open Settings → Linked accounts, select the platform, and choose Authorize and link. Then return here and send your message again."
+  },
+  "text.chat.chatIngressService.accept.1": {
+    "zh-CN": "能力验证消息不触发任务",
+    "en": "Capability verification messages do not start tasks"
+  },
+  "text.chat.chatIngressService.accept.2": {
+    "zh-CN": "不在允许的接收范围",
+    "en": "Outside the allowed receiving scope"
+  },
+  "log.chat.chatInputValidation.content.1": {
+    "zh-CN": "聊天消息解析失败，接入={}，消息={}",
+    "en": "Chat message parsing failed; integrationId={}, messageId={}"
+  },
+  "log.chat.chatInputValidation.time.1": {
+    "zh-CN": "聊天消息的时间无法解析",
+    "en": "Could not parse the chat message time"
+  },
+  "text.chat.chatMessageText.withQuote.1": {
+    "zh-CN": "{0}\n\n引用消息：\n{1}",
+    "en": "{0}\n\nQuoted message:\n{1}"
+  },
+  "text.chat.chatNormalizationTransactions.normalize.1": {
+    "zh-CN": "企业账号绑定消息不保留正文",
+    "en": "Organization account binding messages do not retain their content"
+  },
+  "text.chat.chatNormalizationTransactions.finish.1": {
+    "zh-CN": "事件规范化处理已完成",
+    "en": "Event normalization completed"
+  },
+  "log.chat.chatNormalizationWorker.runOnce.1": {
+    "zh-CN": "聊天操作已结束，不再重试，企业={}，接收记录={}，原因={}",
+    "en": "Chat operation ended and will not retry; enterpriseId={}, receiptId={}, reason={}"
+  },
+  "log.chat.chatNormalizationWorker.runOnce.2": {
+    "zh-CN": "聊天消息处理失败，企业={}，接收记录={}",
+    "en": "Chat message processing failed; enterpriseId={}, receiptId={}"
+  },
+  "text.chat.chatOutboundService.cardProbe.1": {
+    "zh-CN": "请点击下方按钮，确认可以在飞书里修改回复方式。",
+    "en": "Select the button below to confirm that you can change the reply method in Feishu."
+  },
+  "text.chat.chatPairingService.create.1": {
+    "zh-CN": "申请企业微信账号绑定",
+    "en": "Request WeCom account binding"
+  },
+  "protocol.chat.chatPairingService.create.1": {
+    "zh-CN": "绑定企业 {0}",
+    "en": "绑定企业 {0}"
+  },
+  "protocol.chat.chatPairingService.command.1": {
+    "zh-CN": "绑定企业 ",
+    "en": "绑定企业 "
+  },
+  "protocol.chat.chatPairingService.command.2": {
+    "zh-CN": "绑定 ",
+    "en": "绑定 "
+  },
+  "text.chat.chatPairingService.consume.1": {
+    "zh-CN": "请在机器人私聊中完成账号配对；群聊中不会建立绑定。",
+    "en": "Pair your account in a direct chat with the bot. Group chats cannot create account bindings."
+  },
+  "text.chat.chatPairingService.consume.2": {
+    "zh-CN": "请在群策的企业账号绑定页面重新获取绑定指令，企业账号只需绑定一次。",
+    "en": "Get a new binding command from Linked accounts in AgenTeam. An organization account only needs to be linked once."
+  },
+  "text.chat.chatPairingService.consume.3": {
+    "zh-CN": "暂时无法确认此机器人的企业或成员身份，请联系管理员检查企业接入。",
+    "en": "The bot's organization or member identity cannot be confirmed yet. Ask an administrator to check the organization integration."
+  },
+  "text.chat.chatPairingService.consume.4": {
+    "zh-CN": "企业暂未开放账号绑定，请联系管理员。",
+    "en": "Account binding is not enabled for this organization. Contact an administrator."
+  },
+  "text.chat.chatPairingService.consume.5": {
+    "zh-CN": "群策账号或此企微身份已有绑定，请先在群策处理原绑定后重新配对。",
+    "en": "The AgenTeam account or WeCom identity is already linked. Resolve the existing binding in AgenTeam before pairing again."
+  },
+  "text.chat.chatPairingService.consume.6": {
+    "zh-CN": "成员完成企业微信账号绑定",
+    "en": "Member linked a WeCom account"
+  },
+  "text.chat.chatPairingService.consume.7": {
+    "zh-CN": "企业微信账号已绑定，本企业接入群策的机器人都可使用，无需再次绑定。",
+    "en": "Your WeCom account is linked. You can use the organization’s AgenTeam bots without linking again."
+  },
+  "text.chat.chatQuestionMessages.send.1": {
+    "zh-CN": "请选择或输入你的回答。",
+    "en": "Select an option or enter your answer."
+  },
+  "text.chat.chatQuestionMessages.text.1": {
+    "zh-CN": "（推荐）",
+    "en": "(Recommended)"
+  },
+  "text.chat.chatQuestionMessages.text.2": {
+    "zh-CN": "\n\n可以直接 @ 我输入回答；要回答其他问题时，先点该问题卡片的“自己输入”。",
+    "en": "\n\nYou can mention me and enter your answer directly. To answer another question, select “Enter your answer” on its card first."
+  },
+  "text.chat.chatQuestionMessages.text.3": {
+    "zh-CN": "\n\n可以直接输入回答；要回答其他问题时，先点该问题卡片的“自己输入”。",
+    "en": "\n\nYou can enter your answer directly. To answer another question, select “Enter your answer” on its card first."
+  },
+  "protocol.chat.chatReplyCommandService.TASK_MODES.1": {
+    "zh-CN": "本次只发链接",
+    "en": "本次只发链接"
+  },
+  "protocol.chat.chatReplyCommandService.TASK_MODES.2": {
+    "zh-CN": "本次仅发送链接",
+    "en": "本次仅发送链接"
+  },
+  "protocol.chat.chatReplyCommandService.TASK_MODES.3": {
+    "zh-CN": "本次直接回复",
+    "en": "本次直接回复"
+  },
+  "protocol.chat.chatReplyCommandService.TASK_MODES.4": {
+    "zh-CN": "本次直接回复内容",
+    "en": "本次直接回复内容"
+  },
+  "protocol.chat.chatReplyCommandService.DEFAULT_MODES.1": {
+    "zh-CN": "默认仅发送链接",
+    "en": "默认仅发送链接"
+  },
+  "protocol.chat.chatReplyCommandService.DEFAULT_MODES.2": {
+    "zh-CN": "默认直接回复内容",
+    "en": "默认直接回复内容"
+  },
+  "protocol.chat.chatReplyCommandService.handle.1": {
+    "zh-CN": "(?i)^(?:任务\\s*)?(?:【GC-[A-F0-9]{12}】|GC-[A-F0-9]{12})\\s*[:：+]?\\s*",
+    "en": "(?i)^(?:任务\\s*)?(?:【GC-[A-F0-9]{12}】|GC-[A-F0-9]{12})\\s*[:：+]?\\s*"
+  },
+  "text.chat.chatReplyCommandService.handle.1": {
+    "zh-CN": "回复方式",
+    "en": "Reply mode"
+  },
+  "text.chat.chatReplyCommandService.handle.2": {
+    "zh-CN": "本群已设为仅发送链接。如需直接回复内容，请联系管理员调整群内回复限制。",
+    "en": "This group is set to send links only. Ask an administrator to change the group reply restriction if you need direct content replies."
+  },
+  "text.chat.chatReplyCommandService.handle.3": {
+    "zh-CN": "选择本任务的回复方式。",
+    "en": "Choose the reply method for this task."
+  },
+  "text.chat.chatReplyCommandService.handle.4": {
+    "zh-CN": "设置你在此会话的默认回复方式。",
+    "en": "Set your default reply method for this conversation."
+  },
+  "text.chat.chatReplyCommandService.handle.5": {
+    "zh-CN": "已将你在此会话的默认方式设为“{0}”。",
+    "en": "Your default reply method in this conversation is now “{0}”."
+  },
+  "text.chat.chatReplyCommandService.handle.6": {
+    "zh-CN": "请回复需要设置的任务消息，再发送这条设置指令。",
+    "en": "Reply to the task message before sending this settings command."
+  },
+  "text.chat.chatReplyCommandService.handle.7": {
+    "zh-CN": "本任务已设为“{0}”。",
+    "en": "This task is now set to “{0}”."
+  },
+  "text.chat.chatReplyCommandService.label.1": {
+    "zh-CN": "直接回复内容",
+    "en": "Reply with content"
+  },
+  "text.chat.chatReplyCommandService.label.2": {
+    "zh-CN": "仅发送链接",
+    "en": "Send links only"
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.1": {
+    "zh-CN": "{0}\n回复方式：{1}",
+    "en": "{0}\nReply method: {1}"
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.2": {
+    "zh-CN": "已收到你的消息",
+    "en": "Your message was received"
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.3": {
+    "zh-CN": "处理完成后会在此回复。",
+    "en": "The result will be posted here when processing is complete."
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.4": {
+    "zh-CN": "处理完成后会发送结果链接。",
+    "en": "A result link will be sent when processing is complete."
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.5": {
+    "zh-CN": "有问题需要你补充，请打开任务查看并回复。",
+    "en": "More information is needed. Open the task to review the question and reply."
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.6": {
+    "zh-CN": "本次回复已完成，请打开任务查看。",
+    "en": "This reply is complete. Open the task to view it."
+  },
+  "text.chat.chatReplyDeliveryPolicy.prepare.7": {
+    "zh-CN": "[查看结果]({0})",
+    "en": "[View result]({0})"
+  },
+  "log.chat.chatResourceWorker.poll.1": {
+    "zh-CN": "聊天附件后台工作本轮未完成",
+    "en": "Chat attachment background work did not complete this cycle"
+  },
+  "log.chat.chatResourceWorker.runOnce.1": {
+    "zh-CN": "聊天附件处理失败，企业={}，资源={}",
+    "en": "Chat attachment processing failed; enterpriseId={}, resourceId={}"
+  },
+  "log.chat.chatRetentionService.poll.1": {
+    "zh-CN": "聊天资料清理本轮未完成",
+    "en": "Chat data cleanup did not complete this cycle"
+  },
+  "text.chat.chatRetentionService.poll.1": {
+    "zh-CN": "稍后继续清理过期资料。",
+    "en": "Expired data cleanup will continue later."
+  },
+  "text.chat.chatRetentionService.clean.1": {
+    "zh-CN": "原始事件已按保留期限清理",
+    "en": "The raw event was removed under the retention policy"
+  },
+  "text.chat.chatRetentionService.clean.2": {
+    "zh-CN": "未采用的消息正文已清理",
+    "en": "Unused message content was removed"
+  },
+  "text.chat.chatRoutingService.route.1": {
+    "zh-CN": "部分被提及的机器人尚未收到本群消息，请分别 @ 这些机器人后重试。",
+    "en": "Some mentioned bots have not received messages from this group. Mention each of those bots and try again."
+  },
+  "text.chat.chatRoutingService.route.2": {
+    "zh-CN": "请先指定接收任务的岗位机器人。",
+    "en": "Specify the role bot that should receive this task first."
+  },
+  "text.chat.chatRoutingService.route.3": {
+    "zh-CN": "原任务的入口机器人目前无法接收消息，请到群策任务详情补充要求。",
+    "en": "The original task's entry bot cannot receive messages right now. Add requirements in the AgenTeam task details."
+  },
+  "text.chat.chatRoutingService.route.4": {
+    "zh-CN": "指定的入口机器人尚未收到完整消息，请 @ 该机器人重新发送任务。",
+    "en": "The selected entry bot has not received the full message. Mention that bot and send the task again."
+  },
+  "text.chat.chatRoutingService.route.5": {
+    "zh-CN": "已开启新会话，{0}发送问题。",
+    "en": "A new conversation was started. {0}send your question."
+  },
+  "text.chat.chatRoutingService.route.6": {
+    "zh-CN": "请",
+    "en": "Please "
+  },
+  "text.chat.chatRoutingService.route.7": {
+    "zh-CN": "请 @ 我",
+    "en": "Please mention me and "
+  },
+  "text.chat.chatRoutingService.route.8": {
+    "zh-CN": "暂不支持这种消息，请改用文字或支持的附件发送任务。",
+    "en": "This message type is unsupported. Send the task as text or a supported attachment."
+  },
+  "text.chat.chatRoutingService.route.9": {
+    "zh-CN": "暂不支持读取这种附件，请改用文字、表格或文档；任务尚未开始。",
+    "en": "This attachment type cannot be read. Use text, a spreadsheet, or a document. The task has not started."
+  },
+  "text.chat.chatRoutingService.route.10": {
+    "zh-CN": "附件未能读取，请检查附件权限或重新发送；任务尚未开始。",
+    "en": "The attachment could not be read. Check its permissions or send it again. The task has not started."
+  },
+  "text.chat.chatRoutingService.route.11": {
+    "zh-CN": "原发起人补充了附件，请按原任务要求读取附件。",
+    "en": "The original initiator added attachments. Read them according to the original task requirements."
+  },
+  "text.chat.chatRoutingService.route.12": {
+    "zh-CN": "如需发起任务，请 @ 一个岗位并说明要完成的工作。",
+    "en": "To start a task, mention a role and describe the work you need."
+  },
+  "text.chat.chatRoutingService.route.13": {
+    "zh-CN": "你在此会话有多项任务。请回复具体任务消息；另起任务时请以“新任务”开头。",
+    "en": "You have multiple tasks in this conversation. Reply to a specific task message. To start another task, begin with “新任务”."
+  },
+  "text.chat.chatRoutingService.status.1": {
+    "zh-CN": "未用于任务的消息正文不保留",
+    "en": "Message content not used for tasks is not retained"
+  },
+  "log.chat.chatRoutingWorker.processPending.1": {
+    "zh-CN": "聊天消息未能建立任务，企业={}，消息={}",
+    "en": "Could not create a task from the chat message; enterpriseId={}, messageId={}"
+  },
+  "text.chat.chatSendTransactions.claim.1": {
+    "zh-CN": "发送进程失去连接，平台结果尚未确认",
+    "en": "The sending process lost its connection; the platform result is unconfirmed"
+  },
+  "log.chat.chatSendWorker.runOnce.1": {
+    "zh-CN": "聊天发送失败，企业={}，发送记录={}",
+    "en": "Chat delivery failed; enterpriseId={}, deliveryId={}"
+  },
+  "text.chat.chatSendWorker.runOnce.1": {
+    "zh-CN": "请求可能已经发送，平台结果尚未确认。",
+    "en": "The request may have been sent. The platform result is unconfirmed."
+  },
+  "text.chat.chatSocket.connect.1": {
+    "zh-CN": "建立连接",
+    "en": "Connect"
+  },
+  "text.chat.chatSocket.onError.1": {
+    "zh-CN": "读取连接",
+    "en": "Read connection"
+  },
+  "text.chat.chatSocket.text.1": {
+    "zh-CN": "发送文字",
+    "en": "Send text"
+  },
+  "text.chat.chatSocket.binary.1": {
+    "zh-CN": "发送二进制内容",
+    "en": "Send binary content"
+  },
+  "log.chat.chatSocket.failed.1": {
+    "zh-CN": "平台长连接处理失败，接入={}",
+    "en": "Platform persistent connection processing failed; integrationId={}"
+  },
+  "log.chat.chatWorkCoordinator.init.1": {
+    "zh-CN": "聊天发送通知暂未送达，数据库工作仍会由定时检查处理",
+    "en": "Chat delivery notification was not delivered; scheduled checks will still process the database job"
+  },
+  "log.chat.chatWorkRunner.wake.1": {
+    "zh-CN": "聊天工作暂未唤醒，将由定时检查恢复，工作类型={}",
+    "en": "Chat work was not woken and will resume through scheduled checks; jobType={}"
+  },
+  "log.chat.chatWorkRunner.drain.1": {
+    "zh-CN": "聊天后台工作暂未完成，将由后续检查恢复，工作类型={}",
+    "en": "Chat background work did not complete and will resume through later checks; jobType={}"
+  },
+  "text.chat.chatWorkRunner.drain.1": {
+    "zh-CN": "聊天工作稍后继续。",
+    "en": "Chat work will continue later."
+  },
+  "text.chat.feishuChatAdapter.identity.1": {
+    "zh-CN": "飞书机器人",
+    "en": "Feishu bot"
+  },
+  "text.chat.feishuChatAdapter.conversations.1": {
+    "zh-CN": "飞书群",
+    "en": "Feishu group"
+  },
+  "log.chat.feishuConnectionProvider.binary.1": {
+    "zh-CN": "飞书事件未完成持久保存，接入={}",
+    "en": "Feishu event persistence did not complete; integrationId={}"
+  },
+  "text.chat.feishuConnectionProvider.binary.2": {
+    "zh-CN": "等待平台重新投递消息。",
+    "en": "Waiting for the platform to redeliver the message."
+  },
+  "log.chat.feishuConnectionProvider.binary.2": {
+    "zh-CN": "飞书卡片响应已写回连接，接入={}，事件={}，处理={}ms，写回={}ms，状态={}",
+    "en": "Feishu card response written to the connection; integrationId={}, eventId={}, processing={}ms, write={}ms, status={}"
+  },
+  "text.chat.feishuMessageCards.prepare.1": {
+    "zh-CN": "需要你的回答",
+    "en": "Your answer is needed"
+  },
+  "text.chat.feishuMessageCards.prepare.2": {
+    "zh-CN": "回复方式：{0}",
+    "en": "Reply method: {0}"
+  },
+  "text.chat.feishuMessageCards.prepare.3": {
+    "zh-CN": "确认卡片按钮",
+    "en": "Check card buttons"
+  },
+  "text.chat.feishuMessageCards.form.1": {
+    "zh-CN": "设为我在此私聊的默认方式",
+    "en": "Use as my default in this direct chat"
+  },
+  "text.chat.feishuMessageCards.form.2": {
+    "zh-CN": "设为我在本群的默认方式",
+    "en": "Use as my default in this group"
+  },
+  "text.chat.feishuMessageCards.form.3": {
+    "zh-CN": " · 当前",
+    "en": " · Current"
+  },
+  "text.chat.feishuMessageCards.form.4": {
+    "zh-CN": "本群已设为仅发送链接",
+    "en": "This group only allows links"
+  },
+  "text.chat.feishuMessageCards.form.5": {
+    "zh-CN": "收起",
+    "en": "Collapse"
+  },
+  "text.chat.feishuQuestionCard.elements.1": {
+    "zh-CN": " · 推荐",
+    "en": " · Recommended"
+  },
+  "text.chat.feishuQuestionCard.elements.2": {
+    "zh-CN": "选择 {0}",
+    "en": "Choose {0}"
+  },
+  "text.chat.feishuQuestionCard.elements.3": {
+    "zh-CN": "自己填写",
+    "en": "Write my own"
+  },
+  "text.chat.feishuQuestionCard.elements.4": {
+    "zh-CN": "写下你的想法或具体要求，最多1000个字符",
+    "en": "Enter your thoughts or requirements, up to 1000 characters"
+  },
+  "text.chat.feishuQuestionCard.elements.5": {
+    "zh-CN": "发送回答",
+    "en": "Send answer"
+  },
+  "text.chat.feishuQuestionCard.elements.6": {
+    "zh-CN": "自己输入",
+    "en": "Enter your answer"
+  },
+  "text.chat.feishuQuestionCard.elements.7": {
+    "zh-CN": "也可直接发送文字回答。长回答请在聊天中发送；回答其他问题时，请回复对应的问题消息。",
+    "en": "You can also send a text answer directly. Send long answers in the chat. To answer another question, reply to its message."
+  },
+  "text.chat.feishuQuestionCard.elements.8": {
+    "zh-CN": "也可直接 @ 我发送文字回答。长回答请在聊天中发送；回答其他问题时，请回复对应的问题消息并 @ 我。",
+    "en": "You can also mention me and send a text answer. Send long answers in the chat. To answer another question, reply to its message and mention me."
+  },
+  "text.chat.wecomAiBotChatAdapter.send.1": {
+    "zh-CN": "企微尚未接受此消息，请查看发送记录。",
+    "en": "WeCom has not accepted this message. Check the delivery record."
+  },
+  "text.chat.wecomMessageCards.body.1": {
+    "zh-CN": "选择回答",
+    "en": "Choose an answer"
+  },
+  "text.chat.wecomMessageCards.body.2": {
+    "zh-CN": "填写回答",
+    "en": "Enter an answer"
+  },
+  "text.chat.wecomMessageCards.body.3": {
+    "zh-CN": "完整选项见上方，也可自己输入",
+    "en": "See all options above, or enter your own answer"
+  },
+  "text.chat.wecomMessageCards.body.4": {
+    "zh-CN": "直接发送你的回答即可",
+    "en": "Send your answer directly"
+  },
+  "text.chat.wecomMessageCards.body.5": {
+    "zh-CN": "直接 @ 我发送你的回答即可",
+    "en": "Mention me and send your answer"
+  },
+  "text.chat.wecomMessageCards.body.6": {
+    "zh-CN": "选 {0}",
+    "en": "Choose {0}"
+  },
+  "text.chat.wecomMessageCards.body.7": {
+    "zh-CN": "最近会话",
+    "en": "Recent conversations"
+  },
+  "text.chat.wecomMessageCards.body.8": {
+    "zh-CN": "选择后继续提问",
+    "en": "Select one to continue asking questions"
+  },
+  "text.chat.wecomMessageCards.body.9": {
+    "zh-CN": "继续 ",
+    "en": "Continue "
+  },
+  "text.chat.wecomMessageCards.body.10": {
+    "zh-CN": "上一页",
+    "en": "Previous page"
+  },
+  "text.chat.wecomMessageCards.body.11": {
+    "zh-CN": "下一页",
+    "en": "Next page"
+  },
+  "text.chat.wecomMessageCards.body.12": {
+    "zh-CN": "回复",
+    "en": "Reply"
+  },
+  "text.chat.wecomMessageCards.body.13": {
+    "zh-CN": "点击卡片查看内容",
+    "en": "Select the card to view its content"
+  },
+  "text.chat.wecomMessageCards.body.14": {
+    "zh-CN": "新会话",
+    "en": "New conversation"
+  },
+  "text.chat.wecomMessageCards.body.15": {
+    "zh-CN": "继续该会话",
+    "en": "Continue this conversation"
+  },
+  "text.chat.wecomMessageCards.body.16": {
+    "zh-CN": "新对话",
+    "en": "New conversation"
+  },
+  "text.chat.wecomMessageCards.body.17": {
+    "zh-CN": "继续此对话",
+    "en": "Continue this conversation"
+  },
+  "text.chat.wecomMessageCards.body.18": {
+    "zh-CN": "修改回复方式",
+    "en": "Change reply method"
+  },
+  "text.chat.wecomConversationCardService.accept.1": {
+    "zh-CN": "请 @ 我发送",
+    "en": "Please mention me and send "
+  },
+  "text.chat.wecomConversationCardService.accept.2": {
+    "zh-CN": "请发送",
+    "en": "Please send "
+  },
+  "text.chat.wecomConversationCardService.accept.3": {
+    "zh-CN": "已切换到新会话，{0}新问题。",
+    "en": "Switched to a new conversation. {0}a new question."
+  },
+  "text.chat.wecomConversationCardService.accept.4": {
+    "zh-CN": "已回到该会话，{0}后续问题。",
+    "en": "Returned to that conversation. {0}a follow-up question."
+  },
+  "text.chat.wecomConversationHistoryService.show.1": {
+    "zh-CN": "你在这里还没有可以继续的会话。",
+    "en": "You have no conversations to continue here yet."
+  },
+  "text.chat.wecomConversationHistoryService.show.2": {
+    "zh-CN": "这一页已没有可继续的会话，请重新发送 /history。",
+    "en": "This page has no conversations available to continue. Send /history again."
+  },
+  "text.chat.wecomConversationHistoryService.show.3": {
+    "zh-CN": "请选择要继续的会话。",
+    "en": "Choose the conversation to continue."
+  },
+  "text.chat.wecomConversationHistoryService.show.4": {
+    "zh-CN": "未命名会话",
+    "en": "Untitled conversation"
+  },
+  "text.chat.wecomConversationHistoryService.show.5": {
+    "zh-CN": "继续 {0}",
+    "en": "Continue {0}"
+  },
+  "text.chat.wecomConversationHistoryService.accept.1": {
+    "zh-CN": "已切回选中的会话，{0}继续提问。",
+    "en": "Switched back to the selected conversation. {0}continue asking questions."
+  }
+}

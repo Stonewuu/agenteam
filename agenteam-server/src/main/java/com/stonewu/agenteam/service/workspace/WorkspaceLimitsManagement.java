@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
@@ -37,11 +39,11 @@ public class WorkspaceLimitsManagement {
         authorize(actor);
         InputValidation.validate(input);
         if (input.fileMb() > input.workspaceMb()) {
-            throw ApiException.invalidField("fileMb", "单文件大小不能超过工作空间容量。");
+            throw ApiException.invalidField("fileMb", Messages.text("error.workspace.workspaceLimitsManagement.save.1"));
         }
         var saved = store.save(revision, new WorkspaceLimitValues(input.workspaceMb(), input.fileMb(),
             input.maximumFiles(), input.commandResultsMb()));
-        LOG.info("系统管理员修改工作空间限制，用户编号 {}，配置版本 {}，工作空间 {} MB，单文件 {} MB，文件数量 {}，命令输出 {} MB",
+        LOG.info(Messages.log("log.workspace.workspaceLimitsManagement.save.1"),
             actor.id(), saved.revision(), input.workspaceMb(), input.fileMb(), input.maximumFiles(), input.commandResultsMb());
         return view(saved);
     }
@@ -55,7 +57,7 @@ public class WorkspaceLimitsManagement {
 
     private static void authorize(UserEntity actor) {
         if (actor == null || !actor.superAdmin()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "WORKSPACE_SETTINGS_DENIED", "只有系统超级管理员可以管理工作空间设置。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "WORKSPACE_SETTINGS_DENIED", Messages.text("error.workspace.workspaceLimitsManagement.authorize.1"));
         }
     }
 }

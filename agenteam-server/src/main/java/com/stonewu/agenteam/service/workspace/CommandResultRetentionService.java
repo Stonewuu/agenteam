@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.service.project.ProjectWorkspaceLayout;
 import com.stonewu.agenteam.service.project.UserSandboxRegistry;
@@ -53,9 +55,9 @@ public class CommandResultRetentionService {
                     cleanProject(workspace);
                 } catch (IOException | RuntimeException failure) {
                     if (failure instanceof ApiException known && "PROJECT_BUSY".equals(known.code())) {
-                        LOG.debug("工作空间仍在使用，稍后清理命令结果，工作空间编号 {}", workspace, failure);
+                        LOG.debug(Messages.log("log.workspace.commandResultRetentionService.poll.1"), workspace, failure);
                     } else {
-                        LOG.warn("命令结果缓存暂未清理，工作空间编号 {}", workspace, failure);
+                        LOG.warn(Messages.log("log.workspace.commandResultRetentionService.poll.2"), workspace, failure);
                     }
                 }
             }
@@ -67,16 +69,16 @@ public class CommandResultRetentionService {
                             cleanPreview(directory);
                         } catch (IOException | RuntimeException failure) {
                             if (failure instanceof ApiException known && "PROJECT_BUSY".equals(known.code())) {
-                                LOG.debug("预览仍在使用，稍后清理命令结果，目录编号 {}", directory.getFileName(), failure);
+                                LOG.debug(Messages.log("log.workspace.commandResultRetentionService.poll.3"), directory.getFileName(), failure);
                             } else {
-                                LOG.warn("预览命令结果缓存暂未清理，目录编号 {}", directory.getFileName(), failure);
+                                LOG.warn(Messages.log("log.workspace.commandResultRetentionService.poll.4"), directory.getFileName(), failure);
                             }
                         }
                     }
                 }
             }
         } catch (IOException | RuntimeException failure) {
-            LOG.warn("扫描命令结果缓存失败，任务编号 command-result-retention", failure);
+            LOG.warn(Messages.log("log.workspace.commandResultRetentionService.poll.5"), failure);
         }
     }
 

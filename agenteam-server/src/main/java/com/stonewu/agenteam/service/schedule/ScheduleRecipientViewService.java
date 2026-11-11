@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
 import com.stonewu.agenteam.mapper.integration.EnterpriseIntegrationMapper;
@@ -37,10 +39,10 @@ public class ScheduleRecipientViewService {
             .eq(EnterpriseIntegrationRow::getEnterpriseId, enterprise).in(EnterpriseIntegrationRow::getId, ids)).stream()
             .collect(Collectors.toMap(EnterpriseIntegrationRow::getId, Function.identity()));
         return targets.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().stream().map(person ->
-            new ScheduleActionView.Recipient(person.userId(), names.getOrDefault(person.userId(), "成员已不可用"), person.connectionIds().stream().map(id -> {
+            new ScheduleActionView.Recipient(person.userId(), names.getOrDefault(person.userId(), Messages.text("text.schedule.scheduleRecipientViewService.views.1")), person.connectionIds().stream().map(id -> {
                 var app = applications.get(id);
                 if (app == null) {
-                    throw new IllegalStateException("已保存计划的接收渠道不存在");
+                    throw new IllegalStateException(Messages.text("error.schedule.scheduleRecipientViewService.views.1"));
                 }
                 return new ScheduleActionView.Channel(app.getId(), app.getName(), app.getProviderCode());
             }).toList())).toList()));

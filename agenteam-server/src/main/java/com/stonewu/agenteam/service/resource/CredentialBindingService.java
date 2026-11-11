@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
@@ -54,7 +56,7 @@ public class CredentialBindingService {
             actor.permissions().contains("credential.use") ? "credential.use" : "credential.manage");
         if (credentials.find(actor.enterpriseId(), id.asText()).filter(value -> value.status().equals("active"))
             .isEmpty()) {
-            throw ApiException.invalidField("config.credentialId", "请选择本企业当前有效的凭据。");
+            throw ApiException.invalidField("config.credentialId", Messages.text("error.resource.credentialBindingService.validate.1"));
         }
     }
 

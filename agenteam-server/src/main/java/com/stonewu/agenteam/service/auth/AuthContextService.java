@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.auth.AuthSessionAttributes;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -38,7 +40,7 @@ public class AuthContextService {
 
     public UserEntity requireUser(HttpSession session) {
         if (session == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Messages.text("error.auth.authContextService.requireUser.1"));
         }
         try {
             return sessions.effective(session);
@@ -63,14 +65,14 @@ public class AuthContextService {
     public AuthContext requireEnterprise(HttpSession session, String enterpriseId) {
         UserEntity user = requireUser(session);
         if (ChannelSessionGuard.restricted(session) && !Objects.equals(enterpriseId, ChannelSessionGuard.enterprise(session))) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", "当前企业无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", Messages.text("error.auth.authContextService.requireEnterprise.1"));
         }
         if (!behavior.enterpriseAllowed(user, enterpriseId)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", "当前企业无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE", Messages.text("error.auth.authContextService.requireEnterprise.1"));
         }
         if (enterpriseId == null || enterpriseId.isBlank() || !authMapper.isActiveMember(user.id(), enterpriseId)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "ENTERPRISE_UNAVAILABLE",
-                "当前企业无法访问，请选择其他企业或联系管理员。");
+                Messages.text("error.auth.authContextService.requireEnterprise.2"));
         }
         edition.requireEnterpriseScope(enterpriseId);
         var permissions = permissionMapper.listPermissionCodes(user.id(), enterpriseId).stream()
@@ -85,7 +87,7 @@ public class AuthContextService {
     public AuthContext requirePermission(HttpSession session, String enterpriseId, String permission) {
         AuthContext context = requireEnterprise(session, enterpriseId);
         if (!context.permissions().contains(permission)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "没有执行此操作的权限");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Messages.text("error.auth.authContextService.requirePermission.1"));
         }
         return context;
     }

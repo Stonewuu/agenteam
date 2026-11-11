@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.modelprofile.entity.ReasoningEffort;
 import com.stonewu.agenteam.model.modelprofile.request.ModelProfileWriteRequest;
@@ -32,10 +34,10 @@ public class ModelConfigurationValidation {
             }
         } catch (IllegalArgumentException | NullPointerException invalid) {
             throw ApiException.invalidField("baseUrl",
-                "模型地址必须使用加密连接，且不能包含账号、查询参数或片段；本机模型可使用普通连接。");
+                Messages.text("error.modelprofile.modelConfigurationValidation.provider.1"));
         }
         if (value.apiKey() != null && value.apiKey().codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("apiKey", "密钥不能包含换行或控制字符。");
+            throw ApiException.invalidField("apiKey", Messages.text("error.modelprofile.modelConfigurationValidation.provider.2"));
         }
         return new ModelProviderWriteRequest(ResourceInput.text(value.name(), "name", 80, true), value.protocol(),
             baseUrl, value.apiKey(), value.enabled());
@@ -45,7 +47,7 @@ public class ModelConfigurationValidation {
         InputValidation.validate(value);
         ModelCapabilities capability = value.capabilities();
         if (capability.maxOutputTokens() > capability.maxContextTokens()) {
-            throw ApiException.invalidField("capabilities.maxOutputTokens", "最大输出长度不能超过上下文长度。");
+            throw ApiException.invalidField("capabilities.maxOutputTokens", Messages.text("error.modelprofile.modelConfigurationValidation.model.1"));
         }
         var normalized = new ModelCapabilities(capability.supportsTools(), capability.supportsTemperature(),
             capability.maxOutputTokens(),

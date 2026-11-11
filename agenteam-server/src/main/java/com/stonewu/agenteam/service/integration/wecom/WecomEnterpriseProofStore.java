@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.integration.WecomBotEnterpriseMapper;
@@ -57,6 +59,6 @@ public class WecomEnterpriseProofStore {
     }
 
     private static ChannelProviderException changed() {
-        return new ChannelProviderException("WECOM_ENTERPRISE_CHANGED", "企业接入已变化，请稍后重试。");
+        return new ChannelProviderException("WECOM_ENTERPRISE_CHANGED", Messages.text("error.integration.wecomEnterpriseProofStore.changed.1"));
     }
 }

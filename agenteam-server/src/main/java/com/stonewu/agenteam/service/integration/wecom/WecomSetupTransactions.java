@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.integration.WecomBotEnterpriseMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.integration.entity.ChannelApplicationCheck;
@@ -87,7 +89,7 @@ public class WecomSetupTransactions {
     public void bind(WecomSetupJobRow claimed, UserEntity actor, ChatBotBindingService.PreparedIdentity prepared) {
         var row = store.copy(claimed);
         if (enterprises.verified(row.getEnterpriseId(), row.getConnectionId()).isEmpty()) {
-            throw new IllegalStateException("企微企业关联已变化，需要重新核验");
+            throw new IllegalStateException(Messages.text("error.integration.wecomSetupTransactions.bind.1"));
         }
         var input = store.input(row);
         var bot = bots.create(actor, row.getEnterpriseId(), row.getSystemAccess(), WecomSetupStore.binding(input, row.getConnectionId(), false), prepared);

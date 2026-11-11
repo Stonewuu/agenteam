@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.export.ExportJobMapper;
@@ -59,9 +61,9 @@ public class ExportJobTransactions {
                 payloads.write(ExportPayload.requested(definition)), clock.instant());
         } catch (DuplicateKeyException active) {
             throw new ApiException(HttpStatus.CONFLICT, "EXPORT_IN_PROGRESS",
-                "已有一个导出正在处理，请等待完成后再导出。");
+                Messages.text("error.export.exportJobTransactions.create.1"));
         }
-        audit.record(actor.enterpriseId(), actor.user(), "export.create", "background_job", id, "创建数据导出任务",
+        audit.record(actor.enterpriseId(), actor.user(), "export.create", "background_job", id, Messages.text("text.export.exportJobTransactions.create.1"),
             Map.of("type", definition.type()));
         return id;
     }
@@ -73,7 +75,7 @@ public class ExportJobTransactions {
             || !file.purpose()
             .equals("export") || file.resourceId() != null || file.resourceVersionId() != null || file.runId() != null
             || !snapshot.definition().equals(payloads.read(lease.payloadJson()).definition())) {
-            throw new IllegalArgumentException("导出结果归属或查询条件不正确");
+            throw new IllegalArgumentException(Messages.text("error.export.exportJobTransactions.complete.1"));
         }
         var actor = access.actor(lease.enterpriseId(), lease.ownerUserId());
         var now = clock.instant();
@@ -86,17 +88,17 @@ public class ExportJobTransactions {
         files.generated(file, now);
         results.result(lease, file.id(), payloads.write(payload));
         if (!jobs.finish(lease, "completed", null, null, now, clock.instant())) {
-            throw new IllegalStateException("导出工作资格已变化，结果未提交");
+            throw new IllegalStateException(Messages.text("error.export.exportJobMapper.result.1"));
         }
         audit.record(actor.enterpriseId(), actor.user(), "export.completed", "background_job", lease.id(),
-            "完成数据导出", Map.of("type", snapshot.definition().type(), "rowCount", snapshot.rowCount()));
+            Messages.text("text.export.exportJobTransactions.complete.1"), Map.of("type", snapshot.definition().type(), "rowCount", snapshot.rowCount()));
         return true;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void failed(JobLease lease, String code, String summary, boolean retry) {
         if (!lease.kind().equals("export")) {
-            throw new IllegalArgumentException("工作类型不是导出");
+            throw new IllegalArgumentException(Messages.text("error.export.exportJobTransactions.failed.1"));
         }
         enterprises.lockEnterprise(lease.enterpriseId());
         var now = clock.instant();

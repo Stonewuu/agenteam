@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.background;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -21,7 +23,7 @@ public class BackgroundJobHeartbeat {
     private static final Logger LOG = LoggerFactory.getLogger(BackgroundJobHeartbeat.class);
     private final BackgroundJobService jobs;
     private final ScheduledExecutorService timer = Executors.newScheduledThreadPool(4,
-        Thread.ofPlatform().daemon(true).name("后台工作续期-", 0).factory());
+        Thread.ofPlatform().daemon(true).name(Messages.log("log.background.backgroundJobHeartbeat.timer.1"), 0).factory());
 
     public BackgroundJobHeartbeat(BackgroundJobService jobs) {
         this.jobs = jobs;
@@ -36,7 +38,7 @@ public class BackgroundJobHeartbeat {
                 }
             } catch (RuntimeException lost) {
                 valid.set(false);
-                LOG.warn("后台工作续期失败，工作编号 {}", lease.id(), lost);
+                LOG.warn(Messages.log("log.background.backgroundJobHeartbeat.start.1"), lease.id(), lost);
             }
         }, 5, 5, TimeUnit.SECONDS);
         return new Guard(valid, future);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.enterprise.OrganizationMutationMapper;
 import com.stonewu.agenteam.mapper.enterprise.OrganizationViewMapper;
@@ -63,7 +65,7 @@ public class TeamDefinitionService {
         } catch (DuplicateKeyException exception) {
             throw duplicate();
         }
-        authorization.changed(actor, "team.create", "team", id, "创建团队",
+        authorization.changed(actor, "team.create", "team", id, Messages.text("text.enterprise.teamDefinitionService.create.1"),
             Map.of("name", value.name(), "ownerUserId", value.ownerUserId(), "memberIds", value.memberIds()));
         return find(actor.enterpriseId(), id);
     }
@@ -83,7 +85,7 @@ public class TeamDefinitionService {
         } catch (DuplicateKeyException exception) {
             throw duplicate();
         }
-        authorization.changed(actor, "team.update", "team", id, "修改团队资料和成员",
+        authorization.changed(actor, "team.update", "team", id, Messages.text("text.enterprise.teamDefinitionService.update.1"),
             Map.of("beforeName", original.name(), "afterName", value.name(), "ownerUserId", value.ownerUserId(),
                 "memberIds", value.memberIds()));
         return find(actor.enterpriseId(), id);
@@ -100,7 +102,7 @@ public class TeamDefinitionService {
             throw ApiException.versionConflict(revision);
         }
         teams.replaceTeamMembers(actor.enterpriseId(), id, members, clock.instant());
-        authorization.changed(actor, "team.members.update", "team", id, "修改团队成员",
+        authorization.changed(actor, "team.members.update", "team", id, Messages.text("text.enterprise.teamDefinitionService.members.1"),
             Map.of("before", before, "after", ids));
         return find(actor.enterpriseId(), id);
     }
@@ -110,17 +112,17 @@ public class TeamDefinitionService {
         authorize(actor);
         var original = current(actor, id, revision);
         if (requested == null) {
-            throw ApiException.invalidField("status", "请选择启用或停用。");
+            throw ApiException.invalidField("status", Messages.text("error.announcement.announcementStatusRequest.enabled.1"));
         }
         String status = EnterpriseValidation.status(requested, null);
         if (status.equals("active") && !teams.activeMemberExists(actor.enterpriseId(), original.owner().id())) {
-            throw ApiException.invalidField("ownerUserId", "请先把团队负责人改为有效成员，再启用团队。");
+            throw ApiException.invalidField("ownerUserId", Messages.text("error.enterprise.teamDefinitionService.status.1"));
         }
         if (!teams.updateTeam(id, actor.enterpriseId(), original.name(), original.description(), status,
             original.owner().id(), revision, clock.instant())) {
             throw ApiException.versionConflict(revision);
         }
-        authorization.changed(actor, "team.status.update", "team", id, "修改团队状态",
+        authorization.changed(actor, "team.status.update", "team", id, Messages.text("text.enterprise.teamDefinitionService.status.1"),
             Map.of("before", original.status(), "after", status));
         return find(actor.enterpriseId(), id);
     }
@@ -131,35 +133,35 @@ public class TeamDefinitionService {
         var original = current(actor, id, revision);
         dependencies.requireTeamUnused(actor.enterpriseId(), id);
         mutations.deleteTeam(actor.enterpriseId(), id, revision, clock.instant());
-        authorization.changed(actor, "team.delete", "team", id, "删除团队", Map.of("name", original.name()));
+        authorization.changed(actor, "team.delete", "team", id, Messages.text("text.enterprise.teamDefinitionService.delete.1"), Map.of("name", original.name()));
     }
 
     private TeamWritePayload validate(AuthContext actor, String id, TeamWritePayload value) {
         if (value == null || value.name() == null || value.description() == null || value.ownerUserId() == null || value.memberIds() == null) {
-            throw ApiException.invalidField("body", "请填写团队名称、简介、负责人和成员。");
+            throw ApiException.invalidField("body", Messages.text("error.enterprise.teamDefinitionService.validate.1"));
         }
-        String name = EnterpriseValidation.name(value.name(), "团队名称", 50);
+        String name = EnterpriseValidation.name(value.name(), Messages.text("label.team.name"), 50);
         String description = EnterpriseValidation.description(value.description());
         if (!teams.activeMemberExists(actor.enterpriseId(), value.ownerUserId())) {
-            throw ApiException.invalidField("ownerUserId", "请选择本企业有效成员作为负责人。");
+            throw ApiException.invalidField("ownerUserId", Messages.text("error.enterprise.teamDefinitionService.validate.2"));
         }
         Set<String> members = validateMembers(actor.enterpriseId(), id, value.memberIds());
         return new TeamWritePayload(name, description, value.ownerUserId(), members.stream().sorted().toList());
     }
 
     private Set<String> validateMembers(String enterpriseId, String teamId, List<String> requested) {
-        Set<String> members = EnterpriseValidation.identifiers(requested, 0, 500, "团队成员");
+        Set<String> members = EnterpriseValidation.identifiers(requested, 0, 500, Messages.text("label.team.members"));
         Set<String> current = teams.findTeam(enterpriseId, teamId).map(team -> Set.copyOf(team.memberUserIds()))
             .orElse(Set.of());
         for (String userId : members) {
             if (!teams.activeMemberExists(enterpriseId, userId) && !(current.contains(userId)
                 && teams.findMember(enterpriseId, userId).filter(member -> !member.status().equals("removed"))
                 .isPresent())) {
-                throw ApiException.invalidField("memberIds", "新增团队成员必须来自本企业并且当前有效。");
+                throw ApiException.invalidField("memberIds", Messages.text("error.enterprise.teamDefinitionService.validateMembers.1"));
             }
             if (teams.countOtherTeams(enterpriseId, userId, teamId) >= 10) {
                 throw new ApiException(HttpStatus.CONFLICT, "MEMBER_TEAM_LIMIT",
-                    "一名成员最多加入十个团队，请调整后重试。");
+                    Messages.text("error.enterprise.teamDefinitionService.validateMembers.2"));
             }
         }
         return members;
@@ -175,10 +177,10 @@ public class TeamDefinitionService {
 
     private TeamView find(String enterpriseId, String id) {
         return views.team(enterpriseId, id)
-            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "团队不存在或无法访问。"));
+            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", Messages.text("error.enterprise.teamDefinitionService.find.1")));
     }
 
     private ApiException duplicate() {
-        return new ApiException(HttpStatus.CONFLICT, "TEAM_EXISTS", "团队名称已存在，请调整后重试。");
+        return new ApiException(HttpStatus.CONFLICT, "TEAM_EXISTS", Messages.text("error.enterprise.teamDefinitionService.duplicate.1"));
     }
 }

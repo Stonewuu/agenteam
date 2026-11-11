@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.openai.core.RequestOptions;
 import com.openai.core.http.Headers;
 import com.openai.core.http.HttpClient;
@@ -30,7 +32,7 @@ public final class OpenAISdkHttpClient implements HttpClient {
         try {
             return new SdkResponse(session.execute(request(request)));
         } catch (IOException failure) {
-            throw new UncheckedIOException("模型服务请求失败。", failure);
+            throw new UncheckedIOException(Messages.text("error.modelprofile.anthropicSdkHttpClient.execute.1"), failure);
         }
     }
 

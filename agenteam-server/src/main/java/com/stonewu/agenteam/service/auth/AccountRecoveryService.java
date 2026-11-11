@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.auth.AuthTokenMapper;
 import com.stonewu.agenteam.mapper.auth.PasswordResetSourceMapper;
@@ -59,7 +61,7 @@ public class AccountRecoveryService {
 
     public void requestPasswordReset(PasswordResetRequest request, String source) {
         if (request == null) {
-            throw ApiException.invalidField("identifier", "请输入账号或邮箱。");
+            throw ApiException.invalidField("identifier", Messages.text("error.auth.accountRecoveryService.requestPasswordReset.1"));
         }
         String identifier = IdentityValidation.loginIdentifier(request.identifier());
         try {
@@ -69,7 +71,7 @@ public class AccountRecoveryService {
             }
         } catch (DataAccessException exception) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE",
-                "暂时无法申请重置，请稍后重试。");
+                Messages.text("error.auth.accountRecoveryService.requestPasswordReset.2"));
         }
         mail.enqueuePasswordResetLookup(identifier);
     }
@@ -97,7 +99,7 @@ public class AccountRecoveryService {
         }
         users.invalidateUnusedTokens(user.id(), now);
         limiter.succeeded("user:" + user.id());
-        audit.record(null, user, "auth.password.reset", "user", user.id(), "通过邮件重置密码并撤销旧登录会话",
+        audit.record(null, user, "auth.password.reset", "user", user.id(), Messages.text("text.auth.accountRecoveryService.resetPassword.1"),
             Map.of());
     }
 
@@ -125,13 +127,13 @@ public class AccountRecoveryService {
                 throw invalidToken();
             }
         } catch (DuplicateKeyException exception) {
-            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_UNAVAILABLE", "该邮箱已绑定其他账号，请使用另一个邮箱。");
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_UNAVAILABLE", Messages.text("error.auth.accountRecoveryService.verifyEmail.1"));
         }
         if (!tokens.consume(current.id(), now)) {
             throw invalidToken();
         }
         users.invalidateUnusedTokens(user.id(), now);
-        audit.record(null, user, "auth.email.verify", "user", user.id(), "完成账号邮箱验证", Map.of());
+        audit.record(null, user, "auth.email.verify", "user", user.id(), Messages.text("text.auth.accountRecoveryService.verifyEmail.1"), Map.of());
     }
 
     private AuthToken token(String value, String purpose) {
@@ -157,6 +159,6 @@ public class AccountRecoveryService {
 
     private ApiException invalidToken() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "AUTH_TOKEN_INVALID",
-            "链接已失效或已使用，请重新申请。");
+            Messages.text("error.auth.accountRecoveryService.invalidToken.1"));
     }
 }

@@ -1,0 +1,78 @@
+{
+  "error.skill.skillPackageMapper.parse.1": {
+    "zh-CN": "技能文件缺少依赖名称，请补齐后再导入。",
+    "en": "The skill file is missing dependency names. Add them before importing."
+  },
+  "error.skill.skillPackageMapper.text.1": {
+    "zh-CN": "文件首行之后还需要填写技能执行指令。",
+    "en": "Add the skill instructions after the first line."
+  },
+  "error.skill.skillPackageMapper.invalid.1": {
+    "zh-CN": "技能文件格式不正确或格式版本不受支持。",
+    "en": "The skill file format is invalid or its version is unsupported."
+  },
+  "error.skill.skillExecutionService.unavailable.1": {
+    "zh-CN": "所选技能不在该员工的可用能力中，请重新选择。",
+    "en": "The selected skill is not available to this AI employee. Select another skill."
+  },
+  "error.skill.skillImportService.verifyPreview.1": {
+    "zh-CN": "文件内容或可用状态已经变化，请重新预览。",
+    "en": "The file content or availability has changed. Preview it again."
+  },
+  "error.skill.skillImportTokenService.issue.1": {
+    "zh-CN": "无法保存技能导入预览",
+    "en": "The skill import preview could not be saved."
+  },
+  "error.skill.skillImportTokenService.invalid.1": {
+    "zh-CN": "技能导入预览已失效，请重新选择文件。",
+    "en": "The skill import preview expired. Select the file again."
+  },
+  "text.skill.skillPromptMapper.append.1": {
+    "zh-CN": "\n\n本次任务选择的技能，请按以下顺序应用：\n",
+    "en": "\n\nSkills selected for this task, to apply in this order:\n"
+  },
+  "text.skill.skillPromptMapper.append.2": {
+    "zh-CN": "\n技能 ",
+    "en": "\nSkill "
+  },
+  "text.skill.skillPromptMapper.append.3": {
+    "zh-CN": "适用场景",
+    "en": "Use cases"
+  },
+  "text.skill.skillPromptMapper.append.4": {
+    "zh-CN": "输入说明",
+    "en": "Input description"
+  },
+  "text.skill.skillPromptMapper.append.5": {
+    "zh-CN": "执行指令",
+    "en": "Instructions"
+  },
+  "text.skill.skillPromptMapper.append.6": {
+    "zh-CN": "输出说明",
+    "en": "Output description"
+  },
+  "text.skill.skillPromptMapper.append.7": {
+    "zh-CN": "示例",
+    "en": "Examples"
+  },
+  "text.skill.skillImportService.confirm.1": {
+    "zh-CN": "导入的技能包含尚未匹配的插件，请选择需要的插件，或调整指令后保存草稿。",
+    "en": "The imported skill has unmatched plugins. Select the required plugins or adjust the instructions before saving the draft."
+  },
+  "text.skill.skillImportService.confirm.2": {
+    "zh-CN": "导入的技能包含尚未匹配的知识库，请选择需要的知识库，或调整指令后保存草稿。",
+    "en": "The imported skill has unmatched knowledge sources. Select the required sources or adjust the instructions before saving the draft."
+  },
+  "text.skill.skillImportService.suggestedName.1": {
+    "zh-CN": " 副本",
+    "en": " copy"
+  },
+  "text.skill.skillImportService.suggestedName.2": {
+    "zh-CN": " 副本 {0}",
+    "en": " copy {0}"
+  },
+  "text.skill.skillTransferApiService.export.1": {
+    "zh-CN": "导出技能固定版本",
+    "en": "Export fixed skill version"
+  }
+}

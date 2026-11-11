@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.workspace.SandboxContainerCleanup;
 import com.stonewu.agenteam.service.workspace.WorkspaceStore;
 import org.slf4j.Logger;
@@ -99,11 +101,11 @@ final class DocumentSandboxWorkspaces {
                 } catch (NoSuchFileException removed) {
                     // 另一个实例已完成清理，无需重复处理。
                 } catch (IOException failure) {
-                    LOG.warn("检查文档临时目录失败，目录编号 {}", directory.getFileName(), failure);
+                    LOG.warn(Messages.log("log.file.documentSandboxWorkspaces.cleanupUnused.1"), directory.getFileName(), failure);
                 }
             }
         } catch (IOException failure) {
-            LOG.warn("读取文档临时目录失败，工作编号 document-cleanup", failure);
+            LOG.warn(Messages.log("log.file.documentSandboxWorkspaces.cleanupUnused.2"), failure);
         }
     }
 
@@ -114,13 +116,13 @@ final class DocumentSandboxWorkspaces {
                 containers.removeForWorkspace(Files.readString(pending).trim());
             }
         } catch (IOException | RuntimeException failure) {
-            LOG.warn("文档容器清理未完成，保留目录等待重试，目录编号 {}", lease.directory.getFileName(), failure);
+            LOG.warn(Messages.log("log.file.documentSandboxWorkspaces.cleanup.1"), lease.directory.getFileName(), failure);
             return;
         }
         try {
             WorkspaceStore.deleteTree(root, lease.directory);
         } catch (IOException failure) {
-            LOG.warn("文档临时文件清理失败，目录编号 {}", lease.directory.getFileName(), failure);
+            LOG.warn(Messages.log("log.file.documentSandboxWorkspaces.cleanup.2"), lease.directory.getFileName(), failure);
         }
     }
 }

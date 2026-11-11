@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.query.MappedCallbackFailures;
@@ -47,7 +49,7 @@ public class FileDataQueryMapper {
             for (int i = 0; i < plan.fields().size(); i++) {
                 String text = (String) row.get("v" + i);
                 if (text == null) {
-                    throw new IllegalStateException("当前数据行缺少已声明字段");
+                    throw new IllegalStateException(Messages.text("error.data.fileDataQueryMapper.readRow.1"));
                 }
                 if (text.length() > 1024 * 1024) {
                     throw tooLarge();
@@ -61,12 +63,12 @@ public class FileDataQueryMapper {
         } catch (ApiException failed) {
             throw failed;
         } catch (Exception invalid) {
-            throw new IllegalStateException("已保存的数据行无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.data.fileDataQueryMapper.readRow.2"), invalid);
         }
     }
 
     private static ApiException tooLarge() {
         return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "DATA_RESULT_TOO_LARGE",
-            "字段内容超过读取上限，请减少返回字段或拆分原始资料。");
+            Messages.text("error.data.fileDataQueryMapper.tooLarge.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.model.execution.entity.CommittedExecutionEvent;
 import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
@@ -57,7 +59,7 @@ public class ExecutionEventPublisher {
         } catch (RuntimeException unavailable) {
             if (clock.millis() - lastWarning >= 30000) {
                 lastWarning = clock.millis();
-                LOG.warn("事件缓存暂时无法更新，已提交的消息仍保存在数据库", unavailable);
+                LOG.warn(Messages.log("log.execution.executionEventPublisher.publishPending.1"), unavailable);
             }
         }
     }
@@ -79,13 +81,13 @@ public class ExecutionEventPublisher {
             long current = conversations.lastSequence(enterprise, conversation);
             long after = position.sequence();
             if (after > current) {
-                throw new IllegalStateException("缓存事件编号超过数据库已提交的编号");
+                throw new IllegalStateException(Messages.text("error.execution.executionEventPublisher.publish.1"));
             }
             if (after > 0) {
                 var saved = events.after(enterprise, conversation, after - 1, 1);
                 if (!saved.isEmpty() && Long.parseLong(saved.getFirst().sequence()) == after
                     && !codec.encode(saved.getFirst()).hash().equals(position.hash())) {
-                    throw new IllegalStateException("缓存事件与数据库内容不一致");
+                    throw new IllegalStateException(Messages.text("error.execution.executionEventPublisher.publish.2"));
                 }
             } else {
                 after = Math.max(Math.max(0, events.firstSequence(enterprise, conversation) - 1), current - 10000);
@@ -115,7 +117,7 @@ public class ExecutionEventPublisher {
             try {
                 direct.execute(() -> publishDirect(saved.event()));
             } catch (RejectedExecutionException full) {
-                LOG.warn("旧格式事件分发队列已满，将由后台恢复，会话编号 {}", saved.event().conversationId(), full);
+                LOG.warn(Messages.log("log.execution.executionEventPublisher.committed.1"), saved.event().conversationId(), full);
             }
         }
     }
@@ -134,14 +136,14 @@ public class ExecutionEventPublisher {
                 events.published(event, clock.instant());
             }
         } catch (RuntimeException unavailable) {
-            LOG.warn("旧格式事件暂时未分发，将由后台恢复，会话编号 {}，事件编号 {}", event.conversationId(),
+            LOG.warn(Messages.log("log.execution.executionEventPublisher.publishDirect.1"), event.conversationId(),
                 event.eventId(), unavailable);
         } finally {
             if (owner != null) {
                 try {
                     cache.release(event.enterpriseId(), event.conversationId(), owner);
                 } catch (RuntimeException unavailable) {
-                    LOG.warn("释放事件分发资格失败，会话编号 {}，事件编号 {}", event.conversationId(), event.eventId(),
+                    LOG.warn(Messages.log("log.execution.executionEventPublisher.publishDirect.2"), event.conversationId(), event.eventId(),
                         unavailable);
                 }
             }

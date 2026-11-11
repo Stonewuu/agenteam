@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.mail;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
@@ -66,10 +68,10 @@ public class MailQueueService {
 
     public MailDeliveryContent previousInvitation(String enterpriseId, String invitationId) {
         var queued = mail.latestInvitation(enterpriseId, invitationId)
-            .orElseThrow(() -> new IllegalStateException("邀请投递记录不存在"));
+            .orElseThrow(() -> new IllegalStateException(Messages.text("error.mail.mailQueueService.previousInvitation.1")));
         var payload = parse(queued.payloadJson());
         if (!payload.purpose().equals("enterprise_invitation") || !payload.targetId().equals(invitationId)) {
-            throw new IllegalStateException("邀请投递内容不匹配");
+            throw new IllegalStateException(Messages.text("error.mail.mailQueueService.previousInvitation.2"));
         }
         return encryption.decrypt(payload.content(), queued.id(), MailDeliveryContent.class);
     }
@@ -78,7 +80,7 @@ public class MailQueueService {
         try {
             return json.readValue(value, MailJobPayload.class);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("邮件投递记录无法读取");
+            throw new IllegalStateException(Messages.text("error.mail.mailQueueService.parse.1"));
         }
     }
 
@@ -86,7 +88,7 @@ public class MailQueueService {
         try {
             return json.writeValueAsString(payload);
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("邮件投递记录无法保存");
+            throw new IllegalStateException(Messages.text("error.mail.mailQueueService.serialize.1"));
         }
     }
 }

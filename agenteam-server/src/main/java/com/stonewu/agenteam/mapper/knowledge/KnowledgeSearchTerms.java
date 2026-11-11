@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,7 +30,7 @@ public final class KnowledgeSearchTerms {
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)))
                 .substring(0, 32);
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("知识检索词的摘要无法生成", failure);
+            throw new IllegalStateException(Messages.text("error.knowledge.knowledgeSearchTerms.prefix.1"), failure);
         }
     }
 

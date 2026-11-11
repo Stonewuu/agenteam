@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -99,7 +101,7 @@ public class WorkspaceToolService {
             boolean cachedCommand = CommandResultCache.matches(path);
             boolean legacyCommand = path.matches("work/command-results/[A-Za-z0-9_-]{1,100}/(?:stdout|stderr)\\.txt");
             if (cachedCommand && !Set.of("read_file", "grep_files", "list_files").contains(name)) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "COMMAND_RESULT_READ_ONLY", "命令结果只能通过文件读取工具查看，不能修改或覆盖。");
+                throw new ApiException(HttpStatus.FORBIDDEN, "COMMAND_RESULT_READ_ONLY", Messages.text("error.workspace.workspaceToolService.invoke.1"));
             }
             if (WorkspaceToolDefinitions.READ_TOOLS.contains(name) && (cachedCommand || legacyCommand
                 && !Files.exists(files.resolve(path, false), LinkOption.NOFOLLOW_LINKS))) {
@@ -131,7 +133,7 @@ public class WorkspaceToolService {
                 }
                 if (name.equals("read_file") && scope.cleared()) {
                     throw new ApiException(HttpStatus.GONE, "WORKSPACE_FILES_EXPIRED",
-                        "此对话的工作文件因超过保留时间已清理，请重新提供需要处理的文件。");
+                        Messages.text("error.workspace.workspaceToolService.invoke.2"));
                 }
                 if (name.equals("view_image")) {
                     var image = images.read(files, path);
@@ -172,7 +174,7 @@ public class WorkspaceToolService {
                 long seconds = arguments.path("timeout_seconds").asLong(settings.timeoutSeconds());
                 if (seconds < 1 || seconds > settings.timeoutSeconds()) {
                     throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_TIMEOUT_INVALID",
-                        "命令时间上限超过当前允许范围。");
+                        Messages.text("error.workspace.workspaceToolService.invoke.3"));
                 }
                 var requested = new LinkedHashSet<String>();
                 arguments.path("result_paths").forEach(value -> requested.add(WorkspacePaths.logical(value.asText())));
@@ -228,15 +230,15 @@ public class WorkspaceToolService {
                         .equals("WORKSPACE_CAPACITY_EXCEEDED")) {
                         throw failure;
                     }
-                    LOG.warn("容器生成的文件超过允许范围，未替换已保存文件，执行编号 {}，调用编号 {}", run.id(), call.id(),
+                    LOG.warn(Messages.log("log.workspace.workspaceToolService.invoke.1"), run.id(), call.id(),
                         failure);
                     response = object().put("isError", true).put("capacityExceeded", true)
-                        .put("content", "生成文件超过允许的大小或数量，本次生成内容未保存，原有工作文件仍可使用。");
+                        .put("content", Messages.text("error.workspace.workspaceToolService.invoke.7"));
                 } finally {
                     try {
                         WorkspaceStore.deleteTree(scope.directory(), extracted);
                     } catch (IOException failure) {
-                        LOG.warn("沙盒输出临时目录清理失败，执行编号 {}，调用编号 {}", run.id(), call.id(), failure);
+                        LOG.warn(Messages.log("log.workspace.workspaceToolService.invoke.2"), run.id(), call.id(), failure);
                     }
                 }
             } else if (name.equals("export_file")) {
@@ -245,11 +247,11 @@ public class WorkspaceToolService {
                     files.resolve(logical, true);
                 } else if (!logical.startsWith("outputs/")) {
                     throw new ApiException(HttpStatus.BAD_REQUEST, "WORKSPACE_EXPORT_PATH_INVALID",
-                        "请先把交付文件放入 outputs 目录，再导出为附件。");
+                        Messages.text("error.workspace.workspaceToolService.invoke.4"));
                 }
                 Path source = files.resolve(logical, false);
                 if (!Files.isRegularFile(source, LinkOption.NOFOLLOW_LINKS)) {
-                    throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_FILE_MISSING", "准备交付的文件不存在。");
+                    throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_FILE_MISSING", Messages.text("error.workspace.workspaceToolService.invoke.5"));
                 }
                 control.beforeSend();
                 try (var input = control.track(Files.newInputStream(source, LinkOption.NOFOLLOW_LINKS))) {
@@ -267,7 +269,7 @@ public class WorkspaceToolService {
                     scope.commit(sourceIds, fileIds);
                 }
             } else {
-                throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_TOOL_UNAVAILABLE", "当前文件操作不可用。");
+                throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_TOOL_UNAVAILABLE", Messages.text("error.workspace.workspaceReadToolService.invoke.1"));
             }
             control.requireActive();
             if (!binding.readOnly() && response instanceof ObjectNode object) {
@@ -279,7 +281,7 @@ public class WorkspaceToolService {
                 }
             }
             if (Utf8Text.size(response.toString()) > maximum) {
-                throw new IllegalStateException("工作空间工具返回内容超过分配的上限");
+                throw new IllegalStateException(Messages.text("error.workspace.workspaceToolService.invoke.6"));
             }
             return new Outcome(response, Set.copyOf(sourceIds), Set.copyOf(fileIds), exported,
                 scope.manifest().version(), imageContent);
@@ -303,14 +305,14 @@ public class WorkspaceToolService {
             access.requireSources(actor, origins.results(), origins.inputs());
             if (!result.path("workspaceVersion").asText().equals(scope.manifest().version())) {
                 throw new ApiException(HttpStatus.CONFLICT, "WORKSPACE_IMAGE_CHANGED",
-                    "图片所属工作文件已经变化，请重新读取图片。");
+                    Messages.text("error.workspace.workspaceToolService.image.1"));
             }
             String path = WorkspacePaths.projectLogical(result.path("path").asText());
             var image = images.read(scope.current(), path);
             if (result.hasNonNull("imageRevision") && !result.path("imageRevision").asText()
                 .equals(Utf8Text.revision(path, image.data()))) {
                 throw new ApiException(HttpStatus.CONFLICT, "WORKSPACE_IMAGE_CHANGED",
-                    "图片内容已经变化，请重新读取图片。");
+                    Messages.text("error.workspace.workspaceToolService.image.2"));
             }
             return image.block();
         } catch (IOException failure) {
@@ -324,10 +326,10 @@ public class WorkspaceToolService {
             .put("capacityExceeded", command.capacityExceeded()).put("stdoutPath", command.stdoutPath())
             .put("stderrPath", command.stderrPath());
         if (command.capacityExceeded()) {
-            response.put("content", "工作空间容量或文件数量已用完，命令未完成，请减少生成文件。");
+            response.put("content", Messages.text("workspace.command.capacityExceeded"));
         } else if (command.timedOut()) {
             response.put("content",
-                "命令超过允许时间，已停止并保留实际输出与工作文件。请先检查已有文件，再缩小命令范围或改用其他方法继续。");
+                Messages.text("workspace.command.timedOut"));
         }
         int bytes = Math.max(4, maximum - 512);
         for (var entry : Map.of("stdout", command.stdoutPath(), "stderr", command.stderrPath()).entrySet()) {

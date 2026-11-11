@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -84,7 +86,7 @@ public class WebRoomTimeline {
             String author, String key, String kind, Map<String, ?> body) {
         var room = rooms.lockRoom(enterprise, roomId);
         if (room == null) {
-            throw new IllegalStateException("协作对话不存在");
+            throw new IllegalStateException(Messages.text("error.collaboration.webRoomTimeline.append.1"));
         }
         var existing = previous(room, key);
         if (existing != null) {
@@ -121,7 +123,7 @@ public class WebRoomTimeline {
             .eq(CollaborationRoomEntryRow::getId, row.getId()).in(CollaborationRoomEntryRow::getDeliveryState, "queued", "selected")
             .set(CollaborationRoomEntryRow::getDeliveryState, "starting").set(CollaborationRoomEntryRow::getTaskId, taskId)
             .set(CollaborationRoomEntryRow::getSequenceNo, room.getNextSequence()).set(CollaborationRoomEntryRow::getUpdatedAt, clock.instant())) != 1) {
-            throw new IllegalStateException("补充消息未能进入协作对话");
+            throw new IllegalStateException(Messages.text("error.collaboration.webRoomTimeline.admit.1"));
         }
     }
 
@@ -142,7 +144,7 @@ public class WebRoomTimeline {
             .eq(CollaborationRoomRow::getEnterpriseId, actor.enterpriseId()).eq(CollaborationRoomRow::getOwnerUserId, actor.userId())
             .eq(CollaborationRoomRow::getId, task.getWebRoomId()).eq(CollaborationTaskRow::getWebTopicId, task.getWebTopicId());
         if (rooms.selectJoinCount(discussion) == 0) {
-            throw new ApiException(HttpStatus.CONFLICT, "ROOM_TASK_CHANGED", "对话已切换到另一项任务，请回到对话查看。");
+            throw new ApiException(HttpStatus.CONFLICT, "ROOM_TASK_CHANGED", Messages.text("error.collaboration.webRoomTimeline.requirement.1"));
         }
         String prefix = "web:" + task.getWebRoomId() + ":";
         String key = operation.startsWith(prefix) ? "user:" + operation.substring(prefix.length()) : operation;
@@ -154,7 +156,7 @@ public class WebRoomTimeline {
             .eq(CollaborationRoomEntryRow::getEnterpriseId, entry.getEnterpriseId()).eq(CollaborationRoomEntryRow::getRoomId, entry.getRoomId())
             .eq(CollaborationRoomEntryRow::getId, entry.getId()).isNull(CollaborationRoomEntryRow::getTaskId)
             .set(CollaborationRoomEntryRow::getTaskId, taskId)) != 1) {
-            throw new IllegalStateException("协作任务的原始消息无法关联");
+            throw new IllegalStateException(Messages.text("error.collaboration.webRoomTimeline.attach.1"));
         }
     }
 

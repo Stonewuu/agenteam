@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantRow;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationTaskRow;
 import com.stonewu.agenteam.service.chat.ChatOutboundService;
@@ -20,7 +22,7 @@ public class CollaborationNotices {
             String kind, String text, boolean progress, String replyTo) {
         if (task.fromWebRoom()) {
             timeline.append(task.getEnterpriseId(), task.getWebRoomId(), task.getId(), role == null ? null : role.getId(),
-                role == null ? "协作" : role.getRoleName(), key, kind, text);
+                role == null ? Messages.text("text.collaboration.collaborationNotices.send.1") : role.getRoleName(), key, kind, text);
         } else if (progress) {
             outbound.progress(task.getEnterpriseId(), task.getConversationId(), role == null ? task.getEntryBotId() : role.getBotBindingId(),
                 task.getId(), action, key, kind, text, replyTo);

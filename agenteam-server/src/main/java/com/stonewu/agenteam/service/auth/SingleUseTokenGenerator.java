@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.auth.entity.IssuedToken;
 import org.springframework.stereotype.Component;
 
@@ -33,7 +35,7 @@ public class SingleUseTokenGenerator {
             return HexFormat.of()
                 .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("运行环境缺少必要的摘要算法", exception);
+            throw new IllegalStateException(Messages.text("error.auth.passwordResetSourceMapper.check.2"), exception);
         }
     }
 }

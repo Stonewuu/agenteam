@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
@@ -52,12 +54,12 @@ public class ChatTaskReferenceService {
             var matches = tasks.selectList(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, message.getEnterpriseId())
                 .eq(CollaborationTaskRow::getConversationId, message.getConversationId()).eq(CollaborationTaskRow::getShortCode, matcher.group().toUpperCase()));
             if (matches.isEmpty()) {
-                throw new ApiException(HttpStatus.CONFLICT, "CHAT_TASK_REFERENCE_INVALID", "此会话中没有这个任务，请检查任务编号。");
+                throw new ApiException(HttpStatus.CONFLICT, "CHAT_TASK_REFERENCE_INVALID", Messages.text("error.chat.chatTaskReferenceService.resolve.1"));
             }
             matches.forEach(row -> found.add(row.getId()));
         }
         if (found.size() > 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_TASK_REFERENCE_AMBIGUOUS", "消息关联了多个任务，请只回复其中一个任务。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_TASK_REFERENCE_AMBIGUOUS", Messages.text("error.chat.chatTaskReferenceService.resolve.2"));
         }
         return found.stream().findFirst();
     }

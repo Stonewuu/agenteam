@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.security;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.security.CredentialMapper;
 import com.stonewu.agenteam.model.security.entity.HttpConnectionCredentials;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -66,6 +68,6 @@ public class HttpCredentialService {
 
     private static ApiException invalid() {
         return new ApiException(HttpStatus.CONFLICT, "CREDENTIAL_UNAVAILABLE",
-            "连接凭据已失效或格式不正确，请重新设置。");
+            Messages.text("error.security.httpCredentialService.invalid.1"));
     }
 }

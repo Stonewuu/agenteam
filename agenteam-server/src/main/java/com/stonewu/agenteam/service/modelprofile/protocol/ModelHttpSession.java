@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.network.OutboundAddressPolicy;
 import okhttp3.Call;
@@ -58,7 +60,7 @@ public final class ModelHttpSession implements AutoCloseable {
             .addInterceptor(this::intercept)
             .dns(host -> {
                 if (!host.equals(origin.host())) {
-                    throw new UnknownHostException("模型请求不能访问其他主机。");
+                    throw new UnknownHostException(Messages.text("error.modelprofile.modelHttpSession.init.1"));
                 }
                 return local ? addresses.resolveHost(host, Duration.ofSeconds(5), true)
                     : addresses.resolve(origin, Duration.ofSeconds(5));
@@ -100,7 +102,7 @@ public final class ModelHttpSession implements AutoCloseable {
 
     private Call prepare(Request request) {
         if (closed.get() || cancelled.get()) {
-            throw new CancellationException("模型请求已经取消。");
+            throw new CancellationException(Messages.text("error.modelprofile.modelHttpSession.prepare.1"));
         }
         Call call = client.newCall(request);
         activeCall.set(call);
@@ -117,14 +119,14 @@ public final class ModelHttpSession implements AutoCloseable {
 
     private Response intercept(Interceptor.Chain chain) throws IOException {
         if (closed.get() || cancelled.get()) {
-            throw new InterruptedIOException("模型请求已经取消。");
+            throw new InterruptedIOException(Messages.text("error.modelprofile.modelHttpSession.prepare.1"));
         }
         if (!OutboundAddressPolicy.sameOrigin(origin, chain.request().url())) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "MODEL_REQUEST_ORIGIN_CHANGED",
-                "模型请求地址与已配置的服务不一致。");
+                Messages.text("error.modelprofile.modelHttpSession.intercept.1"));
         }
         if (!dispatched.compareAndSet(false, true)) {
-            throw new IllegalStateException("模型开发库尝试在同一次请求中重复发送，已停止未记录的重试。");
+            throw new IllegalStateException(Messages.text("error.modelprofile.modelHttpSession.intercept.2"));
         }
         if (diagnostics != null) {
             diagnostics.request(chain.request());
@@ -132,7 +134,7 @@ public final class ModelHttpSession implements AutoCloseable {
         beforeDispatch.run();
         activeCall.set(chain.call());
         if (closed.get() || cancelled.get()) {
-            throw new InterruptedIOException("模型请求已经取消。");
+            throw new InterruptedIOException(Messages.text("error.modelprofile.modelHttpSession.prepare.1"));
         }
         var response = chain.proceed(chain.request());
         if (diagnostics != null) {

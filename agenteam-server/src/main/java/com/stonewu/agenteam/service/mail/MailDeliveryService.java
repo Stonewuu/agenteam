@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.mail;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
@@ -82,7 +84,7 @@ public class MailDeliveryService {
         }
         MailJobPayload payload = queue.parse(lease.payloadJson());
         if (lease.exhausted()) {
-            finish(lease, payload, "failed", "MAIL_RETRY_EXHAUSTED", "邮件发送未完成，请重新发送。", now, now);
+            finish(lease, payload, "failed", "MAIL_RETRY_EXHAUSTED", Messages.text("text.mail.mailDeliveryService.prepare.1"), now, now);
             return Optional.empty();
         }
         if (payload.purpose().equals("password_reset_lookup")) {
@@ -96,7 +98,7 @@ public class MailDeliveryService {
         boolean valid = payload.purpose().equals("enterprise_invitation")
             ? usableInvitation(lease, payload, content, now) : usableToken(lease, payload, content, now);
         if (!valid) {
-            finish(lease, payload, "cancelled", "MAIL_TARGET_UNAVAILABLE", "链接已失效或邀请已变更，未发送邮件。", now,
+            finish(lease, payload, "cancelled", "MAIL_TARGET_UNAVAILABLE", Messages.text("text.mail.mailDeliveryService.prepare.2"), now,
                 now);
             return Optional.empty();
         }
@@ -108,7 +110,7 @@ public class MailDeliveryService {
 
     private MailJobPayload resolveReset(JobLease lease, MailJobPayload payload, Instant now) {
         if (lease.enterpriseId() != null) {
-            throw new IllegalStateException("全局找回请求不能携带企业归属");
+            throw new IllegalStateException(Messages.text("error.mail.mailDeliveryService.resolveReset.1"));
         }
         var lookup = encryption.decrypt(payload.content(), lease.id(), PasswordResetLookupContent.class);
         Instant expires = Instant.parse(lookup.expiresAt()).truncatedTo(ChronoUnit.MILLIS);
@@ -134,7 +136,7 @@ public class MailDeliveryService {
         var content = new MailDeliveryContent(user.email(), token.value(), "", "", "Asia/Shanghai", expires.toString());
         var resolved = new MailJobPayload("password_reset", token.id(), encryption.encrypt(content, lease.id()));
         if (!queueMapper.replacePayload(lease, user.id(), queue.serialize(resolved), now)) {
-            throw new IllegalStateException("找回邮件的领取资格已失效");
+            throw new IllegalStateException(Messages.text("error.mail.mailDeliveryService.resolveReset.2"));
         }
         return resolved;
     }
@@ -201,7 +203,7 @@ public class MailDeliveryService {
         } catch (ResponseStatusException exception) {
             return false;
         } catch (Exception exception) {
-            throw new IllegalStateException("邀请的角色或团队记录无法读取");
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationMapper.readArray.1"));
         }
     }
 

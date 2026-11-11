@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRecord;
 import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
@@ -45,10 +47,10 @@ public class ModelUsageJournal {
 
     public Call open(ModelCallContext context, ModelProfileRecord model, ModelProviderRecord provider) {
         if (context == null || !model.enterpriseId().equals(context.enterpriseId())) {
-            throw new IllegalStateException("模型调用缺少可信的运行归属。");
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageJournal.open.1"));
         }
         if (!capacity.tryAcquire()) {
-            throw new IllegalStateException("模型用量保存正在恢复，请稍后重试。");
+            throw new IllegalStateException(Messages.text("error.modelusage.modelUsageJournal.open.2"));
         }
         return new Call(context, model, provider);
     }
@@ -66,7 +68,7 @@ public class ModelUsageJournal {
                     capacity.release();
                 }
             } catch (RuntimeException failure) {
-                LOG.warn("补存模型用量失败，企业={}，调用={}", value.enterpriseId(), value.callId(), failure);
+                LOG.warn(Messages.log("log.modelusage.modelUsageJournal.flush.1"), value.enterpriseId(), value.callId(), failure);
                 break;
             }
         }
@@ -76,7 +78,7 @@ public class ModelUsageJournal {
             try {
                 call.checkpoint();
             } catch (RuntimeException failure) {
-                LOG.warn("保存模型用量快照失败，企业={}，调用={}", call.context.enterpriseId(), call.id, failure);
+                LOG.warn(Messages.log("log.modelusage.modelUsageJournal.flush.2"), call.context.enterpriseId(), call.id, failure);
             }
         }
         scanStart = calls.isEmpty() ? 0 : (scanStart + 100) % calls.size();
@@ -114,10 +116,10 @@ public class ModelUsageJournal {
 
         public synchronized void beforeDispatch() {
             if (finished) {
-                throw new CancellationException("模型请求已经取消。");
+                throw new CancellationException(Messages.text("error.modelprofile.modelHttpSession.prepare.1"));
             }
             if (registered) {
-                throw new IllegalStateException("模型请求不能重复登记或发送。");
+                throw new IllegalStateException(Messages.text("error.modelusage.modelUsageJournal.beforeDispatch.1"));
             }
             service.register(id, owner, context, model, provider);
             registered = true;
@@ -160,7 +162,7 @@ public class ModelUsageJournal {
             } catch (RuntimeException failure) {
                 // open 时已经预留一个位置；结束快照不会因队列已满而被丢弃。
                 pending.put(id, value);
-                LOG.warn("模型调用已结束，用量等待补存，企业={}，调用={}", context.enterpriseId(), id, failure);
+                LOG.warn(Messages.log("log.modelusage.modelUsageJournal.finish.1"), context.enterpriseId(), id, failure);
             }
         }
 

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.usage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseTableMapper;
 import com.stonewu.agenteam.model.usage.entity.QuotaBucketRow;
@@ -28,7 +30,7 @@ public class EnterpriseUsageMapper {
             .eq(QuotaPolicyRow::getEnterpriseId, enterprise).eq(QuotaPolicyRow::getSubjectType, "enterprise")
             .eq(QuotaPolicyRow::getSubjectId, enterprise));
         if (row == null) {
-            throw new IllegalStateException("企业缺少用于记录实际用量的次数规则");
+            throw new IllegalStateException(Messages.text("error.usage.enterpriseUsageMapper.policy.1"));
         }
         return new QuotaMapper.Policy(row.getId(), "enterprise", enterprise, null);
     }
@@ -37,7 +39,7 @@ public class EnterpriseUsageMapper {
         var policy = policy(enterprise);
         var owner = enterprises.selectById(enterprise);
         if (owner == null) {
-            throw new IllegalStateException("无法读取不存在企业的实际用量");
+            throw new IllegalStateException(Messages.text("error.usage.enterpriseUsageMapper.usage.1"));
         }
         var bucket = buckets.selectOne(new LambdaQueryWrapper<QuotaBucketRow>()
             .eq(QuotaBucketRow::getEnterpriseId, enterprise).eq(QuotaBucketRow::getPolicyId, policy.id())

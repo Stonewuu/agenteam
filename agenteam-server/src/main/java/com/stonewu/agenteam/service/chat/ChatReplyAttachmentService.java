@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
@@ -106,7 +108,7 @@ public class ChatReplyAttachmentService {
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.FORBIDDEN, "CHAT_ATTACHMENT_REFERENCE_DENIED", "只能引用当前会话中本人上传且未归属其他任务的附件。");
+        return new ApiException(HttpStatus.FORBIDDEN, "CHAT_ATTACHMENT_REFERENCE_DENIED", Messages.text("error.chat.chatReplyAttachmentService.unavailable.1"));
     }
 
     private void changed(int count) {

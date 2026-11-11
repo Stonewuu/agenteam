@@ -1,0 +1,78 @@
+{
+  "error.user.emailChangeService.request.1": {
+    "zh-CN": "请输入新邮箱。",
+    "en": "Enter a new email address."
+  },
+  "error.user.emailChangeService.request.2": {
+    "zh-CN": "这个邮箱已经完成验证，无需再次申请。",
+    "en": "This email is already verified. No new request is needed."
+  },
+  "error.user.userProfileService.updateProfile.1": {
+    "zh-CN": "请输入显示名。",
+    "en": "Enter a display name."
+  },
+  "error.user.userProfileService.updatePreferences.1": {
+    "zh-CN": "请提供要修改的设置。",
+    "en": "Provide the settings to change."
+  },
+  "error.user.userProfileService.updatePreferences.2": {
+    "zh-CN": "请选择显示主题。",
+    "en": "Select a theme."
+  },
+  "error.user.userProfileService.updatePreferences.3": {
+    "zh-CN": "请选择是否接收完成通知。",
+    "en": "Choose whether to receive task completion notifications."
+  },
+  "error.user.userProfileService.updatePreferences.4": {
+    "zh-CN": "请选择是否启用记忆。",
+    "en": "Choose whether to enable memory."
+  },
+  "error.user.userProfileService.updatePreferences.5": {
+    "zh-CN": "请选择支持的回复语言。",
+    "en": "Select a supported reply language."
+  },
+  "error.user.userProfileService.updatePreferences.6": {
+    "zh-CN": "请选择浅色、深色或跟随系统。",
+    "en": "Select Light, Dark, or System."
+  },
+  "error.user.userProfileService.changePassword.1": {
+    "zh-CN": "请输入当前密码。",
+    "en": "Enter your current password."
+  },
+  "error.user.userProfileService.changePassword.2": {
+    "zh-CN": "账号信息已变化，请重新登录后重试。",
+    "en": "Your account details have changed. Sign in again and retry."
+  },
+  "error.user.userProfileService.verifyCurrentPassword.1": {
+    "zh-CN": "当前密码不正确。",
+    "en": "The current password is incorrect."
+  },
+  "text.user.userLanguage.SIMPLIFIED_CHINESE.1": {
+    "zh-CN": "\n\n用户的使用语言是简体中文。请默认使用简体中文回复；用户明确要求其他语言时，按用户要求回复。代码、命令和专有名称保留原文。",
+    "en": "\n\nThe user's language is Simplified Chinese. Reply in Simplified Chinese by default, unless the user explicitly requests another language. Preserve code, commands, and proper names."
+  },
+  "text.user.userLanguage.ENGLISH.1": {
+    "zh-CN": "\n\n用户的使用语言是英语。请默认使用英语回复；用户明确要求其他语言时，按用户要求回复。代码、命令和专有名称保留原文。",
+    "en": "\n\nThe user's language is English. Reply in English by default, unless the user explicitly requests another language. Preserve code, commands, and proper names."
+  },
+  "log.user.emailChangeRequest.toString.1": {
+    "zh-CN": "EmailChangeRequest[账号验证信息已隐藏]",
+    "en": "EmailChangeRequest[account verification data redacted]"
+  },
+  "log.user.passwordChangeRequest.toString.1": {
+    "zh-CN": "PasswordChangeRequest[密码已隐藏]",
+    "en": "PasswordChangeRequest[password redacted]"
+  },
+  "text.user.userProfileService.updateProfile.1": {
+    "zh-CN": "修改个人显示名",
+    "en": "Update personal display name"
+  },
+  "text.user.userProfileService.updatePreferences.1": {
+    "zh-CN": "修改个人偏好",
+    "en": "Update personal preferences"
+  },
+  "text.user.userProfileService.changePassword.1": {
+    "zh-CN": "修改密码并撤销旧登录会话",
+    "en": "Change password and revoke previous sessions"
+  }
+}

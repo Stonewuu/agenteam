@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.auth.AuthSessionAttributes;
 import com.stonewu.agenteam.configuration.auth.OperationActorContext;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
@@ -57,7 +59,7 @@ public class SessionIdentityService {
         }
         UserEntity user = users.findById(userId).orElseThrow(SessionIdentityService::expired);
         if (!"active".equals(user.status()) || !behavior.allowed(user)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_UNAVAILABLE", "用户已被停用。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_UNAVAILABLE", Messages.text("error.auth.sessionIdentityService.authenticated.1"));
         }
         if (user.sessionVersion() != number.longValue() || !channels.valid(attributes, user)) {
             throw expired();
@@ -124,7 +126,7 @@ public class SessionIdentityService {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(id.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("当前运行环境缺少会话摘要算法", exception);
+            throw new IllegalStateException(Messages.text("error.auth.sessionIdentityService.root.1"), exception);
         }
     }
 
@@ -172,15 +174,15 @@ public class SessionIdentityService {
     }
 
     public static ApiException changed() {
-        return new ApiException(HttpStatus.CONFLICT, "IDENTITY_CHANGED", "登录身份已变化，请重新加载页面后操作。");
+        return new ApiException(HttpStatus.CONFLICT, "IDENTITY_CHANGED", Messages.text("error.auth.sessionIdentityService.changed.1"));
     }
 
     private static ApiException expired() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "登录已失效，请重新登录。");
+        return new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", Messages.text("error.auth.sessionIdentityService.expired.1"));
     }
 
     private static ApiException targetUnavailable() {
         return new ApiException(HttpStatus.FORBIDDEN, "IMPERSONATION_TARGET_UNAVAILABLE",
-            "当前用户已无法访问，请返回管理员身份。");
+            Messages.text("error.auth.sessionIdentityService.targetUnavailable.1"));
     }
 }

@@ -11,8 +11,8 @@ import java.util.Map;
  * 完整替换草稿，修改版本由请求头单独提供。
  */
 public record DraftWriteRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 80, message = "文字长度不符合要求。") String name,
-    @NotNull(message = "请填写必填项。") @Size(min = 0, max = 500, message = "文字长度不符合要求。") String description,
-    @NotNull(message = "请填写必填项。") @Size(min = 0, max = 10, message = "条目数量超出允许范围。") @UniqueElements(message = "不能包含重复条目。") List<@NotNull(message = "请填写必填项。") @Size(min = 1, max = 100, message = "文字长度不符合要求。") String> tagIds,
-    @NotNull(message = "请填写必填项。") Map<String, Object> config) {
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 80, message = "{validation.textLength}") String name,
+    @NotNull(message = "{validation.required}") @Size(min = 0, max = 500, message = "{validation.textLength}") String description,
+    @NotNull(message = "{validation.required}") @Size(min = 0, max = 10, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") @UniqueElements(message = "{error.agent.agentConfigurationInput.skillVersionIds.1}") List<@NotNull(message = "{validation.required}") @Size(min = 1, max = 100, message = "{validation.textLength}") String> tagIds,
+    @NotNull(message = "{validation.required}") Map<String, Object> config) {
 }

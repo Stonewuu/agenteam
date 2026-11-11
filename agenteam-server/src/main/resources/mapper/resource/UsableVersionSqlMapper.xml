@@ -2,7 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.stonewu.agenteam.mapper.resource.UsableVersionSqlMapper">
   <sql id="versionFields">
-    SELECT r.id AS resource_id, r.kind, v.id AS version_id, v.version_no, v.name, v.description, v.published_at,
+    SELECT r.id AS resource_id, r.kind, r.source, v.id AS version_id, v.version_no, v.name, v.description, v.published_at,
+    CASE WHEN r.source = 'builtin' THEN JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.builtinCode'))
+      ELSE NULL END AS builtin_code,
     JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.icon')) AS icon,
     JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.color')) AS color,
     CASE WHEN r.kind = 'plugin' THEN COALESCE(JSON_EXTRACT(v.config_json, '$.sources[*].type'),
@@ -17,7 +19,12 @@
       <property name="scopePath" value="scope"/>
       <property name="alias" value="r"/>
     </include>
-    AND v.status = 'available' AND LOCATE(#{query}, v.name) > 0
+    AND v.status = 'available' AND (LOCATE(#{query}, v.name) > 0
+    <if test="builtinCodes != null and !builtinCodes.isEmpty()">
+      OR (r.source = 'builtin' AND JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.builtinCode')) IN
+      <foreach collection="builtinCodes" item="code" open="(" separator="," close=")">#{code}</foreach>)
+    </if>
+    )
     AND (r.kind &lt;&gt; 'plugin' OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.builtinCode')), '') &lt;&gt; 'group_collaboration')
     <if test="resourceId == null">AND (r.kind &lt;&gt; 'plugin' OR r.source &lt;&gt; 'builtin' OR r.published_version_id
       = v.id)

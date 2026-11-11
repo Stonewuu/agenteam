@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -106,7 +108,7 @@ public class DataImportService {
 
     public Source verify(AuthContext actor, String resource, DataImportTokenService.Token token, boolean mutation) {
         if (token.expiresAt() <= clock.millis()) {
-            throw new ApiException(HttpStatus.GONE, "DATA_IMPORT_EXPIRED", "数据导入预览已过期，请重新预览。");
+            throw new ApiException(HttpStatus.GONE, "DATA_IMPORT_EXPIRED", Messages.text("error.data.dataImportService.verify.1"));
         }
         if (!resource.equals(token.resourceId())) {
             throw FileAccessService.unavailable();
@@ -116,7 +118,7 @@ public class DataImportService {
             throw ApiException.versionConflict(source.resource().revision());
         }
         if (!source.file().sha256().equals(token.sha256())) {
-            throw new ApiException(HttpStatus.CONFLICT, "DATA_IMPORT_CHANGED", "原文件已经变化，请重新预览。");
+            throw new ApiException(HttpStatus.CONFLICT, "DATA_IMPORT_CHANGED", Messages.text("error.data.dataImportService.verify.2"));
         }
         if (source.collection() != null) {
             policy.revision(source.collection(), token.collectionRevision());
@@ -130,12 +132,12 @@ public class DataImportService {
         var source = verify(actor, resource, token, true);
         String title = ResourceInput.text(name, "name", 80, true);
         if (source.profile().rowCount() != prepared.rowCount()) {
-            throw new ApiException(HttpStatus.CONFLICT, "DATA_IMPORT_CHANGED", "原文件的解析结果已经变化，请重新预览。");
+            throw new ApiException(HttpStatus.CONFLICT, "DATA_IMPORT_CHANGED", Messages.text("error.data.dataImportService.confirm.1"));
         }
         DataCollectionRecord current = source.collection();
         String id = current == null ? UUID.randomUUID().toString() : current.id();
         if (current != null && current.activeGeneration() == Integer.MAX_VALUE) {
-            throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_LIMIT", "集合版本数量达到上限，请建立新集合。");
+            throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_LIMIT", Messages.text("error.data.dataCollectionTransactions.updateFile.2"));
         }
         int generation = current == null ? 1 : current.activeGeneration() + 1;
         if (current == null) {
@@ -150,7 +152,7 @@ public class DataImportService {
                 prepared.rowCount(), clock.instant());
         }
         files.retain(source.file(), clock.instant());
-        audit.record(actor.enterpriseId(), actor.user(), "data.import", "data_collection", id, "确认导入数据文件",
+        audit.record(actor.enterpriseId(), actor.user(), "data.import", "data_collection", id, Messages.text("text.data.dataImportService.confirm.1"),
             Map.of("generation", generation, "fileId", source.file().id(), "rowCount", prepared.rowCount()));
         return DataCollectionMapper.view(collections.find(actor.enterpriseId(), id, false).orElseThrow(),
             prepared.fields());
@@ -164,11 +166,11 @@ public class DataImportService {
             throw FileAccessService.unavailable();
         }
         if (!file.status().equals("ready")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", "CSV 尚未完成检查和解析，请等待完成。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_READY", Messages.text("error.data.dataImportService.source.1"));
         }
         if (file.expiresAt() == null) {
             throw new ApiException(HttpStatus.CONFLICT, "DATA_FILE_ALREADY_IMPORTED",
-                "这份文件已经导入，请选择新的文件更新集合。");
+                Messages.text("error.data.dataImportService.source.2"));
         }
         var profile = data.profile(file).orElseThrow(PreparedDataImport::unavailable);
         var collection = collectionId == null ? null : policy.collection(actor.enterpriseId(), resource, collectionId,

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -61,8 +63,8 @@ public class ScheduleActionTransactions {
             return;
         }
         if (lease.exhausted()) {
-            failed(locked, "SCHEDULE_PREPARATION_FAILED", "本次操作多次准备失败，请检查后重新执行。", "failed");
-            store.finish(lease, "failed", "SCHEDULE_PREPARATION_FAILED", "本次操作多次准备失败。", clock.instant());
+            failed(locked, "SCHEDULE_PREPARATION_FAILED", Messages.text("error.schedule.scheduleActionTransactions.submit.1"), "failed");
+            store.finish(lease, "failed", "SCHEDULE_PREPARATION_FAILED", Messages.text("text.schedule.scheduleActionTransactions.submit.1"), clock.instant());
             return;
         }
         var actor = access.requireOwner(locked.plan());
@@ -80,13 +82,13 @@ public class ScheduleActionTransactions {
             return;
         }
         String code = "SCHEDULE_PREPARATION_FAILED";
-        String summary = "本次操作暂时无法准备，稍后会继续尝试。";
+        String summary = Messages.text("error.schedule.scheduleActionTransactions.failure.1");
         boolean terminal = lease.exhausted() || lease.attemptCount() >= lease.maxAttempts();
         String status = "failed";
         if (failure instanceof ResponseStatusException rejected) {
             code = rejected instanceof ApiException api && "SCHEDULE_OWNER_UNAVAILABLE".equals(api.code()) ? api.code()
                 : actions.require(locked.occurrence().getActionType(), locked.occurrence().getActionSchemaVersion()).denialReason(rejected);
-            summary = "执行所需的账号、权限或资源已不可用，本次操作未提交。";
+            summary = Messages.text("error.schedule.scheduleActionTransactions.failure.2");
             status = "blocked";
             terminal = true;
             var checked = access.check(locked.plan());
@@ -106,7 +108,7 @@ public class ScheduleActionTransactions {
     }
 
     private Locked lock(JobLease lease) {
-        enterprises.lockEnterprise(lease.enterpriseId()).orElseThrow(() -> new IllegalStateException("定时操作所属企业记录不存在"));
+        enterprises.lockEnterprise(lease.enterpriseId()).orElseThrow(() -> new IllegalStateException(Messages.text("error.schedule.scheduleActionTransactions.lock.1")));
         var payload = json.read(lease.payloadJson());
         var plan = schedules.find(lease.enterpriseId(), lease.ownerUserId(), payload.path("scheduleId").asText(), true, true).orElse(null);
         if (plan == null) {

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.announcement;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stonewu.agenteam.mapper.announcement.AnnouncementPublicationMapper;
@@ -173,9 +175,9 @@ public class AnnouncementManagementService {
         row.setCreatedAt(clock.instant());
         row.setUpdatedAt(clock.instant());
         if (rows.insert(row) != 1) {
-            throw new IllegalStateException("公告未能保存");
+            throw new IllegalStateException(Messages.text("error.announcement.announcementManagementService.create.1"));
         }
-        audit.record(enterprise, actor, "announcement.create", "announcement", row.getId(), "创建公告",
+        audit.record(enterprise, actor, "announcement.create", "announcement", row.getId(), Messages.text("text.announcement.announcementManagementService.create.1"),
             Map.of("level", level.code()));
         return views.view(row);
     }
@@ -186,7 +188,7 @@ public class AnnouncementManagementService {
         authorize(actor, enterprise, system, true);
         var row = require(enterprise, id, revision);
         if (row.getEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "ANNOUNCEMENT_ENABLED", "请先停用公告，再修改内容。");
+            throw new ApiException(HttpStatus.CONFLICT, "ANNOUNCEMENT_ENABLED", Messages.text("error.announcement.announcementManagementService.update.1"));
         }
         String title = ResourceInput.text(input.title(), "title", 160, true);
         var body = content.validate(input.contentFormat(), input.content());
@@ -206,7 +208,7 @@ public class AnnouncementManagementService {
                 .set(AnnouncementRow::getPublishedAt, null);
         }
         checkUpdate(rows.update(update));
-        audit.record(enterprise, actor, "announcement.update", "announcement", id, "修改公告内容",
+        audit.record(enterprise, actor, "announcement.update", "announcement", id, Messages.text("text.announcement.announcementManagementService.update.1"),
             Map.of("contentChanged", changed));
         return views.view(rows.selectById(id));
     }
@@ -222,7 +224,7 @@ public class AnnouncementManagementService {
             .set(AnnouncementRow::getUpdatedBy, actor.id()).set(AnnouncementRow::getUpdatedAt, clock.instant())
             .setIncrBy(AnnouncementRow::getRevision, 1);
         checkUpdate(rows.update(update));
-        audit.record(enterprise, actor, "announcement.delete", "announcement", id, "删除公告", Map.of());
+        audit.record(enterprise, actor, "announcement.delete", "announcement", id, Messages.text("text.announcement.announcementManagementService.delete.1"), Map.of());
     }
 
     @Transactional
@@ -255,7 +257,7 @@ public class AnnouncementManagementService {
         }
         checkUpdate(rows.update(update));
         audit.record(enterprise, actor, enabled ? "announcement.enable" : "announcement.disable", "announcement", id,
-            enabled ? "启用公告" : "停用公告", Map.of("version", row.getContentVersion()));
+            enabled ? Messages.text("text.announcement.announcementManagementService.status.1") : Messages.text("text.announcement.announcementManagementService.status.2"), Map.of("version", row.getContentVersion()));
         return views.view(rows.selectById(id));
     }
 
@@ -272,15 +274,15 @@ public class AnnouncementManagementService {
 
     private void checkUpdate(int count) {
         if (count != 1) {
-            throw new IllegalStateException("公告已变化，修改未能保存");
+            throw new IllegalStateException(Messages.text("error.announcement.announcementManagementService.checkUpdate.1"));
         }
     }
 
     private static ApiException denied() {
-        return new ApiException(HttpStatus.FORBIDDEN, "ANNOUNCEMENT_MANAGEMENT_DENIED", "没有管理此范围公告的权限。");
+        return new ApiException(HttpStatus.FORBIDDEN, "ANNOUNCEMENT_MANAGEMENT_DENIED", Messages.text("error.announcement.announcementManagementService.denied.1"));
     }
 
     private static ApiException missing() {
-        return new ApiException(HttpStatus.NOT_FOUND, "ANNOUNCEMENT_NOT_FOUND", "公告或所属企业不存在或无法访问。");
+        return new ApiException(HttpStatus.NOT_FOUND, "ANNOUNCEMENT_NOT_FOUND", Messages.text("error.announcement.announcementManagementService.missing.1"));
     }
 }

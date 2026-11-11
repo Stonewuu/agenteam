@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRule;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleTime;
 import com.stonewu.agenteam.model.schedule.response.ScheduleTimesView;
@@ -22,17 +24,17 @@ public class ScheduleTimesMapper {
             String warning = switch (time.adjustment()) {
                 case NONE -> null;
                 case SHIFTED_FORWARD ->
-                    "所选本地时间 " + LOCAL.format(time.requested()) + " 不存在，该次将在 " + LOCAL.format(
-                        time.actual()) + " 执行。";
+                    Messages.text("text.schedule.scheduleTimesMapper.view.1", LOCAL.format(time.requested()), LOCAL.format(
+                        time.actual()));
                 case FIRST_OCCURRENCE ->
-                    "本地时间 " + LOCAL.format(time.requested()) + " 会出现两次，该次只在第一次出现时执行。";
+                    Messages.text("text.schedule.scheduleTimesMapper.view.2", LOCAL.format(time.requested()));
             };
             if (warning != null && !warnings.contains(warning)) {
                 warnings.add(warning);
             }
         }
         if (times.isEmpty()) {
-            warnings.add("所选执行时间已经过去，请选择未来时间。");
+            warnings.add(Messages.text("text.schedule.scheduleTimesMapper.view.3"));
         }
         return new ScheduleTimesView(rule.timezone().getId(),
             times.stream().map(time -> time.instant().toString()).toList(), List.copyOf(warnings));

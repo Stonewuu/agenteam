@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import com.stonewu.agenteam.model.file.entity.DocumentChunk;
@@ -36,7 +38,7 @@ public class KnowledgeProcessingWorker {
     private final boolean enabled;
     private final String worker = UUID.randomUUID().toString();
     private final ExecutorService executor = Executors.newFixedThreadPool(4,
-        Thread.ofVirtual().name("知识资料处理-", 0).factory());
+        Thread.ofVirtual().name(Messages.log("log.knowledge.knowledgeProcessingWorker.executor.1"), 0).factory());
     private final AtomicInteger active = new AtomicInteger();
 
     public KnowledgeProcessingWorker(BackgroundJobService jobs, BackgroundJobHeartbeat heartbeats,
@@ -108,18 +110,18 @@ public class KnowledgeProcessingWorker {
                 }
             }
         } catch (ApiException failed) {
-            LOG.warn("知识资料处理未完成，工作编号 {}，文档编号 {}，错误代码 {}", lease.id(), id, failed.code(), failed);
+            LOG.warn(Messages.log("log.knowledge.knowledgeProcessingWorker.process.1"), lease.id(), id, failed.code(), failed);
             boolean retry = failed.getStatusCode().is5xxServerError();
             transactions.failed(lease, id, generation, failed.code(),
-                retry ? "文件服务暂时不可用，等待重试。" : failed.getReason(), retry);
+                retry ? Messages.text("error.knowledge.knowledgeProcessingWorker.process.1") : failed.getReason(), retry);
         } catch (ResponseStatusException denied) {
-            LOG.warn("知识资料处理被拒绝，工作编号 {}，文档编号 {}", lease.id(), id, denied);
-            transactions.failed(lease, id, generation, "KNOWLEDGE_ACCESS_REVOKED", "处理发起人已无法编辑这份资料。",
+            LOG.warn(Messages.log("log.knowledge.knowledgeProcessingWorker.process.2"), lease.id(), id, denied);
+            transactions.failed(lease, id, generation, "KNOWLEDGE_ACCESS_REVOKED", Messages.text("error.knowledge.knowledgeProcessingWorker.process.2"),
                 false);
         } catch (Exception unavailable) {
-            LOG.error("知识资料处理失败，工作编号 {}，文档编号 {}", lease.id(), id, unavailable);
+            LOG.error(Messages.log("log.knowledge.knowledgeProcessingWorker.process.3"), lease.id(), id, unavailable);
             transactions.failed(lease, id, generation, "KNOWLEDGE_PROCESSING_UNAVAILABLE",
-                "资料暂时无法完成处理，等待重试。", true);
+                Messages.text("error.knowledge.knowledgeProcessingWorker.process.3"), true);
         }
     }
 

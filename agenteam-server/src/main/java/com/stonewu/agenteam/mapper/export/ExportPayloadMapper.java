@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -36,7 +38,7 @@ public class ExportPayloadMapper {
             }
             return json.treeToValue(root, ExportPayload.class);
         } catch (JsonProcessingException invalid) {
-            throw new IllegalStateException("导出任务的内部条件无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.export.exportPayloadMapper.read.1"), invalid);
         }
     }
 
@@ -44,7 +46,7 @@ public class ExportPayloadMapper {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException invalid) {
-            throw new IllegalStateException("导出任务的内部条件无法保存", invalid);
+            throw new IllegalStateException(Messages.text("error.export.exportPayloadMapper.write.1"), invalid);
         }
     }
 }

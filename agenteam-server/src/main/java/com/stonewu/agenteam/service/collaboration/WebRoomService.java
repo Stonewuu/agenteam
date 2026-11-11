@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -71,11 +73,11 @@ public class WebRoomService {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
         String title = request.title() == null ? "" : request.title().strip();
         if (title.codePointCount(0, title.length()) > 160) {
-            throw ApiException.invalidField("title", "对话名称不能超过160个字。");
+            throw ApiException.invalidField("title", Messages.text("error.collaboration.webRoomService.create.1"));
         }
         var room = ChatRecords.initialize(new CollaborationRoomRow(), actor.enterpriseId(), clock.instant());
         room.setOwnerUserId(actor.userId());
-        room.setTitle(title.isBlank() ? "协作对话" : title);
+        room.setTitle(title.isBlank() ? Messages.text("text.collaboration.webRoomService.create.1") : title);
         room.setNextSequence(1L);
         var selected = roster.prepareMembers(actor, room, request.agentIds());
         if (title.isBlank()) {
@@ -92,14 +94,14 @@ public class WebRoomService {
             .eq(CollaborationRoomRow::getEnterpriseId, actor.enterpriseId()).eq(CollaborationRoomRow::getOwnerUserId, actor.userId())
             .eq(CollaborationRoomRow::getId, id));
         if (room == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ROOM_UNAVAILABLE", "协作对话不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ROOM_UNAVAILABLE", Messages.text("error.collaboration.webRoomService.owned.1"));
         }
         return room;
     }
 
     public List<Summary> list(AuthContext actor, int page) {
         if (page < 1 || page > 10000) {
-            throw ApiException.invalidField("page", "请选择有效页码。");
+            throw ApiException.invalidField("page", Messages.text("error.collaboration.webRoomService.list.1"));
         }
         return rooms.selectPage(new Page<>(page, 30, false), new LambdaQueryWrapper<CollaborationRoomRow>()
             .eq(CollaborationRoomRow::getEnterpriseId, actor.enterpriseId()).eq(CollaborationRoomRow::getOwnerUserId, actor.userId())
@@ -136,11 +138,11 @@ public class WebRoomService {
         String text = request.text() == null ? "" : request.text().strip();
         var fileIds = WebRoomAttachments.ids(request.attachmentIds());
         if (text.isEmpty() && fileIds.isEmpty()) {
-            throw ApiException.invalidField("text", "请输入任务要求或添加附件。");
+            throw ApiException.invalidField("text", Messages.text("error.collaboration.webRoomService.send.1"));
         }
         ChatInputValidation.size(text, fileIds.size());
         if (request.clientMessageId() == null || !request.clientMessageId().matches("[a-zA-Z0-9_-]{1,64}")) {
-            throw ApiException.invalidField("clientMessageId", "消息编号无效。");
+            throw ApiException.invalidField("clientMessageId", Messages.text("error.collaboration.webRoomService.send.2"));
         }
         String key = "user:" + request.clientMessageId();
         var previous = timeline.previous(room, key);
@@ -152,7 +154,7 @@ public class WebRoomService {
             String reference = body.has("replyToTaskId") ? body.path("replyToTaskId").asText(null) : initial ? null : previous.getTaskId();
             if (!body.path("text").asText().equals(text) || !sameFiles || !intent.equals(request.intent())
                 || !Objects.equals(reference, request.taskId()) || !Objects.equals(body.path("recipientAgentId").asText(null), request.recipientAgentId())) {
-                throw new ApiException(HttpStatus.CONFLICT, "ROOM_MESSAGE_CONFLICT", "同一消息编号不能用于不同的消息或成员。");
+                throw new ApiException(HttpStatus.CONFLICT, "ROOM_MESSAGE_CONFLICT", Messages.text("error.collaboration.webRoomService.send.3"));
             }
             if (Set.of("queued", "selected").contains(previous.getDeliveryState())) {
                 return Map.of("taskId", previous.getTaskId(), "entryId", previous.getId(), "status", "queued");
@@ -164,7 +166,7 @@ public class WebRoomService {
         if (recipient != null) {
             recipientName = roster.members(room).stream().filter(member -> member.getAgentId().equals(recipient))
                 .map(member -> member.getDisplayName()).findFirst()
-                .orElseThrow(() -> ApiException.invalidField("recipientAgentId", "请选择此对话中的成员。"));
+                .orElseThrow(() -> ApiException.invalidField("recipientAgentId", Messages.text("error.collaboration.webRoomService.send.4")));
         }
         var current = room.getCurrentTaskId() == null ? null : access.owned(actor, room.getCurrentTaskId());
         if ("continue".equals(request.intent())) {
@@ -193,10 +195,10 @@ public class WebRoomService {
         }
         boolean firstMention = "mention".equals(request.intent());
         if (!firstMention && !"start".equals(request.intent()) || request.taskId() != null || request.expectedInputRevision() != null) {
-            throw ApiException.invalidField("intent", "请选择开始新任务或继续当前任务。");
+            throw ApiException.invalidField("intent", Messages.text("error.collaboration.webRoomService.send.5"));
         }
         if (recipient == null) {
-            throw ApiException.invalidField("recipientAgentId", "请先 @ 一位对话成员。");
+            throw ApiException.invalidField("recipientAgentId", Messages.text("error.collaboration.webRoomService.send.6"));
         }
         if (firstMention && current != null) {
             // 两个页面都从空对话发言时，共用先到消息打开的讨论，后到的点名不会打断它。
@@ -208,7 +210,7 @@ public class WebRoomService {
             return reply(actor, room, target, request, text, fileIds, recipientName);
         }
         if (current != null && !Set.of("completed", "cancelled", "failed").contains(current.getStatus())) {
-            throw new ApiException(HttpStatus.CONFLICT, "ROOM_TASK_ACTIVE", "当前任务仍在进行，请在对话中 @ 成员继续。");
+            throw new ApiException(HttpStatus.CONFLICT, "ROOM_TASK_ACTIVE", Messages.text("error.collaboration.webRoomService.send.7"));
         }
         return start(actor, room, request, text, fileIds, key, recipientName, null);
     }
@@ -250,7 +252,7 @@ public class WebRoomService {
             .eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId()).eq(CollaborationTaskRow::getWebRoomId, roomId)
             .gt(CollaborationTaskRow::getCreatedAt, clock.instant().minusSeconds(60)));
         if (recent.size() >= 40 || newTopic && recent.stream().filter(task -> task.getWebTopicId().equals(task.getWebOriginEntryId())).count() >= 5) {
-            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "ROOM_TASK_RATE_LIMIT", "新任务较多，请稍后再试。");
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "ROOM_TASK_RATE_LIMIT", Messages.text("error.collaboration.webRoomService.requireStartCapacity.1"));
         }
     }
 
@@ -287,7 +289,7 @@ public class WebRoomService {
         var anchor = access.require(enterprise, entry.getTaskId());
         var actor = access.actor(anchor);
         if (!actor.userId().equals(room.getOwnerUserId()) || !room.getId().equals(anchor.getWebRoomId())) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "ROOM_UNAVAILABLE", "协作对话不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "ROOM_UNAVAILABLE", Messages.text("error.collaboration.webRoomService.owned.1"));
         }
         var body = timeline.content(entry);
         String agent = entry.getRecipientAgentId();
@@ -306,7 +308,7 @@ public class WebRoomService {
             var roles = roster.freeze(actor, room, agent);
             var recipient = roles.stream().filter(role -> agent.equals(role.getAgentId())).findFirst().orElseThrow();
             if (!body.path("queuedVersion").asText(recipient.getAgentVersionId()).equals(recipient.getAgentVersionId())) {
-                throw new ApiException(HttpStatus.CONFLICT, "ROOM_MEMBER_CHANGED", "成员版本已变化，请重新发送这条消息。");
+                throw new ApiException(HttpStatus.CONFLICT, "ROOM_MEMBER_CHANGED", Messages.text("error.collaboration.webRoomService.deliver.1"));
             }
             target = creation.createWeb(actor, room.getId(), entry.getId(), room.getRevision(), roles, recipient, text,
                 topic.isEmpty() ? entry.getId() : topic);
@@ -346,12 +348,12 @@ public class WebRoomService {
         if (!taskId.equals(room.getCurrentTaskId()) && rooms.update(new LambdaUpdateWrapper<CollaborationRoomRow>()
             .eq(CollaborationRoomRow::getEnterpriseId, room.getEnterpriseId()).eq(CollaborationRoomRow::getOwnerUserId, room.getOwnerUserId())
             .eq(CollaborationRoomRow::getId, room.getId()).set(CollaborationRoomRow::getCurrentTaskId, taskId)) != 1) {
-            throw new IllegalStateException("协作对话的当前任务未保存");
+            throw new IllegalStateException(Messages.text("error.collaboration.webRoomService.focus.1"));
         }
     }
 
     private static ApiException changed() {
-        return new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", "当前讨论或要求已有变化，请重新查看后继续。");
+        return new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", Messages.text("error.collaboration.webRoomService.changed.1"));
     }
 
     public record Summary(String id, String title, String updatedAt) {

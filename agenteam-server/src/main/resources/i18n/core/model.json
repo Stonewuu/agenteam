@@ -1,0 +1,18 @@
+{
+  "model.clientRequired": {
+    "zh-CN": "模型客户端不能为空",
+    "en": "A model client is required"
+  },
+  "model.optionsRequired": {
+    "zh-CN": "模型配置不能为空",
+    "en": "Model options are required"
+  },
+  "model.nameRequired": {
+    "zh-CN": "模型名称不能为空",
+    "en": "A model name is required"
+  },
+  "model.apiKeyRequired": {
+    "zh-CN": "模型密钥不能为空",
+    "en": "A model API key is required"
+  }
+}

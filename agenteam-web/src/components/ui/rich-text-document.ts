@@ -10,7 +10,7 @@ export function richTextDocument(value: RichTextValue): JSONContent {
         return document;
       }
     } catch (failure) {
-      console.error("读取富文本正文失败", failure);
+      console.error("Failed to read rich text content", failure);
     }
     return {type: "doc", content: [{type: "paragraph"}]};
   }
@@ -48,7 +48,7 @@ export function safeRichTextLink(value: string): boolean {
     return (url.protocol === "https:" || url.protocol === "http:") && Boolean(url.hostname)
       || url.protocol === "mailto:" && url.pathname.includes("@");
   } catch (failure) {
-    console.warn("校验富文本链接失败", failure);
+    console.warn("Failed to validate the rich text link", failure);
     return false;
   }
 }

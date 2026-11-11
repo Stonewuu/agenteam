@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import org.springframework.stereotype.Repository;
 
@@ -18,7 +20,7 @@ public class ExportJobMapper {
         int changed = statements.resultBackgroundJob(file, payload, lease.enterpriseId(), lease.id(),
             lease.ownerUserId(), lease.leaseOwner(), lease.leaseVersion());
         if (changed != 1) {
-            throw new IllegalStateException("导出工作资格已变化，结果未提交");
+            throw new IllegalStateException(Messages.text("error.export.exportJobMapper.result.1"));
         }
     }
 }

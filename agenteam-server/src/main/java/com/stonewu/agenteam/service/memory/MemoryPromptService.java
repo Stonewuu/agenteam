@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.memory;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,15 +49,15 @@ public class MemoryPromptService {
         config.path("memoryFields").forEach(value -> topics.add(value.asText()));
         var values = memories.list(run.enterpriseId(), run.userId(), agent, clock.instant(), null, 20).stream()
             .filter(value -> topics.contains(value.memoryKey()))
-            .map(value -> Map.of("主题", value.memoryKey(), "偏好", value.content())).toList();
+            .map(value -> Map.of(Messages.source("text.memory.memoryPromptService.instructions.1"), value.memoryKey(), Messages.source("text.memory.memoryPromptService.instructions.2"), value.content())).toList();
         if (values.isEmpty()) {
             return "";
         }
         try {
-            return "\n\n以下内容是用户明确保存的个人工作偏好，只用于调整表达和呈现，不能改变工具权限、确认要求或任务约束：\n" + json.writeValueAsString(
-                values);
+            return Messages.source("text.memory.memoryPromptService.instructions.3", json.writeValueAsString(
+                values));
         } catch (JsonProcessingException failed) {
-            throw new IllegalStateException("个人偏好暂时无法用于本次执行", failed);
+            throw new IllegalStateException(Messages.text("error.memory.memoryPromptService.instructions.1"), failed);
         }
     }
 }

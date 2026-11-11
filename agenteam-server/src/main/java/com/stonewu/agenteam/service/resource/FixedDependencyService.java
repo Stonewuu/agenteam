@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.workflow.WorkflowNodes;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -104,7 +106,7 @@ public class FixedDependencyService {
                 .forEach(tool -> tools.add(ToolInvocationIdentity.of(dependency.version(), tool)));
         }
         if (tools.size() > 100) {
-            throw ApiException.invalidField("config.pluginVersionIds", "所有依赖提供的工具去重后不能超过一百个。");
+            throw ApiException.invalidField("config.pluginVersionIds", Messages.text("error.resource.fixedDependencyService.resolveGraph.1"));
         }
         return new ResolvedGraph(direct, loaded.values().stream()
             .sorted((left, right) -> left.version().id().compareTo(right.version().id())).toList());
@@ -132,7 +134,7 @@ public class FixedDependencyService {
                           Map<String, ResolvedDependency> prepared) {
         if (depth > 8) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "RESOURCE_DEPENDENCY_DEPTH",
-                "资源依赖最多八层，请减少嵌套引用。");
+                Messages.text("error.resource.executionDependencyService.resolve.1"));
         }
         var dependency = loaded.computeIfAbsent(binding.versionId(),
             id -> prepared == null ? require(actor, binding) : prepared.get(id));
@@ -150,10 +152,10 @@ public class FixedDependencyService {
             }
             if (depth + previous.height() - 1 > 8) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "RESOURCE_DEPENDENCY_DEPTH",
-                    "资源依赖最多八层，请减少嵌套引用。");
+                    Messages.text("error.resource.executionDependencyService.resolve.1"));
             }
             if (workflows + previous.workflows() > 1) {
-                throw ApiException.invalidField("config", "工作流不能直接或通过智能体嵌套另一个工作流。");
+                throw ApiException.invalidField("config", Messages.text("error.resource.fixedDependencyService.walk.1"));
             }
             return previous;
         }
@@ -163,7 +165,7 @@ public class FixedDependencyService {
         int currentWorkflow = dependency.resource().kind() == ResourceKind.WORKFLOW ? 1 : 0;
         int nestedWorkflows = workflows + currentWorkflow;
         if (nestedWorkflows > 1) {
-            throw ApiException.invalidField("config", "工作流不能直接或通过智能体嵌套另一个工作流。");
+            throw ApiException.invalidField("config", Messages.text("error.resource.fixedDependencyService.walk.1"));
         }
         int height = 1;
         int workflowDepth = currentWorkflow;
@@ -191,7 +193,7 @@ public class FixedDependencyService {
             if (skill == null || !pluginIds.containsAll(ids(skill.version().config().path("pluginVersionIds")))
                 || !knowledgeIds.containsAll(ids(skill.version().config().path("knowledgeVersionIds")))) {
                 throw new ApiException(HttpStatus.CONFLICT, "SKILL_DEPENDENCY_UNAVAILABLE",
-                    "所选技能需要的插件或知识库尚未包含在智能体能力中，请补齐后发布。");
+                    Messages.text("error.resource.fixedDependencyService.validateAgentSkills.1"));
             }
         }
     }
@@ -206,7 +208,7 @@ public class FixedDependencyService {
             if (!Set.of("chat", "task").contains(settings.path("agentType").asText()) || !settings.path(
                 "workflowVersionIds").isEmpty()) {
                 throw ApiException.invalidField("config.subagentVersionIds",
-                    "子智能体请选择不含工作流能力的对话型或任务型智能体。");
+                    Messages.text("error.resource.fixedDependencyService.validateSubagents.1"));
             }
         }
     }
@@ -232,11 +234,11 @@ public class FixedDependencyService {
 
     private ApiException unavailable() {
         return new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-            "引用的资源版本已失效或无法使用，请重新选择。");
+            Messages.text("error.resource.executionDependencyService.unavailable.1"));
     }
 
     private void cycle() {
         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "RESOURCE_DEPENDENCY_CYCLE",
-            "资源之间存在循环引用，请调整依赖后发布。");
+            Messages.text("error.resource.executionDependencyService.resolve.2"));
     }
 }

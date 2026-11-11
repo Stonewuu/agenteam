@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.model.auth.request.ApiLoginRequest;
 import com.stonewu.agenteam.model.auth.response.BootstrapStatusResponse;
@@ -43,10 +45,10 @@ public class AuthService {
         rateLimiter.checkSource(request.getRemoteAddr());
         if (value == null || value.identifier() == null || value.identifier().isBlank()
             || value.password() == null || value.password().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "账号和密码不能为空");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, Messages.text("error.auth.authService.login.1"));
         }
         if (value.password().codePointCount(0, value.password().length()) > 256) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "密码输入过长");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, Messages.text("error.auth.authService.login.2"));
         }
         String identifier = IdentityValidation.loginIdentifier(value.identifier());
         UserEntity user = users.findByLoginIdentifier(identifier).orElse(null);
@@ -55,7 +57,7 @@ public class AuthService {
         boolean matches = passwords.matches(value.password(), user == null ? nonexistentUserHash : user.passwordHash());
         if (user == null || !matches || !"active".equals(user.status()) || !identity.userAllowed(user)) {
             rateLimiter.failed(account);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "账号或密码不正确");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Messages.text("error.auth.authService.login.3"));
         }
         HttpSession session = sessions.establish(request, user);
         // 密码验证期间发生改密或停用时，不能用此前读取的身份建立有效会话。

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.mail.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 /**
  * 仅在加密队列和内存中流转的投递内容。
  */
@@ -12,6 +14,6 @@ public record MailDeliveryContent(String recipient, String token, String enterpr
 
     @Override
     public String toString() {
-        return "MailDeliveryContent[投递内容已隐藏]";
+        return Messages.log("log.mail.mailDeliveryContent.toString.1");
     }
 }

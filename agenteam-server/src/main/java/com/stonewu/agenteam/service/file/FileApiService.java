@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.file.request.FileCompleteRequest;
 import com.stonewu.agenteam.model.file.request.FilePrepareRequest;
@@ -69,7 +71,7 @@ public class FileApiService {
         }
         var file = access.uploadOwner(actor, id, false);
         if (file.status().equals("pending")) {
-            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_UPLOADED", "请先完成文件上传。");
+            throw new ApiException(HttpStatus.CONFLICT, "FILE_NOT_UPLOADED", Messages.text("error.file.fileApiService.complete.1"));
         }
         var actual = storage.verify(file);
         return requests.execute(request, actor.user(), enterprise, Set.of(), authorize,

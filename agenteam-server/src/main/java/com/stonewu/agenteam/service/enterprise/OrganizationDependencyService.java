@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,7 @@ public class OrganizationDependencyService {
         }));
         if (!totals.isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "DEPENDENCIES_EXIST",
-                "仍有成员或业务记录使用此项，请先处理关联内容。", Map.of("counts", totals), Map.of());
+                Messages.text("error.enterprise.organizationDependencyService.requireUnused.1"), Map.of("counts", totals), Map.of());
         }
     }
 }

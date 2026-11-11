@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.mail;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.auth.AccountInputValidation;
 import com.stonewu.agenteam.service.mail.MailDeliveryException;
 import org.springframework.beans.factory.ObjectProvider;
@@ -24,7 +26,7 @@ public class SmtpMailMapper {
     public void send(String recipient, String subject, String content, String messageId) {
         JavaMailSender sender = senders.getIfAvailable();
         if (sender == null || from.isBlank()) {
-            throw new MailDeliveryException("MAIL_UNAVAILABLE", "邮件服务暂不可用，请稍后重试。");
+            throw new MailDeliveryException("MAIL_UNAVAILABLE", Messages.text("error.mail.smtpMailMapper.send.1"));
         }
         try {
             String address = AccountInputValidation.email(from, "from");
@@ -40,7 +42,7 @@ public class SmtpMailMapper {
                 "<" + messageId + "@" + address.substring(address.lastIndexOf('@') + 1) + ">");
             sender.send(message);
         } catch (Exception exception) {
-            throw new MailDeliveryException("MAIL_SEND_FAILED", "邮件服务未确认发送，请稍后重试。", exception);
+            throw new MailDeliveryException("MAIL_SEND_FAILED", Messages.text("error.mail.smtpMailMapper.send.2"), exception);
         }
     }
 }

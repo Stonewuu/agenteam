@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.agent.AgentModelFactory.ConfiguredModel;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.model.modelusage.entity.ModelCallContext;
@@ -32,7 +34,7 @@ public final class AgentContextCompaction {
         long available = (long) model.getContextWindowSize() - model.maxOutputTokens();
         if (model.maxOutputTokens() < 1 || available < 2) {
             throw new ApiException(HttpStatus.CONFLICT, "MODEL_CONTEXT_INVALID",
-                "模型的最大上下文必须大于最大输出，请检查模型配置。");
+                Messages.text("error.agent.agentContextCompaction.threshold.1"));
         }
         return (int) (available * 95 / 100);
     }
@@ -67,7 +69,7 @@ public final class AgentContextCompaction {
                         CompactionSafetyMiddleware.Attempt attempt = values.getOrDefault(
                             CompactionSafetyMiddleware.ATTEMPT, null);
                         Mono<Void> permission = guard == null ? Mono.empty() : attempt == null
-                            ? Mono.error(new IllegalStateException("上下文压缩缺少执行归属")) : guard.beforeCompaction(
+                            ? Mono.error(new IllegalStateException(Messages.text("error.agent.agentContextCompaction.stream.1"))) : guard.beforeCompaction(
                             attempt.context);
                         var generated = permission.thenMany(Flux.defer(() -> model.stream(messages, List.of(), options)))
                             .doOnNext(response -> {
@@ -76,12 +78,12 @@ public final class AgentContextCompaction {
                                     hasText.set(true);
                                 }
                             }).concatWith(Flux.defer(() -> hasText.get() ? Flux.empty()
-                                : Flux.error(new IllegalStateException("模型未返回可用的上下文摘要"))))
+                                : Flux.error(new IllegalStateException(Messages.text("error.agent.agentContextCompaction.stream.2")))))
                             .doOnError(failure -> {
                                 if (attempt != null) {
                                     attempt.failure = failure;
                                 }
-                                LOG.warn("上下文压缩失败，执行编号 {}", runId, failure);
+                                LOG.warn(Messages.log("log.agent.agentContextCompaction.stream.1"), runId, failure);
                             });
                         ModelCallContext owner = values.getOrDefault(ModelCallContext.class, null);
                         return owner == null ? generated

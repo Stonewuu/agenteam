@@ -34,7 +34,7 @@ export function AuthEntry() {
         if (controller.signal.aborted) {
           return;
         }
-        console.error("读取首页登录信息失败", error);
+        console.error("Failed to read sign-in information for the home page", error);
         setError(errorMessage(error));
         setView("error");
       }

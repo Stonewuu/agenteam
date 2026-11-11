@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol.gemini;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import com.stonewu.agenteam.model.modelprofile.entity.NativeModelState;
@@ -68,7 +70,7 @@ final class NativeGeminiFormatter extends GeminiChatFormatter {
         if (item.kind().equals("tool_use")) {
             var tool = message.getContentBlocks(ToolUseBlock.class).stream()
                 .filter(value -> Objects.equals(value.getId(), item.toolCallId())).findFirst()
-                .orElseThrow(() -> new IllegalStateException("保存的模型内容缺少对应工具调用。"));
+                .orElseThrow(() -> new IllegalStateException(Messages.text("error.modelprofile.nativeAnthropicFormatter.nativeBlock.1")));
             var single = Msg.builder().role(MsgRole.ASSISTANT).content(List.of(tool)).build();
             part = super.doFormat(List.of(single)).getFirst().parts().orElseThrow().getFirst().toBuilder();
         } else {

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepMapper;
@@ -83,7 +85,7 @@ public class ApprovalConversationWriter {
                         updated.label(),
                         new ToolBlockDetails(tool.toolCallId(), tool.name(), tool.sourceKind(),
                             call.requestRedacted().toString(),
-                            rejected ? "用户已拒绝本次操作，未发送请求。" : tool.result(), tool.callStatus(),
+                            rejected ? Messages.text("error.workflow.workflowToolNodeExecutor.execute.2") : tool.result(), tool.callStatus(),
                             toolStatus));
                     blocks.set(i, updated);
                     sequence = Long.parseLong(

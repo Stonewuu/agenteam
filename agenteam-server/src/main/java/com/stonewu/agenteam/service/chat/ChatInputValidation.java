@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,7 +24,7 @@ public final class ChatInputValidation {
     public static String required(JsonNode node, String field) {
         String value = node.path(field).asText("");
         if (value.isBlank() || value.length() > 191 || value.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("message", "平台消息缺少有效的身份或消息编号。");
+            throw ApiException.invalidField("message", Messages.text("error.chat.chatInputValidation.required.1"));
         }
         return value;
     }
@@ -30,7 +32,7 @@ public final class ChatInputValidation {
     public static String optional(JsonNode node, String field) {
         String value = node.path(field).asText(null);
         if (value != null && (value.length() > 191 || value.codePoints().anyMatch(Character::isISOControl))) {
-            throw ApiException.invalidField("message", "平台消息编号长度不正确。");
+            throw ApiException.invalidField("message", Messages.text("error.chat.chatInputValidation.optional.1"));
         }
         return value == null || value.isBlank() ? null : value;
     }
@@ -39,12 +41,12 @@ public final class ChatInputValidation {
         try {
             var result = mapper.readTree(value);
             if (result == null || !result.isObject()) {
-                throw ApiException.invalidField("message", "平台消息内容必须是对象。");
+                throw ApiException.invalidField("message", Messages.text("error.chat.chatInputValidation.content.1"));
             }
             return result;
         } catch (JsonProcessingException failure) {
-            var safe = new ChannelProviderException("CHAT_PAYLOAD_INVALID", "平台消息内容格式无法解析。", failure);
-            LOG.warn("聊天消息解析失败，接入={}，消息={}", connection, message, safe);
+            var safe = new ChannelProviderException("CHAT_PAYLOAD_INVALID", Messages.text("error.chat.chatInputValidation.content.2"), failure);
+            LOG.warn(Messages.log("log.chat.chatInputValidation.content.1"), connection, message, safe);
             throw safe;
         }
     }
@@ -56,24 +58,24 @@ public final class ChatInputValidation {
         try {
             long numeric = Long.parseLong(value);
             if (numeric < 0) {
-                throw new DateTimeException("平台消息时间不能为负数");
+                throw new DateTimeException(Messages.text("error.chat.chatInputValidation.time.1"));
             }
             var result = numeric < 100_000_000_000L ? Instant.ofEpochSecond(numeric) : Instant.ofEpochMilli(numeric);
             if (result.isAfter(Instant.parse("9999-12-31T23:59:59Z"))) {
-                throw new DateTimeException("平台消息时间超过可保存范围");
+                throw new DateTimeException(Messages.text("error.chat.chatInputValidation.time.2"));
             }
             return result;
         } catch (NumberFormatException | DateTimeException failure) {
-            var safe = new ChannelProviderException("CHAT_TIME_INVALID", "平台消息时间格式不正确。", failure);
-            LOG.warn("聊天消息的时间无法解析", safe);
-            throw ApiException.invalidField("message", "平台消息时间格式不正确。");
+            var safe = new ChannelProviderException("CHAT_TIME_INVALID", Messages.text("error.chat.chatInputValidation.time.3"), failure);
+            LOG.warn(Messages.log("log.chat.chatInputValidation.time.1"), safe);
+            throw ApiException.invalidField("message", Messages.text("error.chat.chatInputValidation.time.3"));
         }
     }
 
     public static void size(String text, int resources) {
         ResourceInput.text(text, "message", 32000, false);
         if (text.codePointCount(0, text.length()) > 32000 || resources > 20) {
-            throw ApiException.invalidField("message", "消息内容或附件过多，请拆分后发送。");
+            throw ApiException.invalidField("message", Messages.text("error.chat.chatInputValidation.size.1"));
         }
     }
 }

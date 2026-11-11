@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRoomEntryFileMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationWorkItemMapper;
@@ -54,7 +56,7 @@ public class WebRoomAttachments {
         }
         if (input.size() > 10 || input.stream().anyMatch(id -> id == null || id.isBlank() || id.length() > 100)
             || new HashSet<>(input).size() != input.size()) {
-            throw ApiException.invalidField("attachmentIds", "每条消息最多可选择十份不同的附件。");
+            throw ApiException.invalidField("attachmentIds", Messages.text("error.collaboration.webRoomAttachments.ids.1"));
         }
         return List.copyOf(input);
     }
@@ -83,7 +85,7 @@ public class WebRoomAttachments {
             return List.of();
         }
         if (!roster.acceptsFiles(actor.enterpriseId(), agent, version)) {
-            throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENTS_DISABLED", "这位成员未启用接收附件，请移除附件或选择其他成员。");
+            throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENTS_DISABLED", Messages.text("error.collaboration.webRoomAttachments.store.1"));
         }
         var links = new ArrayList<CollaborationRoomEntryFileRow>();
         var inputs = new ArrayList<CollaborationInputArtifacts.InputFile>();
@@ -94,11 +96,11 @@ public class WebRoomAttachments {
                 throw FileAccessService.unavailable();
             }
             if (!"ready".equals(file.status()) || file.sha256() == null) {
-                throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENT_NOT_READY", "请等附件检查完成后再发送。");
+                throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENT_NOT_READY", Messages.text("error.collaboration.webRoomAttachments.store.2"));
             }
             bytes += file.sizeBytes();
             if (file.sizeBytes() > 20L * 1024 * 1024 || bytes > 50L * 1024 * 1024) {
-                throw ApiException.invalidField("attachmentIds", "每份附件不能超过 20 MB，本次附件合计不能超过 50 MB。");
+                throw ApiException.invalidField("attachmentIds", Messages.text("error.collaboration.webRoomAttachments.store.3"));
             }
             var link = new CollaborationRoomEntryFileRow();
             link.setId(UUID.randomUUID().toString());
@@ -127,7 +129,7 @@ public class WebRoomAttachments {
         }
         var owner = access.participant(task, task.getOwnerParticipantId());
         if (!roster.acceptsFiles(actor.enterpriseId(), owner.getAgentId(), owner.getAgentVersionId())) {
-            throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENTS_DISABLED", "这位成员未启用接收附件。");
+            throw new ApiException(HttpStatus.CONFLICT, "ATTACHMENTS_DISABLED", Messages.text("error.collaboration.webRoomAttachments.publish.1"));
         }
         var inputs = new ArrayList<CollaborationInputArtifacts.InputFile>();
         for (var link : links) {
@@ -143,7 +145,7 @@ public class WebRoomAttachments {
     private void register(CollaborationTaskRow task, List<CollaborationInputArtifacts.InputFile> inputs) {
         var work = works.selectOne(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).eq(CollaborationWorkItemRow::getId, task.getOwnerWorkId()));
-        artifacts.register(task, work, inputs, "web_message_attachment_v1", "发起人在这条消息中提供的附件。");
+        artifacts.register(task, work, inputs, "web_message_attachment_v1", Messages.text("text.collaboration.webRoomAttachments.register.1"));
     }
 
     public void withdraw(CollaborationRoomEntryRow entry) {

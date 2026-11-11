@@ -68,7 +68,7 @@ final class ChatBrowserPlatform implements AutoCloseable {
                 exchange.sendResponseHeaders(status, bytes.length);
                 exchange.getResponseBody().write(bytes);
             } catch (Exception failure) {
-                LOG.error("界面验收平台处理失败，路径={}", path, failure);
+                LOG.error("UI test platform request failed; path={}", path, failure);
             }
         });
         server.start();

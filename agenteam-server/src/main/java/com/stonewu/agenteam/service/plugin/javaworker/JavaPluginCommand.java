@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin.javaworker;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -29,7 +31,7 @@ public final class JavaPluginCommand {
                         break;
                     }
                 } catch (Exception failure) {
-                    throw new IllegalStateException("无法检查 Java 插件执行类路径", failure);
+                    throw new IllegalStateException(Messages.text("error.plugin.javaPluginCommand.command.1"), failure);
                 }
             }
         }

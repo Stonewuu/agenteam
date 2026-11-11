@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.LiveEventCodec;
 import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
@@ -75,7 +77,7 @@ public final class LiveExecutionSession implements AutoCloseable {
             throw error;
         }
         if (closed.get()) {
-            throw new IllegalStateException("执行事件入口已经关闭");
+            throw new IllegalStateException(Messages.text("error.execution.liveExecutionSession.requireOpen.1"));
         }
     }
 
@@ -102,7 +104,7 @@ public final class LiveExecutionSession implements AutoCloseable {
                 return change;
             }
             if (change.delta() != null) {
-                throw new IllegalArgumentException("数据库只能接收完整内容块");
+                throw new IllegalArgumentException(Messages.text("error.execution.liveExecutionSession.persist.1"));
             }
             String expected = scheduledVersions.getOrDefault(change.block().id(), "0");
             scheduledVersions.put(change.block().id(), change.block().revision());
@@ -163,7 +165,7 @@ public final class LiveExecutionSession implements AutoCloseable {
             retryAt = clock.millis() + 1000;
             if (clock.millis() >= warnAt) {
                 warnAt = clock.millis() + 30000;
-                LOG.warn("当前输出暂时无法发送，将保留内存内容并按块保存，会话编号 {}，执行编号 {}",
+                LOG.warn(Messages.log("log.execution.liveExecutionSession.send.1"),
                     run.conversationId(), run.id(), unavailable);
             }
         }
@@ -178,7 +180,7 @@ public final class LiveExecutionSession implements AutoCloseable {
                 commit.accept(batch, changes);
                 return;
             } catch (DataAccessException unavailable) {
-                LOG.warn("完整内容块暂时保存失败，执行编号 {}，保存批次 {}", run.id(), batch, unavailable);
+                LOG.warn(Messages.log("log.execution.liveExecutionSession.retrySave.1"), run.id(), batch, unavailable);
                 if (System.nanoTime() >= deadline) {
                     throw unavailable;
                 }
@@ -221,7 +223,7 @@ public final class LiveExecutionSession implements AutoCloseable {
 
     private void fail(RuntimeException failed) {
         error = failed;
-        LOG.error("执行内容处理失败，执行编号 {}，工作编号 {}", run.id(), lease.id(), failed);
+        LOG.error(Messages.log("log.execution.liveExecutionSession.fail.1"), run.id(), lease.id(), failed);
         failure.tryEmitError(failed);
     }
 
@@ -246,7 +248,7 @@ public final class LiveExecutionSession implements AutoCloseable {
             if (failed.getCause() instanceof RuntimeException cause) {
                 throw cause;
             }
-            throw new IllegalStateException("执行内容处理未完成", failed.getCause());
+            throw new IllegalStateException(Messages.text("error.execution.liveExecutionSession.await.1"), failed.getCause());
         }
     }
 

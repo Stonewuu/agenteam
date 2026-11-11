@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -48,7 +50,7 @@ public class ScheduleAccessService {
             handler.validateCurrent(common.actor(), schedule);
             return common;
         } catch (ResponseStatusException failure) {
-            log.warn("定时计划当前执行资格检查失败，计划编号={}", schedule.id(), failure);
+            log.warn(Messages.log("log.schedule.scheduleAccessService.check.1"), schedule.id(), failure);
             return denied(handler == null ? "SCHEDULE_RESOURCE_UNAVAILABLE" : handler.denialReason(failure));
         }
     }
@@ -56,7 +58,7 @@ public class ScheduleAccessService {
     public AuthContext requireOwner(ScheduleRecord schedule) {
         var checked = owner(schedule);
         if (checked.reason() != null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, checked.reason(), "创建人的账号、成员资格或定时任务权限已不可用。");
+            throw new ApiException(HttpStatus.FORBIDDEN, checked.reason(), Messages.text("error.schedule.scheduleAccessService.requireOwner.1"));
         }
         return checked.actor();
     }

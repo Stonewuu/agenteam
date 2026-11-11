@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.schedule.ScheduleSqlMapper;
 import com.stonewu.agenteam.model.permission.entity.ResourceQueryScope;
@@ -67,7 +69,7 @@ public class ResourceImpactMapper {
             .set(ScheduledTaskRow::getLastCheckedAt, now).set(ScheduledTaskRow::getUpdatedAt, now)
             .setIncrBy(ScheduledTaskRow::getRevision, 1));
         if (changed != ids.size()) {
-            throw new IllegalStateException("删除资源时，关联计划的暂停结果与预期不一致");
+            throw new IllegalStateException(Messages.text("error.resource.resourceImpactMapper.pauseSchedules.1"));
         }
         return changed;
     }

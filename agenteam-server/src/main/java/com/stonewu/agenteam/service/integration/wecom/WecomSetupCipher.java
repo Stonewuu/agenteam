@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.integration.entity.WecomSetupJobRow;
@@ -23,7 +25,7 @@ public class WecomSetupCipher {
         try {
             return json.writeValueAsString(encryption.encrypt(value, binding(row)));
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("企微创建材料无法保存", failure);
+            throw new IllegalStateException(Messages.text("error.integration.wecomSetupCipher.encrypt.1"), failure);
         }
     }
 
@@ -31,7 +33,7 @@ public class WecomSetupCipher {
         try {
             return encryption.decrypt(json.readValue(row.getEncryptedJson(), EncryptedPayload.class), binding(row), Registration.class);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("企微创建材料无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.integration.wecomSetupCipher.read.1"), failure);
         }
     }
 

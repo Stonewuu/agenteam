@@ -1,0 +1,426 @@
+{
+  "error.resource.resourceImpactMapper.pauseSchedules.1": {
+    "zh-CN": "删除资源时，关联计划的暂停结果与预期不一致",
+    "en": "The number of schedules paused during resource deletion did not match the expected count."
+  },
+  "error.resource.resourceJson.write.1": {
+    "zh-CN": "资源配置无法保存",
+    "en": "Resource configuration could not be saved."
+  },
+  "error.resource.resourceJson.read.1": {
+    "zh-CN": "已保存的资源配置无法读取",
+    "en": "Saved resource configuration could not be read."
+  },
+  "error.resource.resourceJson.hash.1": {
+    "zh-CN": "资源配置摘要无法计算",
+    "en": "The resource configuration digest could not be calculated."
+  },
+  "error.resource.resourceJson.checkedSize.1": {
+    "zh-CN": "请填写资源配置。",
+    "en": "Enter the resource configuration."
+  },
+  "error.resource.resourceJson.checkedSize.2": {
+    "zh-CN": "配置内容不能超过 256 KiB。",
+    "en": "Configuration content must not exceed 256 KiB."
+  },
+  "error.resource.resourceJson.checkedSize.3": {
+    "zh-CN": "配置内容无法读取。",
+    "en": "The configuration could not be read."
+  },
+  "error.resource.resourceMapper.list.1": {
+    "zh-CN": "不支持的资源状态",
+    "en": "Unsupported resource status."
+  },
+  "error.resource.resourceMapper.list.2": {
+    "zh-CN": "不支持的资源排序",
+    "en": "Unsupported resource sorting."
+  },
+  "error.resource.resourceMapper.changed.1": {
+    "zh-CN": "已锁定资源的修改版本发生变化",
+    "en": "The locked resource revision changed."
+  },
+  "error.resource.resourceVersionMapper.list.1": {
+    "zh-CN": "分页数量不能小于零",
+    "en": "The page size must not be negative."
+  },
+  "error.resource.resourceKind.from.1": {
+    "zh-CN": "请选择支持的资源类型。",
+    "en": "Select a supported resource type."
+  },
+  "error.resource.credentialBindingService.validate.1": {
+    "zh-CN": "请选择本企业当前有效的凭据。",
+    "en": "Select an active credential from this organization."
+  },
+  "error.resource.executionDependencyService.prepare.1": {
+    "zh-CN": "此流程所需的插件或资源已不可用，请替换后重新发布。",
+    "en": "A plugin or resource required by this workflow is unavailable. Replace it and publish again."
+  },
+  "error.resource.executionDependencyService.resolve.1": {
+    "zh-CN": "资源依赖最多八层，请减少嵌套引用。",
+    "en": "Resource dependencies support up to eight levels. Reduce nested references."
+  },
+  "error.resource.executionDependencyService.resolve.2": {
+    "zh-CN": "资源之间存在循环引用，请调整依赖后发布。",
+    "en": "The resources have circular references. Adjust the dependencies before publishing."
+  },
+  "error.resource.executionDependencyService.unavailable.1": {
+    "zh-CN": "引用的资源版本已失效或无法使用，请重新选择。",
+    "en": "A referenced resource version is invalid or unavailable. Select another version."
+  },
+  "error.resource.fixedDependencyService.resolveGraph.1": {
+    "zh-CN": "所有依赖提供的工具去重后不能超过一百个。",
+    "en": "Dependencies can provide up to 100 distinct tools in total."
+  },
+  "error.resource.fixedDependencyService.walk.1": {
+    "zh-CN": "工作流不能直接或通过智能体嵌套另一个工作流。",
+    "en": "A workflow cannot contain another workflow directly or through an agent."
+  },
+  "error.resource.fixedDependencyService.validateAgentSkills.1": {
+    "zh-CN": "所选技能需要的插件或知识库尚未包含在智能体能力中，请补齐后发布。",
+    "en": "The selected skill requires plugins or knowledge bases missing from this agent. Add them before publishing."
+  },
+  "error.resource.fixedDependencyService.validateSubagents.1": {
+    "zh-CN": "子智能体请选择不含工作流能力的对话型或任务型智能体。",
+    "en": "Select a chat or task agent without workflow capabilities as the subagent."
+  },
+  "error.resource.resourceConfigurationService.init.1": {
+    "zh-CN": "资源类型重复注册校验器",
+    "en": "A validator is registered more than once for a resource type."
+  },
+  "error.resource.resourceConfigurationService.init.2": {
+    "zh-CN": "存在尚未配置校验器的资源类型",
+    "en": "A resource type has no configured validator."
+  },
+  "error.resource.resourceConfigurationService.publish.1": {
+    "zh-CN": "请先处理副本中待修正的依赖并保存草稿。",
+    "en": "Resolve the copied resource's dependencies and save the draft first."
+  },
+  "error.resource.resourceConfigurationService.publish.2": {
+    "zh-CN": "发布前请填写简介。",
+    "en": "Add a description before publishing."
+  },
+  "error.resource.resourceInput.text.1": {
+    "zh-CN": "此项不能为空或超出允许长度。",
+    "en": "This field cannot be empty or exceed the length limit."
+  },
+  "error.resource.resourceInput.text.2": {
+    "zh-CN": "文字包含无效字符。",
+    "en": "The text contains invalid characters."
+  },
+  "error.resource.resourceInput.tags.1": {
+    "zh-CN": "最多选择十个标签。",
+    "en": "Select up to 10 tags."
+  },
+  "error.resource.resourceInput.tags.2": {
+    "zh-CN": "标签编号无效或重复。",
+    "en": "A tag identifier is invalid or duplicated."
+  },
+  "error.resource.resourceLifecycleService.status.1": {
+    "zh-CN": "只有企业管理员可以启停内置{0}。",
+    "en": "Only organization administrators can enable or disable built-in {0}."
+  },
+  "error.resource.resourceLifecycleService.delete.1": {
+    "zh-CN": "此{0}还有未结束的任务，请先停止任务。",
+    "en": "This {0} has unfinished tasks. Stop them first."
+  },
+  "error.resource.resourceLifecycleService.restore.1": {
+    "zh-CN": "内置{0}不能执行此操作。",
+    "en": "Built-in {0} cannot perform this operation."
+  },
+  "error.resource.resourceLifecycleService.restore.2": {
+    "zh-CN": "此{0}没有被删除，请重新加载列表。",
+    "en": "This {0} was not deleted. Reload the list."
+  },
+  "error.resource.resourceOwnershipPolicy.requireRecipient.1": {
+    "zh-CN": "请选择当前企业仍有效且能够维护所选{0}的成员。",
+    "en": "Select an active member of this organization who can maintain the selected {0}."
+  },
+  "error.resource.resourcePolicy.editable.1": {
+    "zh-CN": "内置{0}不能直接修改，请先复制。",
+    "en": "Built-in {0} cannot be edited directly. Copy it first."
+  },
+  "error.resource.resourcePublishService.publish.1": {
+    "zh-CN": "请先启用{0}，再发布新版本。",
+    "en": "Enable the {0} before publishing a new version."
+  },
+  "error.resource.resourcePublishService.publish.2": {
+    "zh-CN": "请填写发布说明。",
+    "en": "Enter release notes."
+  },
+  "error.resource.resourceQueryService.list.1": {
+    "zh-CN": "只有数字员工可以按下架状态筛选。",
+    "en": "Only AI employees can be filtered by listing status."
+  },
+  "error.resource.resourceQueryService.list.2": {
+    "zh-CN": "分页位置无法使用，请重新加载列表。",
+    "en": "The page position is invalid. Reload the list."
+  },
+  "error.resource.resourceQueryService.option.1": {
+    "zh-CN": "请选择当前资源类型支持的筛选条件。",
+    "en": "Select filters supported by this resource type."
+  },
+  "error.resource.resourceSubjectService.list.1": {
+    "zh-CN": "当前版本不支持此授权对象类型。",
+    "en": "This version does not support the authorization target type."
+  },
+  "error.resource.resourceSubjectService.list.2": {
+    "zh-CN": "资源只能转交给成员。",
+    "en": "Resources can be transferred only to members."
+  },
+  "error.resource.resourceSubjectService.list.3": {
+    "zh-CN": "每次最多读取 100 个不同对象。",
+    "en": "Read up to 100 different items per request."
+  },
+  "error.resource.resourceSubjectService.list.4": {
+    "zh-CN": "读取已选对象时不能同时搜索或翻页。",
+    "en": "When loading selected items, do not include search or pagination options."
+  },
+  "error.resource.tagService.create.1": {
+    "zh-CN": "本企业已存在同名标签。",
+    "en": "A tag with this name already exists in the organization."
+  },
+  "error.resource.tagService.validateSelection.1": {
+    "zh-CN": "请选择本企业仍有效的标签。",
+    "en": "Select active tags from this organization."
+  },
+  "error.resource.tagService.key.1": {
+    "zh-CN": "标签名称过长，请缩短后保存。",
+    "en": "The tag name is too long. Shorten it before saving."
+  },
+  "error.resource.usableVersionService.list.1": {
+    "zh-CN": "当前账号没有配置资源的权限。",
+    "en": "This account cannot configure resources."
+  },
+  "error.resource.usableVersionService.list.2": {
+    "zh-CN": "请选择智能体资源。",
+    "en": "Select an agent resource."
+  },
+  "error.resource.usableVersionService.list.3": {
+    "zh-CN": "读取指定资源的版本时，不能同时提交已选版本列表。",
+    "en": "When loading a resource's versions, do not also submit a selected version list."
+  },
+  "error.resource.usableVersionService.list.4": {
+    "zh-CN": "请选择 1～100 个不同的版本。",
+    "en": "Select between 1 and 100 different versions."
+  },
+  "error.resource.usableVersionService.list.5": {
+    "zh-CN": "读取已选版本时不能同时搜索或翻页。",
+    "en": "When loading selected versions, do not include search or pagination options."
+  },
+  "error.resource.agentConfigurationValidator.draft.1": {
+    "zh-CN": "回复变化程度需填写数值；未配置时请移除此项。",
+    "en": "Response variation must be a number. Remove it if it is not configured."
+  },
+  "error.resource.agentConfigurationValidator.draft.2": {
+    "zh-CN": "偏好主题前后不能留空格。",
+    "en": "Preference topics cannot have leading or trailing spaces."
+  },
+  "error.resource.agentConfigurationValidator.draft.3": {
+    "zh-CN": "请填写数字员工的业务职责。",
+    "en": "Enter the AI employee's responsibilities."
+  },
+  "error.resource.agentConfigurationValidator.draft.4": {
+    "zh-CN": "流程型员工的思考强度需在工作流中设置。",
+    "en": "Set reasoning effort for workflow AI employees within the workflow."
+  },
+  "error.resource.agentConfigurationValidator.draft.5": {
+    "zh-CN": "流程型员工使用工作流中的模型和回复变化程度，请确认清除员工的单独设置。",
+    "en": "Workflow AI employees use the model and response variation set in the workflow. Confirm clearing the employee’s separate settings."
+  },
+  "error.resource.agentConfigurationValidator.draft.6": {
+    "zh-CN": "入口必须是已选择的工作流版本。",
+    "en": "The entry point must be a selected workflow version."
+  },
+  "error.resource.agentConfigurationValidator.draft.7": {
+    "zh-CN": "请选择默认模型。",
+    "en": "Select a default model."
+  },
+  "error.resource.agentConfigurationValidator.draft.8": {
+    "zh-CN": "对话型和任务型员工不能设置入口工作流。",
+    "en": "Chat and task AI employees cannot set an entry workflow."
+  },
+  "error.resource.agentConfigurationValidator.draft.9": {
+    "zh-CN": "请填写执行指令。",
+    "en": "Enter execution instructions."
+  },
+  "error.resource.agentConfigurationValidator.validatePublished.1": {
+    "zh-CN": "请选择入口工作流。",
+    "en": "Select an entry workflow."
+  },
+  "error.resource.agentConfigurationValidator.validateSubagents.1": {
+    "zh-CN": "请选择智能体版本。",
+    "en": "Select an agent version."
+  },
+  "error.resource.agentConfigurationValidator.validateSubagents.2": {
+    "zh-CN": "请选择有效的智能体版本。",
+    "en": "Select a valid agent version."
+  },
+  "error.resource.agentConfigurationValidator.validateSubagents.3": {
+    "zh-CN": "请选择是否允许临时助手。",
+    "en": "Choose whether to allow temporary assistants."
+  },
+  "error.resource.agentConfigurationValidator.validateSubagents.4": {
+    "zh-CN": "流程型员工请在工作流的智能体节点中配置助手。",
+    "en": "Configure the agents within the employee’s workflow."
+  },
+  "error.resource.connectionValidationEvidence.credential.1": {
+    "zh-CN": "凭据已失效或不适用于此连接，请重新选择。",
+    "en": "The credential is invalid or unsuitable for this connection. Select another credential."
+  },
+  "error.resource.connectionValidationEvidence.checked.1": {
+    "zh-CN": "请先完成当前配置的连接检查，再发布此{0}。",
+    "en": "Complete a connection check for the current configuration before publishing this {0}."
+  },
+  "error.resource.dataConfigurationValidator.draft.1": {
+    "zh-CN": "文件数据源不能设置连接凭据。",
+    "en": "File data sources cannot have connection credentials."
+  },
+  "error.resource.dataConfigurationValidator.draft.2": {
+    "zh-CN": "数据接口需要使用加密网页地址。",
+    "en": "Data endpoints must use HTTPS addresses."
+  },
+  "error.resource.dataConfigurationValidator.draft.3": {
+    "zh-CN": "请选择支持的数据源类型。",
+    "en": "Select a supported data source type."
+  },
+  "error.resource.dataConfigurationValidator.validatePublished.1": {
+    "zh-CN": "请选择数据库连接凭据。",
+    "en": "Select database connection credentials."
+  },
+  "error.resource.pluginConfigurationValidator.draft.1": {
+    "zh-CN": "内置插件不能设置远程地址、传输方式或连接凭据。",
+    "en": "Built-in plugins cannot set remote addresses, transports, or connection credentials."
+  },
+  "error.resource.pluginConfigurationValidator.draft.2": {
+    "zh-CN": "远程插件需要传输方式和服务地址，不能设置内置插件代码。",
+    "en": "Remote plugins require a transport and service address, and cannot set a built-in plugin code."
+  },
+  "error.resource.pluginConfigurationValidator.publish.1": {
+    "zh-CN": "请至少选择一个工具后发布。",
+    "en": "Select at least one tool before publishing."
+  },
+  "error.resource.pluginConfigurationValidator.publish.2": {
+    "zh-CN": "所选工具不在当前检查结果中，请重新检查连接。",
+    "en": "The selected tool is missing from the current check results. Check the connection again."
+  },
+  "error.resource.pluginConfigurationValidator.collection.1": {
+    "zh-CN": "同一工具来源只能选择一次。",
+    "en": "Each tool source can be selected only once."
+  },
+  "error.resource.pluginConfigurationValidator.collection.2": {
+    "zh-CN": "请选择工具来源的可用版本。",
+    "en": "Select an available version of the tool source."
+  },
+  "error.resource.pluginConfigurationValidator.collection.3": {
+    "zh-CN": "内置工具来源不能设置远程连接。",
+    "en": "Built-in tool sources cannot have remote connections."
+  },
+  "error.resource.pluginConfigurationValidator.collection.4": {
+    "zh-CN": "请选择 Java 插件版本并填写配置。",
+    "en": "Select a Java plugin version and enter its configuration."
+  },
+  "error.resource.pluginConfigurationValidator.collection.5": {
+    "zh-CN": "远程插件目前只支持一个独立连接。",
+    "en": "Remote plugins currently support one independent connection."
+  },
+  "error.resource.pluginConfigurationValidator.collection.6": {
+    "zh-CN": "请填写远程插件的连接信息。",
+    "en": "Enter the remote plugin's connection details."
+  },
+  "error.resource.pluginConfigurationValidator.collection.7": {
+    "zh-CN": "所选工具的来源不存在。",
+    "en": "The selected tool source does not exist."
+  },
+  "error.resource.pluginConfigurationValidator.collection.8": {
+    "zh-CN": "请勿重复选择同一来源的工具。",
+    "en": "Do not select the same tool from a source more than once."
+  },
+  "error.resource.skillConfigurationValidator.draft.1": {
+    "zh-CN": "请填写技能执行指令。",
+    "en": "Enter skill instructions."
+  },
+  "error.resource.workflowConfigurationValidator.validateDraftGraph.1": {
+    "zh-CN": "节点编号不能重复。",
+    "en": "Step identifiers cannot repeat."
+  },
+  "error.resource.workflowConfigurationValidator.validateDraftGraph.2": {
+    "zh-CN": "连线编号不能重复。",
+    "en": "Connection identifiers cannot repeat."
+  },
+  "text.resource.resourceCopyConfiguration.copy.1": {
+    "zh-CN": "原依赖已失效或无法使用，请重新选择或确认移除后保存草稿。",
+    "en": "An original dependency is unavailable. Select a replacement or confirm its removal before saving the draft."
+  },
+  "text.resource.resourceCopyConfiguration.copy.2": {
+    "zh-CN": "副本未保留连接凭据，请重新选择或确认不使用凭据后保存。",
+    "en": "The copy did not retain connection credentials. Select credentials or confirm that none are needed before saving."
+  },
+  "text.resource.resourceDraftService.save.1": {
+    "zh-CN": "保存{0}草稿",
+    "en": "Save {0} draft"
+  },
+  "text.resource.resourceDraftService.loadVersion.1": {
+    "zh-CN": "将历史版本内容保存为新草稿",
+    "en": "Save historical version content as a new draft"
+  },
+  "text.resource.resourceDraftService.create.1": {
+    "zh-CN": "复制{0}为新草稿",
+    "en": "Copy {0} as a new draft"
+  },
+  "text.resource.resourceDraftService.create.2": {
+    "zh-CN": "导入技能为新草稿",
+    "en": "Import skill as a new draft"
+  },
+  "text.resource.resourceDraftService.create.3": {
+    "zh-CN": "创建{0}草稿",
+    "en": "Create {0} draft"
+  },
+  "text.resource.resourceLifecycleService.status.1": {
+    "zh-CN": "修改{0}启用状态",
+    "en": "Update {0} enabled status"
+  },
+  "text.resource.resourceLifecycleService.delete.1": {
+    "zh-CN": "删除{0}并保留恢复期内的数据",
+    "en": "Delete {0} and retain data during the recovery period"
+  },
+  "text.resource.resourceLifecycleService.restore.1": {
+    "zh-CN": "恢复{0}为停用状态",
+    "en": "Restore {0} as disabled"
+  },
+  "text.resource.resourceLifecycleService.revoke.1": {
+    "zh-CN": "撤销{0}版本的使用资格",
+    "en": "Revoke access to the {0} version"
+  },
+  "text.resource.resourceOwnershipPolicy.requireRecipient.1": {
+    "zh-CN": "内容",
+    "en": "Content"
+  },
+  "text.resource.resourceOwnershipService.transfer.1": {
+    "zh-CN": "转交{0}所有权",
+    "en": "Transfer {0} ownership"
+  },
+  "text.resource.resourcePublishService.publish.1": {
+    "zh-CN": "发布{0}版本",
+    "en": "Publish {0} version"
+  },
+  "text.resource.tagService.create.1": {
+    "zh-CN": "创建标签",
+    "en": "Create tag"
+  },
+  "text.resource.tagService.rename.1": {
+    "zh-CN": "修改标签",
+    "en": "Update tag"
+  },
+  "text.resource.tagService.delete.1": {
+    "zh-CN": "删除标签并解除资源标签关联",
+    "en": "Delete tag and remove resource associations"
+  },
+  "text.resource.agentConfigurationValidator.use.1": {
+    "zh-CN": "所选模型不支持温度设置，请移除此参数。",
+    "en": "The selected model does not support temperature. Remove this parameter."
+  },
+  "text.resource.agentConfigurationValidator.use.2": {
+    "zh-CN": "{0}，请选择其他模型。",
+    "en": "{0}. Select another model."
+  }
+}

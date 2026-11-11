@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.ConversationFileMapper;
 import com.stonewu.agenteam.mapper.file.FilePreviewMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -73,7 +75,7 @@ public class ConversationFileService {
             return workspace.list(actor, conversation, path, cursor, limit);
         }
         if (!scope.equals("context")) {
-            throw ApiException.invalidField("scope", "请选择文件或上下文。");
+            throw ApiException.invalidField("scope", Messages.text("error.file.conversationFileService.list.1"));
         }
         conversations.readable(actor, conversation);
         int size = pagination.limit(limit);
@@ -109,7 +111,7 @@ public class ConversationFileService {
                     return snapshots.open(file, id, path, snapshot.files()::requireActive, actor.userId());
                 } catch (NoSuchFileException failure) {
                     throw new ApiException(HttpStatus.NOT_FOUND, "WORKSPACE_FILE_MISSING",
-                        "文件已不存在，请刷新列表后重试。", failure);
+                        Messages.text("error.file.conversationFileService.open.1"), failure);
                 } catch (IOException failure) {
                     throw WorkspacePaths.io(failure);
                 }
@@ -129,7 +131,7 @@ public class ConversationFileService {
     public FileTextSlice text(AuthContext actor, String conversation, String id, int offset, int limit,
                               boolean backwards, String revision) {
         if (offset < 0 || limit < 4 || limit > 256 * 1024) {
-            throw ApiException.invalidField("offset", "读取位置或范围不正确。");
+            throw ApiException.invalidField("offset", Messages.text("error.file.conversationFileService.text.1"));
         }
         return document(actor, conversation, id, revision).window(offset, limit, backwards);
     }
@@ -139,7 +141,7 @@ public class ConversationFileService {
             return opened.file();
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FILE_PREVIEW_UNAVAILABLE",
-                "文件暂时无法读取，请稍后重试。", failure);
+                Messages.text("error.file.conversationFileService.metadata.1"), failure);
         }
     }
 
@@ -150,7 +152,7 @@ public class ConversationFileService {
     }
 
     public void downloaded(AuthContext actor, String conversation) {
-        audit.record(actor.enterpriseId(), actor.user(), "file.download", "conversation", conversation, "下载会话文件",
+        audit.record(actor.enterpriseId(), actor.user(), "file.download", "conversation", conversation, Messages.text("text.file.conversationFileService.downloaded.1"),
             Map.of());
     }
 
@@ -159,11 +161,11 @@ public class ConversationFileService {
             var file = opened.file();
             if (!Set.of("text", "markdown").contains(file.previewKind())) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_NOT_TEXT",
-                    "此文件不支持文本预览，请切换预览方式或下载查看。");
+                    Messages.text("error.file.conversationFileService.document.1"));
             }
             if (file.sizeBytes() > MAXIMUM_TEXT_BYTES) {
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_PREVIEW_TOO_LARGE",
-                    "此文本文件较大，请下载后查看。");
+                    Messages.text("error.file.conversationFileService.document.2"));
             }
             String key = actor.enterpriseId() + ":" + actor.userId() + ":" + conversation + ":" + file.id() + ":" + file.revision();
             var document = textCache.get(key, () -> {
@@ -176,21 +178,21 @@ public class ConversationFileService {
                         .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
                     if (text.indexOf('\0') >= 0) {
                         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_NOT_TEXT",
-                            "此文件包含无法作为文本显示的内容，请下载后查看。");
+                            Messages.text("error.file.conversationFileService.document.3"));
                     }
                     return new TextFileDocument(file.path(), Utf8Text.revision(file.path(), text), text);
                 } catch (IOException failure) {
                     throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_TEXT_UNREADABLE",
-                        "此文件无法按 UTF-8 文本读取，请下载后查看。", failure);
+                        Messages.text("error.file.conversationFileService.document.4"), failure);
                 }
             });
             if (revision != null && !revision.equals(document.revision())) {
-                throw new ApiException(HttpStatus.CONFLICT, "TOOL_CONTENT_CHANGED", "文件已经更新，请重新打开预览。");
+                throw new ApiException(HttpStatus.CONFLICT, "TOOL_CONTENT_CHANGED", Messages.text("error.file.conversationFileService.document.5"));
             }
             return document;
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FILE_PREVIEW_UNAVAILABLE",
-                "文件暂时无法读取，请稍后重试。", failure);
+                Messages.text("error.file.conversationFileService.metadata.1"), failure);
         }
     }
 

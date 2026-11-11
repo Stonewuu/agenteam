@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool.provider;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginToolDefinitionMapper;
@@ -62,7 +64,7 @@ public class RemoteMcpToolProvider implements ToolProvider {
             var discovered = session.listTools();
             if (discovered.stream().anyMatch(tool -> containsSecret(tool, auth.secretValues()))) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "MCP_TOOL_STRUCTURE_INVALID",
-                    "远程工具清单包含不应公开的认证内容，无法保存，请检查服务配置。");
+                    Messages.text("error.tool.remoteMcpToolProvider.tools.1"));
             }
             return definitions.remote(discovered, config.path("timeoutSeconds").asInt(30)).stream()
                 .map(tool -> tools.spec(tool, source)).toList();
@@ -75,7 +77,7 @@ public class RemoteMcpToolProvider implements ToolProvider {
         var config = json.tree(source.configuration());
         var auth = credentials.resolve(context.enterpriseId(), config.path("credentialId").asText(null));
         if (!(context.cancellation() instanceof ToolCallControl control)) {
-            throw new IllegalArgumentException("远程工具缺少宿主取消范围");
+            throw new IllegalArgumentException(Messages.text("error.tool.remoteMcpToolProvider.invoke.1"));
         }
         try (var session = control.track(
             new RemoteMcpSession(http, mapper, config.path("endpoint").asText(), config.path("transport").asText(),
@@ -84,7 +86,7 @@ public class RemoteMcpToolProvider implements ToolProvider {
             if (actual.stream()
                 .noneMatch(value -> value.name().equals(tool.name()) && value.schemaHash().equals(tool.schemaHash()))) {
                 throw new ApiException(HttpStatus.CONFLICT, "PLUGIN_TOOL_CHANGED",
-                    "远程工具结构已经变化，未发送操作，请重新检查并发布。");
+                    Messages.text("error.tool.remoteMcpToolProvider.invoke.2"));
             }
             control.requireActive();
             var response = session.call(tool.name(), json.tree(arguments), context::beforeSend);

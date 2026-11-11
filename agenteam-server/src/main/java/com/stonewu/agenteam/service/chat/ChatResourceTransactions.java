@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -100,7 +102,7 @@ public class ChatResourceTransactions {
         }
         var message = message(row);
         if (Set.of("failed", "ignored").contains(message.getRoutingStatus())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_FORBIDDEN", "此消息已停止处理，不再下载其他附件。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_FORBIDDEN", Messages.text("error.chat.chatResourceTransactions.prepare.1"));
         }
         identities.actor(lease.enterpriseId(), message.getSenderUserId(), message.getOriginBindingId());
         var bot = bots.require(lease.enterpriseId(), row.getSourceBotId());
@@ -109,10 +111,10 @@ public class ChatResourceTransactions {
         var member = conversations.member(lease.enterpriseId(), group.getId(), bot.getId());
         if (!group.getStatus().equals("enabled") || !bot.getStatus().equals("enabled") || !Boolean.TRUE.equals(bot.getChatEnabled())
             || member == null || !member.getMembershipStatus().equals("present") || !Boolean.TRUE.equals(member.getReceiveEnabled())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_FORBIDDEN", "原会话已不允许读取此附件。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_FORBIDDEN", Messages.text("error.chat.chatResourceTransactions.prepare.2"));
         }
         if (app.providerCode().equals("wecom_aibot") && !message.getReceivedAt().plusSeconds(300).isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_EXPIRED", "平台附件下载地址已过期，请重新发送附件。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_EXPIRED", Messages.text("error.chat.chatResourceTransactions.prepare.3"));
         }
         var material = cipher.decrypt(lease.enterpriseId(), "message-resource", row.getId(), row.getFetchMaterialEncrypted());
         String name = material.path("name").asText();
@@ -145,13 +147,13 @@ public class ChatResourceTransactions {
             throw expired();
         }
         if (content.size() < 1 || content.size() > 20L * 1024 * 1024) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_TOO_LARGE", "附件为空或超过二十 MiB，请重新发送。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_TOO_LARGE", Messages.text("error.chat.chatResourceTransactions.downloaded.1"));
         }
         long total = resources.selectList(new LambdaQueryWrapper<ChatMessageResourceRow>().eq(ChatMessageResourceRow::getEnterpriseId, lease.enterpriseId())
             .eq(ChatMessageResourceRow::getMessageId, row.getMessageId()).ne(ChatMessageResourceRow::getId, row.getId())).stream()
             .mapToLong(value -> value.getSizeBytes() == null ? 0 : value.getSizeBytes()).sum();
         if (total + content.size() > 50L * 1024 * 1024) {
-            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_TOO_LARGE", "同一条消息的附件合计超过五十 MiB，请拆分发送。");
+            throw new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_TOO_LARGE", Messages.text("error.chat.chatResourceTransactions.downloaded.2"));
         }
         String fileId = UUID.randomUUID().toString();
         var input = new FilePrepareRequest("collaboration_artifact", null, prepared.name(), content.size(), prepared.mediaType(), content.sha256());
@@ -159,7 +161,7 @@ public class ChatResourceTransactions {
         var file = files.find(lease.enterpriseId(), fileId, true).orElseThrow();
         String uploadLease = UUID.randomUUID().toString();
         if (!files.claimUpload(file, uploadLease, clock.instant()) || !files.uploaded(file, uploadLease, content.key(), content.size(), content.sha256(), clock.instant())) {
-            throw new IllegalStateException("平台附件登记未能完成");
+            throw new IllegalStateException(Messages.text("error.chat.chatResourceTransactions.downloaded.3"));
         }
         files.scanning(files.find(lease.enterpriseId(), fileId, false).orElseThrow(), clock.instant());
         String job = UUID.randomUUID().toString();
@@ -229,7 +231,7 @@ public class ChatResourceTransactions {
     }
 
     private static ApiException expired() {
-        return new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_LEASE_EXPIRED", "附件处理已由其他进程接管。");
+        return new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_LEASE_EXPIRED", Messages.text("error.chat.chatResourceTransactions.expired.1"));
     }
 
     public record Prepared(IntegrationApplication application, String platformMessageId, String userId, String name, String mediaType, JsonNode material) {

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file.parser;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile;
 import org.apache.pdfbox.pdfparser.PDFParser;
@@ -41,7 +43,7 @@ public class DocumentTextExtractor {
             "PK") || start.startsWith("MZ")) {
             throw new DocumentParseFailure("FILE_TYPE_INVALID");
         }
-        writer.location(null, "正文");
+        writer.location(null, Messages.text("text.export.conversationExportHandler.read.9"));
         var decoder = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT);
         try (var reader = new InputStreamReader(Files.newInputStream(source), decoder)) {

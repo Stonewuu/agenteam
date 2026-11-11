@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.usage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.operations.entity.QuotaCheckEvent;
 import com.stonewu.agenteam.service.usage.QuotaReconciliationService;
 import org.slf4j.Logger;
@@ -48,7 +50,7 @@ public class QuotaMaintenanceScheduling {
                 try {
                     var differences = reconciliation.check(enterprise);
                     for (var value : differences) {
-                        LOG.warn("企业 {} 的用量记录 {} 与执行条目不一致，已修正已用次数 {} 为 {}、预留次数 {} 为 {}",
+                        LOG.warn(Messages.log("log.usage.quotaMaintenanceScheduling.poll.1"),
                             enterprise, value.bucketId(), value.savedUsed(), value.actualUsed(), value.savedReserved(),
                             value.actualReserved());
                     }
@@ -56,13 +58,13 @@ public class QuotaMaintenanceScheduling {
                 } catch (RuntimeException unavailable) {
                     failed = true;
                     events.publishEvent(new QuotaCheckEvent(0, false, clock.instant()));
-                    LOG.warn("企业 {} 的用量暂时无法核对，稍后重试", enterprise, unavailable);
+                    LOG.warn(Messages.log("log.usage.quotaMaintenanceScheduling.poll.2"), enterprise, unavailable);
                 }
             }
         } catch (RuntimeException unavailable) {
             failed = true;
             events.publishEvent(new QuotaCheckEvent(0, false, clock.instant()));
-            LOG.warn("用量核对暂时无法开始，稍后重试", unavailable);
+            LOG.warn(Messages.log("log.usage.quotaMaintenanceScheduling.poll.3"), unavailable);
         }
         nextCheck = clock.instant().plus(failed ? Duration.ofMinutes(1) : Duration.ofDays(1));
     }

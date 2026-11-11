@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.file.FileUploadPolicy;
 import com.stonewu.agenteam.service.file.ImageFileContent;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -28,6 +30,6 @@ public final class ChatFilePolicy {
     }
 
     private static ApiException unsupported() {
-        return new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_UNSUPPORTED", "暂不支持读取此类附件，请改用文字、表格或文档。");
+        return new ApiException(HttpStatus.CONFLICT, "CHAT_RESOURCE_UNSUPPORTED", Messages.text("error.chat.chatFilePolicy.unsupported.1"));
     }
 }

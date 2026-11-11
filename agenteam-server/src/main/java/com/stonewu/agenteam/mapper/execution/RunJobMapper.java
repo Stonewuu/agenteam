@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
@@ -81,7 +83,7 @@ public class RunJobMapper {
     public void retry(String enterprise, String run, Instant available, Instant now) {
         int changed = statements.retryBackgroundJob(timestamp(available), timestamp(now), enterprise, "run:" + run);
         if (changed != 1) {
-            throw new IllegalStateException("当前后台任务已变化，不能安排新的尝试");
+            throw new IllegalStateException(Messages.text("error.execution.runJobMapper.retry.1"));
         }
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import {useT} from "@/lib/i18n/locale-provider";
+import {resourceDisplayName} from "../lib/resource-localization";
 
 import {Button} from "@/components/ui/button";
 
@@ -11,7 +12,7 @@ import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {MutationFeedback} from "@/features/workspace/components/mutation-feedback";
 import type {ResourceImpact, ResourceSummary} from "../types/resource";
-import {resourceLabel} from "../lib/resource-display";
+import {resourceSingularLabel} from "../lib/resource-display";
 import ui from "@/components/ui/surface.module.css";
 
 export function ResourceLifecycleDialog({enterpriseId, resource, operation, onClose, onChanged}: {
@@ -24,7 +25,7 @@ export function ResourceLifecycleDialog({enterpriseId, resource, operation, onCl
   const uiText = useT();
   const base = organizationPath(enterpriseId, `/resources/${encodeURIComponent(resource.id)}`);
   const status = resource.status === "disabled" ? "active" : "disabled";
-  const label = resourceLabel(resource.kind);
+  const label = resourceSingularLabel(resource.kind, uiText);
   const title = `${operation === "delete" ? uiText("删除") : operation === "restore" ? uiText("恢复") : status === "active" ? uiText("启用") : uiText("停用")}${label}`;
   const previewRequired = operation === "delete" || operation === "status" && status === "disabled";
   const preview = useApiQuery<ResourceImpact>(previewRequired ? `${base}/impact` : null);
@@ -42,7 +43,7 @@ export function ResourceLifecycleDialog({enterpriseId, resource, operation, onCl
       : status === "disabled"
         ? uiText("停用后，此{0}的所有版本将无法继续使用。{1}", [label, isAgent ? uiText("当前有效的雇佣会暂停。") : ""])
         : uiText("启用后，此{0}可重新使用。{1}", [label, isAgent ? uiText("已暂停的雇佣需要本人恢复，已解除的雇佣需要重新雇佣。") : ""]);
-  return <Dialog title={`${title}“${resource.name}”？`} onClose={onClose} dialogRef={dialog.ref} busy={action.busy}>
+  return <Dialog title={`${title}“${resourceDisplayName(resource, uiText)}”？`} onClose={onClose} dialogRef={dialog.ref} busy={action.busy}>
     <div className={ui.form}>
       <p className={ui.description}>{description}</p>
       {previewRequired &&

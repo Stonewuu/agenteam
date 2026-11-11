@@ -26,7 +26,9 @@ export type ToolSource = {
   code: string;
   tools: PluginTool[]
 };
-export type BuiltinPlugin = { code: string; name: string; description: string; toolNames: string[] };
+export type BuiltinPlugin = {
+  code: string; name: string; description: string; toolNames: string[]; icon: string; color: string
+};
 export type ConnectionCheck = {
   checkedAt: string; success: boolean; summary: string; durationMs: number;
   toolChanges: { name: string; change: "added" | "removed" | "changed" | "unchanged" }[]

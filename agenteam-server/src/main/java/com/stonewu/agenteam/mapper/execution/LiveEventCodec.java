@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +34,7 @@ public class LiveEventCodec {
 
     public Mutation change(RunRecord run, ExecutionChange change, Instant now) {
         if (change.block() == null) {
-            throw new IllegalArgumentException("实时片段必须对应内容块");
+            throw new IllegalArgumentException(Messages.text("error.execution.liveEventCodec.change.1"));
         }
         var block = change.block();
         String type = change.delta() == null ? "block.updated" : "message.delta";
@@ -73,7 +75,7 @@ public class LiveEventCodec {
             case "attempt.updated" -> id = "attempt:" + state.path("id").asText();
             default -> {
                 if (!event.type().startsWith("run.")) {
-                    throw new IllegalArgumentException("新实时协议不支持逐片数据库事件：" + event.type());
+                    throw new IllegalArgumentException(Messages.text("error.execution.liveEventCodec.committed.1", event.type()));
                 }
                 id = "run:" + event.runId();
             }
@@ -108,7 +110,7 @@ public class LiveEventCodec {
         try {
             return json.readValue(value, LiveExecutionEvent.class);
         } catch (JsonProcessingException invalid) {
-            throw new IllegalStateException("实时事件内容无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.execution.liveEventCodec.decode.1"), invalid);
         }
     }
 
@@ -116,7 +118,7 @@ public class LiveEventCodec {
         try {
             return json.readTree(value);
         } catch (JsonProcessingException invalid) {
-            throw new IllegalStateException("累计输出内容无法读取", invalid);
+            throw new IllegalStateException(Messages.text("error.execution.liveEventCodec.read.1"), invalid);
         }
     }
 
@@ -124,7 +126,7 @@ public class LiveEventCodec {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException invalid) {
-            throw new IllegalStateException("实时事件内容无法编码", invalid);
+            throw new IllegalStateException(Messages.text("error.execution.liveEventCodec.write.1"), invalid);
         }
     }
 }

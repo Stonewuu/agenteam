@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -88,7 +90,7 @@ final class ModelSseErrorInputStream extends FilterInputStream {
             }
             if (overflow) {
                 if (event.toString().stripLeading().startsWith("{\"error\"")) {
-                    throw new IllegalStateException("模型在响应流中返回过长的错误信息。");
+                    throw new IllegalStateException(Messages.text("error.modelprofile.modelSseErrorInputStream.inspect.1"));
                 }
                 return;
             }
@@ -97,7 +99,7 @@ final class ModelSseErrorInputStream extends FilterInputStream {
                 if (diagnostics != null) {
                     diagnostics.captureError(root.get("error"));
                 }
-                throw new IllegalStateException("模型在响应流中返回错误。");
+                throw new IllegalStateException(Messages.text("error.modelprofile.modelSseErrorInputStream.inspect.2"));
             }
         } catch (JsonProcessingException ignored) {
             // 此处只识别错误事件；无效 JSON 仍由官方解析器报告，不记录原始内容。

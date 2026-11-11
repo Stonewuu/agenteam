@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.model.http.entity.QueryTimeRange;
 import org.springframework.http.HttpStatus;
@@ -32,7 +34,7 @@ public class QueryTimeRangeService {
                 validate(range);
                 return range;
             } catch (RuntimeException invalid) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "CURSOR_INVALID", "查询时间范围已失效，请重新加载列表。");
+                throw new ApiException(HttpStatus.BAD_REQUEST, "CURSOR_INVALID", Messages.text("error.http.queryTimeRangeService.resolve.1"));
             }
         }
         Instant end = to == null ? clock.instant() : parse(to, "to");
@@ -50,16 +52,16 @@ public class QueryTimeRangeService {
         try {
             return Instant.parse(value);
         } catch (DateTimeParseException invalid) {
-            throw ApiException.invalidField(field, "请提供包含时区的有效时间。");
+            throw ApiException.invalidField(field, Messages.text("error.http.queryTimeRangeService.parse.1"));
         }
     }
 
     private void validate(QueryTimeRange range) {
         if (range.from().isAfter(range.to())) {
-            throw ApiException.invalidField("from", "开始时间不能晚于结束时间。");
+            throw ApiException.invalidField("from", Messages.text("error.http.queryTimeRangeService.validate.1"));
         }
         if (Duration.between(range.from(), range.to()).compareTo(Duration.ofDays(90)) > 0) {
-            throw ApiException.invalidField("from", "一次查询的时间范围不能超过九十天。");
+            throw ApiException.invalidField("from", Messages.text("error.http.queryTimeRangeService.validate.2"));
         }
     }
 }

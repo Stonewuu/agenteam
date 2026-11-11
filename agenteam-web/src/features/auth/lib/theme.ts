@@ -27,7 +27,7 @@ export function applyTheme(theme: ThemePreference) {
   try {
     localStorage.setItem(themeStorageKey, theme);
   } catch (failure) {
-    console.warn("无法保存本机主题偏好，本次切换仍然生效。", failure);
+    console.warn("Failed to persist the local theme preference; the current selection remains active.", failure);
   }
   update();
   if (theme === "system") {

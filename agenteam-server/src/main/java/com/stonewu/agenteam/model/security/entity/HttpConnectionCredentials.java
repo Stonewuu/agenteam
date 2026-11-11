@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.security.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +11,6 @@ import java.util.Map;
 public record HttpConnectionCredentials(Map<String, String> headers, List<String> secretValues) {
     @Override
     public String toString() {
-        return "HttpConnectionCredentials[认证内容已隐藏]";
+        return Messages.log("log.security.httpConnectionCredentials.toString.1");
     }
 }

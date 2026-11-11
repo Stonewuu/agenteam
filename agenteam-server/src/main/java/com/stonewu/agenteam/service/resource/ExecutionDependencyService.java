@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -64,7 +66,7 @@ public class ExecutionDependencyService {
         var config = state.configuration(root.kind(), root.config(), path, 0);
         if (config == null) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-                "此流程所需的插件或资源已不可用，请替换后重新发布。");
+                Messages.text("error.resource.executionDependencyService.prepare.1"));
         }
         var prepared = root.withConfiguration(config, json.hash(config));
         return new Prepared(prepared, dependencies.resolveGraph(actor, prepared, state.prepared));
@@ -123,7 +125,7 @@ public class ExecutionDependencyService {
         private ResolvedDependency resolve(DependencyBinding binding, Set<String> path, int depth) {
             if (depth > 8) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "RESOURCE_DEPENDENCY_DEPTH",
-                    "资源依赖最多八层，请减少嵌套引用。");
+                    Messages.text("error.resource.executionDependencyService.resolve.1"));
             }
             var version = loadedVersions.get(binding.versionId());
             var resource = version == null ? null : loadedResources.get(version.resourceId());
@@ -139,7 +141,7 @@ public class ExecutionDependencyService {
             }
             if (path.contains(resource.id())) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "RESOURCE_DEPENDENCY_CYCLE",
-                    "资源之间存在循环引用，请调整依赖后发布。");
+                    Messages.text("error.resource.executionDependencyService.resolve.2"));
             }
             if (unavailableVersions.contains(version.id())) {
                 return null;
@@ -207,6 +209,6 @@ public class ExecutionDependencyService {
 
     private ApiException unavailable() {
         return new ApiException(HttpStatus.CONFLICT, "RESOURCE_DEPENDENCY_UNAVAILABLE",
-            "引用的资源版本已失效或无法使用，请重新选择。");
+            Messages.text("error.resource.executionDependencyService.unavailable.1"));
     }
 }

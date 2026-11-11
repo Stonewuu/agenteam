@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -86,7 +88,7 @@ public class EnvironmentWorkspaceService {
     public ProjectLocation prepare(AuthContext actor) {
         var project = location(actor);
         if (!settings.executeEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", "当前工作空间暂未开放环境连接，请联系管理员。");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", Messages.text("error.environment.environmentWorkspaceService.prepare.1"));
         }
         var workspace = metadata.userWorkspace(actor);
         try {

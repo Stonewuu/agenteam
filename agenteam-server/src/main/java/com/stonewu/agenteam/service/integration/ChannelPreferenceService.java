@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -95,12 +97,12 @@ public class ChannelPreferenceService {
         enterprises.lockEnterprise(actor.enterpriseId());
         categories.require(input.category());
         if (input.enabled() == null) {
-            throw ApiException.invalidField("enabled", "请选择是否接收此类通知。");
+            throw ApiException.invalidField("enabled", Messages.text("error.integration.channelPreferenceService.update.1"));
         }
         var option = list(actor).stream().filter(value -> value.connectionId().equals(input.connectionId())).findFirst()
-            .orElseThrow(() -> ApiException.invalidField("connectionId", "请先绑定要接收通知的企业账号。"));
+            .orElseThrow(() -> ApiException.invalidField("connectionId", Messages.text("error.integration.channelPreferenceService.update.2")));
         if (input.enabled() && !option.canEnable()) {
-            throw ApiException.invalidField("enabled", "请先启用此接入并在绑定设置中允许接收通知。");
+            throw ApiException.invalidField("enabled", Messages.text("error.integration.channelPreferenceService.update.3"));
         }
         var query = new LambdaQueryWrapper<UserChannelPreferenceRow>().eq(UserChannelPreferenceRow::getEnterpriseId, actor.enterpriseId())
             .eq(UserChannelPreferenceRow::getUserId, actor.userId()).eq(UserChannelPreferenceRow::getConnectionId, input.connectionId())
@@ -132,7 +134,7 @@ public class ChannelPreferenceService {
             cancellations.cancel(actor.enterpriseId(), input.connectionId(), null, actor.userId(), input.category());
         }
         audit.record(actor.enterpriseId(), actor.user(), "channel.preference_update", "integration", input.connectionId(),
-            "更新本人自动通知接收选择", Map.of("category", input.category(), "enabled", input.enabled()));
+            Messages.text("text.integration.channelPreferenceService.update.1"), Map.of("category", input.category(), "enabled", input.enabled()));
         return list(actor);
     }
 }

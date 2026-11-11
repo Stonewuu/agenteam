@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
@@ -89,7 +91,7 @@ public class WorkspaceFileReader {
                 if (!failure.code().equals("WORKSPACE_BINARY_FILE")) {
                     throw failure;
                 }
-                LOG.debug("搜索跳过非文本文件，工作文件版本 {}", version, failure);
+                LOG.debug(Messages.log("log.workspace.workspaceFileReader.read.1"), version, failure);
             }
         }
         return result;
@@ -129,17 +131,17 @@ public class WorkspaceFileReader {
         }
         try {
             if (cursor.length() > 2048) {
-                throw new IllegalArgumentException("续读位置过长");
+                throw new IllegalArgumentException(Messages.text("error.workspace.workspaceFileReader.position.1"));
             }
             var value = json.read(new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8));
             int index = value.path("index").asInt(-1), line = value.path("line").asInt();
             if (!revision.equals(value.path("revision").asText()) || index < 0 || line < 1) {
-                throw new IllegalArgumentException("文件或搜索条件已改变");
+                throw new IllegalArgumentException(Messages.text("error.workspace.workspaceFileReader.position.2"));
             }
             return new Position(revision, index, line);
         } catch (RuntimeException cause) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "WORKSPACE_CURSOR_CHANGED",
-                "工作文件或搜索条件已改变，请重新开始查找。", cause);
+                Messages.text("error.workspace.workspaceFileReader.position.3"), cause);
         }
     }
 
@@ -153,6 +155,6 @@ public class WorkspaceFileReader {
     }
 
     private ObjectNode tooMany() {
-        return object().put("isError", true).put("content", "本轮同时读取的内容过多，请减少并行调用后继续读取。");
+        return object().put("isError", true).put("content", Messages.text("error.workspace.workspaceFileReader.tooMany.1"));
     }
 }

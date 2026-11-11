@@ -1,0 +1,62 @@
+{
+  "error.network.outboundAddressPolicy.init.1": {
+    "zh-CN": "网络允许列表必须填写完整协议、主机和端口，不能包含路径或查询参数",
+    "en": "The network allowlist requires complete schemes, hosts, and ports, without paths or query parameters."
+  },
+  "error.network.outboundAddressPolicy.resolveHost.1": {
+    "zh-CN": "无法解析连接地址，请检查地址或稍后重试。",
+    "en": "The connection address could not be resolved. Check it or try again later."
+  },
+  "error.network.outboundAddressPolicy.lookup.1": {
+    "zh-CN": "当前连接请求较多，请稍后重试。",
+    "en": "Too many connections are being requested. Try again later."
+  },
+  "error.network.outboundAddressPolicy.lookup.2": {
+    "zh-CN": "连接地址无法解析",
+    "en": "The connection address could not be resolved."
+  },
+  "error.network.outboundAddressPolicy.timeout.1": {
+    "zh-CN": "地址解析已取消或超过允许时间。",
+    "en": "Address resolution was cancelled or timed out."
+  },
+  "error.network.outboundAddressPolicy.parse.1": {
+    "zh-CN": "请通过凭据配置提供认证信息，不要写入连接地址。",
+    "en": "Provide authentication through credential settings, not in the connection address."
+  },
+  "error.network.outboundAddressPolicy.denied.1": {
+    "zh-CN": "连接地址不在允许的访问范围内，请检查地址或联系部署管理员。",
+    "en": "This address is outside the allowed access scope. Check it or contact the deployment administrator."
+  },
+  "error.network.restrictedHttpClient.init.1": {
+    "zh-CN": "连接超时必须在一百二十秒以内",
+    "en": "The connection timeout must not exceed 120 seconds."
+  },
+  "error.network.restrictedHttpClient.remainingMillis.1": {
+    "zh-CN": "连接已取消或超过允许时间。",
+    "en": "The connection was cancelled or timed out."
+  },
+  "error.network.restrictedHttpClient.execute.1": {
+    "zh-CN": "请求主机发生变化",
+    "en": "The request host changed."
+  },
+  "error.network.restrictedHttpClient.execute.2": {
+    "zh-CN": "连接已取消",
+    "en": "The connection was canceled."
+  },
+  "error.network.restrictedHttpClient.execute.3": {
+    "zh-CN": "连接返回了不支持的跳转，请检查插件地址。",
+    "en": "The connection returned an unsupported redirect. Check the plugin address."
+  },
+  "error.network.restrictedHttpClient.execute.4": {
+    "zh-CN": "连接跳转不能保留本次请求，请填写最终服务地址。",
+    "en": "The redirect cannot preserve this request. Enter the final service address."
+  },
+  "log.network.outboundAddressPolicy.lookup.1": {
+    "zh-CN": "外部服务地址解析",
+    "en": "External service address resolution"
+  },
+  "log.network.restrictedHttpClient.TIMER.1": {
+    "zh-CN": "外部网页连接期限",
+    "en": "External web connection deadline"
+  }
+}

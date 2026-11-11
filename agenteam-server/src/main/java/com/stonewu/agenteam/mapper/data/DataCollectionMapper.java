@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.data.entity.DataCollectionQueryRow;
 import com.stonewu.agenteam.model.data.entity.DataCollectionRecord;
 import com.stonewu.agenteam.model.data.entity.DataField;
@@ -105,7 +107,7 @@ public class DataCollectionMapper {
         int changed = statements.activateDataCollection(name, source, generation, file, rows, Timestamp.from(now),
             current.enterpriseId(), current.id(), current.revision());
         if (changed != 1) {
-            throw new IllegalStateException("数据集合已经被其他操作更新");
+            throw new IllegalStateException(Messages.text("error.data.dataCollectionMapper.activate.1"));
         }
     }
 

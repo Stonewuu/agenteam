@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -20,7 +22,7 @@ public class ExecutionConfigurationMapper {
 
     public ObjectNode freeze(ResourceKind kind, String id, String name, JsonNode config, ResolvedGraph graph) {
         if (kind != ResourceKind.AGENT && kind != ResourceKind.WORKFLOW) {
-            throw new IllegalArgumentException("当前资源不是执行入口");
+            throw new IllegalArgumentException(Messages.text("error.execution.executionConfigurationMapper.freeze.1"));
         }
         var result = json.createObjectNode().put(kind == ResourceKind.AGENT ? "agentId" : "workflowId", id)
             .put("name", name);

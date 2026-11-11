@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.feishu;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -75,7 +77,7 @@ public class FeishuSetupStore {
             .eq(FeishuSetupJobRow::getOwnerUserId, actor.id()).eq(FeishuSetupJobRow::getKind, input.kind())
             .notIn(FeishuSetupJobRow::getStage, TERMINAL));
         if (active != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_IN_PROGRESS", "已有创建流程尚未完成，请先继续或取消该流程。");
+            throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_IN_PROGRESS", Messages.text("error.integration.feishuSetupStore.create.1"));
         }
         var row = new FeishuSetupJobRow();
         row.setId(UUID.randomUUID().toString());
@@ -89,16 +91,16 @@ public class FeishuSetupStore {
         row.setStage("queued");
         if (input.connectionId() != null) {
             if (!"enterprise".equals(input.kind())) {
-                throw ApiException.invalidField("connectionId", "只有企业快捷接入可以使用已有连接。");
+                throw ApiException.invalidField("connectionId", Messages.text("error.integration.feishuSetupStore.create.2"));
             }
             var source = queries.require(enterprise, input.connectionId());
             if (!"feishu".equals(source.getProviderCode()) || !Set.of("enterprise", "app_management").contains(source.getPurpose())
                 || !Set.of("draft", "enabled").contains(source.getStatus())) {
-                throw ApiException.invalidField("connectionId", "请选择尚未停用的飞书企业接入或管理应用。");
+                throw ApiException.invalidField("connectionId", Messages.text("error.integration.feishuSetupStore.create.3"));
             }
             if (jobs.exists(new LambdaQueryWrapper<FeishuSetupJobRow>().eq(FeishuSetupJobRow::getEnterpriseId, enterprise)
                     .eq(FeishuSetupJobRow::getConnectionId, source.getId()).notIn(FeishuSetupJobRow::getStage, TERMINAL))) {
-                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_IN_PROGRESS", "此应用正在配置，请等待当前流程完成。");
+                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_IN_PROGRESS", Messages.text("error.integration.feishuSetupStore.create.4"));
             }
             row.setConnectionId(source.getId());
             row.setConnectionRevision(source.getRevision());
@@ -111,7 +113,7 @@ public class FeishuSetupStore {
         row.setCreatedAt(clock.instant());
         row.setUpdatedAt(clock.instant());
         jobs.insert(row);
-        audit.record(enterprise, actor, "feishu.setup_create", "feishu_setup", row.getId(), "开始创建飞书应用",
+        audit.record(enterprise, actor, "feishu.setup_create", "feishu_setup", row.getId(), Messages.text("text.integration.feishuSetupStore.create.1"),
             Map.of("kind", row.getKind()));
         return view(row);
     }
@@ -126,7 +128,7 @@ public class FeishuSetupStore {
         var row = jobs.selectOne(new LambdaQueryWrapper<FeishuSetupJobRow>().eq(FeishuSetupJobRow::getId, id)
             .eq(FeishuSetupJobRow::getEnterpriseId, enterprise).eq(FeishuSetupJobRow::getOwnerUserId, user));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "FEISHU_SETUP_UNAVAILABLE", "创建流程不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "FEISHU_SETUP_UNAVAILABLE", Messages.text("error.integration.feishuSetupStore.require.1"));
         }
         return row;
     }
@@ -136,7 +138,7 @@ public class FeishuSetupStore {
         if (!"feishu".equals(row.getProviderCode()) || !("app_management".equals(row.getPurpose())
                 || "enterprise".equals(row.getPurpose()) && managementConnections.ready(row))
             || !"enabled".equals(row.getStatus()) || row.getIdentityVerifiedAt() == null) {
-            throw new ApiException(HttpStatus.CONFLICT, "FEISHU_MANAGER_REQUIRED", "请先完成飞书企业快捷接入。");
+            throw new ApiException(HttpStatus.CONFLICT, "FEISHU_MANAGER_REQUIRED", Messages.text("error.integration.feishuSetupStore.manager.1"));
         }
         return row;
     }
@@ -152,7 +154,7 @@ public class FeishuSetupStore {
     public UserEntity actor(FeishuSetupJobRow row) {
         var actor = users.findById(row.getOwnerUserId()).filter(value -> value.status().equals("active")
             && value.sessionVersion() == row.getOwnerSessionVersion()).orElseThrow(() ->
-                new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", "发起创建的登录状态已失效，请重新登录后继续。"));
+                new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", Messages.text("error.integration.feishuSetupStore.actor.1")));
         policy.require(actor, row.getEnterpriseId(), row.getSystemAccess(), "integration.manage", false);
         return actor;
     }
@@ -227,16 +229,16 @@ public class FeishuSetupStore {
             throw ApiException.versionConflict(row.getRevision());
         }
         if (row.getLeaseUntil() != null && row.getLeaseUntil().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_BUSY", "正在保存飞书处理结果，请稍后再试。");
+            throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_BUSY", Messages.text("error.integration.feishuSetupStore.change.1"));
         }
         if (retry) {
             if (!Set.of("failed", "authorization_required").contains(row.getStage()) || row.getResumeStage() == null) {
-                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_RETRY_UNAVAILABLE", "当前流程无法重试，请检查飞书创建结果后重新开始。");
+                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_RETRY_UNAVAILABLE", Messages.text("error.integration.feishuSetupStore.change.2"));
             }
             if (jobs.exists(new LambdaQueryWrapper<FeishuSetupJobRow>().eq(FeishuSetupJobRow::getEnterpriseId, enterprise)
                     .eq(FeishuSetupJobRow::getOwnerUserId, actor.id()).eq(FeishuSetupJobRow::getKind, row.getKind())
                     .ne(FeishuSetupJobRow::getId, row.getId()).notIn(FeishuSetupJobRow::getStage, TERMINAL))) {
-                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_IN_PROGRESS", "已有另一个创建流程，请先完成或取消它。");
+                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_IN_PROGRESS", Messages.text("error.integration.feishuSetupStore.change.3"));
             }
             row.setStage(row.getResumeStage());
             row.setOwnerSessionVersion(actor.sessionVersion());
@@ -245,14 +247,14 @@ public class FeishuSetupStore {
             row.setNextAttemptAt(clock.instant());
         } else {
             if (row.getStage().equals("completed")) {
-                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_COMPLETED", "创建已经完成，请在机器人设置中管理。");
+                throw new ApiException(HttpStatus.CONFLICT, "FEISHU_SETUP_COMPLETED", Messages.text("error.integration.feishuSetupStore.change.4"));
             }
             row.setStage("cancelled");
             row.setEncryptedJson(null);
         }
         save(row);
         audit.record(enterprise, actor, retry ? "feishu.setup_retry" : "feishu.setup_cancel", "feishu_setup", id,
-            retry ? "继续飞书创建流程" : "取消飞书创建流程", Map.of());
+            retry ? Messages.text("text.integration.feishuSetupStore.change.1") : Messages.text("text.integration.feishuSetupStore.change.2"), Map.of());
         return view(row);
     }
 
@@ -260,7 +262,7 @@ public class FeishuSetupStore {
         try {
             return json.readValue(row.getInputJson(), FeishuSetupRequest.class);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("飞书创建设置无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.integration.feishuSetupStore.input.1"), failure);
         }
     }
 
@@ -290,19 +292,19 @@ public class FeishuSetupStore {
         boolean canOpen = row.getStage().equals("awaiting_scan") && row.getRegistrationExpiresAt() != null
             && row.getRegistrationExpiresAt().isAfter(clock.instant());
         String message = row.getErrorSummary() != null ? row.getErrorSummary() : switch (row.getStage()) {
-            case "queued" -> "正在准备飞书创建入口";
-            case "awaiting_scan" -> "请在飞书确认创建";
-            case "preparing" -> "正在保存并核验飞书应用";
-            case "configuring" -> "正在配置飞书应用";
-            case "publishing" -> "正在提交发布";
-            case "waiting_approval" -> "等待飞书审核通过";
-            case "binding" -> "正在关联智能体";
-            case "completed" -> row.getKind().equals("bot") ? "机器人已创建并关联智能体" : "飞书企业应用已连接";
-            case "authorization_required" -> "请先完成飞书管理授权，再继续创建";
-            case "expired" -> "创建入口已过期，请检查飞书是否已创建应用后重新开始";
-            case "registration_unknown" -> "暂时无法确认飞书创建结果，请先核对飞书应用，避免重复创建";
-            case "cancelled" -> "流程已取消，已经创建的飞书应用会保留";
-            default -> "本次创建尚未完成，请重试或检查飞书设置";
+            case "queued" -> Messages.text("text.integration.feishuSetupStore.view.1");
+            case "awaiting_scan" -> Messages.text("text.integration.feishuSetupStore.view.2");
+            case "preparing" -> Messages.text("text.integration.feishuSetupStore.view.3");
+            case "configuring" -> Messages.text("text.integration.feishuSetupStore.view.4");
+            case "publishing" -> Messages.text("text.integration.feishuSetupStore.view.5");
+            case "waiting_approval" -> Messages.text("text.integration.feishuSetupStore.view.6");
+            case "binding" -> Messages.text("text.integration.feishuSetupStore.view.7");
+            case "completed" -> row.getKind().equals("bot") ? Messages.text("text.integration.feishuSetupStore.view.8") : Messages.text("text.integration.feishuSetupStore.view.9");
+            case "authorization_required" -> Messages.text("text.integration.feishuSetupStore.view.10");
+            case "expired" -> Messages.text("text.integration.feishuSetupStore.view.11");
+            case "registration_unknown" -> Messages.text("text.integration.feishuSetupStore.view.12");
+            case "cancelled" -> Messages.text("text.integration.feishuSetupStore.view.13");
+            default -> Messages.text("text.integration.feishuSetupStore.view.14");
         };
         return new FeishuSetupView(row.getId(), row.getKind(), input(row).name(), row.getStage(), message,
             row.getManagerConnectionId(), row.getConnectionId(), row.getBotId(), canOpen,
@@ -319,7 +321,7 @@ public class FeishuSetupStore {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException failure) {
-            throw new IllegalStateException("飞书创建设置无法保存", failure);
+            throw new IllegalStateException(Messages.text("error.integration.feishuSetupStore.write.1"), failure);
         }
     }
 }

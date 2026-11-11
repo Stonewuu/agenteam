@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -53,10 +55,10 @@ public class WecomConversationHistoryService {
         String key = "conversation-history:" + requestId;
         if (result.getRecords().isEmpty()) {
             outbound.text(actor.enterpriseId(), group.getId(), bot.getId(), null, null, key, "conversation_history_empty",
-                page == 1 ? "你在这里还没有可以继续的会话。" : "这一页已没有可继续的会话，请重新发送 /history。", null);
+                page == 1 ? Messages.text("text.chat.wecomConversationHistoryService.show.1") : Messages.text("text.chat.wecomConversationHistoryService.show.2"), null);
             return;
         }
-        var row = outbound.text(actor.enterpriseId(), group.getId(), bot.getId(), null, null, key, "conversation_history", "请选择要继续的会话。", null);
+        var row = outbound.text(actor.enterpriseId(), group.getId(), bot.getId(), null, null, key, "conversation_history", Messages.text("text.chat.wecomConversationHistoryService.show.3"), null);
         if (row.getFirstSubmittedAt() != null) {
             return;
         }
@@ -70,13 +72,13 @@ public class WecomConversationHistoryService {
             String title = WecomConversationCommands.withoutOwnMention(objective.path("text").asText(), bot.getRoleName())
                 .replaceAll("\\s+", " ").strip();
             if (title.isBlank()) {
-                title = "未命名会话";
+                title = Messages.text("text.chat.wecomConversationHistoryService.show.4");
             }
             if (title.codePointCount(0, title.length()) > 24) {
                 title = title.substring(0, title.offsetByCodePoints(0, 24)) + "…";
             }
             String choiceKey = "history_choose_" + choices.size();
-            String label = "继续 " + (choices.size() + 1);
+            String label = Messages.text("text.chat.wecomConversationHistoryService.show.5", (choices.size() + 1));
             choices.addObject().put("key", choiceKey).put("taskId", task.getId())
                 .put("title", title).put("label", label);
         }
@@ -84,7 +86,7 @@ public class WecomConversationHistoryService {
             .eq(ChatOutboundMessageRow::getId, row.getId()).isNull(ChatOutboundMessageRow::getFirstSubmittedAt)
             .set(ChatOutboundMessageRow::getPayloadEncrypted, cipher.encrypt(actor.enterpriseId(), "outbound", row.getId(), payload))
             .set(ChatOutboundMessageRow::getPayloadHash, json.hash(payload))) != 1) {
-            throw new IllegalStateException("会话列表保存失败");
+            throw new IllegalStateException(Messages.text("error.chat.wecomConversationHistoryService.show.1"));
         }
     }
 
@@ -110,7 +112,7 @@ public class WecomConversationHistoryService {
             access.owned(actor, task.getId());
             sessions.select(actor, group.getId(), bot.getId(), task.getId(), received);
             outbound.text(actor.enterpriseId(), group.getId(), bot.getId(), null, null, "conversation-card:" + receiptId, "conversation_selected",
-                "已切回选中的会话，" + ("group".equals(group.getConversationKind()) ? "请 @ 我" : "请") + "继续提问。", null);
+                Messages.text("text.chat.wecomConversationHistoryService.accept.1", ("group".equals(group.getConversationKind()) ? Messages.text("text.chat.chatRoutingService.route.7") : Messages.text("text.chat.chatRoutingService.route.6"))), null);
             return true;
         }
         return false;

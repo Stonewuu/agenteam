@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.model.agent.entity.AgentHire;
@@ -50,7 +52,7 @@ public class AgentHireMapper {
         int updated = statements.changeStatusAgentHire(status, Timestamp.from(now), hire.enterpriseId(), hire.userId(),
             hire.id(), hire.revision());
         if (updated != 1) {
-            throw new IllegalStateException("已锁定雇佣关系的版本发生变化，当前修改未提交");
+            throw new IllegalStateException(Messages.text("error.agent.agentHireMapper.changeStatus.1"));
         }
     }
 
@@ -81,7 +83,7 @@ public class AgentHireMapper {
                 .set(AgentHireRow::getPausedAt, null).set(AgentHireRow::getUpdatedAt, now)
                 .setIncrBy(AgentHireRow::getRevision, 1));
         if (changed != expected) {
-            throw new IllegalStateException("删除智能体时，解除雇佣的数量与预期不一致");
+            throw new IllegalStateException(Messages.text("error.agent.agentHireMapper.terminateForResource.1"));
         }
         return changed;
     }

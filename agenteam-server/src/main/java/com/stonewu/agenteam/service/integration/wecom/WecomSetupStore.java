@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -71,11 +73,11 @@ public class WecomSetupStore {
         if (jobs.selectList(new LambdaQueryWrapper<WecomSetupJobRow>().eq(WecomSetupJobRow::getEnterpriseId, enterprise)
             .notIn(WecomSetupJobRow::getStage, TERMINAL)).stream()
             .anyMatch(existing -> input(existing).name().equalsIgnoreCase(input.name()))) {
-            throw ApiException.invalidField("name", "已有同名企微机器人正在创建，请换一个名称。");
+            throw ApiException.invalidField("name", Messages.text("error.integration.wecomSetupStore.create.1"));
         }
         if (jobs.exists(new LambdaQueryWrapper<WecomSetupJobRow>().eq(WecomSetupJobRow::getEnterpriseId, enterprise)
             .eq(WecomSetupJobRow::getOwnerUserId, actor.id()).notIn(WecomSetupJobRow::getStage, TERMINAL))) {
-            throw new ApiException(HttpStatus.CONFLICT, "WECOM_SETUP_IN_PROGRESS", "已有企微创建流程尚未完成，请先继续或取消。");
+            throw new ApiException(HttpStatus.CONFLICT, "WECOM_SETUP_IN_PROGRESS", Messages.text("error.integration.wecomSetupStore.create.2"));
         }
         var row = new WecomSetupJobRow();
         row.setId(UUID.randomUUID().toString());
@@ -92,7 +94,7 @@ public class WecomSetupStore {
         row.setCreatedAt(clock.instant());
         row.setUpdatedAt(clock.instant());
         jobs.insert(row);
-        audit.record(enterprise, actor, "wecom.setup_create", "wecom_setup", row.getId(), "开始创建企微机器人", Map.of());
+        audit.record(enterprise, actor, "wecom.setup_create", "wecom_setup", row.getId(), Messages.text("text.integration.wecomSetupStore.create.1"), Map.of());
         return view(row);
     }
 
@@ -106,7 +108,7 @@ public class WecomSetupStore {
         var row = jobs.selectOne(new LambdaQueryWrapper<WecomSetupJobRow>().eq(WecomSetupJobRow::getEnterpriseId, enterprise)
             .eq(WecomSetupJobRow::getOwnerUserId, user).eq(WecomSetupJobRow::getId, id));
         if (row == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "WECOM_SETUP_UNAVAILABLE", "创建流程不存在或无法访问。");
+            throw new ApiException(HttpStatus.NOT_FOUND, "WECOM_SETUP_UNAVAILABLE", Messages.text("error.integration.feishuSetupStore.require.1"));
         }
         return row;
     }
@@ -114,7 +116,7 @@ public class WecomSetupStore {
     public UserEntity actor(WecomSetupJobRow row) {
         var actor = users.findById(row.getOwnerUserId()).filter(value -> "active".equals(value.status())
             && value.sessionVersion() == row.getOwnerSessionVersion()).orElseThrow(() ->
-                new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", "请重新登录后继续创建机器人。"));
+                new ApiException(HttpStatus.UNAUTHORIZED, "SESSION_REVOKED", Messages.text("error.integration.wecomSetupStore.actor.1")));
         policy.require(actor, row.getEnterpriseId(), row.getSystemAccess(), "integration.manage", false);
         return actor;
     }
@@ -166,11 +168,11 @@ public class WecomSetupStore {
             throw ApiException.versionConflict(row.getRevision());
         }
         if (row.getLeaseUntil() != null && row.getLeaseUntil().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "WECOM_SETUP_BUSY", "正在保存企微处理结果，请稍后再试。");
+            throw new ApiException(HttpStatus.CONFLICT, "WECOM_SETUP_BUSY", Messages.text("error.integration.wecomSetupStore.change.1"));
         }
         if (retry) {
             if (!"failed".equals(row.getStage())) {
-                throw ApiException.invalidField("stage", "当前流程无需重试。");
+                throw ApiException.invalidField("stage", Messages.text("error.integration.wecomSetupStore.change.2"));
             }
             var parent = enterprises.require(enterprise, row.getEnterpriseConnectionId());
             row.setEnterpriseCredentialRevision(parent.getCredentialRevision());
@@ -181,14 +183,14 @@ public class WecomSetupStore {
             row.setNextAttemptAt(clock.instant());
         } else {
             if (TERMINAL.contains(row.getStage())) {
-                throw ApiException.invalidField("stage", "创建流程已经结束。");
+                throw ApiException.invalidField("stage", Messages.text("error.integration.wecomSetupStore.change.3"));
             }
             row.setStage("cancelled");
             row.setEncryptedJson(null);
         }
         save(row);
         audit.record(enterprise, actor, retry ? "wecom.setup_retry" : "wecom.setup_cancel", "wecom_setup", id,
-            retry ? "继续创建企微机器人" : "取消企微机器人创建流程", Map.of());
+            retry ? Messages.text("text.integration.wecomSetupStore.change.1") : Messages.text("text.integration.wecomSetupStore.change.2"), Map.of());
         return view(row);
     }
 

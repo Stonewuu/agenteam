@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -149,7 +151,7 @@ public class WebRoomQueue {
     public void stage(CollaborationRoomEntryRow entry, String agent) {
         if (entries.selectCount(lane(entry.getEnterpriseId(), entry.getRoomId(), agent)
             .in(CollaborationRoomEntryRow::getDeliveryState, "queued", "selected")) >= 20) {
-            throw new ApiException(HttpStatus.CONFLICT, "ROOM_QUEUE_FULL", "这位成员已有 20 条消息排队，请稍后再发送。");
+            throw new ApiException(HttpStatus.CONFLICT, "ROOM_QUEUE_FULL", Messages.text("error.collaboration.webRoomQueue.stage.1"));
         }
         var update = guard(entry).set(CollaborationRoomEntryRow::getDeliveryState, "queued")
             .set(CollaborationRoomEntryRow::getRecipientAgentId, agent).set(CollaborationRoomEntryRow::getQueuePosition, entry.getSequenceNo());
@@ -186,7 +188,7 @@ public class WebRoomQueue {
 
     public void change(CollaborationRoomRow room, CollaborationRoomEntryRow row, boolean prioritize) {
         if (row == null || !"queued".equals(row.getDeliveryState())) {
-            throw new ApiException(HttpStatus.CONFLICT, "ROOM_QUEUE_CHANGED", "这条消息已离开等待队列。");
+            throw new ApiException(HttpStatus.CONFLICT, "ROOM_QUEUE_CHANGED", Messages.text("error.collaboration.webRoomQueue.change.1"));
         }
         if (!prioritize) {
             updateState(row, "withdrawn");
@@ -214,7 +216,7 @@ public class WebRoomQueue {
 
     private static void changed(int count) {
         if (count != 1) {
-            throw new IllegalStateException("协作排队消息已被其他操作处理");
+            throw new IllegalStateException(Messages.text("error.collaboration.webRoomQueue.changed.1"));
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -103,12 +105,12 @@ public class ExecutionConfigurationService {
             .filter(row -> row.resourceId().equals(agent) && row.status().equals("available")).orElse(null);
         if (version == null) {
             throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE",
-                "此对话使用的员工版本已不可用，请使用可用版本新建对话。");
+                Messages.text("error.execution.executionConfigurationService.published.1"));
         }
         var hire = hires.forAgent(actor.enterpriseId(), actor.userId(), agent, false)
             .filter(row -> row.status().equals("active"))
             .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE",
-                "请先雇佣该员工，或恢复已暂停的雇佣关系。"));
+                Messages.text("error.execution.executionConfigurationService.published.2")));
         return new PublishedAgent(resource, version, hire.id());
     }
 
@@ -171,13 +173,13 @@ public class ExecutionConfigurationService {
         InputValidation.validate(value);
         ResourceInput.text(value.text(), "text", 20000, false);
         if (value.text().isBlank() && value.attachmentIds().isEmpty()) {
-            throw ApiException.invalidField("text", "请输入任务内容。");
+            throw ApiException.invalidField("text", Messages.text("error.execution.executionConfigurationService.input.1"));
         }
         for (String link : value.links()) {
             URI uri = URI.create(link);
             if (!Set.of("https", "http")
                 .contains(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null) {
-                throw ApiException.invalidField("links", "参考链接需以 http:// 或 https:// 开头，且不能包含账号信息。");
+                throw ApiException.invalidField("links", Messages.text("error.execution.executionConfigurationService.input.2"));
             }
         }
         return new MessageInput(value.text(), value.attachmentIds(),

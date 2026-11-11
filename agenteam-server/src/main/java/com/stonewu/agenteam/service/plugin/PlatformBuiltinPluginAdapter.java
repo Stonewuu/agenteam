@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.plugin.entity.BuiltinExecutionContext;
 import com.stonewu.agenteam.model.tool.entity.ToolDefinition;
@@ -51,12 +53,12 @@ public final class PlatformBuiltinPluginAdapter implements BuiltinPluginAdapter 
     @Override
     public JsonNode call(String toolName, String operationId, JsonNode arguments, Duration timeout,
                          ToolCallControl control) {
-        throw new IllegalStateException("平台业务工具必须由真实任务的执行入口调用");
+        throw new IllegalStateException(Messages.text("error.plugin.platformBuiltinPluginAdapter.call.1"));
     }
 
     public JsonNode call(BuiltinExecutionContext context, String name, JsonNode arguments) {
         if (tools.stream().noneMatch(tool -> tool.name().equals(name))) {
-            throw new IllegalArgumentException("当前插件没有提供此业务工具");
+            throw new IllegalArgumentException(Messages.text("error.plugin.platformBuiltinPluginAdapter.call.2"));
         }
         return business.getObject().call(context, name, arguments);
     }

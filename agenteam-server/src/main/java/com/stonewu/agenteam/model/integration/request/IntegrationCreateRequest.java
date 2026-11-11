@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.integration.request;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.util.Map;
 
 /**
@@ -18,6 +20,6 @@ public record IntegrationCreateRequest(String providerCode, String name, String 
 
     @Override
     public String toString() {
-        return "IntegrationCreateRequest[接入配置和密钥已隐藏]";
+        return Messages.log("log.integration.integrationCreateRequest.toString.1");
     }
 }

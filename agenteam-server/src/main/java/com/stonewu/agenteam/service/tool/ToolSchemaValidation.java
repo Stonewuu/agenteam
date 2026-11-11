@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.re2j.Pattern;
 import com.google.re2j.PatternSyntaxException;
@@ -56,7 +58,7 @@ public class ToolSchemaValidation {
             throw invalid(failure);
         } catch (RuntimeException failure) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "TOOL_SCHEMA_VALIDATION_FAILED",
-                "本次执行未能完成，请稍后重试。", failure);
+                Messages.text("error.tool.toolSchemaValidation.compile.1"), failure);
         }
     }
 
@@ -64,7 +66,7 @@ public class ToolSchemaValidation {
         requireBoundedArguments(value);
         if (!compile(schema).validate(value).isEmpty()) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "TOOL_ARGUMENTS_INVALID",
-                "工具参数不符合已发布的要求，未执行本次操作。");
+                Messages.text("error.tool.toolSchemaValidation.arguments.1"));
         }
     }
 
@@ -72,7 +74,7 @@ public class ToolSchemaValidation {
         if (value == null || !value.isObject() || value.toString().getBytes(StandardCharsets.UTF_8).length > 64 * 1024
             || !bounded(value, 0, new int[]{0})) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "TOOL_ARGUMENTS_INVALID",
-                "工具参数不符合已发布的要求，未执行本次操作。");
+                Messages.text("error.tool.toolSchemaValidation.arguments.1"));
         }
     }
 
@@ -94,7 +96,7 @@ public class ToolSchemaValidation {
 
     public void result(JsonNode schema, JsonNode value) {
         if (schema != null && !schema.isNull() && (value == null || !compile(schema).validate(value).isEmpty())) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_RESULT_INVALID", "工具返回的内容不符合已发布的结构。");
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_RESULT_INVALID", Messages.text("error.tool.toolSchemaValidation.result.1"));
         }
     }
 
@@ -158,6 +160,6 @@ public class ToolSchemaValidation {
 
     private static ApiException invalid(Throwable cause) {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MCP_TOOL_STRUCTURE_INVALID",
-            "本次执行未能完成，请稍后重试。", cause);
+            Messages.text("error.tool.toolSchemaValidation.compile.1"), cause);
     }
 }

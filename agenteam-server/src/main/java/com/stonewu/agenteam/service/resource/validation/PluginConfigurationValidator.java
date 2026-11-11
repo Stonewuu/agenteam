@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource.validation;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -57,13 +59,13 @@ public class PluginConfigurationValidator implements ResourceConfigValidator {
         if (config.path("pluginType").asText().equals("builtin")) {
             if (!config.path("transport").isNull() || !config.path("endpoint").isNull() || !config.path("credentialId")
                 .isNull()) {
-                throw ApiException.invalidField("config", "内置插件不能设置远程地址、传输方式或连接凭据。");
+                throw ApiException.invalidField("config", Messages.text("error.resource.pluginConfigurationValidator.draft.1"));
             }
             builtins.require(config.path("builtinCode").asText());
         } else {
             if (!config.path("builtinCode").isNull() || !config.path("transport").isTextual() || !config.path(
                 "endpoint").isTextual()) {
-                throw ApiException.invalidField("config", "远程插件需要传输方式和服务地址，不能设置内置插件代码。");
+                throw ApiException.invalidField("config", Messages.text("error.resource.pluginConfigurationValidator.draft.2"));
             }
             addresses.validateUrl(config.path("endpoint").asText());
         }
@@ -75,7 +77,7 @@ public class PluginConfigurationValidator implements ResourceConfigValidator {
         if (PluginConfigurationMapper.modern(resource.config())) {
             if (PluginConfigurationMapper.mode(resource.config()).equals("collection") && resource.config()
                 .path("tools").isEmpty()) {
-                throw ApiException.invalidField("config.tools", "请至少选择一个工具后发布。");
+                throw ApiException.invalidField("config.tools", Messages.text("error.resource.pluginConfigurationValidator.publish.1"));
             }
             if (PluginConfigurationMapper.mode(resource.config()).equals("mcp")) {
                 evidence.checked(resource);
@@ -93,7 +95,7 @@ public class PluginConfigurationValidator implements ResourceConfigValidator {
         for (var name : resource.config().path("enabledToolNames")) {
             if (!discovered.contains(name.asText())) {
                 throw ApiException.invalidField("config.enabledToolNames",
-                    "所选工具不在当前检查结果中，请重新检查连接。");
+                    Messages.text("error.resource.pluginConfigurationValidator.publish.2"));
             }
         }
     }
@@ -125,27 +127,27 @@ public class PluginConfigurationValidator implements ResourceConfigValidator {
         var ids = new HashSet<String>();
         for (var source : input.sources()) {
             if (!ids.add(source.id())) {
-                throw ApiException.invalidField("config.sources", "同一工具来源只能选择一次。");
+                throw ApiException.invalidField("config.sources", Messages.text("error.resource.pluginConfigurationValidator.collection.1"));
             }
             if (source.type().equals("builtin")) {
                 if (source.versionId() == null || source.versionId().isBlank()) {
-                    throw ApiException.invalidField("config.sources", "请选择工具来源的可用版本。");
+                    throw ApiException.invalidField("config.sources", Messages.text("error.resource.pluginConfigurationValidator.collection.2"));
                 }
                 if (source.transport() != null || source.endpoint() != null || source.credentialId() != null) {
-                    throw ApiException.invalidField("config.sources", "内置工具来源不能设置远程连接。");
+                    throw ApiException.invalidField("config.sources", Messages.text("error.resource.pluginConfigurationValidator.collection.3"));
                 }
             } else if (source.type().equals("java")) {
                 if (source.versionId() == null || source.versionId().isBlank() || source.transport() != null
                     || source.endpoint() != null || source.configuration() == null || !source.configuration().isObject()
                     || input.sources().size() != 1) {
-                    throw ApiException.invalidField("config.sources", "请选择 Java 插件版本并填写配置。");
+                    throw ApiException.invalidField("config.sources", Messages.text("error.resource.pluginConfigurationValidator.collection.4"));
                 }
             } else {
                 if (input.sources().size() != 1 || source.versionId() != null) {
-                    throw ApiException.invalidField("config.sources", "远程插件目前只支持一个独立连接。");
+                    throw ApiException.invalidField("config.sources", Messages.text("error.resource.pluginConfigurationValidator.collection.5"));
                 }
                 if (source.transport() == null || source.endpoint() == null || source.endpoint().isBlank()) {
-                    throw ApiException.invalidField("config.sources", "请填写远程插件的连接信息。");
+                    throw ApiException.invalidField("config.sources", Messages.text("error.resource.pluginConfigurationValidator.collection.6"));
                 }
                 addresses.validateUrl(source.endpoint());
             }
@@ -154,10 +156,10 @@ public class PluginConfigurationValidator implements ResourceConfigValidator {
         var selected = new HashSet<String>();
         for (var tool : input.tools()) {
             if (!ids.contains(tool.sourceId())) {
-                throw ApiException.invalidField("config.tools", "所选工具的来源不存在。");
+                throw ApiException.invalidField("config.tools", Messages.text("error.resource.pluginConfigurationValidator.collection.7"));
             }
             if (!entries.add(tool.id()) || !selected.add(tool.sourceId() + ":" + tool.name())) {
-                throw ApiException.invalidField("config.tools", "请勿重复选择同一来源的工具。");
+                throw ApiException.invalidField("config.tools", Messages.text("error.resource.pluginConfigurationValidator.collection.8"));
             }
         }
     }

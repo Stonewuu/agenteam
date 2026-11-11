@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -78,7 +80,7 @@ public class PluginCheckService {
 
     public PluginCheckResult inspect(ResourceRecord resource) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("远程插件检查不能占用数据库事务");
+            throw new IllegalStateException(Messages.text("error.plugin.pluginCheckService.inspect.1"));
         }
         long started = System.nanoTime();
         String startedAt = clock.instant().toString();
@@ -88,12 +90,12 @@ public class PluginCheckService {
         boolean reviewPending = resource.validation() != null && (resource.validation().path("fieldErrors")
             .has(toolField) || resource.validation().path("fieldErrors").has("config.enabledToolNames"));
         Map<String, List<String>> reviewError = Map.of(toolField,
-            List.of("所选工具已移除或发生变化，请核对当前工具并保存草稿后重新检查。"));
+            List.of(Messages.text("error.plugin.pluginCheckService.inspect.2")));
         try {
             List<ToolDefinition> tools = discovery.discover(resource.enterpriseId(), resource.config());
             if (PluginConfigurationMapper.mode(resource.config()).equals("collection")) {
                 return new PluginCheckResult(startedAt,
-                    new ConnectionCheckView(clock.instant().toString(), true, "已读取 " + tools.size() + " 个已选工具。",
+                    new ConnectionCheckView(clock.instant().toString(), true, Messages.text("text.plugin.pluginCheckService.inspect.1", tools.size()),
                         elapsed(started), List.of()), tools, Map.of());
             }
             var changes = changes(previous, tools);
@@ -103,10 +105,10 @@ public class PluginCheckService {
                 .filter(change -> selected.contains(change.name())).toList();
             Map<String, List<String>> errors = invalid.isEmpty() && !reviewPending ? Map.of() : reviewError;
             var view = new ConnectionCheckView(clock.instant().toString(), true,
-                "连接检查通过，已读取 " + tools.size() + " 个工具。", elapsed(started), changes);
+                Messages.text("text.plugin.pluginCheckService.inspect.2", tools.size()), elapsed(started), changes);
             return new PluginCheckResult(startedAt, view, tools, errors);
         } catch (ApiException failed) {
-            LOG.warn("插件连接检查失败，资源编号 {}", resource.id(), failed);
+            LOG.warn(Messages.log("log.plugin.pluginCheckService.inspect.1"), resource.id(), failed);
             return new PluginCheckResult(startedAt,
                 new ConnectionCheckView(clock.instant().toString(), false, failed.getReason(), elapsed(started),
                     List.of()), previous, reviewPending ? reviewError : Map.of());
@@ -124,7 +126,7 @@ public class PluginCheckService {
             && Instant.parse(current.validation().path("connection").path("startedAt").asText())
             .isAfter(Instant.parse(result.startedAt()))) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_CHECK_SUPERSEDED",
-                "已有更新的连接检查结果，请重新加载。");
+                Messages.text("error.plugin.pluginCheckService.save.1"));
         }
         configurations.use(actor, ResourceKind.PLUGIN, current.config());
         var connection = new LinkedHashMap<String, Object>();
@@ -140,7 +142,7 @@ public class PluginCheckService {
         resources.validation(actor.enterpriseId(), current.id(), json.tree(
             Map.of("configHash", current.configHash(), "connection", connection, "fieldErrors", result.fieldErrors())));
         audit.record(actor.enterpriseId(), actor.user(), "plugin.check", "resource", current.id(),
-            "检查插件连接与工具清单",
+            Messages.text("text.plugin.pluginCheckService.save.1"),
             Map.of("success", result.view().success(), "toolCount", result.tools().size(), "configHash",
                 current.configHash()));
         return result.view();

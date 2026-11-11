@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -34,9 +36,9 @@ public class ResourceOwnershipPolicy {
     public String requireRecipient(String enterprise, String recipient, Set<ResourceKind> kinds, String field) {
         if (recipient == null || !users.isActiveMember(recipient, enterprise) || kinds.stream()
             .anyMatch(kind -> permissions.operationScope(recipient, enterprise, kind.permission("edit")).isEmpty())) {
-            String label = kinds.isEmpty() ? "内容" : String.join("、",
+            String label = kinds.isEmpty() ? Messages.text("text.resource.resourceOwnershipPolicy.requireRecipient.1") : String.join("、",
                 kinds.stream().map(ResourceKind::label).toList());
-            throw ApiException.invalidField(field, "请选择当前企业仍有效且能够维护所选" + label + "的成员。");
+            throw ApiException.invalidField(field, Messages.text("error.resource.resourceOwnershipPolicy.requireRecipient.1", label));
         }
         return users.findById(recipient).orElseThrow().id();
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -31,7 +33,7 @@ public class JavaPluginReferenceService {
 
     public List<Notice> notices(AuthContext actor, List<String> ids) {
         if (ids.size() > 100) {
-            throw ApiException.invalidField("versionIds", "一次最多检查 100 个插件版本。");
+            throw ApiException.invalidField("versionIds", Messages.text("error.plugin.javaPluginReferenceService.notices.1"));
         }
         var result = new ArrayList<Notice>();
         var selected = versions.findMany(actor.enterpriseId(), ids).values();

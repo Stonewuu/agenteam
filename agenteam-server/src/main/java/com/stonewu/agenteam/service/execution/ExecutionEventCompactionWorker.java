@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionEventSqlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,11 +41,11 @@ public class ExecutionEventCompactionWorker {
                 var result = compaction.compact(row.getEnterpriseId(), row.getConversationId(), row.getRunId(),
                     row.getConversationSequence() - 1);
                 if (result.convertedRows() > 0) {
-                    LOG.info("历史消息增量已合并，会话编号 {}，转换 {} 行，减少 {} 行", row.getConversationId(),
+                    LOG.info(Messages.log("log.execution.executionEventCompactionWorker.compactPending.1"), row.getConversationId(),
                         result.convertedRows(), result.removedRows());
                 }
             } catch (RuntimeException failed) {
-                LOG.warn("历史消息增量合并失败，将保留原记录并稍后重试，会话编号 {}，执行编号 {}",
+                LOG.warn(Messages.log("log.execution.executionEventCompactionWorker.compactPending.2"),
                     row.getConversationId(), row.getRunId(), failed);
             }
             if (visited.size() >= 4) {

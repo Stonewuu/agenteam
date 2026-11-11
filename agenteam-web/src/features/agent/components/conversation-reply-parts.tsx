@@ -32,7 +32,7 @@ export function CopyReplyButton({text, messageId}: {text: string; messageId: str
       timer.current = setTimeout(() => setCopied(false), 1800);
       toast.success(t("回复已复制。"));
     } catch (failure) {
-      console.error("复制对话回复失败", {messageId, error: failure});
+      console.error("Failed to copy the conversation reply", {messageId, error: failure});
       setCopied(false);
       toast.error(t("暂时无法复制，请选择文字后复制。"));
     }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.network;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import okhttp3.Dns;
 import okhttp3.HttpUrl;
@@ -37,7 +39,7 @@ public class OutboundAddressPolicy {
             .map(value -> {
                 HttpUrl url = parse(value);
                 if (!url.encodedPath().equals("/") || url.query() != null) {
-                    throw new IllegalStateException("网络允许列表必须填写完整协议、主机和端口，不能包含路径或查询参数");
+                    throw new IllegalStateException(Messages.text("error.network.outboundAddressPolicy.init.1"));
                 }
                 return origin(url);
             }).collect(Collectors.toUnmodifiableSet());
@@ -74,17 +76,17 @@ public class OutboundAddressPolicy {
             return addresses;
         } catch (UnknownHostException unavailable) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_CONNECTION_FAILED",
-                "无法解析连接地址，请检查地址或稍后重试。", unavailable);
+                Messages.text("error.network.outboundAddressPolicy.resolveHost.1"), unavailable);
         }
     }
 
     private List<InetAddress> lookup(String host, Duration timeout) throws UnknownHostException {
         if (!pendingLookups.tryAcquire()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "REMOTE_CONNECTION_BUSY",
-                "当前连接请求较多，请稍后重试。");
+                Messages.text("error.network.outboundAddressPolicy.lookup.1"));
         }
         var result = new CompletableFuture<List<InetAddress>>();
-        Thread lookup = Thread.ofVirtual().name("外部服务地址解析").start(() -> {
+        Thread lookup = Thread.ofVirtual().name(Messages.log("log.network.outboundAddressPolicy.lookup.1")).start(() -> {
             try {
                 result.complete(List.copyOf(resolver.lookup(host)));
             } catch (Exception failure) {
@@ -103,14 +105,14 @@ public class OutboundAddressPolicy {
             lookup.interrupt();
             throw timeout();
         } catch (ExecutionException failed) {
-            var unavailable = new UnknownHostException("连接地址无法解析");
+            var unavailable = new UnknownHostException(Messages.text("error.network.outboundAddressPolicy.lookup.2"));
             unavailable.initCause(failed);
             throw unavailable;
         }
     }
 
     private static ApiException timeout() {
-        return new ApiException(HttpStatus.GATEWAY_TIMEOUT, "REMOTE_TIMEOUT", "地址解析已取消或超过允许时间。");
+        return new ApiException(HttpStatus.GATEWAY_TIMEOUT, "REMOTE_TIMEOUT", Messages.text("error.network.outboundAddressPolicy.timeout.1"));
     }
 
     public static boolean sameOrigin(HttpUrl left, HttpUrl right) {
@@ -128,7 +130,7 @@ public class OutboundAddressPolicy {
         if (url.queryParameterNames().stream()
             .anyMatch(name -> name.matches("(?i).*(token|secret|password|api.?key|authorization|credential).*"))) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "CREDENTIAL_IN_URL",
-                "请通过凭据配置提供认证信息，不要写入连接地址。");
+                Messages.text("error.network.outboundAddressPolicy.parse.1"));
         }
         return url;
     }
@@ -174,6 +176,6 @@ public class OutboundAddressPolicy {
 
     private static ApiException denied() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "NETWORK_ADDRESS_DENIED",
-            "连接地址不在允许的访问范围内，请检查地址或联系部署管理员。");
+            Messages.text("error.network.outboundAddressPolicy.denied.1"));
     }
 }

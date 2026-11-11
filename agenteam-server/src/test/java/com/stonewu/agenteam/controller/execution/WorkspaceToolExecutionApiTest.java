@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.controller.execution;
 
 import com.stonewu.agenteam.support.TestOutputPaths;
+import com.stonewu.agenteam.service.i18n.Messages;
 import com.stonewu.agenteam.support.InProcessDocumentParsing;
 
 import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
@@ -228,6 +229,7 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         assertEquals("完整结尾", fullOutput.get());
         assertTrue(timeout.get().path("isError").asBoolean());
         assertTrue(timeout.get().path("timedOut").asBoolean());
+        assertEquals(Messages.source("workspace.command.timedOut"), timeout.get().path("content").asText());
         assertEquals(124, timeout.get().path("exitCode").asInt());
         assertEquals("已开始处理", timeout.get().path("stdout").asText());
         assertEquals("已开始处理", timeoutOutput.get());

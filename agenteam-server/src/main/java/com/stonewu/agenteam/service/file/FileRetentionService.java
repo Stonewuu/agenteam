@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.file.FileMapper;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import org.slf4j.Logger;
@@ -44,7 +46,7 @@ public class FileRetentionService {
         try {
             clean();
         } catch (RuntimeException failure) {
-            LOG.warn("文件清理暂未完成，稍后重试", failure);
+            LOG.warn(Messages.log("log.file.fileRetentionService.poll.1"), failure);
         }
     }
 
@@ -74,11 +76,11 @@ public class FileRetentionService {
 
     public void removeRunFiles(RunRecord run) {
         if (!run.terminal()) {
-            throw new IllegalArgumentException("不能清除未结束执行的文件");
+            throw new IllegalArgumentException(Messages.text("error.file.fileRetentionService.removeRunFiles.1"));
         }
         for (var file : files.forRun(run.enterpriseId(), run.id())) {
             if (!file.ownerUserId().equals(run.userId())) {
-                throw new IllegalStateException("执行文件与原成员不一致");
+                throw new IllegalStateException(Messages.text("error.file.fileRetentionService.removeRunFiles.2"));
             }
             files.deleted(file, clock.instant());
             storage.delete(file.storageKey());

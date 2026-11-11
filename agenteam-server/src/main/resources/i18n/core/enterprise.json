@@ -1,0 +1,386 @@
+{
+  "error.enterprise.enterpriseMapper.createDefaultQuota.1": {
+    "zh-CN": "企业初始计数规则未保存",
+    "en": "The organization's initial count rule was not saved."
+  },
+  "error.enterprise.invitationMapper.insert.1": {
+    "zh-CN": "邀请未能保存",
+    "en": "The invitation could not be saved."
+  },
+  "error.enterprise.invitationMapper.accept.1": {
+    "zh-CN": "邀请已变化，接受操作未提交",
+    "en": "The invitation changed. Acceptance was not committed."
+  },
+  "error.enterprise.invitationMapper.revoke.1": {
+    "zh-CN": "邀请已变化，撤回操作未提交",
+    "en": "The invitation changed. Withdrawal was not committed."
+  },
+  "error.enterprise.invitationMapper.resend.1": {
+    "zh-CN": "邀请已变化，重发操作未提交",
+    "en": "The invitation changed. Resending was not committed."
+  },
+  "error.enterprise.invitationMapper.readArray.1": {
+    "zh-CN": "邀请的角色或团队记录无法读取",
+    "en": "The invitation's roles or teams could not be read."
+  },
+  "error.enterprise.invitationMapper.array.1": {
+    "zh-CN": "邀请的角色或团队无法保存",
+    "en": "The invitation's roles or teams could not be saved."
+  },
+  "error.enterprise.memberRemovalMapper.changed.1": {
+    "zh-CN": "成员关联内容已变化，本次交接未提交",
+    "en": "The member's associated data changed. This transfer was not committed."
+  },
+  "error.enterprise.memberTeamMapper.rejoin.1": {
+    "zh-CN": "成员状态已变化，重新加入未提交",
+    "en": "The member status changed. Rejoining was not committed."
+  },
+  "error.enterprise.organizationMutationMapper.changed.1": {
+    "zh-CN": "组织资料已经变化，当前修改未提交",
+    "en": "The organization details changed. This update was not committed."
+  },
+  "error.enterprise.enterpriseMetadataService.update.1": {
+    "zh-CN": "保留时间需要在 90～730 天之间。",
+    "en": "Retention must be between 90 and 730 days."
+  },
+  "error.enterprise.enterpriseMetadataService.find.1": {
+    "zh-CN": "企业不存在或无法访问。",
+    "en": "The organization is missing or inaccessible."
+  },
+  "error.enterprise.enterpriseProvisioningService.createVerified.1": {
+    "zh-CN": "只有有效的系统超级管理员可以创建企业",
+    "en": "Only an active system super administrator can create organizations."
+  },
+  "error.enterprise.enterpriseProvisioningService.createVerified.2": {
+    "zh-CN": "请选择有效账号作为初始管理员",
+    "en": "Select an active account as the initial administrator."
+  },
+  "error.enterprise.enterpriseValidation.name.1": {
+    "zh-CN": "{0}不能为空",
+    "en": "{0} must not be empty."
+  },
+  "error.enterprise.enterpriseValidation.text.1": {
+    "zh-CN": "{0}不能超过 {1} 个字符",
+    "en": "{0} must not exceed {1} characters."
+  },
+  "error.enterprise.enterpriseValidation.text.2": {
+    "zh-CN": "{0}包含无效字符",
+    "en": "{0} contains invalid characters."
+  },
+  "error.enterprise.enterpriseValidation.roleCode.1": {
+    "zh-CN": "角色代码需要 3～64 个字符，以字母开头，只能包含字母、数字、下划线和短横线",
+    "en": "The role code must contain 3–64 characters, start with a letter, and use only letters, numbers, underscores, and hyphens."
+  },
+  "error.enterprise.enterpriseValidation.status.1": {
+    "zh-CN": "请选择启用或停用状态",
+    "en": "Select enabled or disabled."
+  },
+  "error.enterprise.enterpriseValidation.scope.1": {
+    "zh-CN": "请选择本人、所在团队或企业范围",
+    "en": "Select personal, team, or organization scope."
+  },
+  "error.enterprise.enterpriseValidation.revision.1": {
+    "zh-CN": "缺少有效的修改版本，请刷新后重试",
+    "en": "A valid revision is missing. Refresh and try again."
+  },
+  "error.enterprise.enterpriseValidation.identifiers.1": {
+    "zh-CN": "{0}数量需要在 {1}～{2} 之间",
+    "en": "The number of {0} must be between {1} and {2}."
+  },
+  "error.enterprise.enterpriseValidation.identifiers.2": {
+    "zh-CN": "{0}包含无效或重复的记录",
+    "en": "{0} contains invalid or duplicate records."
+  },
+  "error.enterprise.invitationAcceptanceService.accept.1": {
+    "zh-CN": "你在此企业的成员身份已停用，请联系管理员恢复。",
+    "en": "Your membership in this organization is disabled. Contact the administrator to restore it."
+  },
+  "error.enterprise.invitationAcceptanceService.createAccount.1": {
+    "zh-CN": "用户名或邮箱已被使用，请登录已有账号或调整用户名。",
+    "en": "This username or email is in use. Sign in to the existing account or choose another username."
+  },
+  "error.enterprise.invitationAcceptanceService.matchEmail.1": {
+    "zh-CN": "请使用受邀邮箱已完成验证的账号接受邀请。",
+    "en": "Accept this invitation with an account that has verified the invited email address."
+  },
+  "error.enterprise.invitationAcceptanceService.loginRequired.1": {
+    "zh-CN": "请登录受邀邮箱对应的账号后继续。",
+    "en": "Sign in to the account associated with the invited email address."
+  },
+  "error.enterprise.invitationManagementService.create.1": {
+    "zh-CN": "此邮箱已有待接受的邀请，请查看现有记录。",
+    "en": "This email already has a pending invitation. Check the existing invitation."
+  },
+  "error.enterprise.invitationManagementService.resend.1": {
+    "zh-CN": "此邀请无需发送邮件，请复制创建时生成的邀请码或链接。",
+    "en": "This invitation does not require email delivery. Copy the original invitation code or link."
+  },
+  "error.enterprise.invitationManagementService.resend.2": {
+    "zh-CN": "邀请邮件发送次数较多，请稍后重试。",
+    "en": "Too many invitation emails have been sent. Try again later."
+  },
+  "error.enterprise.invitationManagementService.resend.3": {
+    "zh-CN": "邀请投递内容与当前有效链接不一致",
+    "en": "The invitation delivery content does not match the currently valid link."
+  },
+  "error.enterprise.invitationPolicy.pending.1": {
+    "zh-CN": "邀请已撤回，请联系邀请人。",
+    "en": "The invitation was withdrawn. Contact the person who invited you."
+  },
+  "error.enterprise.invitationPolicy.pending.2": {
+    "zh-CN": "邀请已经接受，请登录后打开企业。",
+    "en": "The invitation has already been accepted. Sign in to open the organization."
+  },
+  "error.enterprise.invitationPolicy.pending.3": {
+    "zh-CN": "邀请已过期，请联系邀请人重新邀请。",
+    "en": "The invitation expired. Ask for a new invitation."
+  },
+  "error.enterprise.invitationPolicy.validateIssuer.1": {
+    "zh-CN": "邀请所需的权限、角色或团队已变化，请联系邀请人重新邀请。",
+    "en": "The invitation's permissions, roles, or teams have changed. Ask for a new invitation."
+  },
+  "error.enterprise.invitationPolicy.validateTeams.1": {
+    "zh-CN": "所选团队不存在或不属于当前企业。",
+    "en": "The selected team does not exist or belongs to another organization."
+  },
+  "error.enterprise.invitationPolicy.validateTeams.2": {
+    "zh-CN": "所选团队已停用，请选择其他团队。",
+    "en": "The selected team is disabled. Choose another team."
+  },
+  "error.enterprise.invitationPolicy.validateTeams.3": {
+    "zh-CN": "所选团队人数已满，请联系邀请人调整。",
+    "en": "The selected team is full. Ask the person who invited you to adjust it."
+  },
+  "error.enterprise.invitationPolicy.unavailable.1": {
+    "zh-CN": "邀请不存在或无法访问。",
+    "en": "The invitation is missing or inaccessible."
+  },
+  "error.enterprise.memberCreationService.create.1": {
+    "zh-CN": "用户名已被使用，请使用其他用户名。",
+    "en": "This username is taken. Choose another username."
+  },
+  "error.enterprise.memberDefinitionService.status.1": {
+    "zh-CN": "成员的账号已停用，请联系系统管理员恢复账号。",
+    "en": "This member’s account is disabled. Ask a system administrator to restore it."
+  },
+  "error.enterprise.memberDefinitionService.existing.1": {
+    "zh-CN": "成员不存在或无法访问。",
+    "en": "The member is missing or inaccessible."
+  },
+  "error.enterprise.memberRemovalQueryService.recipients.1": {
+    "zh-CN": "请选择资源负责人或待办接收人。",
+    "en": "Select a resource owner or a recipient for the to-dos."
+  },
+  "error.enterprise.memberRemovalQueryService.recipients.2": {
+    "zh-CN": "当前权限不能完成这些资源或团队的交接。",
+    "en": "You do not have permission to transfer these resources or teams."
+  },
+  "error.enterprise.memberRemovalService.remove.1": {
+    "zh-CN": "请先保留另一名有效的企业管理员，再移除此成员。",
+    "en": "Keep at least one other active organization administrator before removing this member."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.1": {
+    "zh-CN": "转交和取消待办只能选择一种处理方式。",
+    "en": "Choose either transferring or cancelling the to-dos."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.2": {
+    "zh-CN": "当前权限不能完成这些资源或团队的交接，请先由有权限的维护者处理。",
+    "en": "You cannot transfer these resources or teams. Ask an authorized maintainer to handle them first."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.3": {
+    "zh-CN": "请选择另一名有效成员接手资源和团队。",
+    "en": "Select another active member to take over the resources and teams."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.4": {
+    "zh-CN": "当前没有需要交接的资源或团队，请重新查看影响。",
+    "en": "There are no resources or teams to transfer. Review the impact again."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.5": {
+    "zh-CN": "请先选择转交或取消未结束待办。",
+    "en": "Choose whether to transfer or cancel unfinished to-dos."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.6": {
+    "zh-CN": "当前没有需要处理的待办，请重新查看影响。",
+    "en": "There are no to-dos to handle. Review the impact again."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.7": {
+    "zh-CN": "请选择当前企业的有效成员。",
+    "en": "Select an active member of this organization."
+  },
+  "error.enterprise.memberRemovalService.validatePlan.8": {
+    "zh-CN": "请选择另一名有效成员接手待办。",
+    "en": "Select another active member to take over the to-dos."
+  },
+  "error.enterprise.memberRemovalTokenService.issue.1": {
+    "zh-CN": "成员移除影响暂时无法确认",
+    "en": "The impact of removing this member cannot be determined right now."
+  },
+  "error.enterprise.memberRemovalTokenService.changed.1": {
+    "zh-CN": "成员或关联内容已变化，或影响预览已过期，请重新查看移除影响。",
+    "en": "The member or related content has changed, or the preview expired. Review the removal impact again."
+  },
+  "error.enterprise.organizationDependencyService.requireUnused.1": {
+    "zh-CN": "仍有成员或业务记录使用此项，请先处理关联内容。",
+    "en": "Members or records still use this item. Handle the related content first."
+  },
+  "error.enterprise.organizationQueryService.members.1": {
+    "zh-CN": "请选择有效的成员状态。",
+    "en": "Select a valid member status."
+  },
+  "error.enterprise.organizationQueryService.member.1": {
+    "zh-CN": "成员",
+    "en": "Members"
+  },
+  "error.enterprise.organizationQueryService.missing.1": {
+    "zh-CN": "{0}不存在或无法访问。",
+    "en": "{0} does not exist or is inaccessible."
+  },
+  "error.enterprise.roleAssignmentPolicy.validateAssignments.1": {
+    "zh-CN": "不能分配已停用的角色",
+    "en": "Disabled roles cannot be assigned."
+  },
+  "error.enterprise.roleAssignmentPolicy.validateAssignments.2": {
+    "zh-CN": "只有企业管理员可以分配管理员角色",
+    "en": "Only organization administrators can assign administrator roles."
+  },
+  "error.enterprise.roleAssignmentPolicy.validateDelegation.1": {
+    "zh-CN": "只有企业管理员可以委派受保护的管理权限",
+    "en": "Only organization administrators can delegate protected management permissions."
+  },
+  "error.enterprise.roleAssignmentPolicy.validateDelegation.2": {
+    "zh-CN": "不能分配超出自身数据范围的权限",
+    "en": "Permissions beyond your own data scope cannot be assigned."
+  },
+  "error.enterprise.roleAssignmentPolicy.requestedPermissions.1": {
+    "zh-CN": "请提供有效的角色权限列表，最多两百项",
+    "en": "Provide a valid role permission list with up to 200 entries."
+  },
+  "error.enterprise.roleAssignmentPolicy.requestedPermissions.2": {
+    "zh-CN": "权限列表包含重复或不存在的操作",
+    "en": "The permission list contains duplicate or nonexistent operations."
+  },
+  "error.enterprise.teamDefinitionService.status.1": {
+    "zh-CN": "请先把团队负责人改为有效成员，再启用团队。",
+    "en": "Assign an active member as team owner before enabling the team."
+  },
+  "error.enterprise.teamDefinitionService.validate.1": {
+    "zh-CN": "请填写团队名称、简介、负责人和成员。",
+    "en": "Enter the team name, description, owner, and members."
+  },
+  "error.enterprise.teamDefinitionService.validate.2": {
+    "zh-CN": "请选择本企业有效成员作为负责人。",
+    "en": "Select an active organization member as owner."
+  },
+  "error.enterprise.teamDefinitionService.validateMembers.1": {
+    "zh-CN": "新增团队成员必须来自本企业并且当前有效。",
+    "en": "New team members must be active members of this organization."
+  },
+  "error.enterprise.teamDefinitionService.validateMembers.2": {
+    "zh-CN": "一名成员最多加入十个团队，请调整后重试。",
+    "en": "A member can join up to 10 teams. Adjust the selection and try again."
+  },
+  "error.enterprise.teamDefinitionService.find.1": {
+    "zh-CN": "团队不存在或无法访问。",
+    "en": "The team is missing or inaccessible."
+  },
+  "error.enterprise.teamDefinitionService.duplicate.1": {
+    "zh-CN": "团队名称已存在，请调整后重试。",
+    "en": "This team name already exists. Change it and try again."
+  },
+  "log.enterprise.invitationAcceptRequest.toString.1": {
+    "zh-CN": "InvitationAcceptRequest[邀请凭据及账号信息已隐藏]",
+    "en": "InvitationAcceptRequest[invitation credential and account information redacted]"
+  },
+  "log.enterprise.memberCreateRequest.toString.1": {
+    "zh-CN": "MemberCreateRequest[账号凭据已隐藏]",
+    "en": "MemberCreateRequest[account credentials redacted]"
+  },
+  "log.enterprise.issuedInvitationView.toString.1": {
+    "zh-CN": "IssuedInvitationView[邀请凭据已隐藏]",
+    "en": "IssuedInvitationView[invitation credential redacted]"
+  },
+  "text.enterprise.enterpriseContextService.get.1": {
+    "zh-CN": "工作台",
+    "en": "Home"
+  },
+  "text.enterprise.enterpriseContextService.get.2": {
+    "zh-CN": "企业管理",
+    "en": "Organization management"
+  },
+  "text.enterprise.enterpriseMetadataService.update.1": {
+    "zh-CN": "修改企业资料",
+    "en": "Update organization details"
+  },
+  "text.enterprise.enterpriseProvisioningService.createVerified.1": {
+    "zh-CN": "创建企业并设置初始管理员",
+    "en": "Create organization and assign initial administrator"
+  },
+  "text.enterprise.invitationAcceptanceService.accept.1": {
+    "zh-CN": "接受邀请并保留已有成员权限",
+    "en": "Accept invitation and retain existing member permissions"
+  },
+  "text.enterprise.invitationAcceptanceService.accept.2": {
+    "zh-CN": "通过邀请加入企业",
+    "en": "Join organization through an invitation"
+  },
+  "text.enterprise.invitationManagementService.create.1": {
+    "zh-CN": "创建成员邀请",
+    "en": "Create member invitation"
+  },
+  "text.enterprise.invitationManagementService.revoke.1": {
+    "zh-CN": "撤回成员邀请",
+    "en": "Withdraw member invitation"
+  },
+  "text.enterprise.invitationManagementService.resend.1": {
+    "zh-CN": "重新发送邀请邮件",
+    "en": "Resend invitation email"
+  },
+  "text.enterprise.memberCreationService.create.1": {
+    "zh-CN": "管理员创建成员账号",
+    "en": "Administrator created a member account"
+  },
+  "text.enterprise.memberDefinitionService.update.1": {
+    "zh-CN": "修改成员资料或组织关系",
+    "en": "Update member details or organizational relationships"
+  },
+  "text.enterprise.memberDefinitionService.status.1": {
+    "zh-CN": "修改成员状态",
+    "en": "Update member status"
+  },
+  "text.enterprise.memberRemovalService.remove.1": {
+    "zh-CN": "成员移除时转交资源所有权",
+    "en": "Transfer resource ownership during member removal"
+  },
+  "text.enterprise.memberRemovalService.remove.2": {
+    "zh-CN": "成员移除时转交团队负责人",
+    "en": "Transfer team leadership during member removal"
+  },
+  "text.enterprise.memberRemovalService.remove.3": {
+    "zh-CN": "移除企业成员并完成关联交接",
+    "en": "Remove organization member and complete associated transfers"
+  },
+  "text.enterprise.shareInvitationService.issue.1": {
+    "zh-CN": "创建邀请码与邀请链接",
+    "en": "Create invitation code and link"
+  },
+  "text.enterprise.teamDefinitionService.create.1": {
+    "zh-CN": "创建团队",
+    "en": "Create team"
+  },
+  "text.enterprise.teamDefinitionService.update.1": {
+    "zh-CN": "修改团队资料和成员",
+    "en": "Update team details and members"
+  },
+  "text.enterprise.teamDefinitionService.members.1": {
+    "zh-CN": "修改团队成员",
+    "en": "Update team members"
+  },
+  "text.enterprise.teamDefinitionService.status.1": {
+    "zh-CN": "修改团队状态",
+    "en": "Update team status"
+  },
+  "text.enterprise.teamDefinitionService.delete.1": {
+    "zh-CN": "删除团队",
+    "en": "Delete team"
+  }
+}

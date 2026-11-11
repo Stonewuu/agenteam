@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.schedule.entity.ScheduleOccurrenceRecord;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRecord;
 import com.stonewu.agenteam.model.schedule.response.ScheduleOccurrenceView;
@@ -54,24 +56,24 @@ public class ScheduleViewMapper {
 
     public String reason(String code) {
         return switch (code) {
-            case "SCHEDULE_RECONFIRM_REQUIRED" -> "此计划超过三十天没有检查，已暂停。请确认时间后重新启用。";
-            case "SCHEDULE_PREVIOUS_ACTIVE" -> "上一次任务尚未结束，本次已跳过。";
-            case "SCHEDULE_MISSED" -> "本次已错过执行时间。";
-            case "QUOTA_EXCEEDED" -> "本月适用的执行次数不足，本次未执行。";
-            case "CONCURRENCY_LIMIT" -> "同时执行的任务已达到上限，本次未执行。";
-            case "SCHEDULE_OWNER_UNAVAILABLE" -> "创建人的账号或企业成员资格已不可用，计划已暂停。";
-            case "SCHEDULE_HIRE_UNAVAILABLE" -> "员工雇佣已暂停或解除，计划已暂停。";
-            case "SCHEDULE_RESOURCE_UNAVAILABLE" -> "员工版本或所需能力已不可用，计划已暂停。";
-            case "SCHEDULE_PERMISSION_DENIED" -> "执行所需权限已变化，计划已暂停。";
-            case "SCHEDULE_CANCELLED" -> "已停止尚未开始的操作。";
-            case "SCHEDULE_NOTIFICATION_EXPIRED" -> "本次通知已超过发送有效期。";
-            case "SCHEDULE_NOTIFICATION_PARTIAL" -> "部分通知未能发送，请查看各接收人的结果。";
-            case "SCHEDULE_NOTIFICATION_UNKNOWN" -> "部分平台请求尚不能确认是否被接受，请查看发送详情。";
-            case "SCHEDULE_NOTIFICATION_FAILED" -> "本次通知发送失败，请查看发送详情。";
-            case "SCHEDULE_NOTIFICATION_BLOCKED" -> "本次通知的接收条件已变化，未能发送。";
-            case "SCHEDULE_PREPARATION_FAILED" -> "本次操作准备失败，请检查后重新执行。";
-            case "SCHEDULE_NOTIFICATIONS_DISABLED" -> "通知计划已暂时关闭，请稍后重新启用。";
-            default -> "本次无法继续执行，请检查计划和任务详情。";
+            case "SCHEDULE_RECONFIRM_REQUIRED" -> Messages.text("error.schedule.scheduleViewMapper.reason.1");
+            case "SCHEDULE_PREVIOUS_ACTIVE" -> Messages.text("error.schedule.scheduleViewMapper.reason.2");
+            case "SCHEDULE_MISSED" -> Messages.text("error.schedule.scheduleViewMapper.reason.3");
+            case "QUOTA_EXCEEDED" -> Messages.text("error.schedule.scheduleViewMapper.reason.4");
+            case "CONCURRENCY_LIMIT" -> Messages.text("error.schedule.scheduleViewMapper.reason.5");
+            case "SCHEDULE_OWNER_UNAVAILABLE" -> Messages.text("error.schedule.scheduleViewMapper.reason.6");
+            case "SCHEDULE_HIRE_UNAVAILABLE" -> Messages.text("error.schedule.scheduleViewMapper.reason.7");
+            case "SCHEDULE_RESOURCE_UNAVAILABLE" -> Messages.text("error.schedule.scheduleViewMapper.reason.8");
+            case "SCHEDULE_PERMISSION_DENIED" -> Messages.text("error.schedule.scheduleViewMapper.reason.9");
+            case "SCHEDULE_CANCELLED" -> Messages.text("error.schedule.scheduleViewMapper.reason.10");
+            case "SCHEDULE_NOTIFICATION_EXPIRED" -> Messages.text("error.schedule.scheduleViewMapper.reason.11");
+            case "SCHEDULE_NOTIFICATION_PARTIAL" -> Messages.text("error.schedule.scheduleViewMapper.reason.12");
+            case "SCHEDULE_NOTIFICATION_UNKNOWN" -> Messages.text("error.schedule.scheduleViewMapper.reason.13");
+            case "SCHEDULE_NOTIFICATION_FAILED" -> Messages.text("error.schedule.scheduleViewMapper.reason.14");
+            case "SCHEDULE_NOTIFICATION_BLOCKED" -> Messages.text("error.schedule.scheduleViewMapper.reason.15");
+            case "SCHEDULE_PREPARATION_FAILED" -> Messages.text("error.schedule.scheduleViewMapper.reason.16");
+            case "SCHEDULE_NOTIFICATIONS_DISABLED" -> Messages.text("error.schedule.scheduleViewMapper.reason.17");
+            default -> Messages.text("error.schedule.scheduleViewMapper.reason.18");
         };
     }
 

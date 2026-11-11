@@ -67,7 +67,7 @@ export function useConversationFiles(enterprise: string, conversation: string | 
         }
       } catch (failure) {
         if (!controller.signal.aborted) {
-          console.error("读取会话文件列表失败", {conversationId: conversation, error: failure});
+          console.error("Failed to read conversation files", {conversationId: conversation, error: failure});
           const inaccessible = failure instanceof ApiError && [401, 403, 404].includes(failure.status);
           if (inaccessible) {
             loadedPages.current = {key, count: 1};
@@ -128,7 +128,7 @@ export function useConversationFiles(enterprise: string, conversation: string | 
       }
     } catch (failure) {
       if (!controller.signal.aborted) {
-        console.error("读取更多会话文件失败", {conversationId: conversation, error: failure});
+        console.error("Failed to read more conversation files", {conversationId: conversation, error: failure});
         const inaccessible = failure instanceof ApiError && [401, 403, 404].includes(failure.status);
         if (inaccessible) {
           loadedPages.current = {key, count: 1};

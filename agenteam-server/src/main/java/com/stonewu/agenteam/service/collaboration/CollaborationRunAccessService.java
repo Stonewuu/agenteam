@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationRunLinkMapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationActionMapper;
@@ -76,19 +78,19 @@ public class CollaborationRunAccessService {
         }
         var actor = access.requireRole(task, participant);
         if (Set.of("cancelling", "cancelled", "failed").contains(task.getStatus()) || !task.getDeadlineAt().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_STOPPED", "协作任务已经停止或到达截止时间。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_STOPPED", Messages.text("error.collaboration.collaborationRunAccessService.require.1"));
         }
         if (!task.getInputRevision().equals(link.getInputRevision()) || !work.getInputRevision().equals(link.getInputRevision())) {
-            throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", "任务要求已更新，需要按新要求继续。");
+            throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", Messages.text("error.collaboration.collaborationRunAccessService.require.2"));
         }
         boolean running = work.getStatus().equals("running") || work.getStatus().equals("waiting_approval") && run.status().equals("running");
         if (write && (!running || task.getStatus().equals("completed"))) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_WORK_FINISHED", "本轮岗位工作已提交、移交或等待，不能继续修改业务。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_WORK_FINISHED", Messages.text("error.collaboration.collaborationRunAccessService.require.3"));
         }
         return new CollaborationExecutionContext(actor, task, work, participant, link);
     }
 
     public static ApiException contextRequired() {
-        return new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_REQUIRED", "此操作只能在当前任务的顶层岗位工作中使用。");
+        return new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_REQUIRED", Messages.text("error.collaboration.collaborationRunAccessService.contextRequired.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol.gemini;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Part;
 import com.stonewu.agenteam.model.modelprofile.entity.NativeModelState;
@@ -47,7 +49,7 @@ final class GeminiNativeStateCollector {
                 boolean generated = call.id().filter(value -> !value.isBlank()).isEmpty();
                 String id = generated ? UUID.randomUUID().toString() : call.id().orElseThrow();
                 if (!seenToolIds.add(id)) {
-                    throw new IllegalStateException("模型返回了重复的工具调用编号。");
+                    throw new IllegalStateException(Messages.text("error.modelprofile.geminiNativeStateCollector.accept.1"));
                 }
                 var item = new Item("tool_use", id);
                 if (generated) {
@@ -81,7 +83,7 @@ final class GeminiNativeStateCollector {
                 }
             } else if (part.thoughtSignature().isPresent()) {
                 if (items.isEmpty()) {
-                    throw new IllegalStateException("模型返回的签名没有对应内容。");
+                    throw new IllegalStateException(Messages.text("error.modelprofile.geminiNativeStateCollector.accept.2"));
                 }
                 signature(items.getLast(), part.thoughtSignature().orElseThrow());
             }
@@ -110,7 +112,7 @@ final class GeminiNativeStateCollector {
     private void accountSignature(int bytes) {
         privateCharacters = Math.addExact(privateCharacters, Math.multiplyExact((bytes + 2) / 3, 4));
         if (privateCharacters > 1048576) {
-            throw new IllegalStateException("模型返回的签名内容超过允许大小。");
+            throw new IllegalStateException(Messages.text("error.modelprofile.anthropicNativeStateCollector.privateValue.1"));
         }
     }
 

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -75,7 +77,7 @@ final class McpEventReader {
             used += bytes;
             if (used > maximum) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "REMOTE_RESPONSE_TOO_LARGE",
-                    "远程服务返回的内容超过允许大小。");
+                    Messages.text("error.plugin.mcpEventReader.consume.1"));
             }
         }
 

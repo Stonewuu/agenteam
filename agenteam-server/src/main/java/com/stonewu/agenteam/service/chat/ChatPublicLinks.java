@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,14 +37,14 @@ public class ChatPublicLinks {
         var uri = URI.create(base);
         if (!("https".equals(uri.getScheme()) || "http".equals(uri.getScheme())) || uri.getHost() == null || uri.getUserInfo() != null
             || uri.getQuery() != null || uri.getFragment() != null) {
-            throw new IllegalStateException("聊天公开访问地址配置不正确");
+            throw new IllegalStateException(Messages.text("error.chat.chatPublicLinks.base.1"));
         }
         return base.replaceAll("/+$", "");
     }
 
     private void identifiers(String enterprise, String resource) {
         if (!enterprise.matches("[A-Za-z0-9_-]{1,100}") || !resource.matches("[A-Za-z0-9_-]{1,100}")) {
-            throw new IllegalArgumentException("聊天设置链接的记录编号不正确");
+            throw new IllegalArgumentException(Messages.text("error.chat.chatPublicLinks.identifiers.1"));
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.project.ProjectWorkspaceLayout;
@@ -24,7 +26,7 @@ public class EnvironmentTerminalProcess {
         for (String resource : new String[]{"command_runner.py", "terminal_runner.py"}) {
             try (var input = getClass().getResourceAsStream("/sandbox/" + resource)) {
                 if (input == null) {
-                    throw new IOException("缺少终端管理程序");
+                    throw new IOException(Messages.text("error.environment.environmentTerminalProcess.start.1"));
                 }
                 Files.copy(input, directory.resolve(resource.equals("command_runner.py") ? "runner.py" : resource),
                     StandardCopyOption.REPLACE_EXISTING);

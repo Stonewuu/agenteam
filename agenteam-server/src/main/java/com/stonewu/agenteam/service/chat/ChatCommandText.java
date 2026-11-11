@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -23,7 +25,7 @@ public final class ChatCommandText {
     }
 
     public static boolean newTask(String text, JsonNode mentions) {
-        return withoutLeadingMentions(text, mentions).startsWith("新任务");
+        return withoutLeadingMentions(text, mentions).startsWith(Messages.source("protocol.chat.chatCommandText.newTask.1"));
     }
 
     public static String withoutLeadingMentions(String text, JsonNode mentions) {

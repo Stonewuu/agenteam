@@ -124,7 +124,7 @@ export function IridescenceBackground() {
         container!.appendChild(gl.canvas);
         return true;
       } catch (error) {
-        console.error("虹彩背景初始化失败", error);
+        console.error("Failed to initialize the iridescent background", error);
         failed = true;
         release();
         return false;

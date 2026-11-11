@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.IdentityQueryMapper;
 
 
@@ -60,7 +62,7 @@ public class MemberTeamMapper {
     public void rejoin(String enterpriseId, String userId, String name, Instant now) {
         int changed = identityQueryMapper.rejoinEnterpriseMember(name, Timestamp.from(now), enterpriseId, userId);
         if (changed != 1) {
-            throw new IllegalStateException("成员状态已变化，重新加入未提交");
+            throw new IllegalStateException(Messages.text("error.enterprise.memberTeamMapper.rejoin.1"));
         }
     }
 }

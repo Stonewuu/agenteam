@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.modelprofile.ModelProfileMapper;
 import com.stonewu.agenteam.mapper.modelpricing.ModelsDevPriceMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -32,7 +34,7 @@ public class ModelPriceCatalogService {
         String selectedProvider = provider == null ? "" : provider;
         if (input.length() > 100 || input.codePoints().anyMatch(Character::isISOControl) || offset < 0 || offset > 20000
             || selectedProvider.length() > 160 || selectedProvider.codePoints().anyMatch(Character::isISOControl)) {
-            throw ApiException.invalidField("query", "搜索内容最多 100 个字符，请使用有效的分页位置。");
+            throw ApiException.invalidField("query", Messages.text("error.modelpricing.modelPriceCatalogService.search.1"));
         }
         var snapshot = catalog.load(modelId);
         var providers = snapshot.entries().stream().map(entry -> new ModelPriceCatalogView.Provider(entry.providerId(), entry.providerName()))
@@ -47,10 +49,9 @@ public class ModelPriceCatalogService {
             .toList();
         var items = found.stream().skip(offset).limit(PAGE_SIZE).map(result -> {
             var entry = result.entry();
-            String note = "models.dev：" + entry.providerId() + "/" + entry.modelId()
-                + "；公开美元文本价格，不含专属折扣或忙闲时段。";
+            String note = Messages.text("text.modelpricing.modelPriceCatalogService.search.1", entry.providerId(), entry.modelId());
             if (entry.notices().contains(ModelsDevPriceMapper.CACHE_NOTICE)) {
-                note += "缓存创建价未导入，需按有效期补充。";
+                note += Messages.text("text.modelpricing.modelPriceCatalogService.search.2");
             }
             var configuration = new ModelPriceConfiguration("USD", "UTC", null, ModelsDevCatalogClient.SOURCE,
                 snapshot.fetchedAt(), note, entry.rules());

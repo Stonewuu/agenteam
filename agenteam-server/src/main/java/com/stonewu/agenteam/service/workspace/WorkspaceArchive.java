@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -77,7 +79,7 @@ public final class WorkspaceArchive {
                         }
                     }
                     if (copied != entry.getSize()) {
-                        throw new IOException("容器文件内容不完整");
+                        throw new IOException(Messages.text("error.workspace.workspaceArchive.extract.1"));
                     }
                 }
                 entry = archive.getNextEntry();

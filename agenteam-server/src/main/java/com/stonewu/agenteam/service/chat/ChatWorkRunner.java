@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +41,7 @@ final class ChatWorkRunner implements AutoCloseable {
             executor.execute(this::drain);
         } catch (RejectedExecutionException rejected) {
             running.set(false);
-            LOG.debug("聊天工作暂未唤醒，将由定时检查恢复，工作类型={}", name);
+            LOG.debug(Messages.log("log.chat.chatWorkRunner.wake.1"), name);
         }
     }
 
@@ -56,7 +58,7 @@ final class ChatWorkRunner implements AutoCloseable {
             } while (requested.get() && !closed.get());
         } catch (RuntimeException failure) {
             if (!closed.get()) {
-                LOG.warn("聊天后台工作暂未完成，将由后续检查恢复，工作类型={}", name, ChatSocket.safe("CHAT_WORK_FAILED", "聊天工作稍后继续。", failure));
+                LOG.warn(Messages.log("log.chat.chatWorkRunner.drain.1"), name, ChatSocket.safe("CHAT_WORK_FAILED", Messages.text("text.chat.chatWorkRunner.drain.1"), failure));
             }
         } finally {
             running.set(false);

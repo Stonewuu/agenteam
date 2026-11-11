@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.auth.IdentityMaintenanceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +34,7 @@ public class IdentityMaintenanceConfiguration {
             }
             service.removeExpiredRecords();
         } catch (RuntimeException exception) {
-            LOGGER.warn("身份辅助记录暂时无法清理，稍后重试", exception);
+            LOGGER.warn(Messages.log("log.auth.identityMaintenanceConfiguration.removeExpiredRecords.1"), exception);
         }
     }
 }

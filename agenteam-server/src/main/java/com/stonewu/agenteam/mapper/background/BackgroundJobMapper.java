@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.background;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import org.springframework.stereotype.Repository;
 
@@ -30,7 +32,7 @@ public class BackgroundJobMapper {
 
     public Optional<JobLease> claimFileWork(String kind, String workerId, Instant now) {
         if (!Set.of("file_scan", "document_parse").contains(kind)) {
-            throw new IllegalArgumentException("文件处理工作类型不正确");
+            throw new IllegalArgumentException(Messages.text("error.background.backgroundJobMapper.claimFileWork.1"));
         }
         var enterprises = statements.claimFileWorkEnterprise(kind, Timestamp.from(now));
         return enterprises.isEmpty() ? Optional.empty() : claim(kind, workerId, now, enterprises.getFirst());
@@ -55,7 +57,7 @@ public class BackgroundJobMapper {
 
     public void setAttemptLimit(String id, int maximum) {
         if (maximum < 1 || maximum > 1440) {
-            throw new IllegalArgumentException("后台任务尝试次数超出范围");
+            throw new IllegalArgumentException(Messages.text("error.background.backgroundJobMapper.setAttemptLimit.1"));
         }
         statements.setAttemptLimitBackgroundJob(maximum, id);
     }

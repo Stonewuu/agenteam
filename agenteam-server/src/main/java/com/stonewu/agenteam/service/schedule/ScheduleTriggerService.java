@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.schedule.ScheduleMapper;
 import com.stonewu.agenteam.mapper.schedule.ScheduleOccurrenceMapper;
@@ -112,7 +114,7 @@ public class ScheduleTriggerService {
             return views.view(existing.get());
         }
         if (plan.activeOccurrenceId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_BUSY", "此计划还有未结束的任务，请等待完成或先停止。");
+            throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_BUSY", Messages.text("error.schedule.scheduleTriggerService.manual.1"));
         }
         var checked = access.check(plan);
         if (checked.reason() != null) {
@@ -123,7 +125,7 @@ public class ScheduleTriggerService {
         }
         var result = views.view(occurrences.find(actor.enterpriseId(), id, key).orElseThrow());
         if (userActivity && ScheduleActionStore.ACTIVE.contains(result.status())) {
-            audit.record(actor.enterpriseId(), actor.user(), "schedule.run", "schedule", id, "手动执行定时任务",
+            audit.record(actor.enterpriseId(), actor.user(), "schedule.run", "schedule", id, Messages.text("text.schedule.scheduleTriggerService.manual.1"),
                 Map.of("userActivity", true, "occurrenceId", result.id()));
         }
         return result;

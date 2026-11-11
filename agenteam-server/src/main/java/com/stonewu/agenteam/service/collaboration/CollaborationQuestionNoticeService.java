@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.chat.ChatMessageMapper;
@@ -38,8 +40,8 @@ public class CollaborationQuestionNoticeService {
         boolean direct = group.getConversationKind().equals("direct");
         var text = new StringBuilder();
         if (!direct) {
-            text.append("任务 【").append(task.getShortCode()).append("】：【")
-                .append(context.participant().getRoleName()).append("】需要你补充：\n\n");
+            text.append(Messages.text("text.collaboration.collaborationQuestionNoticeService.send.1")).append(task.getShortCode()).append("】：【")
+                .append(context.participant().getRoleName()).append(Messages.text("text.collaboration.collaborationQuestionNoticeService.send.2"));
         }
         text.append(question);
         int ordinal = 0;
@@ -47,11 +49,11 @@ public class CollaborationQuestionNoticeService {
             text.append("\n").append(++ordinal).append(". ").append(option.asText());
         }
         if (direct) {
-            text.append("\n\n直接回复即可继续。");
+            text.append(Messages.text("text.collaboration.collaborationQuestionNoticeService.send.3"));
         } else if (group.getPlatformCode().equals("feishu")) {
-            text.append("\n\n请原发起人回复本条消息，并 @ 接收任务的机器人继续。");
+            text.append(Messages.text("text.collaboration.collaborationQuestionNoticeService.send.4"));
         } else {
-            text.append("\n\n请原发起人 @ 接收任务的机器人，发送“").append(task.getShortCode()).append(" + 补充内容”继续。");
+            text.append(Messages.text("text.collaboration.collaborationQuestionNoticeService.send.5")).append(task.getShortCode()).append(Messages.text("text.collaboration.collaborationQuestionNoticeService.send.6"));
         }
         var origin = messages.selectOne(new LambdaQueryWrapper<ChatMessageRow>()
             .eq(ChatMessageRow::getEnterpriseId, task.getEnterpriseId()).eq(ChatMessageRow::getConversationId, task.getConversationId())

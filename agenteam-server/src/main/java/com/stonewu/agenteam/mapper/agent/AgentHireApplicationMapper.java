@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.agent.entity.AgentHireApplication;
 import com.stonewu.agenteam.model.agent.entity.AgentHireApplicationQueryRow;
@@ -57,7 +59,7 @@ public class AgentHireApplicationMapper {
         int updated = statements.finishAgentHireRequest(status, actor, note, Timestamp.from(now), value.enterpriseId(),
             value.id(), value.revision());
         if (updated != 1) {
-            throw new IllegalStateException("已锁定申请的状态发生变化，当前决定未提交");
+            throw new IllegalStateException(Messages.text("error.agent.agentHireApplicationMapper.finish.1"));
         }
     }
 

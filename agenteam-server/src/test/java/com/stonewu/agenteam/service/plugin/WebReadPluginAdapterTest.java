@@ -6,6 +6,9 @@ import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.service.http.ApiException;
+import com.stonewu.agenteam.service.http.ApplicationInfoService;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
+import org.springframework.boot.info.BuildProperties;
 import com.stonewu.agenteam.service.network.OutboundAddressPolicy;
 import com.stonewu.agenteam.service.network.RestrictedHttpClient;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -37,7 +40,8 @@ class WebReadPluginAdapterTest {
         var mapper = new ObjectMapper();
         var json = new ResourceJson(mapper);
         var adapter = new WebReadPluginAdapter(new RestrictedHttpClient(new OutboundAddressPolicy(origin)), json,
-            new ToolSchemaValidation());
+            new ToolSchemaValidation(), new ApplicationInfoService(new StaticListableBeanFactory()
+                .getBeanProvider(BuildProperties.class)));
         var logger = (Logger) LoggerFactory.getLogger(WebReadPluginAdapter.class);
         var appender = new ListAppender<ILoggingEvent>();
         appender.start();

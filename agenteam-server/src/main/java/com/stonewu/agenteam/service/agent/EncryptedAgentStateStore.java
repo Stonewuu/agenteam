@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.security.entity.EncryptedPayload;
 import com.stonewu.agenteam.service.security.PayloadEncryption;
@@ -93,7 +95,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
         try {
             var values = json.readTree(decrypt(path, stored));
             if (!values.isArray()) {
-                throw new IllegalStateException("框架状态不是所需的列表");
+                throw new IllegalStateException(Messages.text("error.agent.encryptedAgentStateStore.getList.1"));
             }
             var result = new ArrayList<T>();
             for (var value : values) {
@@ -101,7 +103,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
             }
             return List.copyOf(result);
         } catch (IOException error) {
-            throw new IllegalStateException("已保存的框架状态无法读取", error);
+            throw new IllegalStateException(Messages.text("error.agent.encryptedAgentStateStore.getList.2"), error);
         }
     }
 
@@ -114,7 +116,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
         try (var paths = Files.list(directory)) {
             return paths.anyMatch(Files::isRegularFile);
         } catch (IOException error) {
-            throw new UncheckedIOException("无法检查框架状态", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.exists.1"), error);
         }
     }
 
@@ -124,7 +126,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
             Files.deleteIfExists(statePath(user, session, key, false));
             Files.deleteIfExists(statePath(user, session, key, true));
         } catch (IOException error) {
-            throw new UncheckedIOException("无法清理指定框架状态", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.delete.1"), error);
         }
     }
 
@@ -142,7 +144,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
             }
             Files.delete(directory);
         } catch (IOException error) {
-            throw new UncheckedIOException("无法清理指定会话的框架状态", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.delete.2"), error);
         }
     }
 
@@ -162,7 +164,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
             }
             return Set.copyOf(result);
         } catch (IOException error) {
-            throw new UncheckedIOException("无法读取框架会话列表", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.listSessionIds.1"), error);
         }
     }
 
@@ -176,13 +178,13 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
                 .filter(value -> !root.relativize(value).startsWith("checkpoints"))
                 .filter(value -> value.getFileName().toString().endsWith(".json")).sorted().toList()) {
                 if (Files.isSymbolicLink(path)) {
-                    throw new IllegalStateException("框架状态不能使用符号链接");
+                    throw new IllegalStateException(Messages.text("error.agent.encryptedAgentStateStore.manifest.1"));
                 }
                 values.put(root.relativize(path).toString().replace('\\', '/'), digest(Files.readAllBytes(path)));
             }
             return Map.copyOf(values);
         } catch (IOException error) {
-            throw new UncheckedIOException("无法确认已保存的框架状态", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.manifest.2"), error);
         }
     }
 
@@ -201,7 +203,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
             Path source = root.resolve(relative).normalize();
             Path destination = target.root.resolve(relative).normalize();
             if (!source.startsWith(root) || !destination.startsWith(target.root)) {
-                throw new IllegalStateException("框架状态路径超出本次执行目录");
+                throw new IllegalStateException(Messages.text("error.agent.encryptedAgentStateStore.copyTo.1"));
             }
             var saved = read(source);
             target.write(destination, saved.version(), decrypt(source, saved));
@@ -212,7 +214,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));
         } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException("无法计算框架状态摘要", impossible);
+            throw new IllegalStateException(Messages.text("error.agent.encryptedAgentStateStore.digest.1"), impossible);
         }
     }
 
@@ -223,7 +225,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
         try {
             return json.readValue(Files.readAllBytes(path), StoredState.class);
         } catch (IOException error) {
-            throw new UncheckedIOException("已保存的框架状态无法读取", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.getList.2"), error);
         }
     }
 
@@ -246,7 +248,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
                 Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException error) {
-            throw new UncheckedIOException("框架状态无法保存", error);
+            throw new UncheckedIOException(Messages.text("error.agent.encryptedAgentStateStore.write.1"), error);
         } finally {
             if (temporary != null) {
                 try {
@@ -262,7 +264,7 @@ public final class EncryptedAgentStateStore implements AgentStateStore {
 
     private Path sessionPath(String user, String session) {
         if (session == null || session.isBlank()) {
-            throw new IllegalArgumentException("框架会话编号不能为空");
+            throw new IllegalArgumentException(Messages.text("error.agent.encryptedAgentStateStore.sessionPath.1"));
         }
         return root.resolve(component(user)).resolve(component(session));
     }

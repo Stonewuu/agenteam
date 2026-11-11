@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -68,14 +70,14 @@ public class ToolPayloadMapper {
 
     private JsonNode redact(JsonNode value, String path, List<String> paths, List<String> secrets) {
         if (paths.contains(path)) {
-            return JsonNodeFactory.instance.textNode("[已隐藏]");
+            return JsonNodeFactory.instance.textNode(Messages.text("text.tool.toolPayloadMapper.redact.1"));
         }
         if (value.isObject()) {
             var object = JsonNodeFactory.instance.objectNode();
             value.fields().forEachRemaining(field -> {
                 String name = field.getKey();
                 if (privateName(name)) {
-                    object.put(clean(name, secrets), "[已隐藏]");
+                    object.put(clean(name, secrets), Messages.text("text.tool.toolPayloadMapper.redact.1"));
                 } else {
                     object.set(clean(name, secrets),
                         redact(field.getValue(), path + "/" + name.replace("~", "~0").replace("/", "~1"), paths,
@@ -98,10 +100,10 @@ public class ToolPayloadMapper {
         String clean = text;
         for (String secret : secrets) {
             if (secret != null && !secret.isEmpty()) {
-                clean = clean.replace(secret, "[已隐藏]");
+                clean = clean.replace(secret, Messages.source("text.tool.toolPayloadMapper.redact.1"));
             }
         }
-        return EMBEDDED_SECRET.matcher(clean).replaceAll("$1[已隐藏]");
+        return EMBEDDED_SECRET.matcher(clean).replaceAll(Messages.source("text.tool.toolPayloadMapper.clean.1"));
     }
 
     private JsonNode normalizeNumbers(JsonNode node) {

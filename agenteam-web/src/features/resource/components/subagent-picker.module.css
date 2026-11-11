@@ -39,6 +39,11 @@
   white-space: nowrap;
 }
 
+.versionValue {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
 .remove {
   display: grid;
   place-items: center;
@@ -147,9 +152,9 @@
 }
 
 .option .version, .selectedRow .version {
-  width: 100px;
-  flex: 0 0 100px;
-  min-width: 0;
+  width: max-content;
+  flex: 0 0 auto;
+  min-width: 100px;
   min-height: 36px;
   padding: 7px 10px;
   font-size: 12px;
@@ -192,8 +197,7 @@
   }
 
   .option .version, .selectedRow .version {
-    width: 96px;
-    flex-basis: 96px;
+    min-width: 96px;
     min-height: 44px;
     gap: 8px;
     padding-inline: 8px;

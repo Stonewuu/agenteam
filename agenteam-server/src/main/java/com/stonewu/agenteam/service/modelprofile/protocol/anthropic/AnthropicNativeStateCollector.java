@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol.anthropic;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.anthropic.core.JsonValue;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -53,7 +55,7 @@ final class AnthropicNativeStateCollector {
             JsonNode block = JsonValue.from(value.contentBlock()).convert(JsonNode.class);
             var item = new Item(block.path("type").asText(), block.path("id").asText(null));
             if (items.putIfAbsent(Math.toIntExact(value.index()), item) != null) {
-                throw new IllegalStateException("模型返回了重复的内容块编号。");
+                throw new IllegalStateException(Messages.text("error.modelprofile.anthropicNativeStateCollector.accept.1"));
             }
             if (item.kind.equals("redacted_thinking")) {
                 item.attributes.put("data", privateValue(block.path("data").asText()));
@@ -66,7 +68,7 @@ final class AnthropicNativeStateCollector {
             var value = event.asContentBlockDelta();
             var item = items.get(Math.toIntExact(value.index()));
             if (item == null) {
-                throw new IllegalStateException("模型返回的内容片段没有对应的内容块。");
+                throw new IllegalStateException(Messages.text("error.modelprofile.anthropicNativeStateCollector.accept.2"));
             }
             var delta = JsonValue.from(value.delta()).convert(JsonNode.class);
             switch (delta.path("type").asText()) {
@@ -102,7 +104,7 @@ final class AnthropicNativeStateCollector {
     private String privateValue(String value) {
         privateCharacters = Math.addExact(privateCharacters, value.length());
         if (privateCharacters > MAX_PRIVATE_CHARACTERS) {
-            throw new IllegalStateException("模型返回的签名内容超过允许大小。");
+            throw new IllegalStateException(Messages.text("error.modelprofile.anthropicNativeStateCollector.privateValue.1"));
         }
         return value;
     }

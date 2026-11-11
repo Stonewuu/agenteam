@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.mapper.agent.AgentListingMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceImpactMapper;
@@ -93,10 +95,10 @@ public class ResourceLifecycleService {
         policy.revision(resource, revision);
         if (resource.source().equals("builtin") && !policy.enterpriseAdmin(actor)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED",
-                "只有企业管理员可以启停内置" + resource.kind().label() + "。");
+                Messages.text("error.resource.resourceLifecycleService.status.1", resource.kind().localizedLabel()));
         }
         if (status == null || !Set.of("active", "disabled").contains(status)) {
-            throw ApiException.invalidField("status", "请选择启用或停用。");
+            throw ApiException.invalidField("status", Messages.text("error.announcement.announcementStatusRequest.enabled.1"));
         }
         if (status.equals(resource.status())) {
             return views.summary(actor, resource);
@@ -109,7 +111,7 @@ public class ResourceLifecycleService {
             executions.stopForResource(actor.enterpriseId(), resource.id(), null);
         }
         authorization.changed(actor, "resource.status", "resource", resource.id(),
-            "修改" + resource.kind().label() + "启用状态",
+            Messages.text("text.resource.resourceLifecycleService.status.1", resource.kind().localizedLabel()),
             Map.of("kind", resource.kind().code(), "before", resource.status(), "after", status, "pausedHires",
                 paused));
         return current(actor, resource.id());
@@ -123,7 +125,7 @@ public class ResourceLifecycleService {
         var impact = impact(actor, resource);
         if (!impact.canDelete()) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_IN_USE",
-                "此" + resource.kind().label() + "还有未结束的任务，请先停止任务。", Map.of("impact", impact), Map.of());
+                Messages.text("error.resource.resourceLifecycleService.delete.1", resource.kind().localizedLabel()), Map.of("impact", impact), Map.of());
         }
         var now = clock.instant();
         int paused = references.pauseSchedules(actor.enterpriseId(), resource.id(), now);
@@ -134,7 +136,7 @@ public class ResourceLifecycleService {
             listings.unlist(actor.enterpriseId(), resource.id(), actor.userId(), now);
         }
         authorization.changed(actor, "resource.delete", "resource", resource.id(),
-            "删除" + resource.kind().label() + "并保留恢复期内的数据",
+            Messages.text("text.resource.resourceLifecycleService.delete.1", resource.kind().localizedLabel()),
             Map.of("kind", resource.kind().code(), "pausedSchedules", paused, "terminatedHires", terminated));
     }
 
@@ -144,11 +146,11 @@ public class ResourceLifecycleService {
         policy.revision(resource, revision);
         if (resource.source().equals("builtin")) {
             throw new ApiException(HttpStatus.CONFLICT, "BUILTIN_RESOURCE_READ_ONLY",
-                "内置" + resource.kind().label() + "不能执行此操作。");
+                Messages.text("error.resource.resourceLifecycleService.restore.1", resource.kind().localizedLabel()));
         }
         if (resource.deletedAt() == null) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_NOT_DELETED",
-                "此" + resource.kind().label() + "没有被删除，请重新加载列表。");
+                Messages.text("error.resource.resourceLifecycleService.restore.2", resource.kind().localizedLabel()));
         }
         var now = clock.instant();
         resources.restore(resource, now);
@@ -156,7 +158,7 @@ public class ResourceLifecycleService {
             listings.unlist(actor.enterpriseId(), resource.id(), actor.userId(), now);
         }
         authorization.changed(actor, "resource.restore", "resource", resource.id(),
-            "恢复" + resource.kind().label() + "为停用状态", Map.of("kind", resource.kind().code()));
+            Messages.text("text.resource.resourceLifecycleService.restore.1", resource.kind().localizedLabel()), Map.of("kind", resource.kind().code()));
         return current(actor, resource.id());
     }
 
@@ -176,7 +178,7 @@ public class ResourceLifecycleService {
         executions.stopForVersion(actor.enterpriseId(), version.id());
         resources.advanceRevision(resource, clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "resource.version.revoke", "resource_version", version.id(),
-            "撤销" + resource.kind().label() + "版本的使用资格",
+            Messages.text("text.resource.resourceLifecycleService.revoke.1", resource.kind().localizedLabel()),
             Map.of("kind", resource.kind().code(), "resourceId", resource.id(), "reason", note));
         return views.version(versions.find(actor.enterpriseId(), version.id()).orElseThrow());
     }

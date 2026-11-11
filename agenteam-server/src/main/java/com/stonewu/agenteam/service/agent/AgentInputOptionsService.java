@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeInputOptionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -53,7 +55,7 @@ public class AgentInputOptionsService {
                                 String cursor, Integer requested) {
         authorization.require(actor, "agent.run");
         if (!List.of("skill", "document").contains(kind)) {
-            throw ApiException.invalidField("kind", "请选择技能或资料。");
+            throw ApiException.invalidField("kind", Messages.text("error.agent.agentInputOptionsService.list.1"));
         }
         String fixedVersion = null;
         if (conversationId != null) {

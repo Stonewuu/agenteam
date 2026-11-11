@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,7 +48,7 @@ public class WorkflowEventMapper {
             status = workflow.nodes().values().stream().anyMatch(node -> "waiting_input".equals(node.status()))
                 ? "waiting_input" : "waiting_approval";
         }
-        String summary = workflow.errorMessage() != null ? workflow.errorMessage() : errors ? "部分步骤未完成，请查看对应步骤。" : null;
+        String summary = workflow.errorMessage() != null ? workflow.errorMessage() : errors ? Messages.text("text.workflow.workflowEventMapper.invocation.1") : null;
         var details = new WorkflowStepDetails(identity.id(), identity.resourceId(), identity.versionId(), null, null);
         return group(state, id, identity.parentStepId(), identity.parentBlockId(), identity.name(), "workflow", status,
             summary, details, now, null, null);
@@ -74,7 +76,7 @@ public class WorkflowEventMapper {
             return json.readerFor(JsonNode.class).with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
                 .readValue(value);
         } catch (Exception invalid) {
-            throw new IllegalStateException("流程节点内容无法保存到步骤记录", invalid);
+            throw new IllegalStateException(Messages.text("error.workflow.workflowEventMapper.read.1"), invalid);
         }
     }
 
@@ -129,7 +131,7 @@ public class WorkflowEventMapper {
         if (before == null) {
             if (state.blocks().size() >= 500) {
                 throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_OUTPUT_LIMIT",
-                    "本次输出已达到允许的长度，请缩小任务范围后重试。");
+                    Messages.text("error.agent.agentPublicEventMapper.outputLimit.1"));
             }
             var block = new ContentBlock(id, "workflow", parentBlock, state.nextOrder(), "1", text, status, id, null,
                 null, null, label, null);

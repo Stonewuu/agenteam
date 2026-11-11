@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.model.auth.request.ApiBootstrapRequest;
 import com.stonewu.agenteam.model.user.entity.UserEntity;
@@ -55,13 +57,13 @@ public class AuthBootstrapService {
             throw alreadyInitialized();
         }
         if (request == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "请填写初始化信息。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", Messages.text("error.auth.authBootstrapService.create.1"));
         }
         credential.verify(request.setupCredential());
         String username = IdentityValidation.username(request.username());
-        String name = EnterpriseValidation.name(request.displayName(), "显示名", 50);
+        String name = EnterpriseValidation.name(request.displayName(), Messages.text("label.user.name"), 50);
         IdentityValidation.newPassword(request.password());
-        String enterpriseName = EnterpriseValidation.name(request.enterpriseName(), "企业名称", 80);
+        String enterpriseName = EnterpriseValidation.name(request.enterpriseName(), Messages.text("label.enterprise.name"), 80);
         String email = AccountInputValidation.email(request.email(), "email");
         String timezone = AccountInputValidation.timezone(request.timezone());
         String userId = UUID.randomUUID().toString();
@@ -75,18 +77,18 @@ public class AuthBootstrapService {
             String enterpriseId = provisioning.createInitial(enterpriseName, "", email, timezone, user, now)
                 .enterpriseId();
             users.updateLastEnterprise(userId, enterpriseId, now);
-            audit.record(enterpriseId, user, "auth.bootstrap", "user", userId, "完成首次初始化",
+            audit.record(enterpriseId, user, "auth.bootstrap", "user", userId, Messages.text("text.auth.authBootstrapService.create.1"),
                 Map.of("username", username));
             return users.findById(userId).orElseThrow();
         } catch (DuplicateKeyException exception) {
             if (users.initializedByAnother(userId)) {
                 throw alreadyInitialized();
             }
-            throw new ApiException(HttpStatus.CONFLICT, "VALIDATION_FAILED", "用户名或邮箱已被使用，请修改后重试。");
+            throw new ApiException(HttpStatus.CONFLICT, "VALIDATION_FAILED", Messages.text("error.auth.authBootstrapService.create.2"));
         }
     }
 
     private ApiException alreadyInitialized() {
-        return new ApiException(HttpStatus.CONFLICT, "SYSTEM_ALREADY_INITIALIZED", "系统已经初始化，请前往登录。");
+        return new ApiException(HttpStatus.CONFLICT, "SYSTEM_ALREADY_INITIALIZED", Messages.text("error.auth.authBootstrapService.alreadyInitialized.1"));
     }
 }

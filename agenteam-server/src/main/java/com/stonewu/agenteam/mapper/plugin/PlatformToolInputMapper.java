@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.plugin.entity.BuiltinExecutionContext;
@@ -55,7 +57,7 @@ public class PlatformToolInputMapper {
                 return value;
             }
         } catch (NumberFormatException ignored) { /* 下方返回统一字段提示。 */ }
-        throw ApiException.invalidField("revision", "请重新加载当前记录后再修改。");
+        throw ApiException.invalidField("revision", Messages.text("error.plugin.platformToolInputMapper.revision.1"));
     }
 
     public String text(JsonNode args, String key) {

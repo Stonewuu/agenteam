@@ -75,7 +75,7 @@ export function useConversationModel({
       setSaved(result);
       onChanged?.();
     } catch (error) {
-      console.error("保存对话模型选择失败", {
+      console.error("Failed to save the conversation model selection", {
         method: "PUT",
         path: endpoint,
         conversationId: conversation.id,

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.modelusage.entity.ModelTokenUsage;
 
@@ -28,7 +30,7 @@ public final class ModelUsageNormalizer {
             case "openai", "openai_responses" -> openai(fields, protocol, usageFormat);
             case "anthropic" -> anthropic(fields);
             case "gemini" -> gemini(fields);
-            default -> throw new IllegalArgumentException("不支持的模型用量协议。");
+            default -> throw new IllegalArgumentException(Messages.text("error.modelusage.modelUsageNormalizer.normalize.1"));
         };
     }
 

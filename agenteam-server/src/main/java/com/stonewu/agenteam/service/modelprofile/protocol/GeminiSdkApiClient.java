@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile.protocol;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.google.genai.ApiClient;
 import com.google.genai.ApiResponse;
 import com.google.genai.errors.ApiException;
@@ -42,7 +44,7 @@ public final class GeminiSdkApiClient extends ApiClient {
         try {
             return new SdkResponse(session.execute(buildRequest(method, path, body, options)));
         } catch (IOException failure) {
-            throw new UncheckedIOException("模型服务请求失败。", failure);
+            throw new UncheckedIOException(Messages.text("error.modelprofile.anthropicSdkHttpClient.execute.1"), failure);
         }
     }
 
@@ -51,7 +53,7 @@ public final class GeminiSdkApiClient extends ApiClient {
         try {
             return new SdkResponse(session.execute(buildRequest(method, path, body, options)));
         } catch (IOException failure) {
-            throw new UncheckedIOException("模型服务请求失败。", failure);
+            throw new UncheckedIOException(Messages.text("error.modelprofile.anthropicSdkHttpClient.execute.1"), failure);
         }
     }
 

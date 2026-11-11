@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
@@ -68,6 +70,6 @@ public class SkillFileValidation {
 
     private static ApiException invalid() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_TYPE_INVALID",
-            "文件内容不是完整的 UTF-8 文字，请重新导出后上传。");
+            Messages.text("error.file.skillFileValidation.invalid.1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data.mysql;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.security.CredentialMapper;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -15,7 +17,7 @@ public class DatabaseCredentialService {
     public record Credentials(String username, String password) {
         @Override
         public String toString() {
-            return "Credentials[数据库认证信息已隐藏]";
+            return Messages.log("log.data.databaseCredentialService.toString.1");
         }
     }
 
@@ -51,6 +53,6 @@ public class DatabaseCredentialService {
 
     private ApiException invalid() {
         return new ApiException(HttpStatus.CONFLICT, "CREDENTIAL_UNAVAILABLE",
-            "数据库凭据已失效或格式不正确，请重新设置。");
+            Messages.text("error.data.databaseCredentialService.invalid.1"));
     }
 }

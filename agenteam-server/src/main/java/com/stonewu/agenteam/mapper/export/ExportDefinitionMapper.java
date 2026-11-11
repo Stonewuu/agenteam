@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.export.entity.ExportDefinition;
@@ -29,7 +31,7 @@ public class ExportDefinitionMapper {
         try {
             return json.treeToValue(value, type);
         } catch (JsonProcessingException invalid) {
-            throw ApiException.invalidField(name, "导出条件无效，请重新选择后导出。", invalid);
+            throw ApiException.invalidField(name, Messages.text("error.export.exportDefinitionMapper.parameter.1"), invalid);
         }
     }
 }

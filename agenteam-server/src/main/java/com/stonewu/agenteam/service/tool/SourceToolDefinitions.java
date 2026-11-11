@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.tool.entity.ToolDefinition;
@@ -19,20 +21,20 @@ public class SourceToolDefinitions {
 
     public SourceToolDefinitions(ResourceJson json) {
         knowledge = definition("knowledge_search",
-            "检索这份知识库中的真实资料，返回文档、处理版本、页码或章节及原文片段。只在找到资料时使用返回的来源作引用。",
+            Messages.source("text.tool.sourceToolDefinitions.init.1"),
             json.tree(SourceToolParameters.knowledge()), List.of(), json);
         var hidden = new ArrayList<String>();
         for (int index = 0; index < 20; index++) {
             hidden.add("/filters/" + index + "/value");
         }
         data = List.of(definition("data_collections",
-                "列出本数据源当前可查询的集合、处理版本和允许字段。查询前先读取此列表，不要猜测字段或集合编号。",
+                Messages.source("text.tool.sourceToolDefinitions.init.2"),
                 json.tree(Map.of("type", "object", "properties",
                     Map.of("cursor", Map.of("type", "string", "minLength", 1, "maxLength", 2048),
                         "limit", Map.of("type", "integer", "minimum", 1, "maximum", 5)), "additionalProperties", false)),
                 List.of(), json),
             definition("data_query",
-                "按照明确的集合编号、处理版本和允许字段读取数据。只允许结构化条件，不能提交 SQL、地址或请求头。大整数和小数保留为精确字符串。",
+                Messages.source("text.tool.sourceToolDefinitions.init.3"),
                 json.tree(SourceToolParameters.data()), hidden, json));
     }
 

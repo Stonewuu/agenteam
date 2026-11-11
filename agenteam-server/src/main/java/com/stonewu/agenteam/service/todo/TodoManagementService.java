@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.todo.TodoDefinitionMapper;
 import com.stonewu.agenteam.mapper.todo.TodoMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -82,7 +84,7 @@ public class TodoManagementService {
         String reason = input.reason(request.reason());
         if (!before.status().canChangeTo(target)) {
             throw new ApiException(HttpStatus.CONFLICT, "TODO_STATUS_CONFLICT",
-                "当前状态不能执行该操作，请重新加载待办。");
+                Messages.text("error.todo.todoManagementService.status.1"));
         }
         if (before.status() == target) {
             return queries.view(actor, before);
@@ -125,6 +127,6 @@ public class TodoManagementService {
 
     private TodoRecord current(AuthContext actor, String id) {
         return todos.current(actor.enterpriseId(), id)
-            .orElseThrow(() -> new IllegalStateException("待办修改后无法读取"));
+            .orElseThrow(() -> new IllegalStateException(Messages.text("error.todo.todoManagementService.current.1")));
     }
 }

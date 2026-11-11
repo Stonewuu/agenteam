@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.enterprise.entity.InvitationEntity;
@@ -63,7 +65,7 @@ public class InvitationMapper {
             invitation.displayName(), array(invitation.teamIds()), array(invitation.roleIds()), note,
             invitation.tokenHash(),
             invitation.createdBy(), Timestamp.from(invitation.expiresAt()), Timestamp.from(now)) != 1) {
-            throw new IllegalStateException("邀请未能保存");
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationMapper.insert.1"));
         }
     }
 
@@ -71,7 +73,7 @@ public class InvitationMapper {
         int changed = statements.acceptEnterpriseInvitation(userId, Timestamp.from(now), invitation.enterpriseId(),
             invitation.id(), invitation.revision());
         if (changed != 1) {
-            throw new IllegalStateException("邀请已变化，接受操作未提交");
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationMapper.accept.1"));
         }
     }
 
@@ -79,7 +81,7 @@ public class InvitationMapper {
         int changed = statements.revokeEnterpriseInvitation(Timestamp.from(now), invitation.enterpriseId(),
             invitation.id(), invitation.revision());
         if (changed != 1) {
-            throw new IllegalStateException("邀请已变化，撤回操作未提交");
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationMapper.revoke.1"));
         }
     }
 
@@ -87,7 +89,7 @@ public class InvitationMapper {
         int changed = statements.resendEnterpriseInvitation(Timestamp.from(now), invitation.enterpriseId(),
             invitation.id(), invitation.revision());
         if (changed != 1) {
-            throw new IllegalStateException("邀请已变化，重发操作未提交");
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationMapper.resend.1"));
         }
     }
 
@@ -115,7 +117,7 @@ public class InvitationMapper {
             return List.copyOf(json.readValue(value, new TypeReference<List<String>>() {
             }));
         } catch (Exception failure) {
-            throw new IllegalStateException("邀请的角色或团队记录无法读取", failure);
+            throw new IllegalStateException(Messages.text("error.enterprise.invitationMapper.readArray.1"), failure);
         }
     }
 
@@ -123,7 +125,7 @@ public class InvitationMapper {
         try {
             return json.writeValueAsString(values);
         } catch (Exception failure) {
-            throw new IllegalArgumentException("邀请的角色或团队无法保存", failure);
+            throw new IllegalArgumentException(Messages.text("error.enterprise.invitationMapper.array.1"), failure);
         }
     }
 }

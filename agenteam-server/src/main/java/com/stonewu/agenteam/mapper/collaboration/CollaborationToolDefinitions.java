@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
@@ -45,7 +47,7 @@ public class CollaborationToolDefinitions {
         for (var definition : tools()) {
             if (!installed.contains(definition.name())) {
                 var binding = new ExecutionToolBinding(run.executionConfig().path("agentId").asText(), run.agentVersionId(),
-                    "agent", "团队协作", null, definition, bindingConfig);
+                    "agent", Messages.source("text.collaboration.collaborationToolDefinitions.addTo.1"), null, definition, bindingConfig);
                 bindings.put(binding.alias(), binding);
             }
         }
@@ -57,38 +59,38 @@ public class CollaborationToolDefinitions {
 
     private List<ToolDefinition> build() {
         var result = new ArrayList<ToolDefinition>();
-        result.add(tool("collab_list_roles", "分页读取本任务固定岗位及当前可用情况。只能使用返回的岗位编号，按 nextCursor 继续查询。", false,
+        result.add(tool("collab_list_roles", Messages.source("text.collaboration.collaborationToolDefinitions.build.1"), false,
             fields("cursor", text(30), "limit", integer(1, 10))));
-        result.add(tool("collab_read_context", "分页读取本任务的要求、消息、成果或工作。返回内容可能分段，按 nextCursor 继续读取。", false,
+        result.add(tool("collab_read_context", Messages.source("text.collaboration.collaborationToolDefinitions.build.2"), false,
             fields("section", choice("overview", "messages", "artifacts", "work"), "cursor", text(30), "limit", integer(1, 50)), "section"));
-        result.add(tool("collab_read_artifact", "读取本任务固定版本成果。金额、日期等精确事实以原成果为准；hasMore 为真时继续读取。", false,
+        result.add(tool("collab_read_artifact", Messages.source("text.collaboration.collaborationToolDefinitions.build.3"), false,
             fields("artifactId", text(100), "version", integer(1, Integer.MAX_VALUE), "offset", integer(0, Integer.MAX_VALUE), "limit", integer(1, 16000)),
             "artifactId", "version"));
         var publish = fields("expectedInputRevision", integer(1, Integer.MAX_VALUE), "artifactKey", text(100), "title", text(160),
             "summary", text(2000), "kind", choice("text", "json", "file"), "schemaName", text(80), "content", Map.of(), "fileId", text(100));
-        result.add(tool("collab_publish_artifact", "保存本岗位成果的不可变版本。文件只能来自当前执行；内容最多 16 KiB，超出时先生成文件。", true, publish,
+        result.add(tool("collab_publish_artifact", Messages.source("text.collaboration.collaborationToolDefinitions.build.4"), true, publish,
             "expectedInputRevision", "artifactKey", "title", "summary", "kind"));
         var assign = fields("expectedInputRevision", integer(1, Integer.MAX_VALUE), "targetRoleId", text(100), "goal", text(4000),
             "acceptanceCriteria", text(2000), "artifactRefs", references(), "dependsOnWorkIds", identifiers(), "required", Map.of("type", "boolean"), "replacesWorkItemId", text(100));
-        result.add(tool("collab_assign", "向另一岗位委派独立协助工作，当前交付负责人不变。明确指定的岗位必须安排；替换旧工作只允许负责人。", true, assign,
+        result.add(tool("collab_assign", Messages.source("text.collaboration.collaborationToolDefinitions.build.5"), true, assign,
             "expectedInputRevision", "targetRoleId", "goal", "acceptanceCriteria", "artifactRefs", "dependsOnWorkIds"));
         var handoff = fields("expectedInputRevision", integer(1, Integer.MAX_VALUE), "targetRoleId", text(100), "completedSummary", text(2000),
             "nextGoal", text(4000), "acceptanceCriteria", text(2000), "artifactRefs", references(), "dependsOnWorkIds", identifiers());
-        result.add(tool("collab_handoff", "只有最终交付负责人可以移交。必须说明已完成内容并带成果；成功后结束本轮，不再修改业务。", true, handoff,
+        result.add(tool("collab_handoff", Messages.source("text.collaboration.collaborationToolDefinitions.build.6"), true, handoff,
             "expectedInputRevision", "targetRoleId", "completedSummary", "nextGoal", "acceptanceCriteria", "artifactRefs", "dependsOnWorkIds"));
-        result.add(tool("collab_wait", "等待本任务已有工作。成功后结束本轮，依赖齐备后系统会自动继续；不要轮询或继续修改业务。", true,
+        result.add(tool("collab_wait", Messages.source("text.collaboration.collaborationToolDefinitions.build.7"), true,
             fields("expectedInputRevision", integer(1, Integer.MAX_VALUE), "workItemIds", identifiers(), "reason", text(2000)),
             "expectedInputRevision", "workItemIds", "reason"));
-        result.add(tool("collab_ask_user", "向原发起人提出问题并暂停，问题与选项会发送到任务来源群聊或私聊。只填写适合在该会话公开的具体问题，不附带私有文件正文、内部指令或推理；不能用它代替业务操作审批。", true,
+        result.add(tool("collab_ask_user", Messages.source("text.collaboration.collaborationToolDefinitions.build.8"), true,
             fields("expectedInputRevision", integer(1, Integer.MAX_VALUE), "question", text(2000), "options", array(text(200), 5)),
             "expectedInputRevision", "question"));
         var finish = fields("expectedInputRevision", integer(1, Integer.MAX_VALUE), "summary", text(2000), "artifactRefs", references());
         var prior = object(fields("workItemId", text(100), "artifactId", text(100), "version", integer(1, Integer.MAX_VALUE), "reason", text(2000)),
             "workItemId", "artifactId", "version", "reason");
-        result.add(tool("collab_submit_result", "提交本项工作的成果并结束本轮。协助工作只完成自身；负责人有未完成依赖时自动转为等待。", true, finish,
+        result.add(tool("collab_submit_result", Messages.source("text.collaboration.collaborationToolDefinitions.build.9"), true, finish,
             "expectedInputRevision", "summary", "artifactRefs"));
         finish.put("acceptedPriorResults", array(prior, 20));
-        result.add(tool("collab_complete_task", "最终交付负责人在所有必需工作完成后结束任务。旧要求成果必须逐项说明仍符合新要求的理由。", true, finish,
+        result.add(tool("collab_complete_task", Messages.source("text.collaboration.collaborationToolDefinitions.build.10"), true, finish,
             "expectedInputRevision", "summary", "artifactRefs", "acceptedPriorResults"));
         return List.copyOf(result);
     }

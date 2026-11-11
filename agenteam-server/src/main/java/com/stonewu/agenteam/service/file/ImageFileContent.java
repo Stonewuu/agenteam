@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.file.entity.FileRecord;
 import io.agentscope.core.message.Base64Source;
 import io.agentscope.core.message.ImageBlock;
@@ -34,13 +36,13 @@ public class ImageFileContent {
     }
 
     public static String name(String media) {
-        return "图片." + switch (media) {
+        return Messages.text("text.file.imageFileContent.name.1", switch (media) {
             case "image/png" -> "png";
             case "image/jpeg" -> "jpg";
             case "image/gif" -> "gif";
             case "image/webp" -> "webp";
             default -> throw DocumentParserProcess.failure("FILE_TYPE_INVALID");
-        };
+        });
     }
 
     public static String detect(byte[] bytes) {
@@ -74,7 +76,7 @@ public class ImageFileContent {
         } catch (IOException failure) {
             throw FileStorageKeys.storageUnavailable(failure);
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", failure);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), failure);
         }
     }
 }

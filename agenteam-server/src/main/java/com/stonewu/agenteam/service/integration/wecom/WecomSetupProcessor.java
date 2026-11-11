@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.integration.entity.WecomSetupJobRow;
 import com.stonewu.agenteam.service.chat.ChatBotBindingService;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -57,7 +59,7 @@ public class WecomSetupProcessor {
             var actor = store.actor(row);
             var parent = enterprises.require(row.getEnterpriseId(), row.getEnterpriseConnectionId());
             if (!parent.getCredentialRevision().equals(row.getEnterpriseCredentialRevision())) {
-                throw new ChannelProviderException("WECOM_ENTERPRISE_CHANGED", "企业接入凭据已变化，请重新检查后继续。");
+                throw new ChannelProviderException("WECOM_ENTERPRISE_CHANGED", Messages.text("error.integration.wecomSetupProcessor.process.1"));
             }
             row.setNextAttemptAt(clock.instant().plusSeconds(3));
             switch (row.getStage()) {
@@ -99,7 +101,7 @@ public class WecomSetupProcessor {
                     verifier.ensure(row.getEnterpriseId(), row.getConnectionId());
                     transactions.bind(row, actor, bots.prepare(actor, row.getEnterpriseId(), row.getSystemAccess(), row.getConnectionId()));
                 }
-                default -> throw new IllegalStateException("企微创建阶段无法识别");
+                default -> throw new IllegalStateException(Messages.text("error.integration.wecomSetupProcessor.process.2"));
             }
         } catch (RuntimeException failure) {
             // 提交结果不明确时重新读取租约，不能覆盖已完成或被其他线程接管的任务。
@@ -115,11 +117,11 @@ public class WecomSetupProcessor {
             current.setStage("failed");
             current.setErrorCode(failure instanceof ChannelProviderException provider ? provider.code()
                 : failure instanceof ApiException api ? api.code() : "WECOM_SETUP_FAILED");
-            current.setErrorSummary("verifying".equals(claimed.getStage()) ? "企业核验未通过，请检查后重试。"
+            current.setErrorSummary("verifying".equals(claimed.getStage()) ? Messages.text("error.integration.wecomSetupProcessor.process.3")
                 : failure instanceof ChannelProviderException || failure instanceof ApiException
-                    ? failure.getMessage() : "创建暂时未完成，请稍后重试。");
+                    ? failure.getMessage() : Messages.text("error.integration.wecomSetupProcessor.process.4"));
             store.save(current);
-            LOG.warn("企微创建暂时未完成，任务={}，原因={}", claimed.getId(), current.getErrorCode());
+            LOG.warn(Messages.log("log.integration.wecomSetupProcessor.process.1"), claimed.getId(), current.getErrorCode());
         }
     }
 }

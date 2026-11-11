@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
@@ -36,11 +38,11 @@ public class CollaborationToolQueries {
                 "versionId", role.getAgentVersionId(), "availability", role.getAvailability(), "explicitlyRequested", role.getExplicitlyRequested())).toList();
         String cursor = input.path("cursor").asText("0");
         if (!cursor.matches("[0-9]{1,9}")) {
-            throw ApiException.invalidField("cursor", "岗位读取位置不正确。");
+            throw ApiException.invalidField("cursor", Messages.text("error.collaboration.collaborationToolQueries.roles.1"));
         }
         int offset = Integer.parseInt(cursor);
         if (offset > roles.size()) {
-            throw ApiException.invalidField("cursor", "岗位读取位置已经超出当前内容。");
+            throw ApiException.invalidField("cursor", Messages.text("error.collaboration.collaborationToolQueries.roles.2"));
         }
         var selected = new ArrayList<JsonNode>();
         int bytes = 0;
@@ -68,17 +70,17 @@ public class CollaborationToolQueries {
             case "work" -> json.tree(dependencies.works(context.task()).stream().map(work -> Map.of(
                 "id", work.getId(), "participantId", work.getParticipantId(), "status", work.getStatus(), "inputRevision", work.getInputRevision(),
                 "required", work.getRequired())).toList());
-            default -> throw ApiException.invalidField("section", "请选择要求、消息、成果或工作。");
+            default -> throw ApiException.invalidField("section", Messages.text("error.collaboration.collaborationToolQueries.context.1"));
         };
         String cursor = input.path("cursor").asText("0");
         if (!cursor.matches("[0-9]{1,9}")) {
-            throw ApiException.invalidField("cursor", "上下文读取位置不正确。");
+            throw ApiException.invalidField("cursor", Messages.text("error.collaboration.collaborationToolQueries.context.2"));
         }
         int from = Integer.parseInt(cursor);
         String text = data.toString();
         int length = text.codePointCount(0, text.length());
         if (from > length) {
-            throw ApiException.invalidField("cursor", "上下文读取位置已经超出当前内容。");
+            throw ApiException.invalidField("cursor", Messages.text("error.collaboration.collaborationToolQueries.context.3"));
         }
         int start = text.offsetByCodePoints(0, from);
         int next = start;

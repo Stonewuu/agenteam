@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.modelpricing.ModelsDevCatalogParser;
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceCatalogEntry;
@@ -53,10 +55,10 @@ public class ModelsDevCatalogClient {
         diagnostic.request(request);
         try (var original = client.newCall(request).execute(); var response = diagnostic.response(original)) {
             if (!response.isSuccessful() || response.body() == null) {
-                throw new IOException("价格目录请求失败，HTTP 状态=" + response.code());
+                throw new IOException(Messages.text("error.modelpricing.modelsDevCatalogClient.fetch.1", response.code()));
             }
             if (response.body().contentLength() > MAX_BYTES) {
-                throw new IOException("价格目录超过允许大小。");
+                throw new IOException(Messages.text("error.modelpricing.modelsDevCatalogClient.fetch.2"));
             }
             try (var input = new LimitedInputStream(response.body().byteStream())) {
                 return parser.read(input);
@@ -86,7 +88,7 @@ public class ModelsDevCatalogClient {
         public int read() throws IOException {
             int result = in.read();
             if (result >= 0 && --remaining < 0) {
-                throw new IOException("价格目录超过允许大小。");
+                throw new IOException(Messages.text("error.modelpricing.modelsDevCatalogClient.fetch.2"));
             }
             return result;
         }
@@ -95,7 +97,7 @@ public class ModelsDevCatalogClient {
         public int read(byte[] buffer, int offset, int length) throws IOException {
             int result = in.read(buffer, offset, Math.min(length, remaining + 1));
             if (result > 0 && (remaining -= result) < 0) {
-                throw new IOException("价格目录超过允许大小。");
+                throw new IOException(Messages.text("error.modelpricing.modelsDevCatalogClient.fetch.2"));
             }
             return result;
         }

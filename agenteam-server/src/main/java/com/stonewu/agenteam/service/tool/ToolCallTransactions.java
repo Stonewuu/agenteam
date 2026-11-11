@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.execution.ExecutionStepIds;
 import com.stonewu.agenteam.mapper.execution.RunApprovalMapper;
@@ -90,7 +92,7 @@ public class ToolCallTransactions {
         var run = current(lease, binding);
         if (use.getId() == null || use.getId().isBlank() || use.getId()
             .length() > 128 || session == null || session.isBlank() || session.length() > 255) {
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_ARGUMENTS_INVALID", "工具调用没有有效的关联编号。");
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "TOOL_ARGUMENTS_INVALID", Messages.text("error.tool.toolCallTransactions.prepare.1"));
         }
         JsonNode input = json.tree(use.getInput());
         schemas.requireBoundedArguments(input);
@@ -104,7 +106,7 @@ public class ToolCallTransactions {
             if (!failure.code().equals("TOOL_ARGUMENTS_INVALID")) {
                 throw failure;
             }
-            LOG.warn("工具参数未通过校验，将错误返回助手修正，执行编号 {}，工具调用编号 {}", run.id(), use.getId(),
+            LOG.warn(Messages.log("log.tool.toolCallTransactions.prepare.1"), run.id(), use.getId(),
                 failure);
             argumentFailure = failure;
         }
@@ -138,7 +140,7 @@ public class ToolCallTransactions {
         var prepared = calls.find(run.enterpriseId(), id, false).orElseThrow();
         if (argumentFailure != null) {
             var result = json.tree(Map.of("isError", true, "code", argumentFailure.code(),
-                "content", "工具参数不符合已发布的要求，本次操作没有执行。请按工具定义修正参数后继续。"));
+                "content", Messages.text("text.tool.toolCallTransactions.prepare.1")));
             calls.finish(prepared, "failed", encryption.encrypt(result, resultBinding(prepared)), result,
                 argumentFailure.code(), argumentFailure.getReason(), clock.instant());
         } else if (!binding.readOnly() && calls.hasUncertainWrite(run, binding, arguments)) {
@@ -158,7 +160,7 @@ public class ToolCallTransactions {
         var run = current(lease, binding);
         var call = calls.find(run.enterpriseId(), id, true).orElseThrow();
         if (!run.id().equals(call.runId()) || !binding.readOnly() || !call.readOnly()) {
-            throw new IllegalStateException("只有已验证的只读请求可以重新读取");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallTransactions.retryRead.1"));
         }
         verify(call, binding, arguments(call));
         if (call.status().equals("prepared") && call.resultEncrypted() == null) {
@@ -166,7 +168,7 @@ public class ToolCallTransactions {
         }
         if (!List.of("REMOTE_TIMEOUT", "REMOTE_CONNECTION_FAILED", "REMOTE_SERVER_UNAVAILABLE")
             .contains(call.errorCode())) {
-            throw new IllegalStateException("当前失败不是可自动重试的临时连接故障");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallTransactions.retryRead.2"));
         }
         calls.retryRead(call, lease.version(), clock.instant());
     }
@@ -175,7 +177,7 @@ public class ToolCallTransactions {
     public ToolCallRecord start(JobLease lease, ExecutionToolBinding binding, String session, ToolUseBlock use) {
         var run = current(lease, binding);
         var call = calls.framework(run, session, use.getId())
-            .orElseThrow(() -> new IllegalStateException("工具参数尚未固定保存"));
+            .orElseThrow(() -> new IllegalStateException(Messages.text("error.tool.toolCallTransactions.start.1")));
         verify(call, binding, json.tree(use.getInput()));
         if (call.status().equals("unknown") && call.resultEncrypted() == null) {
             throw unknown();
@@ -184,7 +186,7 @@ public class ToolCallTransactions {
             return call;
         }
         if (UserQuestionTool.handles(binding)) {
-            throw new ApiException(HttpStatus.CONFLICT, "QUESTION_ANSWER_REQUIRED", "请先等待用户回答当前问题。");
+            throw new ApiException(HttpStatus.CONFLICT, "QUESTION_ANSWER_REQUIRED", Messages.text("error.tool.toolCallTransactions.start.2"));
         }
         if (!binding.readOnly() && calls.hasUncertainWrite(run, binding, call.argumentHash(), call.id())) {
             rejectUnknown(call);
@@ -233,7 +235,7 @@ public class ToolCallTransactions {
         lifecycle.remaining(run);
         var call = calls.find(lease.enterpriseId(), callId, true).orElseThrow();
         if (!call.runId().equals(run.id()) || !call.status().equals("running")) {
-            throw new IllegalStateException("插件调用已经结束");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallTransactions.recheckPluginCall.1"));
         }
         requireApproval(run, binding, call);
     }
@@ -264,7 +266,7 @@ public class ToolCallTransactions {
         }
         boolean unknown = !call.readOnly() && call.submittedAt() != null;
         boolean pluginChanged = Set.of("JAVA_PLUGIN_UPGRADED", "JAVA_PLUGIN_UNINSTALLED").contains(code);
-        String detail = unknown ? pluginChanged ? message + " 此前已提交的外部操作结果无法确认，请先核对，勿重复执行。"
+        String detail = unknown ? pluginChanged ? Messages.text("error.tool.toolCallTransactions.failed.1", message)
             : unknown().getReason() : message;
         JsonNode result = json.tree(Map.of("isError", true, "code", unknown && !pluginChanged ? "TOOL_RESULT_UNKNOWN" : code, "content",
             List.of(Map.of("type", "text", "text", detail))));
@@ -293,9 +295,9 @@ public class ToolCallTransactions {
     }
 
     public void reject(ToolCallRecord call) {
-        var result = json.tree(Map.of("isError", true, "content", "用户已拒绝本次操作，未发送请求。"));
+        var result = json.tree(Map.of("isError", true, "content", Messages.text("error.workflow.workflowToolNodeExecutor.execute.2")));
         calls.finish(call, "cancelled", encryption.encrypt(result, resultBinding(call)), result, "TOOL_USER_REJECTED",
-            "用户已拒绝本次操作，未发送请求。", clock.instant());
+            Messages.text("error.workflow.workflowToolNodeExecutor.execute.2"), clock.instant());
     }
 
     private void rejectUnknown(ToolCallRecord call) {
@@ -328,12 +330,12 @@ public class ToolCallTransactions {
         if (!run.id().equals(call.runId()) || !run.userId().equals(call.actorUserId()) || !call.readOnly()
                 || !UserQuestionTool.NAME.equals(call.toolName()) || !"waiting_input".equals(call.status())
                 || !questionAnswered(call)) {
-            throw new IllegalStateException("用户回答不属于当前等待的工具调用");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallTransactions.answerQuestion.1"));
         }
         calls.finish(call, "succeeded", encryption.encrypt(answer, resultBinding(call)),
             payloads.redact(answer, List.of(), List.of()), null, null, clock.instant());
         if (!"succeeded".equals(calls.find(call.enterpriseId(), call.id(), false).orElseThrow().status())) {
-            throw new IllegalStateException("未能保存当前问题的回答");
+            throw new IllegalStateException(Messages.text("error.tool.toolCallTransactions.answerQuestion.2"));
         }
     }
 
@@ -361,7 +363,7 @@ public class ToolCallTransactions {
             binding.resourceVersionId())
             || !call.resourceId().equals(binding.resourceId()) || !call.toolName()
             .equals(binding.definition().name()) || !call.argumentHash().equals(payloads.argumentHash(input))) {
-            throw new ApiException(HttpStatus.CONFLICT, "TOOL_ARGUMENTS_CHANGED", "工具参数已经变化，不能沿用此前确认。");
+            throw new ApiException(HttpStatus.CONFLICT, "TOOL_ARGUMENTS_CHANGED", Messages.text("error.tool.toolCallTransactions.verify.1"));
         }
     }
 
@@ -375,11 +377,11 @@ public class ToolCallTransactions {
 
     private static ApiException unapproved() {
         return new ApiException(HttpStatus.CONFLICT, "TOOL_APPROVAL_REQUIRED",
-            "本次外部操作尚未获得有效确认，未发送请求。");
+            Messages.text("error.tool.toolCallTransactions.unapproved.1"));
     }
 
     public static ApiException unknown() {
         return new ApiException(HttpStatus.CONFLICT, "TOOL_RESULT_UNKNOWN",
-            "操作可能已经执行，但暂时无法确认结果。请先查询目标系统，不能重复提交相同操作；可以继续其他步骤并向用户说明未确认的部分。");
+            Messages.text("error.tool.toolCallTransactions.unknown.1"));
     }
 }

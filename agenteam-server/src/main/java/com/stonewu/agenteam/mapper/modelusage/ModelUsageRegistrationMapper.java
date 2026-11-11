@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceVersionRow;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProviderRecord;
@@ -18,7 +20,7 @@ public class ModelUsageRegistrationMapper {
                                       ModelProviderRecord provider, ModelPriceVersionRow price, Instant now) {
         if (context == null || !context.enterpriseId().equals(model.enterpriseId())
             || !context.enterpriseId().equals(provider.enterpriseId()) || !model.providerId().equals(provider.id())) {
-            throw new IllegalArgumentException("模型调用缺少有效的企业归属。");
+            throw new IllegalArgumentException(Messages.text("error.modelusage.modelUsageRegistrationMapper.create.1"));
         }
         var row = new ModelUsageRecordRow();
         row.setId(id);

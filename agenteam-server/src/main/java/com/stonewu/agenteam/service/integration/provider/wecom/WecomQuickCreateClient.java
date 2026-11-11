@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.configuration.integration.IntegrationEndpoints;
 import com.stonewu.agenteam.model.integration.entity.ChannelHttpResponse;
@@ -50,7 +52,7 @@ public class WecomQuickCreateClient {
             return new Registration(registration.code(), registration.url(), text(bot, "botid", 191), text(bot, "secret", 4096));
         }
         if (Set.of("expired", "cancelled", "canceled", "rejected").contains(status)) {
-            throw new ChannelProviderException("WECOM_SETUP_EXPIRED", "企微创建入口已失效，请重新获取二维码。");
+            throw new ChannelProviderException("WECOM_SETUP_EXPIRED", Messages.text("error.integration.wecomQuickCreateClient.poll.1"));
         }
         // 未成功的状态不得当作创建完成，任务自身负责限制等待时间。
         return registration;
@@ -80,13 +82,13 @@ public class WecomQuickCreateClient {
     }
 
     private static ChannelProviderException invalid() {
-        return new ChannelProviderException("WECOM_SETUP_RESPONSE_INVALID", "企微创建服务未返回有效结果，请稍后重试。");
+        return new ChannelProviderException("WECOM_SETUP_RESPONSE_INVALID", Messages.text("error.integration.wecomQuickCreateClient.invalid.1"));
     }
 
     public record Registration(String code, String url, String botId, String secret) {
         @Override
         public String toString() {
-            return "Registration[创建凭据已隐藏]";
+            return Messages.log("log.integration.wecomQuickCreateClient.toString.1");
         }
     }
 }

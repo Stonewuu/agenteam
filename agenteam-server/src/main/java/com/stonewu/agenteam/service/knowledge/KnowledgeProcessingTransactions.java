@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.knowledge;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.background.BackgroundJobMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -66,7 +68,7 @@ public class KnowledgeProcessingTransactions {
     public void append(JobLease lease, String id, int generation, List<DocumentChunk> batch) {
         var doc = owned(lease, id, generation);
         if (batch.isEmpty() || batch.size() > 100) {
-            throw new IllegalArgumentException("知识资料写入批次不正确");
+            throw new IllegalArgumentException(Messages.text("error.knowledge.knowledgeProcessingTransactions.append.1"));
         }
         chunks.add(doc, batch, clock.instant());
     }

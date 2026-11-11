@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.modelpricing.ModelPriceStore;
@@ -35,7 +37,7 @@ public class ModelPricePreviewService {
     public ModelPricePreviewView preview(AuthContext actor, String model, String version, ModelPricePreviewRequest input) {
         management.authorize(actor, false);
         if (input == null || input.dispatchedAt() == null) {
-            throw ApiException.invalidField("dispatchedAt", "请选择模拟请求的发生时间。");
+            throw ApiException.invalidField("dispatchedAt", Messages.text("error.modelpricing.modelPricePreviewService.preview.1"));
         }
         var source = JsonNodeFactory.instance.objectNode();
         counter(source, "input_tokens", input.inputTokens());
@@ -46,18 +48,18 @@ public class ModelPricePreviewService {
         var base = new ModelUsageNormalizer().normalize("openai_responses", "standard", source, Set.of("reasoning"));
         Map<Integer, Long> details = input.cacheWriteDetails() == null ? Map.of() : input.cacheWriteDetails();
         if (input.cacheWriteTokens() == null && details.values().stream().anyMatch(value -> value != null && value > 0)) {
-            throw ApiException.invalidField("cacheWriteTokens", "填写缓存创建明细时，请同时填写创建总量。");
+            throw ApiException.invalidField("cacheWriteTokens", Messages.text("error.modelpricing.modelPricePreviewService.preview.2"));
         }
         if (details.size() > 32 || details.entrySet().stream().anyMatch(entry -> entry.getKey() == null || entry.getKey() <= 0
             || entry.getKey() > 31536000 || entry.getValue() == null || entry.getValue() < 0 || entry.getValue() > 100000000000L)
             || (input.cacheWriteTokens() != null && details.values().stream().mapToLong(Long::longValue).sum() > input.cacheWriteTokens())) {
-            throw ApiException.invalidField("cacheWriteDetails", "缓存创建明细必须为非负整数，且不能超过创建总量。");
+            throw ApiException.invalidField("cacheWriteDetails", Messages.text("error.modelpricing.modelPricePreviewService.preview.3"));
         }
         var usage = new ModelTokenUsage(base.inputTokens(), base.uncachedInputTokens(), base.outputTokens(), base.cacheReadTokens(),
             base.cacheWriteTokens(), base.reasoningTokens(), base.toolUsePromptTokens(), base.totalTokens(), details,
             base.fieldStates(), base.evidence(), base.problems(), base.unsupportedMeters());
         if (!usage.valid()) {
-            throw ApiException.invalidField("inputTokens", "输入总量不能小于缓存读取和创建之和。");
+            throw ApiException.invalidField("inputTokens", Messages.text("error.modelpricing.modelPricePreviewService.preview.4"));
         }
         var book = prices.load(prices.version(actor.enterpriseId(), model, version));
         return mapping.preview(calculator.calculate(book, input.dispatchedAt(), input.requestedServiceTier(), input.actualServiceTier(), usage, usage.complete()));
@@ -68,7 +70,7 @@ public class ModelPricePreviewService {
             return;
         }
         if (count < 0 || count > 100000000000L) {
-            throw ApiException.invalidField("inputTokens", "模拟用量须为 0 至一千亿的整数。");
+            throw ApiException.invalidField("inputTokens", Messages.text("error.modelpricing.modelPricePreviewService.counter.1"));
         }
         value.put(field, count);
     }

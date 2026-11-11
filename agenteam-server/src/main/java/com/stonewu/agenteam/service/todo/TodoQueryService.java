@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.todo;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.todo.TodoHistoryMapper;
 import com.stonewu.agenteam.mapper.todo.TodoMapper;
 import com.stonewu.agenteam.mapper.todo.TodoViewMapper;
@@ -50,10 +52,10 @@ public class TodoQueryService {
         String area = scope == null ? "mine" : scope;
         String state = status == null ? "" : status;
         if (!Set.of("mine", "team").contains(area)) {
-            throw ApiException.invalidField("scope", "请选择我的待办或团队待办。");
+            throw ApiException.invalidField("scope", Messages.text("error.todo.todoQueryService.list.1"));
         }
         if (!Set.of("", "open", "pending", "in_progress", "completed", "cancelled").contains(state)) {
-            throw ApiException.invalidField("status", "请选择有效的待办状态。");
+            throw ApiException.invalidField("status", Messages.text("error.todo.todoDefinitionMapper.status.1"));
         }
         if (area.equals("team")) {
             policy.teamList(actor);

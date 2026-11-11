@@ -154,7 +154,7 @@ export function LightRays({paused}: { paused: boolean }) {
     }
 
     void initialize().catch((error) => {
-      console.error("初始化身份页背景动效失败", error);
+      console.error("Failed to initialize the identity page background animation", error);
       // 不支持图形加速时保留完整表单和静态品牌区域。
       container.dataset.motion = "unavailable";
     });

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRule;
 import com.stonewu.agenteam.model.schedule.entity.ScheduleRule.Frequency;
 import com.stonewu.agenteam.model.schedule.request.ScheduleRuleInput;
@@ -27,13 +29,13 @@ public class ScheduleRuleMapper {
         try {
             date = input.localDate() == null ? null : LocalDate.parse(input.localDate());
         } catch (DateTimeException invalid) {
-            throw ApiException.invalidField("localDate", "请选择有效的执行日期。");
+            throw ApiException.invalidField("localDate", Messages.text("error.schedule.scheduleRuleMapper.from.1"));
         }
         LocalTime time;
         try {
             time = LocalTime.parse(input.localTime());
         } catch (DateTimeException invalid) {
-            throw ApiException.invalidField("localTime", "请选择执行时间，精确到分钟。");
+            throw ApiException.invalidField("localTime", Messages.text("error.schedule.scheduleRuleMapper.from.2"));
         }
         var zone = ZoneId.of(AccountInputValidation.timezone(input.timezone()));
         try {
@@ -41,7 +43,7 @@ public class ScheduleRuleMapper {
             return new ScheduleRule(Frequency.valueOf(input.frequency().toUpperCase(Locale.ROOT)), date, time, days,
                 input.monthDay(), zone);
         } catch (IllegalArgumentException | DateTimeException invalid) {
-            throw ApiException.invalidField("frequency", "日期、星期和月日需要符合所选重复方式。");
+            throw ApiException.invalidField("frequency", Messages.text("error.schedule.scheduleRuleMapper.from.3"));
         }
     }
 }

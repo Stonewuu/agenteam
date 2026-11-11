@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,7 +14,7 @@ public final class LoginRateLimitException extends ResponseStatusException {
     private final long retryAfterSeconds;
 
     public LoginRateLimitException(long retryAfterSeconds) {
-        super(HttpStatus.TOO_MANY_REQUESTS, "尝试次数过多，请稍后再试");
+        super(HttpStatus.TOO_MANY_REQUESTS, Messages.text("error.auth.loginRateLimitException.init.1"));
         this.retryAfterSeconds = retryAfterSeconds;
     }
 

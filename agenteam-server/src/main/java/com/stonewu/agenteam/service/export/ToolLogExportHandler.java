@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.export.CsvExportMapper;
 import com.stonewu.agenteam.mapper.export.ExportDefinitionMapper;
 import com.stonewu.agenteam.mapper.tool.ToolLogMapper;
@@ -46,7 +48,7 @@ public class ToolLogExportHandler implements ExportTypeHandler {
     public ExportDefinition validate(AuthContext actor, ExportDefinition definition) {
         var input = definitions.parameter(definition, "toolCalls", ToolLogQuery.class);
         if (input == null || input.from() == null || input.to() == null) {
-            throw ApiException.invalidField("from", "请提供完整的导出起止时间。");
+            throw ApiException.invalidField("from", Messages.text("error.export.toolLogExportHandler.validate.1"));
         }
         var filter = tools.validate(input);
         ranges.resolve(filter.from(), filter.to(), null);
@@ -64,12 +66,12 @@ public class ToolLogExportHandler implements ExportTypeHandler {
     public ExportSnapshot read(AuthContext actor, ExportDefinition definition, List<DataScope> scopes, Instant when) {
         var filter = definitions.parameter(definition, "toolCalls", ToolLogQuery.class);
         var range = ranges.resolve(filter.from(), filter.to(), null);
-        var output = csv.rows("时间", "发起成员", "工具", "运行来源", "调用状态", "操作类型", "耗时毫秒", "错误摘要");
+        var output = csv.rows(Messages.text("text.export.conversationExportHandler.read.2"), Messages.text("text.export.toolLogExportHandler.read.1"), Messages.text("text.workflow.workflowDraftMapper.schema.3"), Messages.text("text.export.toolLogExportHandler.read.2"), Messages.text("text.export.toolLogExportHandler.read.3"), Messages.text("text.export.toolLogExportHandler.read.4"), Messages.text("text.export.toolLogExportHandler.read.5"), Messages.text("text.export.toolLogExportHandler.read.6"));
         for (var entry : records.list(actor, scopes, null, filter, range, null, CsvExportMapper.MAX_ROWS)) {
             var row = entry.call();
             output.row(row.actor().id(), row.createdAt(), row.actor().displayName(), row.toolName(), row.source(),
                 row.status(), row.operationClass(), row.durationMs() == null ? null : row.durationMs().toString(), row.errorSummary());
         }
-        return output.finish(definition, when, "调用记录.csv");
+        return output.finish(definition, when, Messages.text("text.export.toolLogExportHandler.read.7"));
     }
 }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.plugin.response.BuiltinPluginView;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.stereotype.Component;
@@ -18,7 +20,7 @@ public class BuiltinPluginRegistry {
     public BuiltinPluginRegistry(List<BuiltinPluginAdapter> registered) {
         for (var adapter : registered) {
             if (adapters.put(adapter.code(), adapter) != null) {
-                throw new IllegalStateException("内置插件代码重复登记");
+                throw new IllegalStateException(Messages.text("error.plugin.builtinPluginRegistry.init.1"));
             }
         }
     }
@@ -26,7 +28,7 @@ public class BuiltinPluginRegistry {
     public BuiltinPluginAdapter require(String code) {
         var adapter = adapters.get(code);
         if (adapter == null) {
-            throw ApiException.invalidField("config.builtinCode", "请选择当前支持的内置插件。");
+            throw ApiException.invalidField("config.builtinCode", Messages.text("error.plugin.builtinPluginRegistry.require.1"));
         }
         return adapter;
     }
@@ -34,6 +36,7 @@ public class BuiltinPluginRegistry {
     public List<BuiltinPluginView> list() {
         return adapters.values().stream().filter(value -> !"group_collaboration".equals(value.code())).map(
             value -> new BuiltinPluginView(value.code(), value.name(), value.description(),
-                value.tools().stream().map(tool -> tool.name()).toList())).toList();
+                value.tools().stream().map(tool -> tool.name()).toList(), BuiltinPluginPresentation.icon(value.code()),
+                BuiltinPluginPresentation.color(value.code()))).toList();
     }
 }

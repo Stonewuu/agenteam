@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.google.re2j.Pattern;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.http.HttpStatus;
@@ -13,7 +15,7 @@ public final class WorkspaceFileGlob {
 
     public WorkspaceFileGlob(String glob) {
         if (glob == null || glob.isBlank() || glob.length() > 128) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_GLOB_INVALID", "文件名筛选不正确。");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "FILE_GLOB_INVALID", Messages.text("error.workspace.workspaceFileGlob.init.1"));
         }
         fullPath = glob.contains("/");
         StringBuilder expression = new StringBuilder("^");

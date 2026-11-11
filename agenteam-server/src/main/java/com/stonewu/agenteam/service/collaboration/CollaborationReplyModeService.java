@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -44,7 +46,7 @@ public class CollaborationReplyModeService {
     public CollaborationReplyModeView get(AuthContext actor, String id) {
         var task = access.owned(actor, id);
         if (task.fromWebRoom()) {
-            throw ApiException.invalidField("taskId", "网页协作对话不向外部平台发送消息。");
+            throw ApiException.invalidField("taskId", Messages.text("error.collaboration.collaborationReplyModeService.get.1"));
         }
         var preference = preferences.get(actor, task.getConversationId());
         return new CollaborationReplyModeView(id, revision(task), preference.fullAllowed() ? task.getOutputVisibility() : "summary_link",
@@ -56,7 +58,7 @@ public class CollaborationReplyModeService {
         enterprises.lockEnterprise(actor.enterpriseId()).orElseThrow();
         var task = access.owned(actor, id);
         if (task.fromWebRoom()) {
-            throw ApiException.invalidField("taskId", "网页协作对话不向外部平台发送消息。");
+            throw ApiException.invalidField("taskId", Messages.text("error.collaboration.collaborationReplyModeService.get.1"));
         }
         var group = preferences.owned(actor, task.getConversationId());
         ChatReplyPreferenceService.validate(group, input.outputVisibility());
@@ -76,7 +78,7 @@ public class CollaborationReplyModeService {
                 throw ApiException.versionConflict(current);
             }
             audit.record(actor.enterpriseId(), actor.user(), "collaboration.reply_mode", "collaboration_task", id,
-                "修改本人任务回复方式", Map.of("outputVisibility", input.outputVisibility()));
+                Messages.text("text.collaboration.collaborationReplyModeService.save.1"), Map.of("outputVisibility", input.outputVisibility()));
         }
         cards.getObject().changed(task);
         return get(actor, id);

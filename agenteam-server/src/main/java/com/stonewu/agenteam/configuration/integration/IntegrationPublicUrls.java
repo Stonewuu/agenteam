@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +20,7 @@ public class IntegrationPublicUrls {
         if (uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null
             || !Set.of("", "/").contains(uri.getPath()) || !"https".equals(uri.getScheme())
             && !("http".equals(uri.getScheme()) && Set.of("localhost", "127.0.0.1", "[::1]").contains(uri.getHost()))) {
-            throw new IllegalStateException("公开访问地址必须是加密站点域名，本地开发仅允许回环地址");
+            throw new IllegalStateException(Messages.text("error.integration.integrationPublicUrls.init.1"));
         }
         origin = uri.resolve("/");
     }

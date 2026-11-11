@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.export;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.export.entity.ExportDefinition;
 import com.stonewu.agenteam.model.export.entity.ExportSnapshot;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -40,7 +42,7 @@ public class CsvExportMapper {
 
         public void row(String actor, String... values) {
             if (count >= MAX_ROWS) {
-                throw limit("导出超过十万行，请缩小范围。");
+                throw limit(Messages.text("error.export.csvExportMapper.row.1"));
             }
             add(encode(values));
             count++;
@@ -55,7 +57,7 @@ public class CsvExportMapper {
 
         private void add(byte[] value) {
             if (bytes + value.length > MAX_BYTES) {
-                throw limit("导出文件过大，请缩小范围。");
+                throw limit(Messages.text("error.export.csvExportMapper.add.1"));
             }
             bytes += value.length;
             chunks.add(value);
@@ -68,7 +70,7 @@ public class CsvExportMapper {
         return new FilterInputStream(input) {
             private void requireActive() throws IOException {
                 if (!active.getAsBoolean()) {
-                    throw new IOException("导出工作已失去执行资格");
+                    throw new IOException(Messages.text("error.export.csvExportMapper.requireActive.1"));
                 }
             }
 

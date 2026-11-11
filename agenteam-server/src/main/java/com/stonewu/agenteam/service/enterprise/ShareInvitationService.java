@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.enterprise;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.enterprise.InvitationMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -73,10 +75,10 @@ public class ShareInvitationService {
     }
 
     private StoredIssue issue(AuthContext actor, ShareInvitationRequest request) {
-        Set<String> roleIds = EnterpriseValidation.identifiers(request.roleIds(), 1, 10, "角色");
-        Set<String> teamIds = EnterpriseValidation.identifiers(request.teamIds(), 0, 10, "团队");
+        Set<String> roleIds = EnterpriseValidation.identifiers(request.roleIds(), 1, 10, Messages.text("label.role"));
+        Set<String> teamIds = EnterpriseValidation.identifiers(request.teamIds(), 0, 10, Messages.text("label.team"));
         String name = request.displayName() == null || request.displayName().isBlank() ? null
-            : EnterpriseValidation.name(request.displayName(), "成员显示名", 50);
+            : EnterpriseValidation.name(request.displayName(), Messages.text("label.member.name"), 50);
         String note = EnterpriseValidation.invitationNote(request.note());
         roles.validateAssignments(actor, roleIds);
         policy.validateTeams(actor.enterpriseId(), teamIds, null, true);
@@ -87,7 +89,7 @@ public class ShareInvitationService {
             actor.userId(), null, now.plus(Duration.ofDays(7)), 1);
         invitations.insert(invitation, note, now);
         audit.record(actor.enterpriseId(), actor.user(), "invitation.create", "invitation", invitation.id(),
-            "创建邀请码与邀请链接", Map.of("roleIds", roleIds, "teamIds", teamIds));
+            Messages.text("text.enterprise.shareInvitationService.issue.1"), Map.of("roleIds", roleIds, "teamIds", teamIds));
         return new StoredIssue(invitations.view(actor.enterpriseId(), invitation.id(), now),
             encryption.encrypt(token.value(), binding(actor, invitation.id())));
     }

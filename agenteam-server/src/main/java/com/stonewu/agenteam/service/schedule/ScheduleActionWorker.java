@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.background.entity.JobLease;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -33,20 +35,20 @@ public class ScheduleActionWorker {
             }
             lease = claimed.get();
         } catch (RuntimeException failure) {
-            log.warn("定时操作准备工作暂时无法领取", failure);
+            log.warn(Messages.log("log.schedule.scheduleActionWorker.runOnce.1"), failure);
             return false;
         }
         var renewal = heartbeat.scheduleAtFixedRate(() -> renew(lease), 15, 15, TimeUnit.SECONDS);
         try {
             transactions.submit(lease);
         } catch (ScheduleActionStore.LeaseLostException failure) {
-            log.warn("定时操作准备结果因租约变化未提交，工作编号={}", lease.id(), failure);
+            log.warn(Messages.log("log.schedule.scheduleActionWorker.runOnce.2"), lease.id(), failure);
         } catch (RuntimeException failure) {
-            log.warn("定时操作准备未完成，工作编号={}", lease.id(), failure);
+            log.warn(Messages.log("log.schedule.scheduleActionWorker.runOnce.3"), lease.id(), failure);
             try {
                 transactions.failure(lease, failure);
             } catch (RuntimeException saveFailure) {
-                log.warn("定时操作失败状态暂未保存，工作编号={}", lease.id(), saveFailure);
+                log.warn(Messages.log("log.schedule.scheduleActionWorker.runOnce.4"), lease.id(), saveFailure);
             }
         } finally {
             renewal.cancel(false);
@@ -58,7 +60,7 @@ public class ScheduleActionWorker {
         try {
             transactions.renew(lease);
         } catch (RuntimeException failure) {
-            log.warn("定时操作工作租约无法续期，工作编号={}", lease.id(), failure);
+            log.warn(Messages.log("log.schedule.scheduleActionWorker.renew.1"), lease.id(), failure);
         }
     }
 

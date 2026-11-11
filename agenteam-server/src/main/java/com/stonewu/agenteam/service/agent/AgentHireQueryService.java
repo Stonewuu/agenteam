@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentHireApplicationMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.permission.ResourceAuthorizationMapper;
@@ -57,7 +59,7 @@ public class AgentHireQueryService {
             authorization.require(actor, "agent.hire");
         }
         if (!own && approval == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", "当前账号不能查看雇佣申请。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", Messages.text("error.agent.agentHireQueryService.list.1"));
         }
         int limit = pagination.limit(requestedLimit);
         var binding = new ListPagination.Binding(actor.userId(), actor.enterpriseId(), "hire-requests", "",

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.permission;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
@@ -45,30 +47,30 @@ public class EnterpriseAuthorizationService {
 
     public DataScope lockAndRequire(AuthContext context, String permission) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("企业管理写入必须处于事务中");
+            throw new IllegalStateException(Messages.text("error.permission.enterpriseAuthorizationService.lockAndRequire.1"));
         }
-        String status = enterprises.lockEnterprise(context.enterpriseId()).orElseThrow(() -> missing("企业不存在"));
+        String status = enterprises.lockEnterprise(context.enterpriseId()).orElseThrow(() -> missing(Messages.text("error.enterprise.notFound")));
         if (!"active".equals(status)) {
-            throw forbidden("当前企业已停用");
+            throw forbidden(Messages.text("error.permission.enterpriseAuthorizationService.lockAndRequire.2"));
         }
         return require(context, permission);
     }
 
     public DataScope require(AuthContext context, String permission) {
         var user = users.findById(context.userId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请重新登录"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, Messages.text("error.permission.enterpriseAuthorizationService.require.1")));
         if (!"active".equals(user.status()) || user.sessionVersion() != context.user()
             .sessionVersion() || !behavior.allowed(user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "账号状态已变化，请重新登录");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Messages.text("error.permission.enterpriseAuthorizationService.require.2"));
         }
         var scope = permissions.operationScope(context.userId(), context.enterpriseId(), permission)
-            .orElseThrow(() -> forbidden("没有执行此操作的权限"));
+            .orElseThrow(() -> forbidden(Messages.text("error.permission.denied")));
         return behavior.permissionScope(user, context.enterpriseId(), permission, scope);
     }
 
     public void requireEnterpriseScope(DataScope scope) {
         if (scope != DataScope.ENTERPRISE) {
-            throw forbidden("此操作需要企业范围的管理权限");
+            throw forbidden(Messages.text("error.permission.enterpriseAuthorizationService.requireEnterpriseScope.1"));
         }
     }
 
@@ -80,13 +82,13 @@ public class EnterpriseAuthorizationService {
             ownerUserId)) {
             return;
         }
-        throw missing("记录不存在或无法访问");
+        throw missing(Messages.text("error.permission.enterpriseAuthorizationService.requireOwner.1"));
     }
 
     public void changed(AuthContext context, String action, String objectType, String objectId, String summary,
                         Map<String, ?> detail) {
         if (permissions.activeAdministratorCount(context.enterpriseId()) < 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "LAST_ADMIN_REQUIRED", "企业至少需要保留一名有效管理员。");
+            throw new ApiException(HttpStatus.CONFLICT, "LAST_ADMIN_REQUIRED", Messages.text("error.permission.enterpriseAuthorizationService.changed.1"));
         }
         enterprises.advancePermissionVersion(context.enterpriseId());
         audit.record(context.enterpriseId(), context.user(), action, objectType, objectId, summary, detail);

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
 import com.stonewu.agenteam.model.chat.entity.ChatBotBindingRow;
@@ -93,10 +95,10 @@ public class WecomConversationCardService {
             return false;
         }
         sessions.select(actor, group.getId(), bot.getId(), startNew ? null : task.getId(), receipt.getReceivedAt());
-        String next = "group".equals(group.getConversationKind()) ? "请 @ 我发送" : "请发送";
+        String next = "group".equals(group.getConversationKind()) ? Messages.text("text.chat.wecomConversationCardService.accept.1") : Messages.text("text.chat.wecomConversationCardService.accept.2");
         outbound.text(bot.getEnterpriseId(), group.getId(), bot.getId(), null, null,
             "conversation-card:" + receipt.getId(), "conversation_selected",
-            startNew ? "已切换到新会话，" + next + "新问题。" : "已回到该会话，" + next + "后续问题。", null);
+            startNew ? Messages.text("text.chat.wecomConversationCardService.accept.3", next) : Messages.text("text.chat.wecomConversationCardService.accept.4", next), null);
         return true;
     }
 }

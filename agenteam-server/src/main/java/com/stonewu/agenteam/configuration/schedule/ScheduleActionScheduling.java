@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.schedule.ScheduleActionReconciler;
 import com.stonewu.agenteam.service.schedule.ScheduleActionStore;
 import com.stonewu.agenteam.service.schedule.ScheduleActionWorker;
@@ -57,7 +59,7 @@ public class ScheduleActionScheduling {
             try {
                 reconciler.reconcile(row);
             } catch (RuntimeException failure) {
-                log.warn("定时操作结果暂时无法汇总，发生记录编号={}", row.getId(), failure);
+                log.warn(Messages.log("log.schedule.scheduleActionScheduling.reconcile.1"), row.getId(), failure);
             }
         }
     }

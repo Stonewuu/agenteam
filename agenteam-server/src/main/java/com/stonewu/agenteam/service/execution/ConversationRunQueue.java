@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
@@ -105,7 +107,7 @@ public class ConversationRunQueue {
             .filter(row -> row.userId().equals(actor.userId()) && row.conversationId().equals(conversationId))
             .orElseThrow(ResourceAuthorizationService::unavailable);
         if (!run.status().equals("waiting_turn")) {
-            throw new ApiException(HttpStatus.CONFLICT, "MESSAGE_NO_LONGER_QUEUED", "这条消息已离开队列。");
+            throw new ApiException(HttpStatus.CONFLICT, "MESSAGE_NO_LONGER_QUEUED", Messages.text("error.execution.conversationRunQueue.change.1"));
         }
         if (!prioritize) {
             cancel(run, now);
@@ -120,7 +122,7 @@ public class ConversationRunQueue {
     /** 交接已经提交，旧的执行只能释放本机资源。 */
     public static final class Continued extends RuntimeException {
         public Continued() {
-            super("当前操作已完成，智能体将继续处理补充消息。", null, false, false);
+            super(Messages.text("text.execution.conversationRunQueue.init.1"), null, false, false);
         }
     }
 }

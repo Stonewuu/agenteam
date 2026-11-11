@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.github.yulichang.toolkit.JoinWrappers;
@@ -86,7 +88,7 @@ public class ExecutionMessageMapper {
             .eq(AgentMessageRow::getRunId, run).eq(AgentMessageRow::getStatus, "pending")
             .set(AgentMessageRow::getCreatedAt, now).set(AgentMessageRow::getUpdatedAt, now));
         if (changed != 2) {
-            throw new IllegalStateException("待处理消息的输入或回复记录已经变化。");
+            throw new IllegalStateException(Messages.text("error.execution.executionMessageMapper.startWaitingPair.1"));
         }
     }
 

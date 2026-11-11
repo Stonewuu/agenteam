@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.configuration.chat.ChatConfiguration;
 import com.stonewu.agenteam.model.chat.entity.ChatWorkRequested.Stage;
 import com.stonewu.agenteam.model.integration.entity.ChannelRateLimit;
@@ -82,11 +84,11 @@ public class ChatSendWorker {
                 transactions.defer(lease, Duration.ZERO, api.code(), !api.code().equals("CHAT_REPLY_MODE_CHANGED"));
                 return true;
             }
-            var safe = new ChannelProviderException("CHAT_SEND_FAILED", "聊天消息暂时无法发送。", failure);
-            LOG.warn("聊天发送失败，企业={}，发送记录={}", lease.enterpriseId(), lease.outboundId(), safe);
+            var safe = new ChannelProviderException("CHAT_SEND_FAILED", Messages.text("error.chat.chatSendWorker.runOnce.1"), failure);
+            LOG.warn(Messages.log("log.chat.chatSendWorker.runOnce.1"), lease.enterpriseId(), lease.outboundId(), safe);
             if (submitted.get()) {
                 transactions.complete(lease, new ChatPlatformAdapter.SendReceipt(new ChannelSendResult(Outcome.UNKNOWN, null, null,
-                    "CHAT_SEND_UNKNOWN", "请求可能已经发送，平台结果尚未确认。", null, null, null), null));
+                    "CHAT_SEND_UNKNOWN", Messages.text("text.chat.chatSendWorker.runOnce.1"), null, null, null), null));
             } else {
                 transactions.defer(lease, Duration.ofSeconds(30), failure instanceof ApiException api ? api.code() : safe.code(), failure instanceof ApiException);
             }

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.data.entity.DataField;
 import com.stonewu.agenteam.model.data.entity.DataRow;
@@ -76,7 +78,7 @@ public class PreparedDataImport implements AutoCloseable {
         try {
             TemporaryFileCleanup.delete(file);
         } catch (IOException failed) {
-            LOG.warn("数据导入临时文件暂未删除，统一清理任务将稍后处理", failed);
+            LOG.warn(Messages.log("log.data.preparedDataImport.close.1"), failed);
         }
     }
 
@@ -86,6 +88,6 @@ public class PreparedDataImport implements AutoCloseable {
 
     public static ApiException unavailable(Throwable cause) {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "DATA_IMPORT_UNAVAILABLE",
-            "数据导入内容暂时无法读取，请重新预览后再试。", cause);
+            Messages.text("error.data.preparedDataImport.unavailable.1"), cause);
     }
 }

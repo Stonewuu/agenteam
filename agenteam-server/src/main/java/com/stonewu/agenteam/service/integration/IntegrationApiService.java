@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.http.entity.ApiOperationResult;
 import com.stonewu.agenteam.model.http.response.PageResponse;
 import com.stonewu.agenteam.model.integration.request.IntegrationCreateRequest;
@@ -94,7 +96,7 @@ public class IntegrationApiService {
         policy.require(actor, enterprise, system(request), "integration.manage", false);
         policy.require(actor, enterprise, system(request), "integration.test", false);
         if (!"wecom".equals(input.providerCode()) || input.purpose() != null && !"enterprise".equals(input.purpose())) {
-            throw ApiException.invalidField("providerCode", "请选择企业微信企业接入。");
+            throw ApiException.invalidField("providerCode", Messages.text("error.integration.integrationApiService.quickWecom.1"));
         }
         var provider = providers.require("wecom");
         String tenant = ResourceInput.text(input.externalTenantId(), "externalTenantId", 191, true);
@@ -102,7 +104,7 @@ public class IntegrationApiService {
         provider.validateApplicationId(appId);
         ResourceInput.text(input.name(), "name", 80, true);
         if (input.secret() == null || input.secret().isBlank() || input.secret().length() > 8192) {
-            throw ApiException.invalidField("secret", "请填写有效的应用密钥。");
+            throw ApiException.invalidField("secret", Messages.text("error.integration.integrationApiService.quickWecom.2"));
         }
         provider.normalizeConfiguration(input.configuration());
         var application = new IntegrationApplication(UUID.randomUUID().toString(), enterprise, "wecom", tenant, appId, 1);
@@ -176,7 +178,7 @@ public class IntegrationApiService {
     private void requireScope(String enterprise, HttpServletRequest request) {
         if (ChannelSessionGuard.restricted(request.getSession(false))) {
             if (system(request)) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证账号密码，再访问平台管理。");
+                throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", Messages.text("error.chat.chatManagementApiService.actor.1"));
             }
             identity.requireEnterprise(request.getSession(false), enterprise);
         }

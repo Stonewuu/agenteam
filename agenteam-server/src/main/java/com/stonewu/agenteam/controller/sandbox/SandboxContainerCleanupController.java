@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.service.workspace.SandboxContainerCleanup;
 import com.sun.net.httpserver.HttpExchange;
@@ -63,7 +65,7 @@ public final class SandboxContainerCleanupController implements HttpHandler {
             }
             exchange.sendResponseHeaders(204, -1);
         } catch (Exception failure) {
-            LOG.error("独立节点清理失败，请求编号 {}，方法 {}，路径 {}", requestId, exchange.getRequestMethod(), path,
+            LOG.error(Messages.log("log.sandbox.sandboxContainerCleanupController.handle.1"), requestId, exchange.getRequestMethod(), path,
                 failure);
             reply(exchange, 500, "SANDBOX_CLEANUP_FAILED");
         } finally {

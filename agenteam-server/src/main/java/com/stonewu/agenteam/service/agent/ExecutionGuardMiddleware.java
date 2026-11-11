@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
@@ -91,7 +93,7 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
                 }
                 if (child && !childSlots.tryAcquire()) {
                     return Flux.error(
-                        new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT", "同一任务最多同时执行两个子任务。"));
+                        new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT", Messages.text("error.agent.executionGuardMiddleware.onAgent.1")));
                 }
                 var invocation = new Invocation(agent, context);
                 active.add(invocation);
@@ -165,7 +167,7 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
                         allowed.add(use);
                     } else {
                         rejected.put(use, new ApiException(HttpStatus.CONFLICT, "TOOL_UNAVAILABLE",
-                            "当前任务没有这个工具或助手。本次调用没有执行，请使用已提供的工具继续。"));
+                            Messages.text("error.agent.executionGuardMiddleware.onActing.1")));
                     }
                 } catch (RuntimeException error) {
                     if (ToolFailureRecovery.terminal(error)) {
@@ -262,7 +264,7 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
 
     public void researchSlots(Semaphore slots) {
         if (!active.isEmpty()) {
-            throw new IllegalStateException("开始执行后不能更换子任务的并发限制");
+            throw new IllegalStateException(Messages.text("error.agent.executionGuardMiddleware.researchSlots.1"));
         }
         childSlots = slots;
     }
@@ -281,7 +283,7 @@ public final class ExecutionGuardMiddleware implements MiddlewareBase {
             }
             if (maxSteps > 0 && steps.addAndGet(modelCost + toolKeys.size()) > maxSteps) {
                 throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_STEP_LIMIT",
-                    "本次任务已达到允许的步骤上限，请缩小任务范围后重试。");
+                    Messages.text("error.agent.executionGuardMiddleware.check.1"));
             }
             beforeStep.run();
             if (boundary != null) {

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginToolViewMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -51,7 +53,7 @@ public class WorkflowDependencyOptionsService {
         authorization.require(actor, "capabilities.view");
         if (Set.of("workflow.create", "workflow.edit", "workflow.preview").stream()
             .noneMatch(actor.permissions()::contains)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", "当前账号没有配置工作流的权限。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED", Messages.text("error.workflow.workflowDependencyOptionsService.options.1"));
         }
         var version = versions.find(actor.enterpriseId(), versionId).filter(row -> row.status().equals("available"))
             .orElseThrow(ResourceAuthorizationService::unavailable);

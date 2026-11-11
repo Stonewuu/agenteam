@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +20,7 @@ public record ToolResultSettings(int inlineKb, int largeContextInlineKb, int pre
                               @Value("${tools.results.batch-multiplier:2}") int batchMultiplier,
                               @Value("${tools.results.max-file-mb:20}") int maxFileMb) {
         if (inlineKb < 1 || inlineKb > 1024 || largeContextInlineKb < inlineKb || largeContextInlineKb > 1024 || previewKb < 1 || previewKb > inlineKb || readKb < 1 || readKb > inlineKb || readLines < 1 || readLines > 2000 || batchMultiplier < 1 || batchMultiplier > 8 || maxFileMb < 1 || maxFileMb > 100) {
-            throw new IllegalArgumentException("工具结果容量配置不正确");
+            throw new IllegalArgumentException(Messages.text("error.tool.toolResultSettings.init.1"));
         }
         this.inlineKb = inlineKb;
         this.largeContextInlineKb = largeContextInlineKb;

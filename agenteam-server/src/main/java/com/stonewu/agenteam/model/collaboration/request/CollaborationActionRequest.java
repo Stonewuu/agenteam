@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /** 取消和重试请求使用原记录版本，重试时必须明确具体工作。 */
-public record CollaborationActionRequest(@NotBlank(message = "请填写请求编号。")
-        @Pattern(regexp = "[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}", message = "请求编号格式不正确。") String requestId,
-        @NotNull(message = "请提供当前版本。") @Positive(message = "版本必须为正整数。") Long expectedRevision,
-        @Size(max = 100, message = "工作编号过长。") String workItemId, @Size(max = 2000, message = "说明过长，请缩短后重试。") String reason) {
+public record CollaborationActionRequest(@NotBlank(message = "{error.collaboration.collaborationActionRequest.requestId.1}")
+        @Pattern(regexp = "[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}", message = "{error.collaboration.collaborationActionRequest.requestId.2}") String requestId,
+        @NotNull(message = "{error.collaboration.collaborationActionRequest.expectedRevision.1}") @Positive(message = "{error.collaboration.collaborationActionRequest.expectedRevision.2}") Long expectedRevision,
+        @Size(max = 100, message = "{error.collaboration.collaborationActionRequest.workItemId.1}") String workItemId, @Size(max = 2000, message = "{error.collaboration.collaborationActionRequest.reason.1}") String reason) {
 }

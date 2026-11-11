@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.execution.entity.AgentEventRow;
 import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
 import org.springframework.stereotype.Repository;
@@ -40,7 +42,7 @@ public class ExecutionEventStorageMapper {
         row.setStartedAt(now);
         row.setCreatedAt(now);
         if (statements.insert(row) != 1) {
-            throw new IllegalStateException("事件没有完整保存");
+            throw new IllegalStateException(Messages.text("error.execution.executionEventStorageMapper.append.1"));
         }
     }
 
@@ -52,14 +54,14 @@ public class ExecutionEventStorageMapper {
             || !row.getConversationId().equals(first.conversationId()) || !row.getRunId().equals(first.runId())
             || !row.getEventType().equals(first.type())
             || row.getConversationSequence() != Long.parseLong(last.sequence())) {
-            throw new IllegalStateException("数据库事件的对象或顺序编号与正文不一致");
+            throw new IllegalStateException(Messages.text("error.execution.executionEventStorageMapper.decode.1"));
         }
         return values;
     }
 
     public void replace(AgentEventRow previous, List<ExecutionEvent> values, long lastRunSequence) {
         if (statements.replaceBatch(previous, row(values, lastRunSequence)) != 1) {
-            throw new IllegalStateException("合并事件保存前已经变化，当前事务必须回滚");
+            throw new IllegalStateException(Messages.text("error.execution.executionEventStorageMapper.replace.1"));
         }
     }
 

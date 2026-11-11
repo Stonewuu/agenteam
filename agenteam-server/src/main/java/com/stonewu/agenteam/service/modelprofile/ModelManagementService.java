@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.modelprofile.ModelManagementViewMapper;
 import com.stonewu.agenteam.mapper.modelprofile.ModelProfileMapper;
 import com.stonewu.agenteam.mapper.modelprofile.ModelProfileSqlMapper;
@@ -78,7 +80,7 @@ public class ModelManagementService {
         } catch (DuplicateKeyException duplicate) {
             throw duplicateName();
         }
-        authorization.changed(actor, "model_provider.create", "model_provider", id, "新增模型提供方",
+        authorization.changed(actor, "model_provider.create", "model_provider", id, Messages.text("text.modelprofile.modelManagementService.createProvider.1"),
             Map.of("name", value.name()));
         return views.provider(provider(actor, id));
     }
@@ -95,7 +97,7 @@ public class ModelManagementService {
         } catch (DuplicateKeyException duplicate) {
             throw duplicateName();
         }
-        authorization.changed(actor, "model_provider.update", "model_provider", id, "修改模型提供方",
+        authorization.changed(actor, "model_provider.update", "model_provider", id, Messages.text("text.modelprofile.modelManagementService.updateProvider.1"),
             Map.of("enabled", value.enabled(), "keyChanged", value.apiKey() != null));
         return views.provider(provider(actor, id));
     }
@@ -105,10 +107,10 @@ public class ModelManagementService {
         authorize(actor, true);
         checkRevision(provider(actor, id).revision(), revision);
         if (modelProfileSqlMapper.modelCount(actor.enterpriseId(), id) > 0) {
-            throw inUse("该提供方下仍有模型，请先删除模型后再删除提供方。");
+            throw inUse(Messages.text("error.modelprofile.modelManagementService.deleteProvider.1"));
         }
         checkChanged(providers.delete(actor.enterpriseId(), id, revision, clock.instant()), revision);
-        authorization.changed(actor, "model_provider.delete", "model_provider", id, "删除模型提供方", Map.of());
+        authorization.changed(actor, "model_provider.delete", "model_provider", id, Messages.text("text.modelprofile.modelManagementService.deleteProvider.1"), Map.of());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -122,7 +124,7 @@ public class ModelManagementService {
         } catch (DuplicateKeyException duplicate) {
             throw duplicateName();
         }
-        authorization.changed(actor, "model_profile.create", "model_profile", id, "新增模型",
+        authorization.changed(actor, "model_profile.create", "model_profile", id, Messages.text("text.modelprofile.modelManagementService.createModel.1"),
             Map.of("name", value.name(), "providerId", value.providerId()));
         return views.model(model(actor, id));
     }
@@ -140,7 +142,7 @@ public class ModelManagementService {
         } catch (DuplicateKeyException duplicate) {
             throw duplicateName();
         }
-        authorization.changed(actor, "model_profile.update", "model_profile", id, "修改模型配置",
+        authorization.changed(actor, "model_profile.update", "model_profile", id, Messages.text("text.modelprofile.modelManagementService.updateModel.1"),
             Map.of("name", value.name(), "enabled", value.enabled()));
         return views.model(model(actor, id));
     }
@@ -150,7 +152,7 @@ public class ModelManagementService {
         authorize(actor, true);
         checkRevision(model(actor, id).revision(), revision);
         checkChanged(profiles.delete(actor.enterpriseId(), id, revision, clock.instant()), revision);
-        authorization.changed(actor, "model_profile.delete", "model_profile", id, "删除模型", Map.of());
+        authorization.changed(actor, "model_profile.delete", "model_profile", id, Messages.text("text.modelprofile.modelManagementService.deleteModel.1"), Map.of());
     }
 
     private ModelProviderRecord provider(AuthContext actor, String id) {
@@ -168,7 +170,7 @@ public class ModelManagementService {
     }
 
     private ApiException duplicateName() {
-        return ApiException.invalidField("name", "当前企业已存在同名配置，请修改名称。");
+        return ApiException.invalidField("name", Messages.text("error.modelprofile.modelManagementService.duplicateName.1"));
     }
 
     private void checkChanged(int changed, long revision) {

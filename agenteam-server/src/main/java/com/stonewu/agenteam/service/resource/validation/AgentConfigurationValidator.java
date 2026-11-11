@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource.validation;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.agent.request.AgentConfigurationInput;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -39,38 +41,38 @@ public class AgentConfigurationValidator implements ResourceConfigValidator {
         InputValidation.read(config, AgentConfigurationInput.class, "config");
         validateSubagents(config);
         if (config.has("temperature") && !config.path("temperature").isNumber()) {
-            throw ApiException.invalidField("config.temperature", "回复变化程度需填写数值；未配置时请移除此项。");
+            throw ApiException.invalidField("config.temperature", Messages.text("error.resource.agentConfigurationValidator.draft.1"));
         }
         for (var topic : config.path("memoryFields")) {
             if (!memories.topic(topic.asText(), "config.memoryFields").equals(topic.asText())) {
-                throw ApiException.invalidField("config.memoryFields", "偏好主题前后不能留空格。");
+                throw ApiException.invalidField("config.memoryFields", Messages.text("error.resource.agentConfigurationValidator.draft.2"));
             }
         }
         if (config.path("businessRole").asText().isBlank()) {
-            throw ApiException.invalidField("config.businessRole", "请填写数字员工的业务职责。");
+            throw ApiException.invalidField("config.businessRole", Messages.text("error.resource.agentConfigurationValidator.draft.3"));
         }
         if (config.path("agentType").asText().equals("workflow")) {
             if (config.hasNonNull("reasoningEffort")) {
-                throw ApiException.invalidField("config.reasoningEffort", "流程型员工的思考强度需在工作流中设置。");
+                throw ApiException.invalidField("config.reasoningEffort", Messages.text("error.resource.agentConfigurationValidator.draft.4"));
             }
             if (!config.path("modelProfileId").isNull() || config.has("temperature")) {
                 throw ApiException.invalidField("config.modelProfileId",
-                    "流程型员工使用工作流中的模型和回复变化程度，请确认清除员工的单独设置。");
+                    Messages.text("error.resource.agentConfigurationValidator.draft.5"));
             }
             var entry = config.path("entryWorkflowVersionId");
             if (entry.isTextual() && !contains(config.path("workflowVersionIds"), entry.asText())) {
-                throw ApiException.invalidField("config.entryWorkflowVersionId", "入口必须是已选择的工作流版本。");
+                throw ApiException.invalidField("config.entryWorkflowVersionId", Messages.text("error.resource.agentConfigurationValidator.draft.6"));
             }
         } else {
             if (!config.path("modelProfileId").isTextual()) {
-                throw ApiException.invalidField("config.modelProfileId", "请选择默认模型。");
+                throw ApiException.invalidField("config.modelProfileId", Messages.text("error.resource.agentConfigurationValidator.draft.7"));
             }
             if (!config.path("entryWorkflowVersionId").isNull()) {
                 throw ApiException.invalidField("config.entryWorkflowVersionId",
-                    "对话型和任务型员工不能设置入口工作流。");
+                    Messages.text("error.resource.agentConfigurationValidator.draft.8"));
             }
             if (config.path("instructions").asText().isBlank()) {
-                throw ApiException.invalidField("config.instructions", "请填写执行指令。");
+                throw ApiException.invalidField("config.instructions", Messages.text("error.resource.agentConfigurationValidator.draft.9"));
             }
         }
     }
@@ -80,7 +82,7 @@ public class AgentConfigurationValidator implements ResourceConfigValidator {
         draft(config);
         if (config.path("agentType").asText().equals("workflow") && !config.path("entryWorkflowVersionId")
             .isTextual()) {
-            throw ApiException.invalidField("config.entryWorkflowVersionId", "请选择入口工作流。");
+            throw ApiException.invalidField("config.entryWorkflowVersionId", Messages.text("error.resource.agentConfigurationValidator.validatePublished.1"));
         }
     }
 
@@ -92,11 +94,11 @@ public class AgentConfigurationValidator implements ResourceConfigValidator {
         var model = models.requireAvailable(actor.enterpriseId(), config.path("modelProfileId").asText());
         var capabilities = model.capabilities();
         if (config.has("temperature") && !capabilities.supportsTemperature()) {
-            unsupported("所选模型不支持温度设置，请移除此参数。");
+            unsupported(Messages.text("text.resource.agentConfigurationValidator.use.1"));
         }
         String reason = AgentModelSelectionService.unavailableReason(config, capabilities);
         if (reason != null) {
-            unsupported(reason + "，请选择其他模型。");
+            unsupported(Messages.text("text.resource.agentConfigurationValidator.use.2", reason));
         }
         AgentModelSelectionService.validateReasoning(capabilities, config.path("reasoningEffort").asText(null));
     }
@@ -125,19 +127,19 @@ public class AgentConfigurationValidator implements ResourceConfigValidator {
 
     private void validateSubagents(JsonNode config) {
         if (config.has("subagentVersionIds") && !config.path("subagentVersionIds").isArray()) {
-            throw ApiException.invalidField("config.subagentVersionIds", "请选择智能体版本。");
+            throw ApiException.invalidField("config.subagentVersionIds", Messages.text("error.resource.agentConfigurationValidator.validateSubagents.1"));
         }
         for (var id : config.path("subagentVersionIds")) {
             if (!id.isTextual() || id.asText().isBlank() || !id.asText().equals(id.asText().strip())) {
-                throw ApiException.invalidField("config.subagentVersionIds", "请选择有效的智能体版本。");
+                throw ApiException.invalidField("config.subagentVersionIds", Messages.text("error.resource.agentConfigurationValidator.validateSubagents.2"));
             }
         }
         if (config.has("dynamicSubagentEnabled") && !config.path("dynamicSubagentEnabled").isBoolean()) {
-            throw ApiException.invalidField("config.dynamicSubagentEnabled", "请选择是否允许临时助手。");
+            throw ApiException.invalidField("config.dynamicSubagentEnabled", Messages.text("error.resource.agentConfigurationValidator.validateSubagents.3"));
         }
         if (config.path("agentType").asText().equals("workflow") && (!config.path("subagentVersionIds")
             .isEmpty() || config.path("dynamicSubagentEnabled").asBoolean())) {
-            throw ApiException.invalidField("config.subagentVersionIds", "流程型员工请在工作流的智能体节点中配置助手。");
+            throw ApiException.invalidField("config.subagentVersionIds", Messages.text("error.resource.agentConfigurationValidator.validateSubagents.4"));
         }
     }
 

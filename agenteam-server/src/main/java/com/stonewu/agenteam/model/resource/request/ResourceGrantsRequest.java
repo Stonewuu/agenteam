@@ -8,5 +8,5 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record ResourceGrantsRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 0, max = 500, message = "条目数量超出允许范围。") List<@NotNull(message = "请填写必填项。") @Valid ResourceGrantSpec> grants) {
+    @NotNull(message = "{validation.required}") @Size(min = 0, max = 500, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") List<@NotNull(message = "{validation.required}") @Valid ResourceGrantSpec> grants) {
 }

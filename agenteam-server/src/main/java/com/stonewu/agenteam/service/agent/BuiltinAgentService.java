@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
@@ -51,7 +53,7 @@ public class BuiltinAgentService {
         var registered = new LinkedHashMap<String, BuiltinAgentTemplate>();
         for (var template : templates) {
             if (registered.putIfAbsent(template.code(), template) != null) {
-                throw new IllegalStateException("内置助手模板重复登记：" + template.code());
+                throw new IllegalStateException(Messages.text("error.agent.builtinAgentService.init.1", template.code()));
             }
         }
         this.templates = Map.copyOf(registered);
@@ -80,7 +82,7 @@ public class BuiltinAgentService {
         String message = template.prepareInput(actor, input.targetResourceId(), input.message());
         var model = models.requireAvailable(actor.enterpriseId(), input.modelProfileId());
         if (!model.capabilities().supportsTools() || !model.capabilities().inputTypes().contains("text")) {
-            throw ApiException.invalidField("modelProfileId", "请选择支持文字和工具调用的模型。");
+            throw ApiException.invalidField("modelProfileId", Messages.text("error.agent.builtinAgentService.start.1"));
         }
         plugins.initialize(actor.enterpriseId());
         var versions = new ArrayList<String>();
@@ -101,11 +103,11 @@ public class BuiltinAgentService {
         String id = stableId("builtin-agent:" + actor.enterpriseId() + ":" + actor.userId() + ":" + code + ":" + json.hash(config));
         var detail = drafts.createAgentTemplate(actor, id, new ResourceCreateRequest("agent", template.name(), template.description(), List.of(), json.object(config)));
         if (detail.resource().publishedVersion() == null) {
-            publishing.publish(actor, id, new ResourcePublishRequest("创建内置助手的个人副本", null,
+            publishing.publish(actor, id, new ResourcePublishRequest(Messages.text("text.agent.builtinAgentService.start.1"), null,
                 new AgentListingRequest(true, "automatic", List.of())), Long.parseLong(detail.resource().revision()));
         }
-        if (!(hires.hire(actor, new HireAgentRequest(id, "使用内置助手")) instanceof Hired)) {
-            throw ApiException.invalidField("agentId", "请先完成这位助手的使用审批。");
+        if (!(hires.hire(actor, new HireAgentRequest(id, Messages.text("text.agent.builtinAgentService.start.2"))) instanceof Hired)) {
+            throw ApiException.invalidField("agentId", Messages.text("error.agent.builtinAgentService.start.2"));
         }
         return submissions.create(actor, new NewConversationInput(id,
             new MessageInput(message, List.of(), List.of(), List.of(), List.of()), "default"));

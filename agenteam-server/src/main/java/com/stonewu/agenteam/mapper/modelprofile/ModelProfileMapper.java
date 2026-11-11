@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
@@ -52,7 +54,7 @@ public class ModelProfileMapper {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("模型能力无法保存", error);
+            throw new IllegalStateException(Messages.text("error.modelprofile.modelProfileMapper.capabilities.1"), error);
         }
     }
 
@@ -64,7 +66,7 @@ public class ModelProfileMapper {
                 row.getRevision(), row.getProviderName(), row.getProtocol(), row.getBaseUrl(), row.getProviderEnabled(),
                 row.getCreatedAt().toInstant(), row.getUpdatedAt().toInstant());
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("已保存的模型能力无法读取", error);
+            throw new IllegalStateException(Messages.text("error.modelprofile.modelProfileMapper.map.1"), error);
         }
     }
 }

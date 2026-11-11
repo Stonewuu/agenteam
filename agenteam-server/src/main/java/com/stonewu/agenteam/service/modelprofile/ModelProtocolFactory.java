@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelprofile;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.modelprofile.ModelRequestLimits;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
@@ -115,7 +117,7 @@ public class ModelProtocolFactory {
                     var model = new GeminiModelSession(provider.id(), options, window, transport, call.usage(), json, settings);
                     yield new Session(model, model, transport, call, diagnostics);
                 }
-                default -> throw new IllegalArgumentException("不支持的模型接口。");
+                default -> throw new IllegalArgumentException(Messages.text("error.modelprofile.modelProtocolFactory.open.1"));
             };
         } catch (RuntimeException | Error failure) {
             if (transport != null) {

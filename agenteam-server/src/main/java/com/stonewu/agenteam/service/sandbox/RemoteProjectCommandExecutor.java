@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -49,7 +51,7 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
             || !(endpoint.getScheme().equals("https") || endpoint.getScheme().equals("http") && local)
             || token == null || token.length() < 32 || token.contains("\r") || token.contains("\n")) {
             throw new IllegalArgumentException(
-                "独立沙盒需要有效的加密服务地址和至少三十二字符的访问凭据；本机地址可使用 HTTP");
+                Messages.text("error.sandbox.remoteProjectCommandExecutor.init.1"));
         }
         this.token = token;
         this.settings = settings;
@@ -60,7 +62,7 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
     public SandboxExecutor.Result execute(ProjectLocation location, String callId, String command,
                                           String workingDirectory, Duration timeout, ToolCallControl control) {
         if (!settings.executeEnabled()) {
-            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", "当前部署未启用沙盒执行。");
+            throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", Messages.text("error.project.dockerProjectCommandExecutor.execute.1"));
         }
         return send(new ProjectExecutionRequest(location, callId, command, workingDirectory,
                 Math.min(timeout.toMillis(), settings.timeoutSeconds() * 1000L), settings.network(), false), timeout,
@@ -96,17 +98,17 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
             try (var input = control.track(response.body())) {
                 byte[] bytes = input.readNBytes(16385);
                 if (bytes.length > 16384) {
-                    throw new IllegalStateException("独立节点的执行结果超过允许范围");
+                    throw new IllegalStateException(Messages.text("error.sandbox.remoteProjectCommandExecutor.send.1"));
                 }
                 if (response.statusCode() != 200) {
                     var error = json.readTree(bytes);
                     if (error.path("code").asText().equals("PROJECT_STORAGE_UNAVAILABLE")) {
                         throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "PROJECT_STORAGE_UNAVAILABLE",
-                            "执行节点无法读取项目目录，请检查两端是否使用同一份持久存储。");
+                            Messages.text("error.sandbox.remoteProjectCommandExecutor.send.2"));
                     }
                     throw new ApiException(
                         response.statusCode() == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.SERVICE_UNAVAILABLE,
-                        "SANDBOX_REMOTE_UNAVAILABLE", "独立执行服务未能完成命令，请先检查项目中的已有结果再继续。");
+                        "SANDBOX_REMOTE_UNAVAILABLE", Messages.text("error.sandbox.remoteProjectCommandExecutor.send.3"));
                 }
                 var result = json.readValue(bytes, SandboxExecutor.Result.class);
                 complete.set(true);
@@ -123,7 +125,7 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
                 throw known;
             }
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SANDBOX_REMOTE_UNAVAILABLE",
-                "命令执行结果尚无法确认，请先检查项目中的已有文件再继续。", failure);
+                Messages.text("error.sandbox.remoteProjectCommandExecutor.send.4"), failure);
         }
     }
 
@@ -137,7 +139,7 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
                     HttpResponse.BodyHandlers.discarding())
                 .orTimeout(5, TimeUnit.SECONDS).join();
         } catch (RuntimeException failure) {
-            LOG.warn("通知独立节点停止项目命令失败，执行编号 {}", id, failure);
+            LOG.warn(Messages.log("log.sandbox.remoteProjectCommandExecutor.cancel.1"), id, failure);
         }
     }
 }

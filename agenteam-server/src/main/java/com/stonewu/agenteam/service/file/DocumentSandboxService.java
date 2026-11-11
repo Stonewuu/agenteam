@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.file.entity.FileRecord;
@@ -89,7 +91,7 @@ public class DocumentSandboxService {
             Path rendered = workspace.directory().resolve("result/outputs/document/source.pdf");
             if (!Files.isRegularFile(rendered, LinkOption.NOFOLLOW_LINKS) || Files.size(rendered) == 0) {
                 throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "OFFICE_PREVIEW_FAILED",
-                    "此文件暂时无法生成预览，可下载原文件查看。");
+                    Messages.text("error.file.documentSandboxService.render.1"));
             }
             Files.copy(rendered, target);
         } catch (IOException failure) {
@@ -112,14 +114,14 @@ public class DocumentSandboxService {
                 throw DocumentParserProcess.failure("FILE_PROCESSING_CANCELLED");
             }
         }); var watchdog = Executors.newSingleThreadScheduledExecutor(
-            Thread.ofPlatform().daemon(true).name("文档处理取消检查").factory())) {
+            Thread.ofPlatform().daemon(true).name(Messages.log("log.file.documentSandboxService.execute.1")).factory())) {
             watchdog.scheduleWithFixedDelay(() -> {
                 try {
                     if (!current.getAsBoolean() || System.nanoTime() >= deadline) {
                         control.close();
                     }
                 } catch (RuntimeException failure) {
-                    LOG.warn("检查文档处理是否仍有效失败，调用编号 {}", invocation, failure);
+                    LOG.warn(Messages.log("log.file.documentSandboxService.execute.2"), invocation, failure);
                     control.close();
                 }
             }, 0, 100, TimeUnit.MILLISECONDS);
@@ -162,14 +164,14 @@ public class DocumentSandboxService {
             if (operation.equals("extract") && !Files.isRegularFile(
                 directory.resolve("result/outputs/document/result.json"))) {
                 throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "DOCUMENT_RUNTIME_UNAVAILABLE",
-                    "文档处理环境暂不可用，请稍后重试。");
+                    Messages.text("error.file.documentSandboxService.execute.1"));
             }
             retained = true;
             return workspace;
         } catch (IOException failure) {
             throw FileStorageKeys.storageUnavailable(failure);
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("运行环境缺少文件摘要算法", failure);
+            throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), failure);
         } finally {
             if (workspace != null && !retained) {
                 workspace.close();

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionStepIds;
@@ -50,7 +52,7 @@ public class WorkflowApprovalNodeExecutor {
         String content = values.write(payloads.redact(input, List.of(), secrets));
         if (title.isBlank() || title.length() > 100 || description.length() > 2000 || content.length() > 100000) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "WORKFLOW_APPROVAL_TOO_LARGE",
-                "确认标题、说明或参数内容过长，请减少展示内容。");
+                Messages.text("error.workflow.workflowApprovalNodeExecutor.execute.1"));
         }
         var summary = new RunApprovalView.Summary(title, payloads.clean(identity.name(), secrets), description, content,
             null);

@@ -13,7 +13,7 @@ export const conversationPreferenceChanged = "agenteam:conversation-preference-c
 function storageFailure(failure: unknown) {
   if (!warned) {
     warned = true;
-    console.warn("无法保存对话查看偏好，本次页面仍可正常使用。", failure);
+    console.warn("Failed to persist conversation display preferences; the current page remains usable.", failure);
   }
 }
 

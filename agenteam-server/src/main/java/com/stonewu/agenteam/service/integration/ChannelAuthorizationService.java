@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.yulichang.toolkit.JoinWrappers;
 import com.stonewu.agenteam.configuration.integration.IntegrationPublicUrls;
@@ -116,14 +118,14 @@ public class ChannelAuthorizationService {
 
     public URI login(String key, boolean embedded, HttpServletRequest request) {
         if (identity.optionalUser(request.getSession(false)) != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_AUTHENTICATED", "当前已经登录，请先退出账号再使用企业登录。");
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_AUTHENTICATED", Messages.text("error.integration.channelAuthorizationService.login.1"));
         }
         return start(publicConnection(key), "login", null, embedded, request);
     }
 
     public URI callback(String connection, String state, String code, HttpServletRequest request) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("平台授权交换不能在数据库事务中执行");
+            throw new IllegalStateException(Messages.text("error.integration.channelAuthorizationService.callback.1"));
         }
         ChannelOauthSessionRow flow = null;
         try {
@@ -131,7 +133,7 @@ public class ChannelAuthorizationService {
             String nonce = attribute(session, NONCE);
             flow = flows.claim(connection, state, nonce, session);
             if (code == null || code.isBlank() || code.length() > 4096) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "CHANNEL_AUTHORIZATION_DENIED", "平台授权未完成，请重新发起并允许授权。");
+                throw new ApiException(HttpStatus.BAD_REQUEST, "CHANNEL_AUTHORIZATION_DENIED", Messages.text("error.integration.channelAuthorizationService.callback.2"));
             }
             var row = policy.current(flow, session, false);
             var app = queries.application(row);
@@ -151,20 +153,20 @@ public class ChannelAuthorizationService {
             identity.requireUser(sessions.establishExternal(request, result.user(), result.binding(), result.connectionRevision()));
             return URI.create("/enterprises/" + flow.getEnterpriseId() + "/workspace");
         } catch (Exception failure) {
-            log.warn("外部授权未完成：请求编号={}，方法={}，路径={}，授权记录={}", responses.requestId(request), request.getMethod(),
-                request.getRequestURI(), flow == null ? "尚未取得" : flow.getId(), failure);
+            log.warn(Messages.log("log.integration.channelAuthorizationService.callback.1"), responses.requestId(request), request.getMethod(),
+                request.getRequestURI(), flow == null ? Messages.log("log.integration.channelAuthorizationService.callback.2") : flow.getId(), failure);
             if (flow != null) {
                 try {
                     flows.fail(flow.getId());
                 } catch (RuntimeException persistenceFailure) {
-                    log.error("授权失败状态保存失败：授权记录={}", flow.getId(), persistenceFailure);
+                    log.error(Messages.log("log.integration.channelAuthorizationService.callback.3"), flow.getId(), persistenceFailure);
                 }
             }
             var session = request.getSession();
             session.removeAttribute(REVIEW);
             session.removeAttribute(CONFIRMATION);
             session.setAttribute(ERROR, failure instanceof ApiException known ? known.getReason()
-                : failure instanceof ChannelProviderException ? failure.getMessage() : "授权暂时无法完成，请稍后重新发起。");
+                : failure instanceof ChannelProviderException ? failure.getMessage() : Messages.text("text.integration.channelAuthorizationService.callback.1"));
             return URI.create("/channel-authorization");
         }
     }

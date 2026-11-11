@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelusage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +29,7 @@ public class ModelUsageRecoveryWorker {
                 try {
                     repairs.repair(candidate);
                 } catch (RuntimeException failure) {
-                    LOG.warn("修正旧模型用量失败，企业={}，调用={}", candidate.enterprise(), candidate.id(), failure);
+                    LOG.warn(Messages.log("log.modelusage.modelUsageRecoveryWorker.run.1"), candidate.enterprise(), candidate.id(), failure);
                     repairs.postpone(candidate);
                 }
             }
@@ -35,12 +37,12 @@ public class ModelUsageRecoveryWorker {
                 try {
                     recovery.calculate(work);
                 } catch (RuntimeException failure) {
-                    LOG.warn("计算模型金额失败，企业={}，调用={}", work.enterprise(), work.id(), failure);
+                    LOG.warn(Messages.log("log.modelusage.modelUsageRecoveryWorker.run.2"), work.enterprise(), work.id(), failure);
                     recovery.postpone(work);
                 }
             }
         } catch (RuntimeException failure) {
-            LOG.warn("模型用量恢复任务失败，将在下一批继续", failure);
+            LOG.warn(Messages.log("log.modelusage.modelUsageRecoveryWorker.run.3"), failure);
         }
     }
 }

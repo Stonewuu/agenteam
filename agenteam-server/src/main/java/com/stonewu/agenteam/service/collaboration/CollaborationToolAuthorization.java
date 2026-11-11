@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.collaboration.CollaborationToolDefinitions;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.tool.entity.ExecutionToolBinding;
@@ -36,7 +38,7 @@ public class CollaborationToolAuthorization {
         if (access.applies(run) && !call.readOnly()) {
             access.require(run, run.conversationId(), true);
             if (run.executionConfig().at("/collaboration/planningOnly").asBoolean() && !isInternalAction(run, binding, call)) {
-                throw new ApiException(HttpStatus.CONFLICT, "TASK_REPLANNING_REQUIRED", "本轮只允许核对新要求和重新安排工作，不能执行业务写入。");
+                throw new ApiException(HttpStatus.CONFLICT, "TASK_REPLANNING_REQUIRED", Messages.text("error.collaboration.collaborationToolAuthorization.requireWrite.1"));
             }
         }
     }

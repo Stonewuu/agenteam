@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -84,7 +86,7 @@ public class DataQueryService {
         if (!sourceHash.calculate(config)
             .equals(collections.sourceHash(actor.enterpriseId(), input.collectionId(), input.generation()))) {
             throw new ApiException(HttpStatus.CONFLICT, "DATA_SOURCE_CHANGED",
-                "此集合版本使用的连接配置不同，请重新检查并保存集合。");
+                Messages.text("error.data.dataQueryService.query.1"));
         }
         if (config.path("sourceType").asText().equals("file")) {
             String file = collections.fileForGeneration(actor.enterpriseId(), plan.collection().id(), plan.generation())
@@ -102,14 +104,14 @@ public class DataQueryService {
                 case "mysql" -> mysql.query(actor.enterpriseId(), config, plan, deadline, byteBudget, control);
                 case "http" -> http.query(actor.enterpriseId(), config, plan, deadline, byteBudget, control);
                 default -> throw new ApiException(HttpStatus.CONFLICT, "DATA_SOURCE_UNAVAILABLE",
-                    "此数据连接暂时不能执行查询。");
+                    Messages.text("error.data.dataQueryService.query.2"));
             };
             control.requireActive();
             var currentSource = policy.use(actor, resource);
             if (fixedConfig == null && !sourceHash.calculate(config)
                 .equals(sourceHash.calculate(currentSource.config()))) {
                 throw new ApiException(HttpStatus.CONFLICT, "DATA_SOURCE_CHANGED",
-                    "数据连接在查询期间发生变化，请重新读取集合后再试。");
+                    Messages.text("error.data.dataQueryService.query.3"));
             }
             var latest = plan(actor, resource, input, false);
             List<Map<String, Object>> rows = new ArrayList<>();
@@ -117,7 +119,7 @@ public class DataQueryService {
                 var visible = row.deepCopy();
                 for (var field : latest.fields()) {
                     if (field.sensitive() && !visible.path(field.name()).isNull()) {
-                        visible.put(field.name(), "已隐藏");
+                        visible.put(field.name(), Messages.text("text.data.dataQueryService.query.1"));
                     }
                 }
                 rows.add(json.convertValue(visible, new TypeReference<Map<String, Object>>() {
@@ -138,10 +140,10 @@ public class DataQueryService {
             }
             if (truncated && rows.isEmpty()) {
                 throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "DATA_RESULT_TOO_LARGE",
-                    "结果超过大小限制，请减少返回字段。");
+                    Messages.text("error.data.dataQueryService.query.4"));
             }
             audit.record(actor.enterpriseId(), actor.user(), "data.query", "data_collection", input.collectionId(),
-                "读取数据集合",
+                Messages.text("text.data.dataQueryService.query.2"),
                 Map.of("generation", input.generation(), "fields", input.fields(), "rowCount", rows.size(),
                     "durationMs", duration));
             return result;
@@ -163,7 +165,7 @@ public class DataQueryService {
                 }
                 if (!hidden) {
                     throw new ApiException(HttpStatus.FORBIDDEN, "DATA_RESULT_PERMISSION_CHANGED",
-                        "此结果包含现在已限制的字段，请重新查询后查看。");
+                        Messages.text("error.data.dataQueryService.authorizeResult.1"));
                 }
             }
         }
@@ -173,11 +175,11 @@ public class DataQueryService {
         var collection = policy.collection(actor.enterpriseId(), resource, input.collectionId(), false);
         if (newQuery && input.generation() != collection.activeGeneration()) {
             throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_CHANGED",
-                "数据集合已经更新，请刷新集合后重新查询。");
+                Messages.text("error.data.dataQueryService.plan.1"));
         }
         if (!collections.hasGeneration(actor.enterpriseId(), collection.id(), input.generation())) {
             throw new ApiException(HttpStatus.CONFLICT, "DATA_GENERATION_UNAVAILABLE",
-                "所选集合版本已经不可查询，请重新选择。");
+                Messages.text("error.data.dataQueryService.plan.2"));
         }
         return validation.plan(collection,
             collections.fields(actor.enterpriseId(), collection.id(), input.generation()),
@@ -188,12 +190,12 @@ public class DataQueryService {
         try {
             return json.writeValueAsBytes(value).length;
         } catch (Exception invalid) {
-            throw new IllegalStateException("数据查询结果无法编码", invalid);
+            throw new IllegalStateException(Messages.text("error.data.dataQueryService.bytes.1"), invalid);
         }
     }
 
     private ApiException timeout() {
         return new ApiException(HttpStatus.GATEWAY_TIMEOUT, "DATA_QUERY_TIMEOUT",
-            "数据查询超过允许时间，请减少查询范围。");
+            Messages.text("error.data.dataQueryService.timeout.1"));
     }
 }

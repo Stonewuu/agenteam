@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.execution.RunQuestionMapper;
@@ -144,10 +146,10 @@ public class ChatQuestionReplyService {
     }
 
     private static ApiException selectionRequired() {
-        return new ApiException(HttpStatus.CONFLICT, "QUESTION_SELECTION_REQUIRED", "请回复要回答的问题消息，或先点击该问题的“自己输入”。");
+        return new ApiException(HttpStatus.CONFLICT, "QUESTION_SELECTION_REQUIRED", Messages.text("error.chat.chatQuestionReplyService.selectionRequired.1"));
     }
 
     private static ApiException unavailable() {
-        return new ApiException(HttpStatus.CONFLICT, "QUESTION_UNAVAILABLE", "这个问题已结束或无法访问，请继续当前对话。");
+        return new ApiException(HttpStatus.CONFLICT, "QUESTION_UNAVAILABLE", Messages.text("error.chat.chatQuestionReplyService.unavailable.1"));
     }
 }

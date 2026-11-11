@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationParticipantMapper;
 import com.stonewu.agenteam.model.collaboration.entity.CollaborationParticipantRow;
@@ -85,7 +87,7 @@ public class ConversationQueryService {
         authorization.require(actor, "conversation.view");
         if (ids == null || ids.isEmpty() || ids.size() > 50
             || ids.stream().anyMatch(id -> id == null || id.isBlank() || id.length() > 100)) {
-            throw ApiException.invalidField("ids", "每次只能读取 1 至 50 条有效对话。");
+            throw ApiException.invalidField("ids", Messages.text("error.execution.conversationQueryService.metadata.1"));
         }
         var rows = conversations.metadata(actor.enterpriseId(), actor.userId(), ids.stream().distinct().toList());
         if (rows.isEmpty()) {
@@ -108,7 +110,7 @@ public class ConversationQueryService {
         authorization.require(actor, "conversation.view");
         String state = status == null ? "active" : status;
         if (!Set.of("active", "archived", "deleted").contains(state)) {
-            throw ApiException.invalidField("status", "请选择有效的对话状态。");
+            throw ApiException.invalidField("status", Messages.text("error.execution.conversationManagementService.update.2"));
         }
         String text = pagination.query(query);
         int size = pagination.limit(limit);
@@ -216,11 +218,11 @@ public class ConversationQueryService {
     public ConversationView view(AuthContext actor, ConversationRecord row, Map<String, String> checked) {
         String reason;
         if (!row.status().equals("active")) {
-            reason = row.status().equals("archived") ? "此对话已归档。" : "此对话已删除。";
+            reason = row.status().equals("archived") ? Messages.text("text.execution.conversationQueryService.view.1") : Messages.text("text.execution.conversationQueryService.view.2");
         } else if (row.mode().equals("preview")) {
-            reason = "此对话用于预览。如需继续测试，请重新发起预览。";
+            reason = Messages.text("text.execution.conversationQueryService.view.3");
         } else if (row.activeRunId() != null) {
-            reason = "请等待当前任务结束，或先停止任务。";
+            reason = Messages.text("text.execution.conversationQueryService.view.4");
         } else {
             String key = row.agentId() + ":" + row.agentVersionId();
             if (!checked.containsKey(key)) {
@@ -229,7 +231,7 @@ public class ConversationQueryService {
                     configuration.inputOptions(actor, row.agentId(), row.agentVersionId());
                 } catch (ResponseStatusException unavailable) {
                     logUnavailable(row.id(), unavailable);
-                    failure = "当前无法继续使用该员工，请确认雇佣关系、版本和使用权限。";
+                    failure = Messages.text("text.execution.conversationQueryService.view.5");
                 }
                 checked.put(key, failure);
             }
@@ -238,7 +240,7 @@ public class ConversationQueryService {
         var appearance = row.mode().equals("preview") ? appearances.preview(actor.enterpriseId(), actor.userId(),
             row.id()).orElse(null) : null;
         if ("collaboration".equals(row.sourceType())) {
-            reason = "此对话属于协作任务，请到任务详情补充要求。";
+            reason = Messages.text("text.execution.conversationQueryService.view.6");
         }
         return new ConversationView(row.id(), Long.toString(row.revision()), row.createdAt().toString(),
             row.updatedAt().toString(),
@@ -276,11 +278,11 @@ public class ConversationQueryService {
     private void logUnavailable(String conversation, ResponseStatusException failure) {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
             var request = attributes.getRequest();
-            log.warn("检查对话可用配置失败，会话编号 {}，请求编号 {}，请求方法 {}，请求路径 {}",
+            log.warn(Messages.log("log.execution.conversationQueryService.logUnavailable.1"),
                 conversation, request.getAttribute(AuditEventService.REQUEST_ID_ATTRIBUTE), request.getMethod(),
                 request.getRequestURI(), failure);
         } else {
-            log.warn("检查对话可用配置失败，会话编号 {}", conversation, failure);
+            log.warn(Messages.log("log.execution.conversationQueryService.logUnavailable.2"), conversation, failure);
         }
     }
 }

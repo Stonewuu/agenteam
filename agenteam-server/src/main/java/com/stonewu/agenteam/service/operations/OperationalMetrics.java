@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.operations;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.operations.OperationalStateMapper;
 import com.stonewu.agenteam.model.operations.entity.OperationalSnapshot;
 import com.stonewu.agenteam.model.operations.entity.QuotaCheckEvent;
@@ -79,7 +81,7 @@ public class OperationalMetrics {
         } catch (RuntimeException unavailable) {
             snapshot = null;
             failures.increment();
-            LOG.warn("运维状态暂时无法采集，下一轮重试", unavailable);
+            LOG.warn(Messages.log("log.operations.operationalMetrics.collect.1"), unavailable);
         }
     }
 

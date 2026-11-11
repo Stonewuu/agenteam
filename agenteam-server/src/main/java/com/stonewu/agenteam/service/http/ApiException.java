@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.http;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -57,7 +59,7 @@ public final class ApiException extends ResponseStatusException {
     }
 
     public static ApiException versionConflict(long revision) {
-        return new ApiException(HttpStatus.CONFLICT, "VERSION_CONFLICT", "内容已被其他操作更新，请重新加载后继续编辑。",
+        return new ApiException(HttpStatus.CONFLICT, "VERSION_CONFLICT", Messages.text("http.versionConflict"),
             Map.of("currentRevision", Long.toString(revision)), Map.of());
     }
 }

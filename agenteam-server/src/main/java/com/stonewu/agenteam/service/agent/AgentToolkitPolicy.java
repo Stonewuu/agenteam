@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.agent;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import io.agentscope.harness.agent.HarnessAgent;
 
 import java.util.Set;
@@ -19,7 +21,7 @@ public final class AgentToolkitPolicy {
         }
         if (!allowed.containsAll(agent.getToolkit().getToolNames())) {
             agent.close();
-            throw new IllegalStateException("执行实例包含未允许的工具，不能启动");
+            throw new IllegalStateException(Messages.text("error.agent.agentToolkitPolicy.retain.1"));
         }
     }
 }

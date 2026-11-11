@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workflow;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
 import com.stonewu.agenteam.mapper.plugin.PluginToolMapper;
@@ -34,12 +36,12 @@ public class WorkflowNodeDependencies {
                 if (agent == null || !Set.of("chat", "task")
                     .contains(agent.version().config().path("agentType").asText())) {
                     throw ApiException.invalidField(field + ".agentVersionId",
-                        "节点只能使用可用的对话型或任务型智能体。");
+                        Messages.text("error.workflow.workflowNodeDependencies.validate.1"));
                 }
                 if (type.equals("skill") && !ids(agent.version().config().path("skillVersionIds")).contains(
                     settings.path("skillVersionId").asText())) {
                     throw ApiException.invalidField(field + ".skillVersionId",
-                        "所选技能没有包含在该智能体的固定能力中，请重新选择。");
+                        Messages.text("error.workflow.workflowNodeDependencies.validate.2"));
                 }
             }
             if (type.equals("tool")) {
@@ -50,7 +52,7 @@ public class WorkflowNodeDependencies {
                     .filter(tool -> tool.enabled() && (key.equals(tool.entryId()) || key.equals(tool.id())
                         || !PluginConfigurationMapper.modern(plugin.version().config()) && !settings.hasNonNull(
                         "toolId") && key.equals(tool.definition().name()))).count() != 1) {
-                    throw ApiException.invalidField(field + ".toolId", "所选插件版本不提供此工具，请重新选择工具。");
+                    throw ApiException.invalidField(field + ".toolId", Messages.text("error.workflow.workflowNodeDependencies.validate.3"));
                 }
             }
         }

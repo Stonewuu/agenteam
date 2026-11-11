@@ -1,6 +1,8 @@
 import "server-only";
 import {NextResponse} from "next/server";
 import {agentBackendUrl} from "./agent-backend";
+import {localeFromHeaders} from "@/lib/i18n/locales";
+import {translate} from "@/lib/i18n/translate";
 
 type HeadersWithCookies = Headers & {
   getSetCookie?: () => string[];
@@ -21,6 +23,7 @@ async function forwardBackendRequest(request: Request, path: string) {
   const method = request.method.toUpperCase();
   const requestHeaders = new Headers();
   copyRequestHeader(request.headers, requestHeaders, "accept");
+  copyRequestHeader(request.headers, requestHeaders, "accept-language");
   copyRequestHeader(request.headers, requestHeaders, "content-type");
   copyRequestHeader(request.headers, requestHeaders, "cookie");
   copyRequestHeader(request.headers, requestHeaders, "last-event-id");
@@ -47,13 +50,13 @@ async function forwardBackendRequest(request: Request, path: string) {
       return NextResponse.json({
           error: {
             code: "REQUEST_TOO_LARGE",
-            message: "提交内容过大，请缩小后重试。",
+            message: translate(localeFromHeaders(request.headers), "提交内容过大，请缩小后重试。"),
             requestId: crypto.randomUUID(),
             fieldErrors: {},
             details: {}
           }
         },
-        {status: 413, headers: {"Cache-Control": "no-store"}});
+        {status: 413, headers: {"Cache-Control": "no-store", "Content-Language": localeFromHeaders(request.headers)}});
     }
   }
   const response = await fetch(agentBackendUrl(path), {

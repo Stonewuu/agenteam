@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -74,7 +76,7 @@ public class CollaborationTaskListService {
         String keyword = pagination.query(search).toLowerCase(Locale.ROOT);
         String selectedStatus = status == null || status.isBlank() ? null : status;
         if (selectedStatus != null && !STATUSES.contains(selectedStatus)) {
-            throw ApiException.invalidField("status", "请选择有效的任务状态。");
+            throw ApiException.invalidField("status", Messages.text("error.collaboration.collaborationTaskListService.list.1"));
         }
         int limit = pagination.limit(requested);
         var binding = new ListPagination.Binding(actor.userId(), actor.enterpriseId(), "collaboration/tasks",
@@ -92,7 +94,7 @@ public class CollaborationTaskListService {
         String keyword = pagination.query(search).toLowerCase(Locale.ROOT);
         String selected = status == null || status.isBlank() ? null : status;
         if (selected != null && !"not_started".equals(selected) && !STATUSES.contains(selected)) {
-            throw ApiException.invalidField("status", "请选择有效的任务状态。");
+            throw ApiException.invalidField("status", Messages.text("error.collaboration.collaborationTaskListService.list.1"));
         }
         int limit = pagination.limit(requested);
         var binding = new ListPagination.Binding(actor.userId(), actor.enterpriseId(), "collaboration/directory",
@@ -217,7 +219,7 @@ public class CollaborationTaskListService {
                 right.getId().equals(task.getOwnerParticipantId()), left.getId().equals(task.getOwnerParticipantId()))).toList();
             var summaries = ordered.stream().map(role -> new CollaborationTaskSummary.Role(role.getId(), role.getRoleName(), role.getConversationId())).toList();
             String primary = ordered.stream().map(CollaborationParticipantRow::getConversationId).filter(Objects::nonNull).findFirst().orElse(null);
-            String name = source == null || "尚未取得群名称".equals(source.getName()) ? null : source.getName();
+            String name = source == null || Messages.source("text.collaboration.collaborationTaskListService.summaries.1").equals(source.getName()) ? null : source.getName();
             var origin = task.fromWebRoom() ? new CollaborationTaskSummary.Source("web", "room", roomNames.get(task.getWebRoomId()))
                 : source == null ? null : new CollaborationTaskSummary.Source(source.getPlatformCode(), source.getConversationKind(), name);
             return CollaborationTaskViewMapper.summary(task, match.requirements(), origin, summaries, primary);

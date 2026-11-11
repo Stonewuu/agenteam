@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.stonewu.agenteam.mapper.modelpricing.ModelPriceBookMapper;
 import com.stonewu.agenteam.mapper.modelpricing.ModelPriceStore;
@@ -106,7 +108,7 @@ public class ModelPriceService {
         checkChanged(changed, revision);
         store.deleteRules(actor.enterpriseId(), id);
         store.insertRules(mapping.create(row, config));
-        audit(actor, "update", id, "修改价格草稿");
+        audit(actor, "update", id, Messages.text("text.modelpricing.modelPriceService.update.1"));
         return detail(actor, model, id);
     }
 
@@ -120,7 +122,7 @@ public class ModelPriceService {
         var previous = store.current(actor.enterpriseId(), model, now);
         if (previous != null && !now.isAfter(previous.getEffectiveFrom())) {
             // 不伪造未来生效时间；同毫秒的极少数重复操作由调用方重新提交。
-            throw new ApiException(HttpStatus.CONFLICT, "PRICE_PUBLICATION_TOO_SOON", "价格刚刚更新，请稍后重新发布。");
+            throw new ApiException(HttpStatus.CONFLICT, "PRICE_PUBLICATION_TOO_SOON", Messages.text("error.modelpricing.modelPriceService.publish.1"));
         }
         checkChanged(versions.update(Wrappers.<ModelPriceVersionRow>lambdaUpdate()
             .eq(ModelPriceVersionRow::getEnterpriseId, actor.enterpriseId()).eq(ModelPriceVersionRow::getId, id)
@@ -128,7 +130,7 @@ public class ModelPriceService {
             .set(ModelPriceVersionRow::getStatus, "published").set(ModelPriceVersionRow::getEffectiveFrom, now)
             .set(ModelPriceVersionRow::getPublishedBy, actor.userId()).set(ModelPriceVersionRow::getPublishedAt, now)
             .set(ModelPriceVersionRow::getUpdatedAt, now).setIncrBy(ModelPriceVersionRow::getRevision, 1)), revision);
-        audit(actor, "publish", id, "发布模型价格");
+        audit(actor, "publish", id, Messages.text("text.modelpricing.modelPriceService.publish.1"));
         return detail(actor, model, id);
     }
 
@@ -141,7 +143,7 @@ public class ModelPriceService {
         checkChanged(versions.delete(Wrappers.<ModelPriceVersionRow>lambdaQuery()
             .eq(ModelPriceVersionRow::getEnterpriseId, actor.enterpriseId()).eq(ModelPriceVersionRow::getId, id)
             .eq(ModelPriceVersionRow::getStatus, "draft").eq(ModelPriceVersionRow::getRevision, revision)), revision);
-        audit(actor, "delete", id, "删除价格草稿");
+        audit(actor, "delete", id, Messages.text("text.modelpricing.modelPriceService.delete.1"));
     }
 
     private ModelPriceVersionView createDraft(AuthContext actor, String model, ModelPriceConfiguration config) {
@@ -159,7 +161,7 @@ public class ModelPriceService {
         row.setUpdatedAt(row.getCreatedAt());
         var book = mapping.create(row, config);
         store.insert(book);
-        audit(actor, "create", row.getId(), "创建价格草稿");
+        audit(actor, "create", row.getId(), Messages.text("text.modelpricing.modelPriceService.createDraft.1"));
         return mapping.view(book, true);
     }
 
@@ -169,7 +171,7 @@ public class ModelPriceService {
             throw ApiException.versionConflict(row.getRevision());
         }
         if (!row.getStatus().equals("draft")) {
-            throw new ApiException(HttpStatus.CONFLICT, "PRICE_VERSION_IMMUTABLE", "已发布价格不能修改，请复制后创建新版本。");
+            throw new ApiException(HttpStatus.CONFLICT, "PRICE_VERSION_IMMUTABLE", Messages.text("error.modelpricing.modelPriceService.draft.1"));
         }
         return row;
     }

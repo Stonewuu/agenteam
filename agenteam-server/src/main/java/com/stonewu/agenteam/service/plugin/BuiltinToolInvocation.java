@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -63,11 +65,11 @@ public class BuiltinToolInvocation {
                 }
                 if (current.attemptCount() >= 2 || !queries.canRepeat(binding)) {
                     return json.tree(
-                        Map.of("isError", true, "content", "目标系统已确认操作未执行，本次任务不再发送该操作。"));
+                        Map.of("isError", true, "content", Messages.text("text.plugin.builtinToolInvocation.invoke.1")));
                 }
                 if (deadline != null && deadline - System.nanoTime() <= Duration.ofSeconds(2).toNanos()) {
                     return json.tree(
-                        Map.of("isError", true, "content", "目标系统已确认操作未执行，剩余时间不足，本次任务不再发送。"));
+                        Map.of("isError", true, "content", Messages.text("text.plugin.builtinToolInvocation.invoke.2")));
                 }
                 control.pause(Duration.ofSeconds(2));
             }

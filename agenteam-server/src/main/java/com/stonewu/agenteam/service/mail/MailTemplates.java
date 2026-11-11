@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.mail;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.mail.entity.MailDeliveryContent;
 import com.stonewu.agenteam.model.mail.entity.PreparedMail;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,41 +26,40 @@ public class MailTemplates {
             uri.getScheme())) || uri.getHost() == null
             || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null
             || (!uri.getPath().isEmpty() && !uri.getPath().equals("/"))) {
-            throw new IllegalArgumentException("邮件站点地址必须是完整且不带路径的站点来源");
+            throw new IllegalArgumentException(Messages.text("error.mail.mailTemplates.init.1"));
         }
         origin = configuredOrigin.endsWith("/") ? configuredOrigin.substring(0,
             configuredOrigin.length() - 1) : configuredOrigin;
     }
 
     public PreparedMail render(String jobId, String purpose, MailDeliveryContent content) {
-        String expires = DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm（zzzz）", Locale.SIMPLIFIED_CHINESE)
+        String expires = DateTimeFormatter.ofPattern(Messages.source("text.mail.mailTemplates.render.1"), Locale.SIMPLIFIED_CHINESE)
             .withZone(ZoneId.of(content.timezone())).format(Instant.parse(content.expiresAt()));
         String subject;
         String introduction;
         String path;
         switch (purpose) {
             case "password_reset" -> {
-                subject = "重置账号密码";
-                introduction = "你申请了重置账号密码。请打开下方链接设置新密码。";
+                subject = Messages.source("text.mail.mailTemplates.render.2");
+                introduction = Messages.source("text.mail.mailTemplates.render.3");
                 path = "/reset-password";
             }
             case "email_verify" -> {
-                subject = "验证账号邮箱";
-                introduction = "请打开下方链接，确认将此邮箱用于你的账号。";
+                subject = Messages.source("text.mail.mailTemplates.render.4");
+                introduction = Messages.source("text.mail.mailTemplates.render.5");
                 path = "/settings/verify-email";
             }
             case "enterprise_invitation" -> {
-                subject = "邀请你加入" + content.enterpriseName();
-                introduction = content.inviterName() + "邀请你加入「" + content.enterpriseName() + "」。请打开下方链接查看并接受邀请。";
+                subject = Messages.source("text.mail.mailTemplates.render.6", content.enterpriseName());
+                introduction = Messages.source("text.mail.mailTemplates.render.7", content.inviterName(), content.enterpriseName());
                 if (content.note() != null && !content.note().isBlank()) {
-                    introduction += "\n\n邀请说明：\n" + content.note();
+                    introduction += Messages.source("text.mail.mailTemplates.render.8", content.note());
                 }
                 path = "/invite";
             }
-            default -> throw new IllegalArgumentException("邮件用途未定义");
+            default -> throw new IllegalArgumentException(Messages.text("error.mail.mailTemplates.render.1"));
         }
-        String text = introduction + "\n\n" + origin + path + "#token=" + content.token()
-            + "\n\n链接有效期至 " + expires + "。\n如果这不是你的操作，请忽略此邮件。";
+        String text = Messages.source("text.mail.mailTemplates.render.9", introduction, origin, path, content.token(), expires);
         return new PreparedMail(content.recipient(), subject, text, jobId);
     }
 }

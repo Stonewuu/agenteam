@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
@@ -64,7 +66,7 @@ public class ExecutionDeltaBatchCodec {
 
     public ExecutionEventCodec.Stored encode(List<ExecutionEvent> batch) {
         if (batch.isEmpty() || batch.size() > MAX_FRAGMENTS || !compactable(batch.getFirst())) {
-            throw new IllegalArgumentException("只能合并结构完整的消息增量");
+            throw new IllegalArgumentException(Messages.text("error.execution.executionDeltaBatchCodec.encode.1"));
         }
         var first = batch.getFirst();
         var value = (ObjectNode) json.tree(Map.of(
@@ -79,12 +81,12 @@ public class ExecutionDeltaBatchCodec {
         for (int i = 0; i < batch.size(); i++) {
             var event = batch.get(i);
             if (i > 0 && !canAppend(List.of(batch.get(i - 1)), event)) {
-                throw new IllegalArgumentException("消息增量的对象、编号、版本或长度不符合合并条件");
+                throw new IllegalArgumentException(Messages.text("error.execution.executionDeltaBatchCodec.encode.2"));
             }
             String part = (String) event.payload().get("delta");
             textBytes += bytes(part);
             if (textBytes > MAX_TEXT_BYTES) {
-                throw new IllegalArgumentException("合并增量的正文超过允许长度");
+                throw new IllegalArgumentException(Messages.text("error.execution.executionDeltaBatchCodec.encode.3"));
             }
             text.append(part);
             fragments.addArray().add(event.eventId()).add(event.createdAt()).add(text.length());
@@ -98,13 +100,13 @@ public class ExecutionDeltaBatchCodec {
             return List.of(events.decode(data, hash));
         }
         if (version != STORAGE_VERSION) {
-            throw new IllegalStateException("不支持当前数据库事件编码版本");
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.1"));
         }
         var value = json.read(data);
         if (value == null || hash == null || !hash.equals(json.hash(value))
             || value.path("storageVersion").asInt() != STORAGE_VERSION
             || value.path("protocolVersion").asInt() != 1) {
-            throw new IllegalStateException("合并事件的内容或版本不完整");
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.2"));
         }
         String enterprise = text(value, "enterpriseId"), conversation = text(value, "conversationId");
         String run = text(value, "runId"), message = text(value, "messageId"), block = text(value, "blockId");
@@ -114,7 +116,7 @@ public class ExecutionDeltaBatchCodec {
         if (!fragments.isArray() || fragments.isEmpty() || fragments.size() > MAX_FRAGMENTS
             || bytes(delta) > MAX_TEXT_BYTES || sequence < 1 || revision < 1
             || sequence > Long.MAX_VALUE - fragments.size() + 1 || revision > Long.MAX_VALUE - fragments.size()) {
-            throw new IllegalStateException("合并事件的片段数量、正文或编号不符合要求");
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.3"));
         }
         var result = new ArrayList<ExecutionEvent>(fragments.size());
         int start = 0;
@@ -122,15 +124,15 @@ public class ExecutionDeltaBatchCodec {
             if (!fragment.isArray() || fragment.size() != 3 || !fragment.get(0).isTextual()
                 || fragment.get(0).asText().isBlank() || !fragment.get(1).isTextual()
                 || !fragment.get(2).isIntegralNumber() || !fragment.get(2).canConvertToInt()) {
-                throw new IllegalStateException("合并事件的片段信息不完整");
+                throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.4"));
             }
             int end = fragment.get(2).intValue();
             if (end < start || end > delta.length()) {
-                throw new IllegalStateException("合并事件的正文位置不正确");
+                throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.5"));
             }
             String part = delta.substring(start, end);
             if (bytes(part) > 4096) {
-                throw new IllegalStateException("合并事件还原后的单个片段过长");
+                throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.6"));
             }
             var payload = Map.<String, Object>of("messageId", message, "blockId", block,
                 "baseRevision", Long.toString(revision), "revision", Long.toString(++revision), "delta", part);
@@ -139,26 +141,26 @@ public class ExecutionDeltaBatchCodec {
             start = end;
         }
         if (start != delta.length()) {
-            throw new IllegalStateException("合并事件没有包含全部正文");
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.decode.7"));
         }
         return List.copyOf(result);
     }
 
     private static String text(JsonNode node, String field) {
         if (!node.path(field).isTextual()) {
-            throw new IllegalStateException("合并事件缺少必要的文本字段：" + field);
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.text.1", field));
         }
         return node.path(field).textValue();
     }
 
     private static long number(String value) {
         if (value == null || !value.matches("0|[1-9][0-9]{0,18}")) {
-            throw new IllegalStateException("事件编号或内容版本不是有效的十进制整数");
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.number.1"));
         }
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException invalid) {
-            throw new IllegalStateException("事件编号或内容版本超出允许范围", invalid);
+            throw new IllegalStateException(Messages.text("error.execution.executionDeltaBatchCodec.number.2"), invalid);
         }
     }
 

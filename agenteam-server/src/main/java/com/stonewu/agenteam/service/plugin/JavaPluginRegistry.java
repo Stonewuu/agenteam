@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.plugin;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,7 +77,7 @@ public class JavaPluginRegistry {
         if (row == null || !row.getStatus().equals("active")) {
             boolean upgraded = row != null && row.getStatus().equals("upgraded");
             throw new ApiException(HttpStatus.CONFLICT, upgraded ? "JAVA_PLUGIN_UPGRADED" : "JAVA_PLUGIN_UNINSTALLED",
-                upgraded ? "插件已升级，旧版本已停止调用，请确认并更新插件配置。" : "插件已卸载，已停止本次调用。");
+                upgraded ? Messages.text("error.plugin.javaPluginRegistry.require.1") : Messages.text("error.plugin.javaPluginRegistry.require.2"));
         }
         return row;
     }
@@ -88,7 +90,7 @@ public class JavaPluginRegistry {
             .eq(JavaPluginInstallationRow::getStatus, "active"));
         if (row == null || row.getArtifact() == null) {
             require(enterprise, id);
-            throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_PACKAGE_MISSING", "插件程序包不可用，请重新安装。");
+            throw new ApiException(HttpStatus.CONFLICT, "JAVA_PLUGIN_PACKAGE_MISSING", Messages.text("error.plugin.javaPluginRegistry.artifact.1"));
         }
         return row.getArtifact();
     }
@@ -118,7 +120,7 @@ public class JavaPluginRegistry {
 
     public void matchPlugin(JavaPluginInstallationRow row, String pluginId) {
         if (!Objects.equals(row.getPluginId(), pluginId)) {
-            throw ApiException.invalidField("config.sources", "插件版本与所选程序包不一致。");
+            throw ApiException.invalidField("config.sources", Messages.text("error.plugin.javaPluginRegistry.matchPlugin.1"));
         }
     }
 }

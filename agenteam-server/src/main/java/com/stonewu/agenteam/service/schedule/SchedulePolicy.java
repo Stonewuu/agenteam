@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.schedule;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.mapper.schedule.ScheduleMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -56,7 +58,7 @@ public class SchedulePolicy {
         var hire = hires.find(actor.enterpriseId(), actor.userId(), hireId, false)
             .orElseThrow(ResourceAuthorizationService::unavailable);
         if (!hire.status().equals("active")) {
-            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", "请先恢复该员工的雇佣，再创建或启用计划。");
+            throw new ApiException(HttpStatus.CONFLICT, "AGENT_UNAVAILABLE", Messages.text("error.schedule.schedulePolicy.select.1"));
         }
         var selected = configurations.normal(actor, hire.agentId(), version);
         if (!hire.id().equals(selected.hireId())) {

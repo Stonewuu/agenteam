@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data.mysql;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.network.OutboundAddressPolicy;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,7 +33,7 @@ public class DatabaseAddressPolicy {
             if (!"mysql".equals(
                 uri.getScheme()) || uri.getHost() == null || uri.getPort() < 1 || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null
                 || (uri.getPath() != null && !uri.getPath().isEmpty() && !uri.getPath().equals("/"))) {
-                throw new IllegalArgumentException("数据库允许列表需要完整 mysql 主机来源和端口，不能填写凭据或路径");
+                throw new IllegalArgumentException(Messages.text("error.data.databaseAddressPolicy.init.1"));
             }
             return origin(uri.getHost(), uri.getPort());
         }).collect(Collectors.toUnmodifiableSet());
@@ -56,6 +58,6 @@ public class DatabaseAddressPolicy {
 
     private ApiException denied() {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DATABASE_ADDRESS_DENIED",
-            "数据库地址不在部署允许范围内，请检查地址或联系部署管理员。");
+            Messages.text("error.data.databaseAddressPolicy.denied.1"));
     }
 }

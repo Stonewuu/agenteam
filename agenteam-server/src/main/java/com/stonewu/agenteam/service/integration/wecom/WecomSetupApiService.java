@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.model.http.entity.ApiOperationResult;
 import com.stonewu.agenteam.model.integration.request.WecomSetupRequest;
 import com.stonewu.agenteam.model.integration.response.WecomSetupView;
@@ -74,7 +76,7 @@ public class WecomSetupApiService {
     public ApiOperationResult change(String enterprise, String id, Action input, boolean retry, HttpServletRequest request) {
         InputValidation.request(request, Action.class);
         if (input == null || input.expectedRevision() == null || input.expectedRevision() < 1) {
-            throw ApiException.invalidField("expectedRevision", "请刷新创建进度后重试。");
+            throw ApiException.invalidField("expectedRevision", Messages.text("error.integration.feishuSetupApiService.change.1"));
         }
         var actor = actor(enterprise, request);
         return execute(actor, enterprise, request, () -> ApiOperationResult.of(200,
@@ -93,7 +95,7 @@ public class WecomSetupApiService {
         var actor = actor(enterprise, request);
         var row = store.require(enterprise, actor.id(), id);
         if (!store.view(row).canOpen()) {
-            throw new ApiException(HttpStatus.CONFLICT, "WECOM_CREATION_LINK_EXPIRED", "创建入口已结束，请返回群策查看当前进度。");
+            throw new ApiException(HttpStatus.CONFLICT, "WECOM_CREATION_LINK_EXPIRED", Messages.text("error.integration.feishuSetupApiService.open.1"));
         }
         return cipher.read(row);
     }
@@ -105,11 +107,11 @@ public class WecomSetupApiService {
 
     private UserEntity actor(String enterprise, HttpServletRequest request) {
         if (SessionIdentityService.state(request.getSession(false)) != null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED", "请结束代操作，使用本人账号创建企微机器人。");
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERSONAL_AUTH_REQUIRED", Messages.text("error.integration.wecomSetupApiService.actor.1"));
         }
         if (ChannelSessionGuard.restricted(request.getSession(false))) {
             if (system(request)) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", "请先验证账号密码，再访问平台管理。");
+                throw new ApiException(HttpStatus.FORBIDDEN, "LOCAL_REAUTH_REQUIRED", Messages.text("error.chat.chatManagementApiService.actor.1"));
             }
             auth.requireEnterprise(request.getSession(false), enterprise);
         }

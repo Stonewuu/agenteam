@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.controller.sandbox;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.model.sandbox.request.EnvironmentRequest;
@@ -59,13 +61,13 @@ public final class EnvironmentServerController implements HttpHandler {
             }
             var request = json.readValue(bytes, EnvironmentRequest.class);
             if (request.project() == null) {
-                throw ApiException.invalidField("project", "环境信息不完整。");
+                throw ApiException.invalidField("project", Messages.text("error.sandbox.environmentServerController.handle.1"));
             }
             workspace = request.project().workspaceId();
             reply(exchange, 200, runtime.manage(request.action(), request.project()));
         } catch (Exception failure) {
             Throwable cause = failure instanceof JsonProcessingException ? ExceptionDiagnostics.withoutMessages(failure) : failure;
-            LOG.warn("独立环境管理失败，工作空间编号 {}，方法 {}，路径 /environments", workspace, exchange.getRequestMethod(), cause);
+            LOG.warn(Messages.log("log.sandbox.environmentServerController.handle.1"), workspace, exchange.getRequestMethod(), cause);
             int status = failure instanceof ApiException known ? known.getStatusCode().value() : 500;
             reply(exchange, status, Map.of("code", failure instanceof ApiException known ? known.code() : "ENVIRONMENT_UNAVAILABLE"));
         } finally {

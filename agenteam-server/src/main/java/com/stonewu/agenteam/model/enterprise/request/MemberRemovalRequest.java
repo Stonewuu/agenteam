@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record MemberRemovalRequest(
-    @NotNull(message = "请填写必填项。") @Size(min = 1, max = 8192, message = "文字长度不符合要求。") String impactToken,
-    @JsonProperty(value = "resourceOwnerId", required = true) @Size(min = 1, max = 100, message = "文字长度不符合要求。") String resourceOwnerId,
-    @JsonProperty(value = "todoOwnerId", required = true) @Size(min = 1, max = 100, message = "文字长度不符合要求。") String todoOwnerId,
+    @NotNull(message = "{validation.required}") @Size(min = 1, max = 8192, message = "{validation.textLength}") String impactToken,
+    @JsonProperty(value = "resourceOwnerId", required = true) @Size(min = 1, max = 100, message = "{validation.textLength}") String resourceOwnerId,
+    @JsonProperty(value = "todoOwnerId", required = true) @Size(min = 1, max = 100, message = "{validation.textLength}") String todoOwnerId,
     @JsonProperty(value = "cancelOpenTodos", required = true) boolean cancelOpenTodos) {
 }

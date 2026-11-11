@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ExecutionEventCache;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.PreviewRetentionMapper;
@@ -72,7 +74,7 @@ public class PreviewRetentionService {
                     cache.release(preview.enterprise(), preview.conversation(), owner);
                 }
             } catch (RuntimeException failed) {
-                LOG.warn("到期预览暂时无法清理，下次继续处理，企业编号 {}，会话编号 {}",
+                LOG.warn(Messages.log("log.execution.previewRetentionService.clean.1"),
                     preview.enterprise(), preview.conversation(), failed);
             }
         }

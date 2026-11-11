@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolLogMapper;
@@ -78,7 +80,7 @@ public class ToolLogService {
         var details = authorization.require(actor, "tool_log.details");
         var result = logs.details(actor, view, details, id).orElseThrow(ResourceAuthorizationService::unavailable);
         audit.record(actor.enterpriseId(), actor.user(), "tool_log.details", "tool_call", result.entry().call().id(),
-            "查看脱敏工具调用详情", Map.of());
+            Messages.text("text.tool.toolLogService.details.1"), Map.of());
         return new ToolCallDetailsView(view(actor, result.entry(), new HashMap<>()), preview(result.request()),
             preview(result.result()));
     }
@@ -90,7 +92,7 @@ public class ToolLogService {
     public ToolLogQuery validate(ToolLogQuery query) {
         String owner = query.actorUserId() == null || query.actorUserId().isBlank() ? null : query.actorUserId().trim();
         if (owner != null && (owner.length() > 100 || owner.codePoints().anyMatch(Character::isISOControl))) {
-            throw ApiException.invalidField("actorUserId", "请选择有效的发起成员。");
+            throw ApiException.invalidField("actorUserId", Messages.text("error.tool.toolLogService.validate.1"));
         }
         String status = option(query.status(), "status",
             Set.of("prepared", "waiting_approval", "waiting_input", "running", "succeeded", "failed", "cancelled", "unknown"));
@@ -105,7 +107,7 @@ public class ToolLogService {
             return null;
         }
         if (!allowed.contains(value)) {
-            throw ApiException.invalidField(field, "请选择有效的筛选条件。");
+            throw ApiException.invalidField(field, Messages.text("error.tool.toolLogService.option.1"));
         }
         return value;
     }

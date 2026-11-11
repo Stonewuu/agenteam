@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.integration.provider.wecom;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,8 +24,7 @@ import java.util.regex.Pattern;
 @Component
 public class WecomBotIdentityClient {
     private static final Pattern IDENTITY = Pattern.compile(
-        "\\A<extra_identity_context>\\n机器人身份：\\n名字：([^\\r\\n<>]{1,200})\\nID：([A-Za-z0-9_-]{1,191})\\n"
-            + "授权真人用户身份：\\n名字：[^\\r\\n<>]{1,200}\\nID：([A-Za-z0-9_-]{1,191})\\n");
+        Messages.source("protocol.integration.wecomBotIdentityClient.IDENTITY.1"));
     private static final Pattern ID_LINE = Pattern.compile("(?m)^ID：");
     private final IntegrationEndpoints endpoints;
     private final IntegrationHttpClient http;
@@ -60,8 +61,8 @@ public class WecomBotIdentityClient {
         var match = IDENTITY.matcher(normalized);
         if (normalized.length() > 16384 || !normalized.endsWith("</extra_identity_context>") || !match.find()
             || ID_LINE.matcher(normalized).results().count() != 2
-            || normalized.indexOf("机器人身份：") != normalized.lastIndexOf("机器人身份：")
-            || normalized.indexOf("授权真人用户身份：") != normalized.lastIndexOf("授权真人用户身份：")
+            || normalized.indexOf(Messages.source("protocol.integration.wecomBotIdentityClient.parse.1")) != normalized.lastIndexOf(Messages.source("protocol.integration.wecomBotIdentityClient.parse.1"))
+            || normalized.indexOf(Messages.source("protocol.integration.wecomBotIdentityClient.parse.2")) != normalized.lastIndexOf(Messages.source("protocol.integration.wecomBotIdentityClient.parse.2"))
             || !expectedBot.equals(match.group(2))) {
             throw unavailable();
         }
@@ -73,7 +74,7 @@ public class WecomBotIdentityClient {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("无法计算企微身份签名", failure);
+            throw new IllegalStateException(Messages.text("error.integration.wecomBotIdentityClient.signature.1"), failure);
         }
     }
 
@@ -94,7 +95,7 @@ public class WecomBotIdentityClient {
     }
 
     private static ChannelProviderException unavailable() {
-        return new ChannelProviderException("WECOM_BOT_IDENTITY_UNAVAILABLE", "暂时无法核对企微机器人身份，请稍后重试。");
+        return new ChannelProviderException("WECOM_BOT_IDENTITY_UNAVAILABLE", Messages.text("error.integration.wecomBotIdentityClient.unavailable.1"));
     }
 
     public record Identity(String botId, String name, String encryptedOwnerId) {

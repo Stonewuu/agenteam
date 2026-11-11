@@ -2,13 +2,34 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
+import {loadSource} from "./i18n-test-runtime.mjs";
 
 const source = (await readFile(new URL("../src/lib/server/backend-proxy.ts", import.meta.url), "utf8"))
   .replace('import "server-only";', "")
   .replace(/import\s*\{\s*NextResponse\s*\}\s*from\s*"next\/server";/, "const NextResponse = Response;")
   .replace(/import\s*\{\s*agentBackendUrl\s*\}\s*from\s*"\.\/agent-backend";/, 'const agentBackendUrl = (path: string) => "http://backend.test" + path;');
-const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText;
-const { proxyBackendRequest } = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
+const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+const loaded = {exports: {}};
+new Function("require", "module", "exports", compiled)((name) => loadSource(name.slice(2)), loaded, loaded.exports);
+const {proxyBackendRequest} = loaded.exports;
+
+test("代理转发请求语言，代理拒绝大请求时也使用页面语言", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async (_url, options) => {
+    assert.equal(options.headers.get("accept-language"), "en");
+    return new Response(null, {status: 204});
+  };
+  try {
+    await proxyBackendRequest(new Request("http://frontend.test/example", {headers: {"accept-language": "en"}}), "/example");
+    const response = await proxyBackendRequest(new Request("http://frontend.test/example", {method: "POST",
+      headers: {cookie: "agenteam-locale=en", "content-length": "2000000"}}), "/example");
+    assert.equal(response.status, 413);
+    assert.equal(response.headers.get("content-language"), "en");
+    assert.match((await response.json()).error.message, /^[A-Za-z]/);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
 
 test("文件分段请求保留范围与版本，响应保留长度和正文", async () => {
   const original = globalThis.fetch;

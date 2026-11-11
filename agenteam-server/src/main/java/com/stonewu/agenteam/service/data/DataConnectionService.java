@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.data;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.data.DataCollectionMapper;
 import com.stonewu.agenteam.mapper.data.HttpDataResponseMapper;
 import com.stonewu.agenteam.mapper.data.MysqlSourceSchema;
@@ -79,7 +81,7 @@ public class DataConnectionService {
 
     public Check inspect(ResourceRecord resource) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("数据源连接检查不能占用数据库事务");
+            throw new IllegalStateException(Messages.text("error.data.dataConnectionService.inspect.1"));
         }
         long start = System.nanoTime(), deadline = start + Math.min(10,
             resource.config().path("timeoutSeconds").asInt(10)) * 1_000_000_000L;
@@ -87,7 +89,7 @@ public class DataConnectionService {
         try {
             String summary;
             switch (resource.config().path("sourceType").asText()) {
-                case "file" -> summary = "文件数据源无需外部连接，导入文件会单独检查。";
+                case "file" -> summary = Messages.text("text.data.dataConnectionService.inspect.1");
                 case "mysql" -> {
                     try (var session = mysql.open(resource.enterpriseId(), resource.config(), deadline)) {
                         var configured = collections.all(resource.enterpriseId(), resource.id());
@@ -96,7 +98,7 @@ public class DataConnectionService {
                                 collections.fields(resource.enterpriseId(), collection.id(),
                                     collection.activeGeneration()));
                         }
-                        summary = "数据库只读连接检查通过，已核对 " + configured.size() + " 个集合。";
+                        summary = Messages.text("text.data.dataConnectionService.inspect.2", configured.size());
                     }
                 }
                 case "http" -> {
@@ -107,22 +109,22 @@ public class DataConnectionService {
                             collections.fields(resource.enterpriseId(), collection.id(), collection.activeGeneration()),
                             deadline);
                     }
-                    summary = "接口读取检查通过，已核对 " + configured.size() + " 个集合。";
+                    summary = Messages.text("text.data.dataConnectionService.inspect.3", configured.size());
                 }
                 default ->
-                    throw new ApiException(HttpStatus.CONFLICT, "DATA_SOURCE_UNAVAILABLE", "此数据连接暂时不能检查。");
+                    throw new ApiException(HttpStatus.CONFLICT, "DATA_SOURCE_UNAVAILABLE", Messages.text("error.data.dataConnectionService.inspect.2"));
             }
             return new Check(startedAt,
                 new ConnectionCheckView(clock.instant().toString(), true, summary, elapsed(start), List.of()));
         } catch (ApiException failed) {
-            LOG.warn("数据源连接检查失败，资源编号 {}", resource.id(), failed);
+            LOG.warn(Messages.log("log.data.dataConnectionService.inspect.1"), resource.id(), failed);
             return new Check(startedAt,
                 new ConnectionCheckView(clock.instant().toString(), false, failed.getReason(), elapsed(start),
                     List.of()));
         } catch (Exception failed) {
-            LOG.error("数据源连接检查失败，资源编号 {}", resource.id(), failed);
+            LOG.error(Messages.log("log.data.dataConnectionService.inspect.1"), resource.id(), failed);
             return new Check(startedAt,
-                new ConnectionCheckView(clock.instant().toString(), false, "数据连接或字段暂时无法读取，请检查配置。",
+                new ConnectionCheckView(clock.instant().toString(), false, Messages.text("text.data.dataConnectionService.inspect.4"),
                     elapsed(start), List.of()));
         }
     }
@@ -136,7 +138,7 @@ public class DataConnectionService {
         if (current.validation() != null && current.validation().at("/connection/startedAt").isTextual()
             && Instant.parse(current.validation().at("/connection/startedAt").asText())
             .isAfter(Instant.parse(check.startedAt()))) {
-            throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_CHECK_SUPERSEDED", "已有更新的检查结果，请重新加载。");
+            throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_CHECK_SUPERSEDED", Messages.text("error.data.dataConnectionService.save.1"));
         }
         configurations.use(actor, ResourceKind.DATA, current.config());
         var connection = new LinkedHashMap<String, Object>();
@@ -149,7 +151,7 @@ public class DataConnectionService {
         resources.validation(actor.enterpriseId(), current.id(),
             json.tree(Map.of("configHash", current.configHash(), "connection", connection, "fieldErrors", Map.of())));
         audit.record(actor.enterpriseId(), actor.user(), "data.check", "resource", current.id(),
-            "检查数据源连接与集合字段", Map.of("success", check.view().success(), "configHash", current.configHash()));
+            Messages.text("text.data.dataConnectionService.save.1"), Map.of("success", check.view().success(), "configHash", current.configHash()));
         return check.view();
     }
 

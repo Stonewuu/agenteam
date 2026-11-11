@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.resource;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceViewMapper;
@@ -62,10 +64,10 @@ public class ResourcePublishService {
         policy.editable(resource);
         if (!resource.status().equals("active")) {
             throw new ApiException(HttpStatus.CONFLICT, "RESOURCE_DISABLED",
-                "请先启用" + resource.kind().label() + "，再发布新版本。");
+                Messages.text("error.resource.resourcePublishService.publish.1", resource.kind().localizedLabel()));
         }
         if (request == null) {
-            throw ApiException.invalidField("body", "请填写发布说明。");
+            throw ApiException.invalidField("body", Messages.text("error.resource.resourcePublishService.publish.2"));
         }
         String note = ResourceInput.text(request.releaseNote(), "releaseNote", 500, true);
         configurations.publish(actor, resource);
@@ -82,7 +84,7 @@ public class ResourcePublishService {
                 request.listing(), request.grants() != null);
         }
         audit.record(actor.enterpriseId(), actor.user(), "resource.publish", "resource", id,
-            "发布" + resource.kind().label() + "版本",
+            Messages.text("text.resource.resourcePublishService.publish.1", resource.kind().localizedLabel()),
             Map.of("kind", resource.kind().code(), "versionId", versionId, "versionNo", resource.nextVersionNo(),
                 "dependencyCount", fixed.size()));
         return views.version(actor, versions.find(actor.enterpriseId(), versionId).orElseThrow());

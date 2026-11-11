@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.usage;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -36,7 +38,7 @@ public class QuotaReconciliationMapper {
         int changed = statements.repairQuotaBucket(value.actualUsed(), value.actualReserved(), timestamp(now),
             enterprise, value.bucketId());
         if (changed != 1) {
-            throw new IllegalStateException("次数记录在核对期间发生变化，当前修正未提交");
+            throw new IllegalStateException(Messages.text("error.usage.quotaReconciliationMapper.repair.1"));
         }
     }
 }

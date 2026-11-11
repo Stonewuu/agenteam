@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.project.ProjectViewMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -99,7 +101,7 @@ public class ConversationProjectService {
         }
         if (row.activeRunId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
-                "请等待当前任务结束，或先停止任务，再切换项目。");
+                Messages.text("error.project.conversationProjectService.select.1"));
         }
         var project = projects.require(actor.enterpriseId(), actor.userId(), projectId);
         if (!project.getId().equals(row.projectId())) {

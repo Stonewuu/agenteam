@@ -1,0 +1,382 @@
+{
+  "error.modelprofile.modelLibraryLogging.stack.1": {
+    "zh-CN": "{0}：模型开发库处理异常",
+    "en": "{0}: Model library processing failed."
+  },
+  "error.modelprofile.modelRequestLimits.init.1": {
+    "zh-CN": "模型等待时限必须为正数，输入预算不能为负数。",
+    "en": "The model timeout must be positive and the input budget must not be negative."
+  },
+  "error.modelprofile.modelProfileMapper.capabilities.1": {
+    "zh-CN": "模型能力无法保存",
+    "en": "Model capabilities could not be saved."
+  },
+  "error.modelprofile.modelProfileMapper.map.1": {
+    "zh-CN": "已保存的模型能力无法读取",
+    "en": "Saved model capabilities could not be read."
+  },
+  "error.modelprofile.remoteModelMapper.invalidResponse.1": {
+    "zh-CN": "提供方未返回有效的模型列表，可重试或手动填写模型标识。",
+    "en": "The provider did not return a valid model list. Retry or enter a model identifier manually."
+  },
+  "error.modelprofile.modelCapabilities.reasoningEfforts.1": {
+    "zh-CN": "思考等级数量超出允许范围。",
+    "en": "The number of reasoning levels is outside the allowed range."
+  },
+  "error.modelprofile.modelCapabilities.reasoningEfforts.2": {
+    "zh-CN": "不能包含重复的思考等级。",
+    "en": "Duplicate reasoning levels are not allowed."
+  },
+  "error.modelprofile.modelProtocolOptions.reasoningMode.1": {
+    "zh-CN": "请选择支持的思考方式。",
+    "en": "Select a supported reasoning mode."
+  },
+  "error.modelprofile.modelProtocolOptions.cacheTtlSeconds.1": {
+    "zh-CN": "缓存有效期不能为负数。",
+    "en": "The cache lifetime must not be negative."
+  },
+  "error.modelprofile.modelProtocolOptions.cacheTtlSeconds.2": {
+    "zh-CN": "缓存有效期超出允许范围。",
+    "en": "The cache lifetime is outside the allowed range."
+  },
+  "error.modelprofile.modelProtocolOptions.usageFormat.1": {
+    "zh-CN": "请选择支持的用量格式。",
+    "en": "Select a supported usage format."
+  },
+  "error.modelprofile.modelProtocolOptions.notApplicableUsage.1": {
+    "zh-CN": "用量字段数量超出允许范围。",
+    "en": "The number of usage fields is outside the allowed range."
+  },
+  "error.modelprofile.modelProtocolOptions.notApplicableUsage.2": {
+    "zh-CN": "用量字段不能重复。",
+    "en": "Usage fields must not be duplicated."
+  },
+  "error.modelprofile.modelProtocolOptions.serviceTier.1": {
+    "zh-CN": "请选择支持的服务档位。",
+    "en": "Select a supported service tier."
+  },
+  "error.modelprofile.modelProtocolOptions.version.1": {
+    "zh-CN": "协议配置版本不受支持。",
+    "en": "The protocol configuration version is unsupported."
+  },
+  "error.modelprofile.nativeModelState.init.1": {
+    "zh-CN": "模型历史文字的位置不能为负数。",
+    "en": "The model history text position must not be negative."
+  },
+  "error.modelprofile.agentModelSelectionService.apply.1": {
+    "zh-CN": "流程型员工不能在对话中切换模型。",
+    "en": "Workflow AI employees cannot switch models within a conversation."
+  },
+  "error.modelprofile.agentModelSelectionService.validateReasoning.1": {
+    "zh-CN": "当前模型不支持所选思考强度，请重新选择。",
+    "en": "This model does not support the selected reasoning effort. Choose another option."
+  },
+  "error.modelprofile.modelConfigurationValidation.provider.1": {
+    "zh-CN": "模型地址必须使用加密连接，且不能包含账号、查询参数或片段；本机模型可使用普通连接。",
+    "en": "Model addresses must use HTTPS and cannot contain credentials, query parameters, or fragments. Local models may use HTTP."
+  },
+  "error.modelprofile.modelConfigurationValidation.provider.2": {
+    "zh-CN": "密钥不能包含换行或控制字符。",
+    "en": "A key cannot contain line breaks or control characters."
+  },
+  "error.modelprofile.modelConfigurationValidation.model.1": {
+    "zh-CN": "最大输出长度不能超过上下文长度。",
+    "en": "Maximum output length cannot exceed context length."
+  },
+  "error.modelprofile.modelManagementService.deleteProvider.1": {
+    "zh-CN": "该提供方下仍有模型，请先删除模型后再删除提供方。",
+    "en": "This provider still has models. Delete them before deleting the provider."
+  },
+  "error.modelprofile.modelManagementService.duplicateName.1": {
+    "zh-CN": "当前企业已存在同名配置，请修改名称。",
+    "en": "A configuration with this name already exists in the organization. Change the name."
+  },
+  "error.modelprofile.modelProfileCatalog.list.1": {
+    "zh-CN": "当前账号不能查看模型选项。",
+    "en": "This account cannot view model options."
+  },
+  "error.modelprofile.modelProfileCatalog.requireAvailable.1": {
+    "zh-CN": "所选模型已停用或不可使用，请调整配置。",
+    "en": "The selected model is disabled or unavailable. Adjust the configuration."
+  },
+  "error.modelprofile.modelProtocolFactory.open.1": {
+    "zh-CN": "不支持的模型接口。",
+    "en": "Unsupported model API."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.1": {
+    "zh-CN": "当前接口不支持所选思考方式。",
+    "en": "This API does not support the selected reasoning mode."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.2": {
+    "zh-CN": "请为每个思考等级填写小于最大输出长度的预算；Anthropic 启用思考时至少为 1024。",
+    "en": "Set a budget below the maximum output length for each reasoning level. Anthropic requires at least 1024 when thinking is enabled."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.3": {
+    "zh-CN": "关闭思考的预算必须为 0，其他等级必须大于 0。",
+    "en": "The budget must be 0 when reasoning is off and greater than 0 for other levels."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.4": {
+    "zh-CN": "请为每个等级填写当前接口支持的按思考强度设置。",
+    "en": "Set the reasoning effort supported by the current API for each level."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.5": {
+    "zh-CN": "只有 Anthropic 可配置 5 分钟或 1 小时的缓存创建有效期。",
+    "en": "Only Anthropic supports a 5-minute or 1-hour cache creation lifetime."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.6": {
+    "zh-CN": "DeepSeek 用量格式只适用于 OpenAI 兼容接口。",
+    "en": "The DeepSeek usage format only applies to OpenAI-compatible APIs."
+  },
+  "error.modelprofile.modelProtocolValidation.validate.7": {
+    "zh-CN": "当前接口不支持所选服务档位。",
+    "en": "This API does not support the selected service tier."
+  },
+  "error.modelprofile.anthropicNativeStateCollector.accept.1": {
+    "zh-CN": "模型返回了重复的内容块编号。",
+    "en": "The model returned a duplicate content block ID."
+  },
+  "error.modelprofile.anthropicNativeStateCollector.accept.2": {
+    "zh-CN": "模型返回的内容片段没有对应的内容块。",
+    "en": "The model returned a content fragment without a matching content block."
+  },
+  "error.modelprofile.anthropicNativeStateCollector.privateValue.1": {
+    "zh-CN": "模型返回的签名内容超过允许大小。",
+    "en": "The model's signed content exceeds the allowed size."
+  },
+  "error.modelprofile.nativeAnthropicFormatter.nativeBlock.1": {
+    "zh-CN": "保存的模型内容缺少对应工具调用。",
+    "en": "The saved model content is missing its matching tool call."
+  },
+  "error.modelprofile.nativeAnthropicFormatter.nativeBlock.2": {
+    "zh-CN": "保存的模型包含当前不支持的原生内容类型。",
+    "en": "The saved model contains an unsupported native content type."
+  },
+  "error.modelprofile.nativeAnthropicFormatter.attribute.1": {
+    "zh-CN": "保存的模型签名内容不完整。",
+    "en": "The saved model signature content is incomplete."
+  },
+  "error.modelprofile.anthropicSdkHttpClient.execute.1": {
+    "zh-CN": "模型服务请求失败。",
+    "en": "The model service request failed."
+  },
+  "error.modelprofile.geminiNativeStateCollector.accept.1": {
+    "zh-CN": "模型返回了重复的工具调用编号。",
+    "en": "The model returned a duplicate tool call ID."
+  },
+  "error.modelprofile.geminiNativeStateCollector.accept.2": {
+    "zh-CN": "模型返回的签名没有对应内容。",
+    "en": "The model returned a signature without matching content."
+  },
+  "error.modelprofile.geminiUsageResponseBody.availableEvent.1": {
+    "zh-CN": "模型单个响应事件超过 8 MiB 限制。",
+    "en": "A model response event exceeds the 8 MiB limit."
+  },
+  "error.modelprofile.modelHttpSession.init.1": {
+    "zh-CN": "模型请求不能访问其他主机。",
+    "en": "Model requests cannot access another host."
+  },
+  "error.modelprofile.modelHttpSession.prepare.1": {
+    "zh-CN": "模型请求已经取消。",
+    "en": "The model request was canceled."
+  },
+  "error.modelprofile.modelHttpSession.intercept.1": {
+    "zh-CN": "模型请求地址与已配置的服务不一致。",
+    "en": "The model request URL does not match the configured service."
+  },
+  "error.modelprofile.modelHttpSession.intercept.2": {
+    "zh-CN": "模型开发库尝试在同一次请求中重复发送，已停止未记录的重试。",
+    "en": "The model library attempted to send the same request again. The unrecorded retry was stopped."
+  },
+  "error.modelprofile.modelInputBudget.requireFits.1": {
+    "zh-CN": "模型输入超过内存预算",
+    "en": "Model input exceeds the memory budget."
+  },
+  "error.modelprofile.modelInputBudget.requireFits.2": {
+    "zh-CN": "本次对话内容过大，已保留原始内容，请缩小输入或新建对话后重试。",
+    "en": "This conversation is too large. The original content has been retained. Reduce the input or start a new conversation."
+  },
+  "error.modelprofile.modelInputBudget.requireFits.3": {
+    "zh-CN": "模型输入无法编码。",
+    "en": "Model input could not be encoded."
+  },
+  "error.modelprofile.modelRequestDiagnostics.safeCause.1": {
+    "zh-CN": "：模型请求处理异常",
+    "en": ": Model request processing failed."
+  },
+  "error.modelprofile.modelSseErrorInputStream.inspect.1": {
+    "zh-CN": "模型在响应流中返回过长的错误信息。",
+    "en": "The model returned an excessively long error in the response stream."
+  },
+  "error.modelprofile.modelSseErrorInputStream.inspect.2": {
+    "zh-CN": "模型在响应流中返回错误。",
+    "en": "The model returned an error in the response stream."
+  },
+  "error.modelprofile.nativeModelHistory.state.1": {
+    "zh-CN": "保存的模型状态版本不受支持。",
+    "en": "The saved model state version is unsupported."
+  },
+  "error.modelprofile.nativeModelHistory.text.1": {
+    "zh-CN": "保存的模型签名与对应内容不完整，不能继续发送。",
+    "en": "The saved model signature or associated content is incomplete and cannot be sent again."
+  },
+  "error.modelprofile.observedChatTransport.observe.1": {
+    "zh-CN": "模型用量事件不是有效的 JSON。",
+    "en": "The model usage event is not valid JSON."
+  },
+  "error.modelprofile.remoteModelClient.list.1": {
+    "zh-CN": "模型目录分页超过读取时间限制。",
+    "en": "Model catalog pagination exceeded the reading time limit."
+  },
+  "error.modelprofile.remoteModelClient.list.2": {
+    "zh-CN": "提供方重复返回同一页，请手动填写模型标识。",
+    "en": "The provider returned the same page repeatedly. Enter the model identifier manually."
+  },
+  "error.modelprofile.remoteModelClient.list.3": {
+    "zh-CN": "获取模型列表超时，请重试或手动填写模型标识。",
+    "en": "Loading the model list timed out. Retry or enter a model identifier manually."
+  },
+  "error.modelprofile.remoteModelClient.list.4": {
+    "zh-CN": "无法连接模型提供方，请检查服务地址后重试。",
+    "en": "Unable to connect to the model provider. Check the service address and try again."
+  },
+  "error.modelprofile.remoteModelClient.tooLarge.1": {
+    "zh-CN": "提供方返回的模型列表过大，请手动填写模型标识。",
+    "en": "The provider's model list is too large. Enter a model identifier manually."
+  },
+  "error.modelprofile.agentModelSelectionService.unavailableReason.1": {
+    "zh-CN": "不支持文字输入",
+    "en": "does not support text input"
+  },
+  "error.modelprofile.agentModelSelectionService.unavailableReason.2": {
+    "zh-CN": "不支持此员工所需的工具调用",
+    "en": "does not support the tool calls required by this AI employee"
+  },
+  "error.modelprofile.remoteModelClient.statusError.1": {
+    "zh-CN": "提供方拒绝访问，请检查连接中保存的访问密钥及其模型读取权限。",
+    "en": "The provider denied access. Check the saved access key and its permission to list models."
+  },
+  "error.modelprofile.remoteModelClient.statusError.2": {
+    "zh-CN": "此服务未提供模型列表，请检查服务地址或手动填写模型标识。",
+    "en": "This service does not provide a model list. Check the service URL or enter the model identifier manually."
+  },
+  "error.modelprofile.remoteModelClient.statusError.3": {
+    "zh-CN": "获取模型列表过于频繁，请稍后重试。",
+    "en": "Model lists were requested too often. Try again later."
+  },
+  "error.modelprofile.remoteModelClient.statusError.4": {
+    "zh-CN": "模型服务地址发生跳转，请在连接配置中填写最终服务地址。",
+    "en": "The model service URL redirects. Enter the final service URL in the connection settings."
+  },
+  "error.modelprofile.remoteModelClient.statusError.5": {
+    "zh-CN": "提供方暂时无法返回模型列表，请稍后重试。",
+    "en": "The provider cannot return the model list right now. Try again later."
+  },
+  "log.modelprofile.modelLibraryLogging.decide.1": {
+    "zh-CN": "模型开发库报告问题，组件={}，原因类别={}",
+    "en": "Model library reported a problem; component={}, category={}"
+  },
+  "log.modelprofile.modelLibraryLogging.category.1": {
+    "zh-CN": "响应格式处理失败",
+    "en": "Response format processing failed"
+  },
+  "log.modelprofile.modelLibraryLogging.category.2": {
+    "zh-CN": "响应缺少必要字段",
+    "en": "Required response fields are missing"
+  },
+  "log.modelprofile.modelLibraryLogging.category.3": {
+    "zh-CN": "请求处理异常",
+    "en": "Request processing failed"
+  },
+  "log.modelprofile.modelLibraryLogging.category.4": {
+    "zh-CN": "开发库处理异常",
+    "en": "Library processing failed"
+  },
+  "validation.modelprofile.modelCapabilities.reasoningEfforts.1": {
+    "zh-CN": "请选择思考等级。",
+    "en": "Select reasoning levels."
+  },
+  "validation.modelprofile.modelCapabilities.reasoningEfforts.2": {
+    "zh-CN": "请选择支持的思考等级。",
+    "en": "Select supported reasoning levels."
+  },
+  "validation.modelprofile.modelProtocolOptions.thinkingBudgets.1": {
+    "zh-CN": "思考预算不能为负数。",
+    "en": "The reasoning budget must not be negative."
+  },
+  "validation.modelprofile.modelProtocolOptions.thinkingBudgets.2": {
+    "zh-CN": "思考预算超出允许范围。",
+    "en": "The reasoning budget is outside the allowed range."
+  },
+  "validation.modelprofile.modelProtocolOptions.thinkingLevels.1": {
+    "zh-CN": "请选择支持的按思考强度设置。",
+    "en": "Select a supported reasoning effort."
+  },
+  "validation.modelprofile.modelProtocolOptions.notApplicableUsage.1": {
+    "zh-CN": "请选择支持的用量字段。",
+    "en": "Select supported usage fields."
+  },
+  "text.modelprofile.modelManagementService.createProvider.1": {
+    "zh-CN": "新增模型提供方",
+    "en": "Add model provider"
+  },
+  "text.modelprofile.modelManagementService.updateProvider.1": {
+    "zh-CN": "修改模型提供方",
+    "en": "Update model provider"
+  },
+  "text.modelprofile.modelManagementService.deleteProvider.1": {
+    "zh-CN": "删除模型提供方",
+    "en": "Delete model provider"
+  },
+  "text.modelprofile.modelManagementService.createModel.1": {
+    "zh-CN": "新增模型",
+    "en": "Add model"
+  },
+  "text.modelprofile.modelManagementService.updateModel.1": {
+    "zh-CN": "修改模型配置",
+    "en": "Update model configuration"
+  },
+  "text.modelprofile.modelManagementService.deleteModel.1": {
+    "zh-CN": "删除模型",
+    "en": "Delete model"
+  },
+  "log.modelprofile.modelRequestDiagnostics.response.1": {
+    "zh-CN": "厂商错误响应无法解析",
+    "en": "Could not parse the provider error response"
+  },
+  "log.modelprofile.modelRequestDiagnostics.response.2": {
+    "zh-CN": "模型错误响应无法解析，调用={}，方法={}，路径={}，HTTP状态={}，平台排障编号={}",
+    "en": "Could not parse the model error response; callId={}, method={}, path={}, httpStatus={}, traceId={}"
+  },
+  "log.modelprofile.modelRequestDiagnostics.response.3": {
+    "zh-CN": "模型服务拒绝请求，HTTP状态={0}",
+    "en": "Model service rejected the request; httpStatus={0}"
+  },
+  "log.modelprofile.modelRequestDiagnostics.captureError.1": {
+    "zh-CN": "厂商返回错误，错误码={0}",
+    "en": "Provider returned an error; errorCode={0}"
+  },
+  "log.modelprofile.modelRequestDiagnostics.failure.1": {
+    "zh-CN": "模型请求失败，调用={}，方法={}，路径={}，HTTP状态={}，平台错误码={}，原因={}，平台排障编号={}",
+    "en": "Model request failed; callId={}, method={}, path={}, httpStatus={}, platformCode={}, reason={}, traceId={}"
+  },
+  "log.modelprofile.modelRequestDiagnostics.networkReason.1": {
+    "zh-CN": "模型请求超过本次执行时间限制（timeout）",
+    "en": "Model request exceeded the execution time limit (timeout)"
+  },
+  "log.modelprofile.modelRequestDiagnostics.networkReason.2": {
+    "zh-CN": "模型响应处理失败，具体位置见异常堆栈",
+    "en": "Model response processing failed; see the exception stack trace for the location"
+  },
+  "log.modelprofile.modelRequestDiagnostics.clean.1": {
+    "zh-CN": "厂商未提供错误说明",
+    "en": "The provider supplied no error description"
+  },
+  "log.modelprofile.modelRequestDiagnostics.clean.2": {
+    "zh-CN": "$1?[已隐藏]",
+    "en": "$1?[redacted]"
+  },
+  "log.modelprofile.observedChatTransport.observe.1": {
+    "zh-CN": "模型用量事件无法解析，调用编号={}",
+    "en": "Could not parse the model usage event; callId={}"
+  }
+}

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -121,14 +123,14 @@ public class RunApprovalService {
         access.actor(run);
         var tools = catalog.all(run);
         if (confirmations.stream().allMatch(item -> item.calls().isEmpty()) && workflowConfirmations.isEmpty()) {
-            throw new IllegalStateException("没有待确认操作，不能暂停执行");
+            throw new IllegalStateException(Messages.text("error.execution.runApprovalService.parkAll.1"));
         }
         checkpoints.save(lease, checkpoint);
         for (var confirmation : confirmations) {
             for (var use : confirmation.calls()) {
                 var binding = tools.get(use.getName());
                 if (binding == null || binding.readOnly() && !UserQuestionTool.handles(binding)) {
-                    throw new IllegalStateException("待确认工具不属于本次固定能力");
+                    throw new IllegalStateException(Messages.text("error.execution.runApprovalService.parkAll.2"));
                 }
                 var call = calls.framework(run, confirmation.sessionId(), use.getId()).orElseThrow();
                 if (!call.argumentHash().equals(payloads.argumentHash(json.tree(use.getInput()))) || !binding.matches(
@@ -142,7 +144,7 @@ public class RunApprovalService {
                 var approval = approvals.forTool(call)
                     .orElseGet(() -> approvals.create(call, toolTransactions.summary(binding, call), clock.instant()));
                 if (!approval.status().equals("pending")) {
-                    throw new IllegalStateException("已经处理的操作不能重新请求确认");
+                    throw new IllegalStateException(Messages.text("error.execution.runApprovalService.parkAll.3"));
                 }
                 calls.waiting(call, clock.instant());
                 messages.save(run, approval);
@@ -212,10 +214,10 @@ public class RunApprovalService {
         }
         if (approval.revision() != revision) {
             throw new ApiException(HttpStatus.PRECONDITION_FAILED, "VERSION_CONFLICT",
-                "确认内容已经变化，请刷新后再处理。");
+                Messages.text("error.execution.runApprovalService.decide.1"));
         }
         if (!approval.expiresAt().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_EXPIRED", "本次操作确认已过期，未发送请求。");
+            throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_EXPIRED", Messages.text("error.execution.runApprovalService.decide.2"));
         }
         if (!Set.of("waiting_approval", "waiting_input").contains(run.status()) || run.cancelRequestedAt() != null) {
             throw resolved();
@@ -244,7 +246,7 @@ public class RunApprovalService {
         messages.save(run, saved);
         events.append(run, "approval.resolved", saved.view(), clock.instant());
         audit.record(actor.enterpriseId(), actor.user(), "run.approval." + input.decision(), "run_approval", saved.id(),
-            outcome.equals("approved") ? "同意本次确认内容" : "拒绝本次确认内容",
+            outcome.equals("approved") ? Messages.text("text.execution.runApprovalService.decide.1") : Messages.text("text.execution.runApprovalService.decide.2"),
             Map.of("runId", run.id(), "stepId", approval.stepId()));
         continuation.resumeWhenReady(run);
         return saved.view();
@@ -260,14 +262,14 @@ public class RunApprovalService {
         if (!restored) {
             if (session.equals(run.conversationId()) && run.executionConfig().path("resumeWebRoomWork").asBoolean()) {
                 if (saved.isEmpty() || saved.get().getContext().isEmpty()) {
-                    throw new IllegalStateException("继续协作工作时缺少上一批工具的执行记录");
+                    throw new IllegalStateException(Messages.text("error.execution.runApprovalService.input.1"));
                 }
                 return List.of();
             }
             return List.of(first);
         }
         if (saved.isEmpty()) {
-            throw new IllegalStateException("已保存的执行缺少框架状态");
+            throw new IllegalStateException(Messages.text("error.execution.runApprovalService.input.2"));
         }
         List<ConfirmResult> decisions = new ArrayList<>();
         for (var message : saved.get().getContext()) {
@@ -322,7 +324,7 @@ public class RunApprovalService {
         var step = steps.list(run.enterpriseId(), run.id()).stream().filter(value -> value.id().equals(id)).findFirst()
             .orElseThrow();
         if (step.workflow() == null || !"approval".equals(step.workflow().nodeType())) {
-            throw new IllegalStateException("流程确认必须属于真实人工确认节点");
+            throw new IllegalStateException(Messages.text("error.execution.runApprovalService.requireWorkflowStep.1"));
         }
     }
 
@@ -333,11 +335,11 @@ public class RunApprovalService {
 
     private static ApiException changed() {
         return new ApiException(HttpStatus.CONFLICT, "APPROVAL_PARAMETERS_CHANGED",
-            "待确认的内容与实际操作不一致，请重新加载并核对。");
+            Messages.text("error.execution.runApprovalService.changed.1"));
     }
 
     private static ApiException resolved() {
         return new ApiException(HttpStatus.CONFLICT, "APPROVAL_ALREADY_RESOLVED",
-            "本次操作已确认或确认已失效，无法更改决定。");
+            Messages.text("error.execution.runApprovalService.resolved.1"));
     }
 }

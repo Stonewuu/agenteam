@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.configuration.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +17,7 @@ public record UserWorkspaceSettings(String root, String hostRoot) {
         @Value("${execution.user-workspaces-root:${agenteam.storage.root:.agenteam}/user-workspaces}") String root,
         @Value("${execution.user-workspaces-host-root:}") String hostRoot) {
         if (root == null || root.isBlank() || hostRoot == null || root.contains(",") || hostRoot.contains(",")) {
-            throw new IllegalArgumentException("用户工作空间目录配置不正确");
+            throw new IllegalArgumentException(Messages.text("error.tool.userWorkspaceSettings.init.1"));
         }
         this.root = Path.of(root).toAbsolutePath().normalize().toString();
         this.hostRoot = hostRoot;
@@ -25,7 +27,7 @@ public record UserWorkspaceSettings(String root, String hostRoot) {
         Path base = Path.of(root);
         Path absolute = path.toAbsolutePath().normalize();
         if (!absolute.startsWith(base)) {
-            throw new IllegalArgumentException("用户文件不在配置的挂载目录内");
+            throw new IllegalArgumentException(Messages.text("error.tool.userWorkspaceSettings.hostPath.1"));
         }
         if (hostRoot.isBlank()) {
             return absolute.toString();

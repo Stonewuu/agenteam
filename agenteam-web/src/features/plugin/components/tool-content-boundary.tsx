@@ -13,7 +13,7 @@ export class ToolContentBoundary extends Component<{ children: ReactNode }, { fa
   }
 
   componentDidCatch(error: Error) {
-    console.error("工具内容显示失败", error);
+    console.error("Failed to display tool content", error);
   }
 
   render() {

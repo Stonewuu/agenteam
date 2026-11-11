@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.tool;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.enterprise.response.ActorView;
@@ -38,7 +40,7 @@ public class ToolLogMapper {
     public List<Entry> list(AuthContext actor, List<DataScope> scopes, DataScope details, ToolLogQuery filter,
                             QueryTimeRange range, PagePosition cursor, int limit) {
         if (scopes.isEmpty()) {
-            throw new IllegalArgumentException("调用日志读取必须指定当前权限范围");
+            throw new IllegalArgumentException(Messages.text("error.tool.toolLogMapper.list.1"));
         }
         var ranges = scopes.stream().map(
                 scope -> new OwnerQueryScope(actor.enterpriseId(), actor.userId(), scope == null ? "own" : scope.code()))

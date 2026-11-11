@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.auth;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.stonewu.agenteam.mapper.auth.LoginAttemptMapper;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -46,7 +48,7 @@ public class AuthLoginRateLimiter {
         try {
             return operation.getAsLong();
         } catch (DataAccessException exception) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "登录服务暂不可用，请稍后再试");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, Messages.text("error.auth.authLoginRateLimiter.execute.1"));
         }
     }
 }

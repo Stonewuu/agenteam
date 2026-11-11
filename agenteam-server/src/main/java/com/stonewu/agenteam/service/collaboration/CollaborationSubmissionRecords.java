@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationContextMapper;
@@ -87,7 +89,7 @@ public class CollaborationSubmissionRecords {
         var row = conversations.selectOne(new LambdaQueryWrapper<AgentConversationRow>().eq(AgentConversationRow::getEnterpriseId, actor.enterpriseId())
             .eq(AgentConversationRow::getUserId, actor.userId()).eq(AgentConversationRow::getId, conversation));
         if (row != null && "collaboration".equals(row.getSourceType())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_INPUT_REQUIRED", "请在协作任务详情中补充要求，岗位会话由任务统一安排。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_INPUT_REQUIRED", Messages.text("error.collaboration.collaborationSubmissionRecords.requireWebConversation.1"));
         }
     }
 
@@ -97,17 +99,17 @@ public class CollaborationSubmissionRecords {
             .eq(CollaborationWorkItemRow::getLeaseVersion, lease.version()).gt(CollaborationWorkItemRow::getLeaseUntil, clock.instant()));
         if (work == null || !actor.enterpriseId().equals(lease.enterpriseId()) || !work.getStatus().equals("ready")
             || work.getActiveRunId() != null || round != work.getRunRound() + 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_WORK_LEASE_EXPIRED", "岗位工作已被接管或已经开始。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_WORK_LEASE_EXPIRED", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.1"));
         }
         var task = access.owned(actor, work.getTaskId());
         var role = access.participant(task, work.getParticipantId());
         access.requireRole(task, role);
         var policy = json.read(task.getPolicySnapshot());
         if (!Set.of("active", "waiting_input", "waiting_approval", "blocked").contains(task.getStatus()) || !task.getDeadlineAt().isAfter(clock.instant())) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_STOPPED", "任务已停止或到达截止时间。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_STOPPED", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.2"));
         }
         if (task.getRunCount() >= policy.path("maxRuns").asInt(40)) {
-            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", "任务已达到允许的执行次数。");
+            throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.3"));
         }
         long active = works.selectCount(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).isNotNull(CollaborationWorkItemRow::getActiveRunId));
@@ -115,14 +117,14 @@ public class CollaborationSubmissionRecords {
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).eq(CollaborationWorkItemRow::getParticipantId, role.getId())
             .isNotNull(CollaborationWorkItemRow::getActiveRunId));
         if (active >= policy.path("maxParallel").asInt(2) || sameRole > 0) {
-            throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT", "正在等待岗位或任务的可用执行名额。");
+            throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.4"));
         }
         var context = contexts.selectOne(new LambdaQueryWrapper<CollaborationContextRow>().eq(CollaborationContextRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationContextRow::getId, contextId).eq(CollaborationContextRow::getTaskId, task.getId())
             .eq(CollaborationContextRow::getWorkId, work.getId()).eq(CollaborationContextRow::getRunRound, round)
             .eq(CollaborationContextRow::getInputRevision, task.getInputRevision()));
         if (context == null || !work.getInputRevision().equals(task.getInputRevision())) {
-            throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", "要求或上下文已变化，需要重新准备。");
+            throw new ApiException(HttpStatus.CONFLICT, "TASK_INPUT_CHANGED", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.5"));
         }
         if (role.getProjectId() == null) {
             var projectIds = participants.selectList(new LambdaQueryWrapper<CollaborationParticipantRow>()
@@ -131,21 +133,21 @@ public class CollaborationSubmissionRecords {
                 .stream().map(CollaborationParticipantRow::getProjectId).distinct().toList();
             if (projectIds.size() > 1) {
                 throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LEGACY_WORKSPACE",
-                    "此旧任务的岗位文件分散在不同项目，请保留原文件并新建协作任务。");
+                    Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.6"));
             }
             String projectId = projectIds.isEmpty()
-                ? projects.createOwned(actor.enterpriseId(), actor.userId(), task.getShortCode() + " 协作任务", null, null).getId()
+                ? projects.createOwned(actor.enterpriseId(), actor.userId(), Messages.text("text.collaboration.collaborationSubmissionRecords.prepare.1", task.getShortCode()), null, null).getId()
                 : projects.require(actor.enterpriseId(), actor.userId(), projectIds.getFirst()).getId();
             if (participants.update(new LambdaUpdateWrapper<CollaborationParticipantRow>().eq(CollaborationParticipantRow::getEnterpriseId, actor.enterpriseId())
                 .eq(CollaborationParticipantRow::getTaskId, task.getId()).isNull(CollaborationParticipantRow::getProjectId)
                 .set(CollaborationParticipantRow::getProjectId, projectId)) < 1) {
-                throw new IllegalStateException("协作项目已由其他工作建立");
+                throw new IllegalStateException(Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.7"));
             }
             role.setProjectId(projectId);
         }
         var body = cipher.decrypt(task.getEnterpriseId(), "context", context.getId(), context.getContentEncrypted());
         if (!json.hash(body).equals(context.getContentHash())) {
-            throw new IllegalStateException("岗位上下文的内容校验失败");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.8"));
         }
         return new Prepared(task, work, role, context, body.toString());
     }
@@ -157,11 +159,11 @@ public class CollaborationSubmissionRecords {
         if (conversations.update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getEnterpriseId, task.getEnterpriseId())
             .eq(AgentConversationRow::getId, run.conversationId()).eq(AgentConversationRow::getUserId, task.getInitiatorUserId())
             .set(AgentConversationRow::getSourceType, "collaboration").set(AgentConversationRow::getSourceId, role.getId())) != 1) {
-            throw new IllegalStateException("岗位会话来源无法保存");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationSubmissionRecords.saved.1"));
         }
         if (participants.update(new LambdaUpdateWrapper<CollaborationParticipantRow>().eq(CollaborationParticipantRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationParticipantRow::getId, role.getId()).set(CollaborationParticipantRow::getConversationId, run.conversationId())) != 1) {
-            throw new IllegalStateException("岗位会话无法保存");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationSubmissionRecords.saved.2"));
         }
         var link = ChatRecords.initialize(new CollaborationRunLinkRow(), task.getEnterpriseId(), clock.instant());
         link.setTaskId(task.getId());
@@ -181,7 +183,7 @@ public class CollaborationSubmissionRecords {
             .set(CollaborationWorkItemRow::getActiveRunId, run.runId()).set(CollaborationWorkItemRow::getContextId, link.getContextId())
             .set(CollaborationWorkItemRow::getRunRound, link.getRunRound()).set(CollaborationWorkItemRow::getLeaseOwner, null)
             .set(CollaborationWorkItemRow::getLeaseUntil, null).setIncrBy(CollaborationWorkItemRow::getRevision, 1)) != 1) {
-            throw new IllegalStateException("岗位工作已被其他进程接管");
+            throw new IllegalStateException(Messages.text("error.collaboration.collaborationSubmissionRecords.saved.3"));
         }
         if (tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationTaskRow::getId, task.getId()).eq(CollaborationTaskRow::getRevision, task.getRevision())

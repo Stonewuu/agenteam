@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.data.entity;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.math.BigDecimal;
@@ -29,7 +31,7 @@ public record DataQueryParameters(DataQueryPlan plan, String database, String ta
         for (var condition : plan.conditions()) {
             String operator = condition.operator();
             if (!Set.of("eq", "ne", "gt", "gte", "lt", "lte", "is_null", "contains", "in").contains(operator)) {
-                throw new IllegalArgumentException("未验证的比较条件");
+                throw new IllegalArgumentException(Messages.text("error.data.dataQueryParameters.prepare.1"));
             }
             var value = condition.value();
             var parameters = new ArrayList<Object>();
@@ -43,7 +45,7 @@ public record DataQueryParameters(DataQueryPlan plan, String database, String ta
         }
         var order = plan.order().stream().map(item -> {
             if (!Set.of("asc", "desc").contains(item.direction())) {
-                throw new IllegalArgumentException("未验证的排序方向");
+                throw new IllegalArgumentException(Messages.text("error.data.dataQueryParameters.prepare.2"));
             }
             return new Order(new Field(item.field()), item.direction().equals("asc"));
         }).toList();
@@ -66,7 +68,7 @@ public record DataQueryParameters(DataQueryPlan plan, String database, String ta
      */
     public static String quoteIdentifier(String value) {
         if (value == null || value.isBlank() || value.codePoints().anyMatch(Character::isISOControl)) {
-            throw new IllegalArgumentException("数据库名称或字段名称无效");
+            throw new IllegalArgumentException(Messages.text("error.data.dataQueryParameters.quoteIdentifier.1"));
         }
         return "`" + value.replace("`", "``") + "`";
     }

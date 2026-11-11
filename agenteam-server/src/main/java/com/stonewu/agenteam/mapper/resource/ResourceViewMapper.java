@@ -85,7 +85,8 @@ public class ResourceViewMapper {
                 resource.config().path("color").asText(),
                 new ActorView(resource.ownerUserId(), resource.ownerDisplayName()), resource.subtype(),
                 resource.source(), resource.status(), version == null ? null : version(version), changed,
-                List.copyOf(selectedTags.getOrDefault(resource.id(), List.of())), actions.get(resource.id()), listing);
+                List.copyOf(selectedTags.getOrDefault(resource.id(), List.of())), actions.get(resource.id()), listing,
+                resource.source().equals("builtin") ? resource.config().path("builtinCode").asText(null) : null);
         }).toList();
     }
 
@@ -104,7 +105,9 @@ public class ResourceViewMapper {
             try {
                 var value = dependencies.require(actor, binding);
                 visible.add(new VersionDependencyView(value.resource().id(), value.version().id(), binding.kind(),
-                    value.version().name(), binding.bindingKey()));
+                    value.version().name(), binding.bindingKey(), value.resource().source(),
+                    value.resource().source().equals("builtin") ? value.version().config().path("builtinCode")
+                        .asText(null) : null));
             } catch (ResponseStatusException denied) {
                 if (!List.of(403, 404, 409).contains(denied.getStatusCode().value())) {
                     throw denied;

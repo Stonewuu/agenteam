@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.file.parser;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -113,7 +115,7 @@ public class DocxTextExtractor {
                     }
                     if (name.equals("p")) {
                         paragraph++;
-                        writer.paragraphLocation("第 " + paragraph + " 段起");
+                        writer.paragraphLocation(Messages.text("text.file.docxTextExtractor.read.1", paragraph));
                     }
                     if (name.equals("t")) {
                         inText = true;
@@ -152,7 +154,7 @@ public class DocxTextExtractor {
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
         factory.setXMLResolver((publicId, systemId, baseUri, namespace) -> {
-            throw new XMLStreamException("禁止读取外部实体");
+            throw new XMLStreamException(Messages.text("error.file.docxTextExtractor.xml.1"));
         });
         return factory;
     }

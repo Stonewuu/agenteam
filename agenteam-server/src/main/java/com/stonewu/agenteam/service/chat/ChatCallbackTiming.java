@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.service.i18n.Messages;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
@@ -15,7 +17,7 @@ public final class ChatCallbackTiming {
     private final long started;
     private final Map<String, Long> stages = new LinkedHashMap<>();
     private long previous;
-    private String current = "启动事务";
+    private String current = Messages.log("log.chat.chatCallbackTiming.current.1");
     private Result result;
 
     public ChatCallbackTiming(Clock clock) {
@@ -52,7 +54,7 @@ public final class ChatCallbackTiming {
     }
 
     public static String eventId(String value) {
-        return value != null && value.matches("[A-Za-z0-9_-]{1,191}") ? value : "无有效事件编号";
+        return value != null && value.matches("[A-Za-z0-9_-]{1,191}") ? value : Messages.log("text.chat.feishuConnectionProvider.binary.1");
     }
 
     private static long elapsed(long from, long to) {

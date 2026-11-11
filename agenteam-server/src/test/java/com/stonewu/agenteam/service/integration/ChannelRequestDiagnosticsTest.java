@@ -69,10 +69,10 @@ class ChannelRequestDiagnosticsTest {
             .put("errmsg", "not allow to access from your ip 203.0.113.7; " + secret + " " + encoded).toString(), Map.of());
         http.get("test-wecom", server.origin().resolve("/cgi-bin/gettoken"), Map.of("corpsecret", secret), null);
         String logs = logs();
-        assertTrue(logs.contains("HTTP状态=200"));
-        assertTrue(logs.contains("平台错误码=60020"));
+        assertTrue(logs.contains("httpStatus=200"));
+        assertTrue(logs.contains("platformCode=60020"));
         assertTrue(logs.contains("not allow to access from your ip 203.0.113.7"));
-        assertTrue(logs.contains("路径=/cgi-bin/gettoken"));
+        assertTrue(logs.contains("path=/cgi-bin/gettoken"));
         assertFalse(logs.contains(secret));
         assertFalse(logs.contains(encoded));
     }
@@ -86,9 +86,9 @@ class ChannelRequestDiagnosticsTest {
         http.post("test-feishu", server.origin().resolve("/open-apis/im/v1/messages"), Map.of(),
             json.createObjectNode().put("app_secret", "private-app-secret"), "private-bearer");
         String logs = logs();
-        assertTrue(logs.contains("平台错误码=99991672"));
+        assertTrue(logs.contains("platformCode=99991672"));
         assertTrue(logs.contains("im:message:send_as_bot permission required"));
-        assertTrue(logs.contains("平台排障编号=test-trace-20260928"));
+        assertTrue(logs.contains("traceId=test-trace-20260928"));
         assertFalse(logs.contains("private-bearer"));
         assertFalse(logs.contains("response-token"));
         assertFalse(logs.contains("private-app-secret"));
@@ -114,7 +114,7 @@ class ChannelRequestDiagnosticsTest {
     void invalidRecipientsAreVisibleEvenWhenWecomReturnsZeroWithoutLoggingMemberIds() {
         server.raw(200, "{\"errcode\":0,\"errmsg\":\"ok\",\"invaliduser\":\"private-member\"}", Map.of());
         http.post("test-wecom", server.origin().resolve("/cgi-bin/message/send"), Map.of(), json.createObjectNode(), null);
-        assertTrue(logs().contains("平台拒绝的接收对象字段：invaliduser"));
+        assertTrue(logs().contains("Recipient field rejected by the platform: invaliduser"));
         assertFalse(logs().contains("private-member"));
     }
 
@@ -122,7 +122,7 @@ class ChannelRequestDiagnosticsTest {
     void malformedResponseKeepsStackAndHttpStatusWithoutDumpingItsBody() {
         server.raw(502, "<html>proxy failure private-response-token</html>", Map.of("X-Tt-Logid", "test-proxy-trace"));
         http.get("test-wecom", server.origin().resolve("/cgi-bin/gettoken"), Map.of(), null);
-        assertTrue(logs().contains("HTTP状态=502"));
+        assertTrue(logs().contains("httpStatus=502"));
         assertTrue(logs().contains("test-proxy-trace"));
         assertTrue(logs().contains("JsonParseException"));
         assertTrue(events.list.stream().anyMatch(event -> event.getThrowableProxy() != null));
@@ -188,7 +188,7 @@ class ChannelRequestDiagnosticsTest {
             "upload-private-token", new UploadFile("私有考勤.csv", "text/csv", content.length, () -> new ByteArrayInputStream(content)), () -> {
             }));
         assertTrue(logs().contains("im:resource:upload permission required"));
-        assertTrue(logs().contains("HTTP状态=403"));
+        assertTrue(logs().contains("httpStatus=403"));
         assertTrue(logs().contains("upload-denied-trace"));
         assertFalse(logs().contains(line));
         assertFalse(logs().contains("私有考勤.csv"));

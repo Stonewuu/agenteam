@@ -26,7 +26,8 @@ public interface ResourceSqlMapper extends MPJBaseMapper<ResourceRow> {
                                          @Param("status") String status, @Param("source") String source,
                                          @Param("subtype") String subtype, @Param("tags") List<String> tags,
                                          @Param("sort") String sort, @Param("cursor") PagePosition cursor,
-                                         @Param("limit") int limit, @Param("deletedAfter") Instant deletedAfter);
+                                         @Param("limit") int limit, @Param("deletedAfter") Instant deletedAfter,
+                                         @Param("builtinCodes") List<String> builtinCodes);
 
     default List<ResourceQueryRow> findResource(String enterprise, String id, boolean deleted, boolean lock) {
         if (lock) {
