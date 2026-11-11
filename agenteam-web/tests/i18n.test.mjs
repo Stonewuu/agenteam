@@ -282,7 +282,9 @@ test("前端控制台日志使用英文，变量和原始错误不被改写", ()
   const root = new URL("../src/", import.meta.url);
   for (const name of readdirSync(root, {recursive: true}).filter(name => /\.tsx?$/.test(name))) {
     const content = readFileSync(new URL(name.replaceAll("\\", "/"), root), "utf8");
-    if (!content.includes("console.")) continue;
+    if (!content.includes("console.")) {
+      continue;
+    }
     const source = ts.createSourceFile(name, content, ts.ScriptTarget.Latest, true);
     const inspect = node => {
       if (ts.isStringLiteralLike(node) && /[\p{Script=Han}]/u.test(node.text)) {
