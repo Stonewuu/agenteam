@@ -104,6 +104,9 @@ test("子智能体启动和继续调用使用子智能体分组，原父子关�
 });
 
 test("排队、优先和撤回只更新输入框上方的列表，并保留正在执行的对话", () => {
+  const expanded = liveSnapshot("100");
+  expanded.queuedMessages = Array.from({length: 30}, (_, index) => ({runId: `waiting-${index}`, position: index, text: `消息 ${index}`}));
+  assert.equal(fromSnapshot(expanded).snapshot.queuedMessages.length, 30);
   let state = fromSnapshot(liveSnapshot("100"));
   const update = (sequence, runId, position, text) => {
     const frame = liveEvent(String(sequence), "queue.updated", {runId, position, text}, String(sequence));
@@ -411,6 +414,11 @@ test("大类归并保留顺序、工具与子任务身份，未对应工具的�
     block("text", "text", null, 3), block("tool-a", "tool", null, 4), block("tool-b", "tool", null, 5),
     block("child", "subagent", "tool-a", 6), block("child-thought", "thinking", "child", 7),
     { ...block("confirm", "approval", null, 8), approvalId: "confirmation" }, block("tool-c", "tool", null, 9), block("thinking-3", "thinking", null, 10)];
+  for (const item of raw) {
+    if (["text", "thinking"].includes(item.type)) {
+      item.text = "已有内容";
+    }
+  }
   const blocks = displayMessages(fromSnapshot(snapshot("3", raw)))[0].blocks;
   const groups = groupConversationBlocks(blocks);
   assert.deepEqual(groups.map(value => value.kind), ["thinking", "text", "tool", "approval", "tool", "thinking"]);
@@ -422,6 +430,21 @@ test("大类归并保留顺序、工具与子任务身份，未对应工具的�
   assert.equal(groups[2].id, groupConversationBlocks(blocks.filter(value => value.id !== "tool-b"))[2].id);
   assert.equal(groupBlockStatus([{ ...groups[2].blocks[0], status: "completed" }, { ...groups[2].blocks[1], status: "running" }]), "running");
   assert.equal(groupBlockStatus([{ ...groups[2].blocks[0], status: "failed" }, { ...groups[2].blocks[1], status: "completed" }]), "failed");
+});
+
+test("空思考不拆开连续工具，正文和非空思考仍保留原位置", () => {
+  const {groupConversationBlocks} = load("../.test-build/conversation/agent/lib/conversation-display.js");
+  const raw = [block("first-tool", "tool", null, 1), block("empty-thought", "thinking", null, 2),
+    block("next-tool", "tool", null, 3), {...block("explanation", "text", null, 4), text: "文件已读取。"},
+    block("last-tool", "tool", null, 5), {...block("visible-thought", "thinking", null, 6), text: "核对结果。"}];
+  const blocks = displayMessages(fromSnapshot(snapshot("3", raw)))[0].blocks;
+  const groups = groupConversationBlocks(blocks);
+  assert.deepEqual(groups.map(group => group.kind), ["tool", "text", "tool", "thinking"]);
+  assert.deepEqual(groups[0].blocks.map(item => item.id), ["first-tool", "next-tool"]);
+  assert.equal(groups[0].id, "first-tool");
+  assert.equal(blocks.length, 6);
+  assert.equal(blocks[1].kind, "thinking");
+  assert.equal(groups[1].blocks[0].content, "文件已读取。");
 });
 
 test("多个工具的确认按步骤分别合入，原快照不被修改且重复合并不重复显示", () => {

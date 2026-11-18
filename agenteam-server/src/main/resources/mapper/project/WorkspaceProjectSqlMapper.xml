@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.stonewu.agenteam.mapper.project.WorkspaceProjectSqlMapper">
+  <select id="lockOwnedProject" resultType="com.stonewu.agenteam.model.project.entity.WorkspaceProjectRow">
+    SELECT * FROM workspace_project WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND id = #{id} FOR UPDATE
+  </select>
   <!-- 使用带锁读取看到刚刚完成的并发创建结果，避免项目目录互相包含。 -->
   <select id="conflictingDirectory" resultType="string">
     SELECT id FROM workspace_project WHERE workspace_id = #{workspace}

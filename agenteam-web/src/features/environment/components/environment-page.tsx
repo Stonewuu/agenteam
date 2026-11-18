@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState, type CSSProperties} from "react";
+import {useSearchParams} from "next/navigation";
 import {EnterpriseGate} from "@/features/auth/components/enterprise-gate";
 import {PlatformShell} from "@/features/workspace/components/platform-shell";
 import {Button} from "@/components/ui/button";
@@ -20,14 +21,16 @@ import styles from "./environment-page.module.css";
 
 export function EnvironmentPage({enterpriseId}: {enterpriseId: string}) {
   const t = useT();
+  const requestedPath = useSearchParams().get("path");
+  const initialPath = requestedPath?.startsWith("/workspace/") ? requestedPath : "/workspace";
   return <EnterpriseGate enterpriseId={enterpriseId} permission="agent.run">{({user, context}) =>
     <PlatformShell user={user} context={context} area="user" title={t("我的环境")}>
-      <EnvironmentContent key={enterpriseId + ":" + user.id} enterpriseId={enterpriseId}/>
+      <EnvironmentContent key={enterpriseId + ":" + user.id + ":" + initialPath} enterpriseId={enterpriseId} initialPath={initialPath}/>
     </PlatformShell>
   }</EnterpriseGate>;
 }
 
-function EnvironmentContent({enterpriseId}: {enterpriseId: string}) {
+function EnvironmentContent({enterpriseId, initialPath}: {enterpriseId: string; initialPath: string}) {
   const t = useT();
   const model = useEnvironment(enterpriseId);
   const terminal = useRef<EnvironmentTerminalHandle>(null);
@@ -38,7 +41,7 @@ function EnvironmentContent({enterpriseId}: {enterpriseId: string}) {
   const previousOutput = useRef({id: "", end: 0});
   const fileRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [mobile, setMobile] = useState<"terminal" | "files">("terminal");
+  const [mobile, setMobile] = useState<"terminal" | "files">(initialPath === "/workspace" ? "terminal" : "files");
   const [filesWidth, setFilesWidth] = useState(36);
   const [confirm, setConfirm] = useState<"stop" | "disconnect" | null>(null);
   const [closing, setClosing] = useState(false);
@@ -98,7 +101,7 @@ function EnvironmentContent({enterpriseId}: {enterpriseId: string}) {
 
   return <div className={styles.page} onPointerDown={model.activity} onKeyDown={model.activity} onWheel={model.activity}>
     <PageHeader title={t("我的环境")} icon={<IconDeviceDesktop size={28} variant="Bulk"/>}
-      description={t("在当前工作环境中运行命令、查看和下载文件。")} inlineMetadata
+      description={t("在工作环境中管理文件、运行命令。")} inlineMetadata
       metadata={state && <DetailStatus tone={state.status === "running" ? "success" : "neutral"}>{t(state.status === "running" ? "运行中" : state.status === "stopping" ? "正在停止" : "已停止")}</DetailStatus>}
       actions={<>
         <Button className={ui.button} disabled={pending} onClick={() => {
@@ -118,7 +121,7 @@ function EnvironmentContent({enterpriseId}: {enterpriseId: string}) {
           <Button role="tab" aria-selected={mobile === "files"} onClick={() => setMobile("files")}><IconFolder size={18}/>{t("文件浏览")}</Button>
         </div>
         <div className={styles.filesPane}>
-          <EnvironmentFiles base={model.base} version={filesVersion} terminalDirectory={terminalState?.directory}
+          <EnvironmentFiles base={model.base} version={filesVersion} initialPath={initialPath} terminalDirectory={terminalState?.directory}
             terminalReady={ready} terminalBusy={Boolean(terminalState?.busy)} onTerminalDirectory={path => {
               terminal.current?.openDirectory(path);
               setMobile("terminal");
@@ -146,7 +149,9 @@ function EnvironmentContent({enterpriseId}: {enterpriseId: string}) {
             onExpand={() => setExpanded(value => !value)} onState={onTerminalState}/>
         </div>
       </div>
-      <p className={styles.idleHint}><IconClock size={15}/>{t("空闲 {0} 分钟后自动停止，工作文件保留。", [Math.ceil((state?.idleSeconds ?? 1800) / 60)])}</p>
+      {state && <p className={styles.idleHint}><IconClock size={15}/>{state.idleSeconds === -1
+        ? t("空闲时保持运行，可手动停止。")
+        : t("空闲 {0} 分钟后自动停止，工作文件保留。", [Math.ceil(state.idleSeconds / 60)])}</p>}
     </QueryState>
     {confirm && <Dialog title={t(confirm === "stop" ? "停止环境？" : "断开连接？")} icon={<IconPlayerStop size={21}/>}
       size="small" busy={pending} onClose={() => setConfirm(null)} footer={<>

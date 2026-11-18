@@ -3,6 +3,7 @@ package com.stonewu.agenteam.model.agent.request;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.stonewu.agenteam.model.modelprofile.entity.ReasoningEffort;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.UniqueElements;
@@ -22,8 +23,8 @@ public record AgentConfigurationInput(
     @NotNull(message = "{validation.required}") @Size(min = 0, max = 20000, message = "{validation.textLength}") String instructions,
     @DecimalMin(value = "0", message = "{validation.range}") @DecimalMax(value = "2", message = "{validation.range}") Double temperature,
     @Pattern(regexp = ReasoningEffort.PATTERN, message = "{error.agent.agentConfigurationInput.reasoningEffort.1}") String reasoningEffort,
-    @NotNull(message = "{validation.required}") @Min(value = 0L, message = "{error.agent.agentConfigurationInput.maxSteps.1}") Integer maxSteps,
-    @NotNull(message = "{validation.required}") @Min(value = 0L, message = "{error.agent.agentConfigurationInput.timeoutSeconds.1}") Integer timeoutSeconds,
+    @NotNull(message = "{validation.required}") @Min(value = -1L, message = "{error.agent.agentConfigurationInput.maxSteps.1}") Integer maxSteps,
+    @NotNull(message = "{validation.required}") @Min(value = -1L, message = "{error.agent.agentConfigurationInput.timeoutSeconds.1}") Integer timeoutSeconds,
     @NotNull(message = "{validation.required}") Boolean attachmentsEnabled,
     @NotNull(message = "{validation.required}") @Size(min = 0, max = 1000, message = "{validation.textLength}") String welcomeMessage,
     @NotNull(message = "{validation.required}") @Size(min = 0, max = 5, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") List<@NotNull(message = "{validation.required}") @Size(min = 1, max = 200, message = "{validation.textLength}") String> suggestedQuestions,
@@ -39,6 +40,11 @@ public record AgentConfigurationInput(
     @Size(max = 8, message = "{error.agent.agentConfigurationInput.subagentVersionIds.1}") @UniqueElements(message = "{error.agent.agentConfigurationInput.subagentVersionIds.2}") List<@NotNull(message = "{error.resource.agentConfigurationValidator.validateSubagents.1}") @Size(min = 1, max = 100, message = "{validation.agent.agentConfigurationInput.subagentVersionIds.1}") String> subagentVersionIds,
     Boolean dynamicSubagentEnabled,
     @NotNull(message = "{validation.required}") @Size(min = 0, max = 5, message = "{error.agent.agentConfigurationInput.suggestedQuestions.1}") List<@NotNull(message = "{validation.required}") @Size(min = 1, max = 200, message = "{validation.textLength}") String> publicExamples) {
+    public AgentConfigurationInput {
+        maxSteps = maxSteps == null ? null : LimitValue.legacyZero(maxSteps);
+        timeoutSeconds = timeoutSeconds == null ? null : LimitValue.legacyZero(timeoutSeconds);
+    }
+
     public record BusinessTermsItem(
         @NotNull(message = "{validation.required}") @Size(min = 1, max = 50, message = "{validation.textLength}") String term,
         @NotNull(message = "{validation.required}") @Size(min = 1, max = 500, message = "{validation.textLength}") String meaning) {

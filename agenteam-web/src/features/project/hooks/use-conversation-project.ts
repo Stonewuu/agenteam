@@ -28,17 +28,20 @@ export function useConversationProject({
   const [draft, setDraft] = useState<{ key: string; project: WorkspaceProject | null } | null>(null);
   const [saved, setSaved] = useState<{ conversation: Conversation; project: WorkspaceProject } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletedId, setDeletedId] = useState<string | null>(null);
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const mutation = useRef(new ApiMutation());
   const pending = useRef(false);
   const visible = !conversation || conversation.mode === "normal";
   const current = saved && conversation && saved.conversation.id === conversation.id && BigInt(saved.conversation.revision) > BigInt(conversation.revision)
     ? saved.conversation : conversation;
-  const query = useApiQuery<WorkspaceProject>(conversationId && visible && current?.projectId
+  const query = useApiQuery<WorkspaceProject | null>(conversationId && visible && current?.projectId && current.projectId !== deletedId
     ? organizationPath(enterprise, `/projects/${encodeURIComponent(current.projectId)}`)
     : conversationId && visible && current ? `${conversationPath(enterprise, conversationId)}/project` : null);
-  const selected = conversationId ? query.data ?? (saved?.conversation.id === conversationId && saved.project.id === current?.projectId ? saved.project : initialProject ?? null)
+  const previous = saved?.conversation.id === conversationId && saved?.project.id === current?.projectId ? saved?.project : initialProject;
+  const candidate = conversationId ? query.data ?? (!current || previous?.id === current.projectId ? previous : null)
     : draft?.key === draftKey ? draft.project : null;
+  const selected = candidate?.id === deletedId ? null : candidate ?? null;
   const disabled = !enabled || busy || saving || Boolean(conversationId && (!current || current.status !== "active" || current.activeRunId || query.loading));
 
   async function change(project: WorkspaceProject | null) {
@@ -82,9 +85,18 @@ export function useConversationProject({
   }
 
   return {
-    enterprise, selected, projectId: current?.projectId ?? selected?.id ?? null, visible, disabled, saving,
+    enterprise, selected, projectId: (current?.projectId !== deletedId ? current?.projectId : null) ?? selected?.id ?? null, visible, disabled, saving,
     loading: Boolean(conversationId && !selected && (!current || query.loading)), existing: Boolean(conversationId),
     error: failure?.key === draftKey ? failure.message : query.error, reload: query.retry,
     change, resetDraft: () => setDraft(null),
+    deleted: (project: WorkspaceProject) => {
+      if (project.id === selected?.id || project.id === current?.projectId) {
+        setDeletedId(project.id);
+        setDraft(null);
+        setSaved(null);
+        setFailure(null);
+        onChanged?.();
+      }
+    },
   };
 }

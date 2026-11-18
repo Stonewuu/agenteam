@@ -12,6 +12,9 @@ import java.util.List;
  */
 @Mapper
 public interface WorkspaceProjectSqlMapper extends BaseMapper<WorkspaceProjectRow> {
+    WorkspaceProjectRow lockOwnedProject(@Param("enterprise") String enterprise, @Param("user") String user,
+                                        @Param("id") String id);
+
     String conflictingDirectory(@Param("workspace") String workspace, @Param("parents") List<String> parents,
                                 @Param("prefix") String prefix);
 }

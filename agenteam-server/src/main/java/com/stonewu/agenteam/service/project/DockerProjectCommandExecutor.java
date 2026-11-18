@@ -9,6 +9,9 @@ import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectCommandRecord;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 import com.stonewu.agenteam.service.file.Utf8Text;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -97,8 +100,7 @@ public class DockerProjectCommandExecutor implements ProjectCommandExecutor {
             || Utf8Text.size(command) > 65536 || command.indexOf('\0') >= 0) {
             throw ApiException.invalidField("command", Messages.text("error.project.dockerProjectCommandExecutor.execute.2"));
         }
-        long deadline = System.nanoTime() + Math.min(timeout.toNanos(),
-            Duration.ofSeconds(settings.timeoutSeconds()).toNanos());
+        long deadline = ExecutionDeadline.after(ExecutionLimits.minTimeout(timeout, LimitValue.seconds(settings.timeoutSeconds())));
         try {
             layout.requireRegistered(location);
             if (Files.exists(layout.control(location.workspaceId()).resolve("container.pending"),

@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -70,7 +72,7 @@ public class WorkspaceReadToolService {
     public JsonNode invoke(RunRecord run, String session, String name, JsonNode input, Duration timeout,
                            ToolCallControl control,
                            int maximum, Set<String> shared) {
-        var scope = new Scope(access.actor(run), run, session, shared, control, System.nanoTime() + timeout.toNanos(),
+        var scope = new Scope(access.actor(run), run, session, shared, control, ExecutionDeadline.after(timeout),
             maximum);
         scope.requireActive();
         control.beforeSend();
@@ -92,7 +94,7 @@ public class WorkspaceReadToolService {
             scope.requireActive();
             var slice = document.text().read(input.path("start_line").asInt(1),
                 input.hasNonNull("end_line") ? input.path("end_line").asInt() : null,
-                input.path("cursor").asText(null), settings.readLines(), bytes);
+                input.path("cursor").asText(null), settings.readLineLimit(), bytes);
             var result = (ObjectNode) json.tree(slice);
             result.putArray("sourceResultIds").add(document.call().id());
             if (Utf8Text.size(result.toString()) <= scope.maximum()) {

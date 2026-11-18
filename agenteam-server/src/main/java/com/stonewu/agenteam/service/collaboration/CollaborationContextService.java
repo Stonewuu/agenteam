@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -121,7 +123,7 @@ public class CollaborationContextService {
                 continue;
             }
             var description = results.describe(result);
-            if (characters(root) + characters(description) > configuration.getMaxContextCharacters()) {
+            if (LimitValue.exceeded((long) characters(root) + characters(description), configuration.getMaxContextCharacters())) {
                 continue;
             }
             summaries.add(description);
@@ -136,14 +138,14 @@ public class CollaborationContextService {
                 var body = webTimeline.content(row);
                 String value = body.path("text").asText();
                 int size = value.codePointCount(0, value.length());
-                int length = Math.min(2000, size);
+                int length = LimitValue.unlimited(configuration.getMaxContextCharacters()) ? size : Math.min(2000, size);
                 var item = mapper.createObjectNode().put("author", row.getAuthorName()).put("kind", row.getKind())
                     .put("text", value.substring(0, value.offsetByCodePoints(0, length))).put("truncated", length < size)
                     .put("createdAt", row.getCreatedAt().toString());
                 if (body.hasNonNull("recipientName")) {
                     item.put("recipient", body.path("recipientName").asText());
                 }
-                if (selected.size() >= configuration.getMaxContextMessages() || characters(root) + characters(item) + 200 > configuration.getMaxContextCharacters()) {
+                if (LimitValue.reached(selected.size(), configuration.getMaxContextMessages()) || LimitValue.exceeded((long) characters(root) + characters(item) + 200, configuration.getMaxContextCharacters())) {
                     omitted++;
                 } else {
                     selected.add(item);
@@ -156,7 +158,7 @@ public class CollaborationContextService {
                 var content = cipher.decrypt(task.getEnterpriseId(), "message", message.getId(), message.getContentEncrypted());
                 var item = mapper.createObjectNode().put("messageId", message.getId()).put("text", ChatMessageText.withQuote(content))
                     .put("createdAt", message.getPlatformCreatedAt().toString());
-                if (selected.size() >= configuration.getMaxContextMessages() || characters(root) + characters(item) + 200 > configuration.getMaxContextCharacters()) {
+                if (LimitValue.reached(selected.size(), configuration.getMaxContextMessages()) || LimitValue.exceeded((long) characters(root) + characters(item) + 200, configuration.getMaxContextCharacters())) {
                     omitted++;
                     continue;
                 }
@@ -192,7 +194,7 @@ public class CollaborationContextService {
     }
 
     private void requireSize(ObjectNode node) {
-        if (characters(node) > configuration.getMaxContextCharacters()) {
+        if (LimitValue.exceeded(characters(node), configuration.getMaxContextCharacters())) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_CONTEXT_TOO_LARGE", Messages.text("error.collaboration.collaborationContextService.requireSize.1"));
         }
     }

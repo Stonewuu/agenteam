@@ -4,8 +4,21 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { selectToolCallDetails } = require("../.test-build/tool-payload/tool-call-details.js");
+const { isToolPayloadPreview } = require("../.test-build/tool-payload/tool-payload-format.js");
 const display = (input, result) => selectToolCallDetails(JSON.stringify(input), JSON.stringify(result));
 const find = (view, part, key) => view.fields.find((field) => field.part === part && field.key === key);
+
+test("完整结果直接显示，只有接口最外层的截断预览需要补读", () => {
+  for (const complete of ["", "已保存", '{"content":[{"type":"text","text":"已保存"}]}',
+    '{"truncated":false,"content":"完整内容"}', '{"content":{"truncated":true}}',
+    '{"content":"{\\"truncated\\":true}"}']) {
+    assert.equal(isToolPayloadPreview(complete), false);
+  }
+  for (const preview of ['{"truncated":true,"content":"首段"}',
+    '{ "content": "首段", "truncated": true }', '{"truncated":true,"fileId":"saved-result"}']) {
+    assert.equal(isToolPayloadPreview(preview), true);
+  }
+});
 test("创建文件直接展示完整正文，输出中的相同路径只出现一次", () => {
   const content = Array.from({ length: 120 }, (_, index) => `第 ${index + 1} 行：保留原文及缩进`).join("\n");
   const view = display({ path: "work/report.md", content }, { path: "work/report.md", sizeBytes: 9000, revision: "2" });

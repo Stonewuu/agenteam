@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -71,11 +73,11 @@ public class CollaborationRetryService {
             throw ApiException.versionConflict(task.getRevision());
         }
         if (!Set.of("active", "blocked", "waiting_input", "waiting_approval").contains(task.getStatus())
-            || !task.getDeadlineAt().isAfter(clock.instant()) || work.getActiveRunId() != null
+            || LimitValue.expired(task.getDeadlineAt(), clock.instant()) || work.getActiveRunId() != null
             || !Set.of("failed", "blocked", "cancelled").contains(work.getStatus()) || work.getReplacementWorkId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_RETRY_UNAVAILABLE", Messages.text("error.collaboration.collaborationRetryService.retry.1"));
         }
-        if (task.getRunCount() >= json.read(task.getPolicySnapshot()).path("maxRuns").asInt(40)) {
+        if (LimitValue.reached(task.getRunCount(), json.read(task.getPolicySnapshot()).path("maxRuns").asLong(40))) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", Messages.text("error.collaboration.collaborationRetryService.retry.2"));
         }
         boolean unknown = "TOOL_RESULT_UNKNOWN".equals(work.getErrorCode());

@@ -55,6 +55,9 @@ export function mergeToolConfirmations(blocks: DisplayBlock[]): DisplayBlock[] {
 export function groupConversationBlocks(blocks: DisplayBlock[]) {
   const groups: Array<{ id: string; kind: DisplayBlock["kind"]; blocks: DisplayBlock[] }> = [];
   for (const block of [...blocks].sort((a, b) => a.order - b.order)) {
+    if (!hasVisibleConversationContent(block)) {
+      continue;
+    }
     const kind = isSubagentTool(block) ? "agent" : block.kind;
     const previous = groups[groups.length - 1];
     if (previous?.kind === kind && ["thinking", "text", "tool", "agent"].includes(kind)) {
@@ -64,6 +67,15 @@ export function groupConversationBlocks(blocks: DisplayBlock[]) {
     }
   }
   return groups;
+}
+
+/** 空文本不占据显示位置；带有公开摘要或子内容的块继续保留。 */
+export function hasVisibleConversationContent(block: DisplayBlock): boolean {
+  if (("content" in block && block.content.trim()) || block.step?.publicSummary?.trim()
+    || ("summary" in block && block.summary.trim())) {
+    return true;
+  }
+  return block.kind !== "thinking" && block.kind !== "text" || block.blocks.some(hasVisibleConversationContent);
 }
 
 /** 子任务调用保留原始工具身份，只在展示时使用子智能体版式。 */

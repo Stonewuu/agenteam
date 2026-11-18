@@ -268,14 +268,17 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         assertEquals(1, count("run_approval"), "只为修正后的有效写入申请确认");
         assertEquals("failed", calls.forRun(enterprise, runId).getFirst().status());
         assertEquals("TOOL_ARGUMENTS_INVALID", calls.forRun(enterprise, runId).getFirst().errorCode());
-        assertFalse(Files.exists(projectMarker(run)));
+        Path work = projectDirectory(run).resolve("work");
+        assertTrue(Files.isDirectory(work));
+        Path corrected = work.resolve("corrected.txt");
+        assertFalse(Files.exists(corrected));
         var approval = data(mvc.perform(get(base() + "/runs/" + runId + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn()).get(0);
         change(HttpMethod.POST, base() + "/approvals/" + approval.path("id").asText() + "/decision", Map.of("decision", "approve", "requestHash", approval.path("requestHash").asText()),
             approval.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
         finish(runId);
         assertEquals("completed", runs.find(enterprise, runId, false).orElseThrow().status());
         assertEquals(List.of("failed", "succeeded"), calls.forRun(enterprise, runId).stream().map(call -> call.status()).toList());
-        assertTrue(Files.exists(projectMarker(run)));
+        assertTrue(Files.isRegularFile(corrected));
         var saved = workspaces.read(enterprise, admin, run.conversationId(), snapshot -> snapshot.files().bytes("work/corrected.txt"));
         assertEquals("修正后的内容", new String(saved, StandardCharsets.UTF_8));
     }
@@ -380,9 +383,9 @@ class WorkspaceToolExecutionApiTest extends ExecutionApiTestSupport {
         throw new IllegalStateException("模型请求中缺少对应工具结果");
     }
 
-    private Path projectMarker(RunRecord run) {
+    private Path projectDirectory(RunRecord run) {
         var project = projects.require(run.enterpriseId(), run.userId(), run.executionConfig().path("workspaceProjectId").asText());
-        return layout.state(new ProjectLocation(project.getWorkspaceId(), project.getId(), run.enterpriseId(), run.userId(), project.getDirectoryPath()));
+        return layout.project(new ProjectLocation(project.getWorkspaceId(), project.getId(), run.enterpriseId(), run.userId(), project.getDirectoryPath()));
     }
 
     private void tool(HttpExchange exchange, String id, String name, Object arguments) throws IOException {

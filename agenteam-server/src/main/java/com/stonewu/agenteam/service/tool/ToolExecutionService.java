@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.tool;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -155,9 +157,9 @@ public class ToolExecutionService {
                 ? new HttpConnectionCredentials(Map.of(), sources.databaseSecrets(run, binding)) : credentials.resolve(
                 run.enterpriseId(), credential);
             privateValues.addAll(auth.secretValues());
-            int limit = Math.min(binding.definition().timeoutSeconds(),
-                binding.config().path("timeoutSeconds").asInt(30));
-            Duration timeout = ExecutionLimits.minTimeout(remaining, Duration.ofSeconds(limit));
+            Duration limit = ExecutionLimits.minTimeout(LimitValue.seconds(binding.definition().timeoutSeconds()),
+                LimitValue.seconds(binding.config().path("timeoutSeconds").asInt(30)));
+            Duration timeout = ExecutionLimits.minTimeout(remaining, limit);
             JsonNode arguments = transactions.arguments(call);
             privateValues.addAll(payloads.secretValues(arguments, binding.definition().redactPaths()));
             JsonNode response;

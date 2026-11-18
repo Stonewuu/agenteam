@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -83,7 +85,7 @@ public class CollaborationWorkService {
                 .eq(CollaborationTaskRow::getId, task.getId()).set(CollaborationTaskRow::getErrorCode, "COLLABORATION_HANDOFF_CLARIFICATION"));
             return result;
         }
-        if (task.getWorkCount() >= policy.path("maxWorks").asInt(20) || handoff && task.getHandoffCount() >= policy.path("maxHandoffs").asInt(8)) {
+        if (LimitValue.reached(task.getWorkCount(), policy.path("maxWorks").asLong(20)) || handoff && LimitValue.reached(task.getHandoffCount(), policy.path("maxHandoffs").asLong(8))) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", Messages.text("error.collaboration.collaborationWorkService.assign.3"));
         }
         String goal = text(input, handoff ? "nextGoal" : "goal", 4000);

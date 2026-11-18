@@ -2,7 +2,7 @@ import type {RunQuestion} from "@/features/agent/types/execution";
 
 export type CollaborationTask = {
   id: string; shortCode: string; title: string; conversationId: string; status: string; revision: number; inputRevision: number;
-  outputVisibility: "summary_link" | "chat_full" | "web_private"; createdAt: string; updatedAt: string; deadlineAt: string; finishedAt: string | null; errorCode: string | null;
+  outputVisibility: "summary_link" | "chat_full" | "web_private"; createdAt: string; updatedAt: string; deadlineAt: string | null; finishedAt: string | null; errorCode: string | null;
   source?: {platformCode: string; kind: string; name: string | null} | null;
   roles?: {id: string; name: string; conversationId: string | null}[];
   primaryConversationId?: string | null;

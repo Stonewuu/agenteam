@@ -40,6 +40,7 @@ export function Dialog({
                          bodyClassName = "",
                          className = "",
                          headerDetails,
+                         dropHandlers,
                          tall = false,
                          dialogRef,
                          variant
@@ -59,6 +60,7 @@ export function Dialog({
   dialogRef?: Ref<DialogHandle>;
   className?: string;
   headerDetails?: ReactNode;
+  dropHandlers?: Pick<ComponentProps<"div">, "onDragEnter" | "onDragOver" | "onDragLeave" | "onDrop">;
   variant?: "discard";
 }) {
   const uiText = useT();
@@ -73,7 +75,7 @@ export function Dialog({
       close();
     }
   }} onOpenChangeComplete={onOpenChangeComplete}>
-    <DialogContent ref={loadingSurface} showCloseButton={false} role={variant === "discard" ? "alertdialog" : "dialog"}
+    <DialogContent {...dropHandlers} ref={loadingSurface} showCloseButton={false} role={variant === "discard" ? "alertdialog" : "dialog"}
                    className={`agenteam-dialog ${drawer ? "drawer" : "modal"} ${variant === "discard" ? "small confirmation" : size ?? (wide ? "large" : "medium")}${tall ? " tall" : ""} ${className}`}
                    initialFocus={() => (variant === "discard" ? body.current?.parentElement?.querySelector<HTMLElement>(".modal-footer button") : body.current?.querySelector<HTMLElement>('input:not([type="hidden"]):not([aria-hidden="true"]):not(:disabled),textarea:not(:disabled),button[role="combobox"]:not(:disabled)')) ?? true}
                    finalFocus={() => {

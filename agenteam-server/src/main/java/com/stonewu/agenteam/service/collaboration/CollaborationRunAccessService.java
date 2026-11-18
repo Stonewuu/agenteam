@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -77,7 +79,7 @@ public class CollaborationRunAccessService {
             throw contextRequired();
         }
         var actor = access.requireRole(task, participant);
-        if (Set.of("cancelling", "cancelled", "failed").contains(task.getStatus()) || !task.getDeadlineAt().isAfter(clock.instant())) {
+        if (Set.of("cancelling", "cancelled", "failed").contains(task.getStatus()) || LimitValue.expired(task.getDeadlineAt(), clock.instant())) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_STOPPED", Messages.text("error.collaboration.collaborationRunAccessService.require.1"));
         }
         if (!task.getInputRevision().equals(link.getInputRevision()) || !work.getInputRevision().equals(link.getInputRevision())) {

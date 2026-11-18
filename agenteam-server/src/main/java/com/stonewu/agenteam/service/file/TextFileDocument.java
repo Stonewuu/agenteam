@@ -123,7 +123,7 @@ public final class TextFileDocument {
             throw invalid(Messages.text("error.file.textFileDocument.read.4"));
         }
         int startIndex = lineIndex(start);
-        int lineLimit = lineEnd(Math.min(lines.length, startIndex + maxLines));
+        int lineLimit = lineEnd((int) Math.min(lines.length, (long) startIndex + maxLines));
         int end = Utf8Text.boundary(bytes, (int) Math.min(Math.min((long) start + maxBytes, rangeEnd), lineLimit));
         boolean complete = end >= rangeEnd;
         return slice(start, end, rangeEnd, complete ? null : encode(end, requestedEnd), complete);

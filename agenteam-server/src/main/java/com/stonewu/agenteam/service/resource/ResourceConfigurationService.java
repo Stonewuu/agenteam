@@ -13,6 +13,7 @@ import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.resource.entity.DependencyBinding;
 import com.stonewu.agenteam.model.resource.entity.ResourceKind;
 import com.stonewu.agenteam.model.resource.entity.ResourceRecord;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.resource.validation.ResourceConfigValidator;
 import org.springframework.http.HttpStatus;
@@ -58,6 +59,14 @@ public class ResourceConfigurationService {
             object.remove(List.of("researchSubagentEnabled", "subagents", "historyMessageLimit"));
         }
         validators.get(kind).draft(config);
+        if (kind == ResourceKind.AGENT && config instanceof ObjectNode object) {
+            // 旧客户端仍可提交零值，新草稿只保存统一的不限表示；已发布版本保持原样。
+            for (String field : List.of("maxSteps", "timeoutSeconds")) {
+                if (object.path(field).isIntegralNumber() && object.path(field).asLong() == 0) {
+                    object.put(field, LimitValue.UNLIMITED);
+                }
+            }
+        }
         return config;
     }
 

@@ -11,6 +11,10 @@ export type TerminalInput = {
   action: "open" | "poll" | "input" | "resize" | "close";
   id: string; data?: string; sequence: number; cursor: number; cols: number; rows: number;
 };
-export type EnvironmentFile = {name: string; path: string; directory: boolean; size: number; modifiedAt: string};
+export type EnvironmentFile = {
+  name: string; path: string; directory: boolean; size: number | null; modifiedAt: string;
+  projectName: string | null; deletable: boolean;
+};
+export type EnvironmentUsage = {fileCount: number; totalBytes: number; sampleId: string};
 export type EnvironmentDirectory = {path: string; entries: EnvironmentFile[]; nextOffset: number | null; total: number};
 export type EnvironmentPreview = {name: string; path: string; size: number; binary: boolean; truncated: boolean; content: string};

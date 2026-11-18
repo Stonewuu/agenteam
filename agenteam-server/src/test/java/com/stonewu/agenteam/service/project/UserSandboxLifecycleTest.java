@@ -9,9 +9,9 @@ import com.stonewu.agenteam.model.environment.entity.EnvironmentTerminalState;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.SandboxExecutor;
+import com.stonewu.agenteam.support.TestOutputPaths;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.HttpStatus;
 
 import java.nio.file.Files;
@@ -22,14 +22,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class UserSandboxLifecycleTest {
-    @TempDir
-    Path root;
+    Path root = TestOutputPaths.path("sandbox-lifecycle", UUID.randomUUID().toString());
     private final TestClock clock = new TestClock();
     private final UserContainerRuntime containers = mock(UserContainerRuntime.class);
     private final ProjectCommandProcess processes = mock(ProjectCommandProcess.class);
@@ -61,6 +61,23 @@ class UserSandboxLifecycleTest {
         }).when(containers).stopInstance(any(), anyString(), anyInt(), any());
         when(processes.status(any(), any())).thenReturn(new ProjectCommandProcess.Status("running", null, false, null));
         lifecycle = restored();
+    }
+
+    @Test
+    void unlimitedCommandAndIdleLifetimeRemainActiveUntilExplicitCompletionAndStop() throws Exception {
+        lifecycle = new UserSandboxLifecycle(layout, registry, containers, processes,
+            new SandboxLifecycleSettings(-1, 30, 60, 10, -1), clock);
+        try (var control = control()) {
+            var record = lifecycle.begin(project, "unlimited", "hash", "command", Duration.ZERO, control);
+            assertEquals(-1, record.deadline());
+            clock.advance(1000000);
+            assertFalse(lifecycle.collect(project.workspaceId()));
+            verify(processes, never()).cancel(any(), any());
+            lifecycle.complete(record, new SandboxExecutor.Result(0, false, false, "out", "err"));
+            clock.advance(1000000);
+            assertFalse(lifecycle.collect(project.workspaceId()));
+            assertEquals("stopped", lifecycle.stopEnvironment(project).status());
+        }
     }
 
     @Test

@@ -238,7 +238,7 @@ class CommunityInitializationApiTest {
         assertThat(quotaPolicies).isInstanceOf(CommunityQuotaPolicyProvider.class);
         var row = quotaRows.selectOne(new LambdaQueryWrapper<QuotaPolicyRow>()
             .eq(QuotaPolicyRow::getEnterpriseId, enterprise));
-        assertThat(row.getMonthlyLimit()).isNull();
+        assertThat(row.getMonthlyLimit()).isEqualTo(-1L);
         String root = "/api/v1/enterprises/" + enterprise;
         http.getJson(root + "/quota-policies", session).andExpect(status().isNotFound());
         http.getJson(root + "/quota-policies/subjects?subjectType=team", session).andExpect(status().isNotFound());
@@ -258,7 +258,7 @@ class CommunityInitializationApiTest {
         assertThat(pending).hasSize(1);
         assertThat(pending.get(0).path("reservedCount").asInt()).isEqualTo(2);
         assertThat(pending.get(0).path("usedCount").asInt()).isZero();
-        assertThat(pending.get(0).path("monthlyLimit").isNull()).isTrue();
+        assertThat(pending.get(0).path("monthlyLimit").asLong()).isEqualTo(-1L);
         tx.executeWithoutResult(ignored -> {
             reservations.consume(actor, consumed);
             reservations.consume(actor, consumed);

@@ -4,6 +4,7 @@ import {useT} from "@/lib/i18n/locale-provider";
 
 import {Textarea} from "@/components/ui/textarea";
 import {Input} from "@/components/ui/input";
+import {LimitField} from "@/components/ui/limit-field";
 import {Fieldset} from "@/components/ui/fieldset";
 import {Button} from "@/components/ui/button";
 import {FieldErrorFeedback} from "@/components/ui/error-feedback";
@@ -55,7 +56,7 @@ export function TextField({
   </label>;
 }
 
-export function NumberField({label, value, min, max, step = 1, onChange, name, errors = {}, hint}: {
+export function NumberField({label, value, min, max, step = 1, onChange, name, errors = {}, hint, allowUnlimited = false}: {
   label: string;
   value: number;
   min: number;
@@ -64,9 +65,15 @@ export function NumberField({label, value, min, max, step = 1, onChange, name, e
   onChange: (value: number) => void;
   name: string;
   errors?: FieldErrors;
-  hint?: string
+  hint?: string;
+  allowUnlimited?: boolean;
 }) {
   const id = useId();
+  if (allowUnlimited) {
+    return <LimitField label={label} value={value === 0 ? -1 : value} name={name} minimum={min}
+      hint={hint} error={errors[name]?.join(" ")}
+      onChange={next => onChange(next.trim() ? Number(next) : NaN)}/>;
+  }
   const describedBy = [hint && `${id}-hint`, errors[name]?.length && `${id}-error`].filter(Boolean).join(" ") || undefined;
   return <label className={ui.field} htmlFor={id}><span>{label}</span><Input id={id} className={ui.input} type="number"
                                                                              name={name} min={min} max={max} step={step}

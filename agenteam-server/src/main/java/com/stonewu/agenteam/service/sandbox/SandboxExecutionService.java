@@ -1,5 +1,11 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
+import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
+
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntSupplier;
 
 /**
  * 独立节点只管理临时任务文件；持久工作文件仍由调用方确认后保存。
@@ -44,7 +51,7 @@ public final class SandboxExecutionService implements AutoCloseable {
     private final SandboxArchiveMapper archives;
     private final WorkspaceSettings settings;
     private final Path root;
-    private final int maximum;
+    private final IntSupplier maximum;
     private final FileChannel ownership;
     private final FileLock owner;
     private final ObjectMapper json;
@@ -54,6 +61,11 @@ public final class SandboxExecutionService implements AutoCloseable {
 
     public SandboxExecutionService(SandboxExecutor executor, WorkspaceSettings settings, ObjectMapper json, Path root,
                                    int maximum) throws IOException {
+        this(executor, settings, json, root, () -> maximum);
+    }
+
+    public SandboxExecutionService(SandboxExecutor executor, WorkspaceSettings settings, ObjectMapper json, Path root,
+                                   IntSupplier maximum) throws IOException {
         this.executor = executor;
         this.settings = settings;
         this.json = json;
@@ -125,15 +137,14 @@ public final class SandboxExecutionService implements AutoCloseable {
                 throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_NETWORK_MISMATCH",
                     Messages.text("error.sandbox.sandboxExecutionService.execute.1"));
             }
-            if (request.timeoutMillis() < 1 || request.timeoutMillis() > settings.timeoutSeconds() * 1000L) {
+            if (!validTimeout(request.timeoutMillis())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_TIMEOUT_INVALID", Messages.text("error.sandbox.sandboxExecutionService.execute.2"));
             }
             Path output = job.directory().resolve("result");
-            long remaining = Math.min(request.timeoutMillis(),
-                Math.max(1, TimeUnit.NANOSECONDS.toMillis(job.deadline() - System.nanoTime())));
+            Duration remaining = timeout(request.timeoutMillis(), job);
             var result = executor.execute(source, output, job.directory(), request.callId(), request.command(),
                 request.workingDirectory(),
-                Duration.ofMillis(remaining), job.control());
+                remaining, job.control());
             Path packed = job.directory().resolve("result.zip");
             try (var stream = Files.newOutputStream(packed)) {
                 archives.write(stream, result, output, Set.of("work", "outputs"), job.control());
@@ -161,11 +172,10 @@ public final class SandboxExecutionService implements AutoCloseable {
                 throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_NETWORK_MISMATCH",
                     Messages.text("error.sandbox.sandboxExecutionService.execute.1"));
             }
-            if (request.project() == null || request.timeoutMillis() < 1 || request.timeoutMillis() > settings.timeoutSeconds() * 1000L) {
+            if (request.project() == null || !validTimeout(request.timeoutMillis())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_REQUEST_INVALID", Messages.text("error.sandbox.sandboxExecutionService.executeProject.2"));
             }
-            var timeout = Duration.ofMillis(Math.min(request.timeoutMillis(),
-                Math.max(1, TimeUnit.NANOSECONDS.toMillis(job.deadline() - System.nanoTime()))));
+            var timeout = timeout(request.timeoutMillis(), job);
             if (request.recoverOnly()) {
                 projects.recover(request.project(), timeout, job.control());
                 return new SandboxExecutor.Result(0, false, false, null, null);
@@ -177,11 +187,27 @@ public final class SandboxExecutionService implements AutoCloseable {
         }
     }
 
+    private boolean validTimeout(long milliseconds) {
+        return (LimitValue.unlimited(milliseconds) || milliseconds >= 1)
+            && (LimitValue.unlimited(settings.timeoutSeconds())
+                || (!LimitValue.unlimited(milliseconds) && milliseconds <= settings.timeoutSeconds() * 1000L));
+    }
+
+    private Duration timeout(long milliseconds, Active job) {
+        return ExecutionLimits.minTimeout(LimitValue.unlimited(milliseconds) ? Duration.ZERO
+                : Duration.ofMillis(milliseconds), DockerWorkspaceCommands.remaining(job.deadline()));
+    }
+
+    private Duration withGrace(int seconds) {
+        return LimitValue.unlimited(settings.timeoutSeconds()) ? Duration.ZERO
+            : Duration.ofSeconds(settings.timeoutSeconds() + (long) seconds);
+    }
+
     private synchronized Active acquire(String id) throws IOException {
         if (cancelled.containsKey(id)) {
             throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_CANCELLED", Messages.text("error.sandbox.sandboxExecutionService.acquire.1"));
         }
-        if (active.size() >= maximum) {
+        if (LimitValue.reached(active.size(), maximum.getAsInt())) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "SANDBOX_BUSY", Messages.text("error.sandbox.sandboxExecutionService.acquire.2"));
         }
         if (active.containsKey(id)) {
@@ -189,14 +215,14 @@ public final class SandboxExecutionService implements AutoCloseable {
         }
         Path directory = Files.createDirectory(root.resolve(id));
         var job = new Active(new ToolCallControl(() -> {
-        }), directory, System.nanoTime() + Duration.ofSeconds(settings.timeoutSeconds() + 30L).toNanos());
+        }), directory, ExecutionDeadline.after(withGrace(30)));
         active.put(id, job);
         return job;
     }
 
     public synchronized void cancel(String id) {
         if (cancelled.size() < 10000) {
-            cancelled.put(id, System.nanoTime() + Duration.ofSeconds(settings.timeoutSeconds() + 60L).toNanos());
+            cancelled.put(id, ExecutionDeadline.after(withGrace(60)));
         }
         var job = active.get(id);
         if (job != null) {

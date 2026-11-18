@@ -141,12 +141,27 @@ class ModelProtocolBoundaryTest {
             assertThat(body.path("max_tokens").asInt()).isEqualTo(4096);
             assertThat(body.path("service_tier").asText()).isEqualTo("standard_only");
             assertThat(body.at("/thinking/type").asText()).isEqualTo(mode.equals("budget") ? "enabled" : "adaptive");
+            assertThat(body.at("/thinking/display").asText()).isEqualTo("summarized");
             assertThat(mode.equals("budget") ? body.at("/thinking/budget_tokens").asInt() : body.at("/output_config/effort").asText())
                 .isEqualTo(mode.equals("budget") ? 2048 : "high");
         } else {
             assertThat(body.at("/generationConfig/maxOutputTokens").asInt()).isEqualTo(4096);
             assertThat(mode.equals("budget") ? body.at("/generationConfig/thinkingConfig/thinkingBudget").asInt()
                 : body.at("/generationConfig/thinkingConfig/thinkingLevel").asText()).isEqualTo(mode.equals("budget") ? 2048 : "HIGH");
+        }
+        assertThat(sends.get()).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"high,auto", "none,absent", "null,absent"}, nullValues = "null")
+    void responsesRequestsAskForReadableSummaryWhenReasoningIsAvailable(String effort, String expected) {
+        reply = "data: [DONE]\n\n";
+        invoke("openai_responses", ModelProtocolOptions.defaults(), effort);
+        var summary = request.get().at("/reasoning/summary");
+        if (expected.equals("absent")) {
+            assertThat(summary.isMissingNode()).isTrue();
+        } else {
+            assertThat(summary.asText()).isEqualTo(expected);
         }
         assertThat(sends.get()).isEqualTo(1);
     }

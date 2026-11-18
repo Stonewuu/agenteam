@@ -73,7 +73,9 @@ public class ModelProtocolFactory {
             return Flux.usingWhen(Mono.fromSupplier(() -> open(profile, provider, context, prepared, options)), session -> {
                 var stream = Flux.defer(() -> session.model.stream(prepared, tools, options)).doOnCancel(session.transport::cancel);
                 Duration timeout = limits.timeout(options.getExecutionConfig().getTimeout());
-                stream = stream.timeout(timeout);
+                if (!timeout.isZero()) {
+                    stream = stream.timeout(timeout);
+                }
                 return stream.map(response -> ModelUsageFrames.bounded(response, session.call.usage().snapshot().usage()))
                     .map(history::identify).onErrorMap(session.diagnostics::failure);
             }, session -> finish(session, "completed"), (session, failure) -> finish(session, "failed"),

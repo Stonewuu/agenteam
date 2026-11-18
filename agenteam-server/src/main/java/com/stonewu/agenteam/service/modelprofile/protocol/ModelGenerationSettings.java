@@ -46,6 +46,11 @@ public final class ModelGenerationSettings {
         if (nativeOptions.reasoningMode().equals("budget") && requested.getReasoningEffort() != null) {
             builder.thinkingBudget(nativeOptions.thinkingBudgets().get(requested.getReasoningEffort()));
         }
+        if (provider.protocol().equals("openai_responses") && !capability.reasoningEfforts().isEmpty()
+            && !"none".equals(requested.getReasoningEffort())) {
+            // 思考强度不代表返回可读摘要，显式请求接口公开提供的摘要。
+            builder.additionalBodyParam("reasoning.summary", "auto");
+        }
         return builder.build();
     }
 
@@ -60,10 +65,11 @@ public final class ModelGenerationSettings {
         if (effort.equals("none")) {
             params.thinking(ThinkingConfigDisabled.builder().build());
         } else if (settings.reasoningMode().equals("adaptive")) {
-            params.thinking(ThinkingConfigAdaptive.builder().build());
+            params.thinking(ThinkingConfigAdaptive.builder().display(ThinkingConfigAdaptive.Display.SUMMARIZED).build());
             params.outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.of(settings.thinkingLevels().get(effort))).build());
         } else {
-            params.thinking(ThinkingConfigEnabled.builder().budgetTokens(settings.thinkingBudgets().get(effort)).build());
+            params.thinking(ThinkingConfigEnabled.builder().budgetTokens(settings.thinkingBudgets().get(effort))
+                .display(ThinkingConfigEnabled.Display.SUMMARIZED).build());
         }
     }
 

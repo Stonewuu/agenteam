@@ -1,5 +1,11 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.service.workspace.SandboxResourceArguments;
+
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
@@ -69,14 +75,14 @@ public class UserContainerRuntime {
     }
 
     public void start(ProjectLocation location, Duration timeout, ToolCallControl control) throws IOException {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         try (var lock = UserWorkspaceLock.capacity(layout, remaining(deadline), control)) {
             startLocked(location, remaining(deadline), control);
         }
     }
 
     private void startLocked(ProjectLocation location, Duration timeout, ToolCallControl control) throws IOException {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         layout.requireRegistered(location);
         Path scripts = layout.control(location.workspaceId()).resolve("command");
         Files.createDirectories(scripts);
@@ -117,7 +123,7 @@ public class UserContainerRuntime {
             String active = docker.require(
                 List.of("ps", "-q", "--filter", "label=agenteam_user_root=" + deploymentScope()),
                 remaining(deadline), control).output();
-            if (active.lines().filter(value -> !value.isBlank()).count() >= lifecycle.maximumRunning()) {
+            if (LimitValue.reached(active.lines().filter(value -> !value.isBlank()).count(), lifecycle.maximumRunning())) {
                 throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "SANDBOX_CAPACITY",
                     Messages.text("error.project.userContainerRuntime.startLocked.3"));
             }
@@ -142,7 +148,7 @@ public class UserContainerRuntime {
     }
 
     public void stopInstance(ProjectLocation project, String id, int graceSeconds, Duration timeout) {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         String current = ownedId(project, remaining(deadline));
         if (current == null || !current.equals(id)) {
             return;
@@ -154,7 +160,7 @@ public class UserContainerRuntime {
     }
 
     public void stop(ProjectLocation location, Duration timeout) {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         String id = UserContainerOwnership.ownedId(docker, storagePath(location), remaining(deadline), null);
         if (id == null) {
             return;
@@ -197,14 +203,14 @@ public class UserContainerRuntime {
         var arguments = new ArrayList<>(
             List.of("create", "--name=" + name(location), "--read-only", "--user=" + containerUser(location), "--init",
                 "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=" + settings.processLimit(),
-                "--memory=" + settings.memoryMb() * 1024L * 1024, "--memory-swap=" + settings.memoryMb() * 1024L * 1024,
-                "--cpus=" + settings.cpus(), "--network=" + settings.network(), "--workdir=/workspace",
-                "--ulimit=fsize=" + settings.fileBytes() + ":" + settings.fileBytes(),
-                "--tmpfs=/tmp:rw,nosuid,nodev,size=" + runtime.temporaryMb() + "m,mode=1777",
+                "--network=" + settings.network(), "--workdir=/workspace",
+                "--ulimit=fsize=" + (LimitValue.unlimited(settings.fileMb()) ? "-1:-1" : settings.fileBytes() + ":" + settings.fileBytes()),
+                SandboxResourceArguments.temporaryMount(runtime.temporaryMb()),
                 "--env=HOME=/tmp", "--env=LANG=C.UTF-8", "--label=com.stonewu.agenteam.managed=true",
                 "--label=agenteam_user_root=" + deploymentScope(),
                 "--label=com.stonewu.agenteam.user-workspace=" + location.workspaceId(),
                 "--label=" + UserContainerOwnership.LABEL + "=" + UserContainerOwnership.scope(storagePath(location))));
+        SandboxResourceArguments.addCompute(arguments, settings.memoryMb(), settings.cpus());
         if (!runtime.cgroupParent().isBlank()) {
             arguments.add("--cgroup-parent=" + runtime.cgroupParent());
         }

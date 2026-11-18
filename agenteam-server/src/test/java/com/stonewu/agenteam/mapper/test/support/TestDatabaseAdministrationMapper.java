@@ -21,6 +21,8 @@ public interface TestDatabaseAdministrationMapper {
 
     int countColumn(@Param("table") String table, @Param("column") String column);
 
+    String columnNullable(@Param("table") String table, @Param("column") String column);
+
     int countForeignKeys();
 
     String version();

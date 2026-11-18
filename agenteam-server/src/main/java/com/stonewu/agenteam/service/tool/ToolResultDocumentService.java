@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.tool;
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.ToolResultSettings;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -20,6 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.FilterInputStream;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -153,26 +156,67 @@ public class ToolResultDocumentService {
             return result;
         }
         var file = requireStoredContent(actor, call, logAuthorized);
-        try (var input = control == null ? storage.open(file) : control.track(storage.open(file))) {
-            byte[] bytes = input.readNBytes(settings.maxFileBytes() + 1);
+        var factory = mapper.getFactory().copy();
+        factory.setStreamReadConstraints(factory.streamReadConstraints().rebuild()
+            .maxStringLength((int) Math.min(Integer.MAX_VALUE, settings.maxFileBytes())).build());
+        try (var input = new VerifiedInput(control == null ? storage.open(file) : control.track(storage.open(file)),
+            settings.maxFileBytes(), control); var parser = factory.createParser(input)) {
+            parser.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+            JsonNode loaded = mapper.readTree(parser);
+            byte[] buffer = new byte[8192];
+            while (input.read(buffer) != -1) {
+                // 校验整个文件，包括解析器没有消费的尾部空白。
+            }
             if (control != null) {
                 control.requireActive();
             }
-            if (bytes.length > settings.maxFileBytes()) {
-                throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE",
-                    Messages.text("error.tool.toolResultDocumentService.loadResult.1"));
-            }
-            if (bytes.length != file.sizeBytes() || !HexFormat.of()
-                .formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)).equals(file.sha256())) {
+            if (input.count != file.sizeBytes() || !HexFormat.of().formatHex(input.digest.digest()).equals(file.sha256())) {
                 throw new ApiException(HttpStatus.CONFLICT, "FILE_CONTENT_CHANGED",
                     Messages.text("error.tool.toolResultDocumentService.loadResult.2"));
             }
-            return mapper.readTree(bytes);
+            return loaded;
         } catch (IOException failure) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FILE_READ_FAILED",
                 Messages.text("error.tool.toolResultDocumentService.loadResult.3"), failure);
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), impossible);
+        }
+    }
+
+    /** 流式解析完整结果并核对长度与摘要，不按配置值预先分配巨大字节数组。 */
+    private static final class VerifiedInput extends FilterInputStream {
+        private final long maximum;
+        private final ToolCallControl control;
+        private final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        private long count;
+
+        private VerifiedInput(InputStream input, long maximum, ToolCallControl control) throws NoSuchAlgorithmException {
+            super(input);
+            this.maximum = maximum;
+            this.control = control;
+        }
+
+        @Override
+        public int read() throws IOException {
+            byte[] single = new byte[1];
+            return read(single, 0, 1) == -1 ? -1 : single[0] & 255;
+        }
+
+        @Override
+        public int read(byte[] bytes, int offset, int length) throws IOException {
+            if (control != null) {
+                control.requireActive();
+            }
+            int read = in.read(bytes, offset, length);
+            if (read > 0) {
+                if (read > maximum - count) {
+                    throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE",
+                        Messages.text("error.tool.toolResultDocumentService.loadResult.1"));
+                }
+                count += read;
+                digest.update(bytes, offset, read);
+            }
+            return read;
         }
     }
 

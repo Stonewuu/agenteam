@@ -1,8 +1,11 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
@@ -77,7 +80,8 @@ public class WorkspaceToolDefinitions {
         Map<String, ExecutionToolBinding> result = new LinkedHashMap<>();
         var definitions = new ArrayList<>(reads);
         definitions.addAll(writes);
-        for (var tool : definitions) {
+        for (var savedTool : definitions) {
+            var tool = current(savedTool);
             if (tool.name().equals("execute") && !settings.executeEnabled()) {
                 continue;
             }
@@ -86,6 +90,16 @@ public class WorkspaceToolDefinitions {
             result.put(binding.alias(), binding);
         }
         return Map.copyOf(result);
+    }
+
+    private ToolDefinition current(ToolDefinition saved) {
+        var schema = (ObjectNode) saved.inputSchema().deepCopy();
+        if (saved.name().equals("execute")) {
+            ((ObjectNode) schema.path("properties")).set("timeout_seconds", json.tree(integer(1, settings.timeoutSeconds())));
+        }
+        return new ToolDefinition(saved.name(), saved.description(), json.hash(schema), schema, saved.outputSchema(),
+            saved.annotations(), saved.operationClass(), saved.supportsDeduplication(), saved.supportsResultQuery(),
+            saved.supportsCancel(), saved.redactPaths(), settings.timeoutSeconds());
     }
 
     public static boolean handles(ExecutionToolBinding binding) {
@@ -156,6 +170,8 @@ public class WorkspaceToolDefinitions {
     }
 
     private static Map<String, Object> integer(int minimum, int maximum) {
-        return Map.of("type", "integer", "minimum", minimum, "maximum", maximum);
+        return LimitValue.unlimited(maximum) ? Map.of("type", "integer", "anyOf",
+            List.of(Map.of("minimum", minimum), Map.of("const", LimitValue.UNLIMITED)))
+            : Map.of("type", "integer", "minimum", minimum, "maximum", maximum);
     }
 }

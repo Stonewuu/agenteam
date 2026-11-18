@@ -1,7 +1,15 @@
-.panel {position:relative; display:flex; flex-direction:column; height:100%; min-width:0; min-height:0;}
+.panel {position:relative; display:flex; flex-direction:column; height:100%; min-width:0; min-height:0; container-type:inline-size;}
 .heading {display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; min-height:63px; border-bottom:1px solid var(--border);}
 .heading > div {display:flex; align-items:center; gap:10px;}
 .heading h2 {margin:0; font-size:14px; font-weight:600;}
+.heading .headingActions {gap:3px;}
+.createButton,.uploadButton {display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; padding:5px 9px; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--foreground); white-space:nowrap; font:inherit; font-size:12px;}
+.uploadButton {border-color:transparent;}
+.createButton:hover,.uploadButton:hover {background:var(--surface-hover);}
+.usage {display:flex; align-items:center; flex-wrap:wrap; gap:6px 18px; padding:9px 16px; background:var(--surface-soft); border-bottom:1px solid var(--border); color:var(--muted-foreground); font-size:12px;}
+.usage > span {display:inline-flex; align-items:center; gap:6px;}
+.usage strong {color:var(--foreground); font-weight:600; font-variant-numeric:tabular-nums;}
+.retry {border:0; background:transparent; color:var(--foreground); text-decoration:underline; font:inherit;}
 .iconButton,.smallButton,.crumb {display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:34px; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--foreground); font:inherit; font-size:12px; cursor:pointer; text-decoration:none;}
 .iconButton {flex-shrink:0; width:34px; padding:6px;}
 .smallButton {padding:6px 10px; border-color:var(--border); white-space:nowrap;}
@@ -23,29 +31,74 @@
 .toggle {display:flex; padding:2px; gap:2px; background:var(--surface-soft); border-radius:9px;}
 .toggle .iconButton {height:calc(var(--view-control-height) - 4px); min-height:calc(var(--view-control-height) - 4px); width:32px;}
 .toggle [aria-pressed="true"] {background:var(--card); border-color:var(--border); box-shadow:0 1px 3px #00000008;}
-.files {flex:1; min-height:0; overflow:auto; padding:6px 12px 16px; scrollbar-width:thin;}
-.columnTitles {display:flex; justify-content:space-between; padding:8px 14px; font-size:11px; color:var(--muted-foreground);}
+.files {--size-column:clamp(48px,12cqi,72px); --actions-column:42px; flex:1; min-height:0; overflow:auto; padding:6px 10px 16px; scrollbar-width:thin; scrollbar-gutter:stable;}
+.columnTitles {display:grid; grid-template-columns:minmax(0,1fr) var(--size-column) var(--actions-column); align-items:center; margin:0 3px; padding:8px 4px 8px 11px; border:1px solid transparent; font-size:11px; color:var(--muted-foreground);}
+.columnTitles > :nth-child(2),.list .fileSize {text-align:right; padding-right:8px;}
+.columnTitles > :last-child {text-align:center;}
 .list,.grid {list-style:none; margin:0; padding:3px;}
 .file {display:flex; align-items:center; width:100%; min-width:0; gap:10px; min-height:62px; padding:9px 10px; border:1px solid transparent; border-radius:10px; background:transparent; color:var(--foreground); text-align:left; cursor:pointer; font:inherit; transition:background 160ms,border-color 160ms;}
 .list > li + li {border-top:1px solid color-mix(in srgb,var(--border) 55%,transparent);}
-.file:hover {background:var(--surface-soft);}
-.file[data-selected] {background:color-mix(in srgb,var(--icon-blue) 8%,var(--card)); border-color:color-mix(in srgb,var(--icon-blue) 25%,var(--border));}
+.entry {position:relative; display:flex; align-items:center; min-width:0; height:100%; border:1px solid transparent; border-radius:10px; transition:background-color 160ms,border-color 160ms;}
+.list .entry {display:grid; grid-template-columns:minmax(0,1fr) var(--actions-column); padding-right:4px;}
+.list .file {display:grid; grid-template-columns:34px minmax(0,1fr) var(--size-column); min-height:57px; padding:8px 0 8px 11px; border:0;}
+.list .more {justify-self:center; margin:0;}
+.entry:hover {background:var(--surface-soft);}
+.entry[data-selected] {background:color-mix(in srgb,var(--icon-blue) 8%,var(--card)); border-color:color-mix(in srgb,var(--icon-blue) 25%,var(--border));}
+.more {display:inline-flex; align-items:center; justify-content:center; width:30px; height:32px; flex:none; margin-right:3px; border:0; border-radius:7px; background:transparent; color:var(--muted-foreground);}
+.more:hover,.more[data-popup-open] {background:var(--surface-hover); color:var(--foreground);}
+.more:focus-visible,.createButton:focus-visible,.uploadButton:focus-visible,.retry:focus-visible {outline:2px solid var(--ring); outline-offset:2px;}
+.actionMenu {width:max-content; min-width:160px; max-width:min(270px,90vw);}
+.projectTag {display:flex; align-items:center; gap:4px; width:fit-content; max-width:100%; min-width:0; padding:2px 6px; border-radius:5px; background:color-mix(in srgb,var(--icon-blue) 11%,var(--card)); color:var(--icon-blue); font-size:10px; line-height:1.4;}
+.projectTag svg {flex:none;}
+.projectTag span {overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .fileIcon {width:34px; height:36px; display:grid; place-items:center; flex-shrink:0; border-radius:9px;}
 .fileName {min-width:0; flex:1; display:grid; gap:4px;}
 .fileName strong {font-size:12px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .fileName small {font-size:10px; color:var(--muted-foreground);}
-.fileSize {flex-shrink:0; font-size:10px; color:var(--muted-foreground); font-variant-numeric:tabular-nums;}
+.fileSize {flex-shrink:0; font-size:11px; color:var(--muted-foreground); font-variant-numeric:tabular-nums; white-space:nowrap;}
 .grid {display:grid; grid-template-columns:repeat(auto-fill,minmax(105px,1fr)); gap:8px; padding-top:9px;}
-.grid .file {flex-direction:column; justify-content:flex-start; text-align:center; padding:16px 9px 12px; gap:10px; border-color:var(--border); min-height:130px; height:100%;}
+.grid .entry {border-color:var(--border);}
+.grid .file {flex-direction:column; justify-content:flex-start; text-align:center; padding:21px 9px 12px; gap:10px; min-height:130px; height:100%;}
+.grid .more {position:absolute; top:3px; right:2px; margin:0;}
+.grid .projectTag {justify-self:center;}
 .grid .fileIcon {width:48px; height:48px; border-radius:13px;}
 .grid .fileName {width:100%; flex:none;}
-.grid .fileSize {display:none;}
+.grid .fileSize {font-size:10px;}
 .empty {display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:230px; gap:12px; padding:26px 16px;}
 .empty strong {font-size:13px; font-weight:500;}
 .empty p {font-size:12px; line-height:1.8; color:var(--muted-foreground); margin:0;}
 .folderActions {display:flex; align-items:center; gap:6px; padding:10px 16px; border-top:1px solid var(--border);}
-.folderActions > .smallButton {margin-right:auto;}
-.footer {display:flex; justify-content:space-between; gap:8px; min-height:44px; padding:12px 16px; border-top:1px solid var(--border); color:var(--muted-foreground); font-size:10px;}
+.count {margin-right:auto; color:var(--muted-foreground); font-size:11px; font-variant-numeric:tabular-nums;}
+.operationForm {display:grid; gap:16px;}
+.dropOverlay {position:absolute; inset:5px; z-index:4; display:grid; place-items:center; pointer-events:none; border:2px dashed var(--icon-teal); border-radius:14px; background:color-mix(in srgb,var(--card) 84%,transparent);}
+.dropOverlay > div {display:grid; justify-items:center; gap:8px; max-width:90%; padding:18px 22px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 20px #0001;}
+.dropOverlay strong,.uploadZone strong {font-size:14px; font-weight:550;}
+.dropOverlay span {color:var(--muted-foreground); font-size:12px; overflow-wrap:anywhere;}
+.uploadZone {display:grid; justify-items:center; align-content:center; gap:10px; min-height:142px; padding:18px; border:1px dashed var(--border); border-radius:12px; background:var(--surface-soft); transition:border-color 160ms,background-color 160ms;}
+.uploadZone[data-dragging] {border-color:var(--icon-teal); background:color-mix(in srgb,var(--icon-teal) 9%,var(--card));}
+.uploadList {list-style:none; margin:0; padding:4px; max-height:32dvh; overflow:auto; scrollbar-width:thin;}
+.pickActions {display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px;}
+.uploadList > li {padding:5px 4px;}
+.uploadList > li + li {border-top:1px solid var(--border);}
+.uploadRow,.uploadGroup {display:flex; align-items:center; gap:9px; min-width:0;}
+.uploadGroup {flex:1; padding:4px 2px; background:transparent; border:0; border-radius:6px; font:inherit; color:var(--foreground); text-align:left;}
+button.uploadGroup:hover {background:var(--surface-soft);}
+.uploadGroup:focus-visible {outline:2px solid var(--ring); outline-offset:1px;}
+.uploadInfo {display:grid; min-width:0; flex:1; gap:2px;}
+.uploadInfo small,.folderPaths span {overflow-wrap:anywhere;}
+.folderPaths {margin:4px 0 6px 10px; padding-left:14px; border-left:1px solid var(--border);}
+.folderPaths ul {margin:0; padding:0; list-style:none;}
+.folderPaths li {display:flex; align-items:flex-start; gap:8px; padding:4px 0; font-size:12px;}
+.folderPaths li > div {display:grid; min-width:0;}
+.folderPaths svg {flex:none; margin-top:2px;}
+.folderPaths .smallButton {margin-top:6px;}
+.uploadList > li > p {margin:4px 0 4px 26px;}
+.uploadList strong {overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:500;}
+.uploadList small {font-size:11px; color:var(--muted-foreground);}
+.folderPaths .pathError {color:var(--red-text);}
+.targetPath {display:flex; align-items:flex-start; gap:8px; color:var(--muted-foreground); font-size:12px; line-height:1.6; overflow-wrap:anywhere;}
+.targetPath svg {flex:none; margin-top:2px;}
+.warning {margin:0; font-size:14px; line-height:1.65;}
 .pagination {display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; font-size:12px;}
 .previewPath {display:flex; align-items:center; flex-wrap:wrap; gap:12px; color:var(--muted-foreground); font:12px/1.6 Consolas,monospace; overflow-wrap:anywhere;}
 .previewPath > span {font-size:11px; padding:2px 7px; border-radius:5px; background:var(--surface-soft);}
@@ -56,9 +109,15 @@
 .imagePreview {display:grid; place-items:center; min-height:200px; max-height:65dvh; overflow:auto; background:var(--surface-soft); border-radius:12px; padding:16px;}
 .imagePreview img {display:block; max-width:100%; max-height:58dvh; object-fit:contain;}
 @media (max-width:760px) {
-  .heading {position:absolute; top:7px; right:12px; min-height:44px; padding:0; border:0; z-index:1;}
-  .heading > div {display:none;}
-  .navigation {padding-right:56px;}
+  .heading {min-height:52px; padding:3px 12px;}
+  .heading .headingTitle {display:none;}
+  .heading .headingActions {width:100%; gap:6px;}
+  .headingActions > .iconButton:last-child {margin-left:auto;}
+  .more,.createButton,.uploadButton {min-width:44px; height:44px;}
+  .uploadGroup {min-height:44px;}
+  .files {--actions-column:44px;}
+  .actionMenu [role="menuitem"] {min-height:44px;}
+  .usage {padding-block:7px;}
   .iconButton,.smallButton,.crumb {min-height:44px;}
   .iconButton {width:40px;}
   .viewControls {--view-control-height:48px;}
@@ -69,6 +128,17 @@
   .fileName small,.fileSize {font-size:11px;}
   .grid .file {min-height:108px; padding:12px 8px; gap:6px;}
   .grid .fileIcon {width:40px; height:40px; border-radius:11px;}
-  .footer {font-size:11px;}
+  .grid .more {top:0; right:0;}
 }
-@media (prefers-reduced-motion:reduce) {.file {transition:none;}}
+@container (max-width:330px) {
+  .heading,.folderActions {padding-inline:9px;}
+  .usage {padding-inline:12px; column-gap:12px;}
+  .heading .headingActions {gap:1px;}
+  .count {font-size:10px;}
+  .uploadButton span {display:none;}
+}
+@container (min-width:340px) {
+  .filter {display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px;}
+  .viewControls {gap:8px;}
+}
+@media (prefers-reduced-motion:reduce) {.file,.entry,.uploadZone {transition:none;}}

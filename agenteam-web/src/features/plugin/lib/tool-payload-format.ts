@@ -23,6 +23,12 @@ export function parseToolPayload(source: string): unknown {
   }
 }
 
+/** 只有最外层的截断标记表示接口返回了预览，工具正文中的同名字段不影响读取。 */
+export function isToolPayloadPreview(source: string): boolean {
+  const value = parseToolPayload(source);
+  return isPayloadRecord(value) && value.truncated === true;
+}
+
 export type ToolPayloadFile = {
   path: string | null;
   fileId: string | null;

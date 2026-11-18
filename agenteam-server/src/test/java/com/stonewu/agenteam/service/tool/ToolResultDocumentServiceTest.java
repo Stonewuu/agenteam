@@ -112,6 +112,37 @@ class ToolResultDocumentServiceTest {
     }
 
     @Test
+    void unlimitedFileSizeCanReadStringsBeyondTheParserDefaultWithoutChangingGlobalLimits() throws Exception {
+        int length = 21 * 1024 * 1024;
+        int parserLimit = mapper.getFactory().streamReadConstraints().getMaxStringLength();
+        byte[] bytes = ("{\"content\":\"" + "x".repeat(length) + "\"}").getBytes(StandardCharsets.UTF_8);
+        when(call.resultRedacted()).thenReturn(mapper.createObjectNode().put("truncated", true).put("fileId", "result"));
+        var file = mock(FileRecord.class);
+        when(file.id()).thenReturn("result");
+        when(file.enterpriseId()).thenReturn("enterprise");
+        when(file.ownerUserId()).thenReturn("user");
+        when(file.runId()).thenReturn("run");
+        when(file.resourceVersionId()).thenReturn("version");
+        when(file.purpose()).thenReturn("artifact");
+        when(file.status()).thenReturn("ready");
+        when(file.sizeBytes()).thenReturn((long) bytes.length);
+        when(file.sha256()).thenReturn(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
+        when(files.ready(actor, "result")).thenReturn(file);
+        when(storage.open(file)).thenAnswer(ignored -> new ByteArrayInputStream(bytes));
+        assertEquals("FILE_TOO_LARGE", assertThrows(ApiException.class,
+            () -> documents.open(actor, "conversation", "tool-results/result/content.txt", "parent", Set.of())).code());
+        var unlimited = new ToolResultDocumentService(calls, runs, conversations, sources, mock(ResourcePolicy.class), files,
+            storage, mapper, new ToolResultSettings(-1, -1, -1, -1, -1, -1, -1), mock(FileMapper.class), Clock.systemUTC());
+        assertEquals(length, unlimited.open(actor, "conversation", "tool-results/result/content.txt", "parent", Set.of()).text().sizeBytes());
+        assertEquals(parserLimit, mapper.getFactory().streamReadConstraints().getMaxStringLength());
+        when(file.sha256()).thenReturn("0".repeat(64));
+        var changed = new ToolResultDocumentService(calls, runs, conversations, sources, mock(ResourcePolicy.class), files,
+            storage, mapper, new ToolResultSettings(-1, -1, -1, -1, -1, -1, -1), mock(FileMapper.class), Clock.systemUTC());
+        assertEquals("FILE_CONTENT_CHANGED", assertThrows(ApiException.class,
+            () -> changed.open(actor, "conversation", "tool-results/result/content.txt", "parent", Set.of())).code());
+    }
+
+    @Test
     void rejectsHostPathsAndTraversal() {
         for (String path : new String[]{"C:/Windows/system.ini", "../tool-results/result/content.txt", "tool-results/../content.txt", "tool-results/result/../../content.txt"}) {
             assertThrows(ApiException.class, () -> documents.open(actor, "conversation", path, null, Set.of()));

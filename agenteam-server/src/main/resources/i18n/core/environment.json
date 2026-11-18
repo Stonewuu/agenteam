@@ -1,4 +1,36 @@
 {
+  "error.environment.uploadFolderConflict": {
+    "zh-CN": "“{0}”已被同名文件占用，请更改目录名称后重试。",
+    "en": "A file already exists at “{0}”. Rename the folder and try again."
+  },
+  "error.environment.usageChanged": {
+    "zh-CN": "统计期间文件已有变动，请重新统计。",
+    "en": "Files changed while counting. Refresh the totals."
+  },
+  "error.environment.reservedFolderName": {
+    "zh-CN": "环境需要使用这个文件夹名称，请更换文件名称。",
+    "en": "The environment uses this name for a folder. Choose a different file name."
+  },
+  "error.environment.entryChanged": {
+    "zh-CN": "文件或文件夹已有变动，请刷新目录后重新确认。",
+    "en": "This item has changed. Refresh the folder and confirm again."
+  },
+  "error.environment.missingDirectory": {
+    "zh-CN": "找不到这个文件夹，请返回上级目录后刷新。",
+    "en": "Folder not found. Go up one level and refresh."
+  },
+  "error.environment.protectedDirectory": {
+    "zh-CN": "这个目录由环境或项目使用。删除整个项目请在项目列表中操作。",
+    "en": "This folder is used by the environment or a project. To delete a project, open the project list."
+  },
+  "error.environment.invalidName": {
+    "zh-CN": "请输入有效的名称，不要包含路径分隔符。",
+    "en": "Enter a valid name without path separators."
+  },
+  "error.environment.nameExists": {
+    "zh-CN": "当前目录已有同名文件或文件夹，请换一个名称。",
+    "en": "This folder already contains an item with that name. Choose another name."
+  },
   "error.environment.dockerUserEnvironmentRuntime.manage.1": {
     "zh-CN": "不支持此环境操作。",
     "en": "This environment operation is unsupported."

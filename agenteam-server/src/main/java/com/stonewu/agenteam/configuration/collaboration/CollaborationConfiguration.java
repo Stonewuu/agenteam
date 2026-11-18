@@ -2,6 +2,9 @@ package com.stonewu.agenteam.configuration.collaboration;
 
 import lombok.Getter;
 import lombok.Setter;
+import com.stonewu.agenteam.service.system.RuntimeSettingsStore;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +16,16 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @Component
 @ConfigurationProperties(prefix = "collaboration")
 public class CollaborationConfiguration {
+    private final RuntimeSettingsStore runtimeSettings;
+
+    public CollaborationConfiguration() {
+        this(null);
+    }
+
+    @Autowired
+    public CollaborationConfiguration(RuntimeSettingsStore runtimeSettings) {
+        this.runtimeSettings = runtimeSettings;
+    }
     @Bean(name = "collaborationScheduler", defaultCandidate = false)
     public ThreadPoolTaskScheduler collaborationScheduler() {
         var scheduler = new ThreadPoolTaskScheduler();
@@ -30,4 +43,36 @@ public class CollaborationConfiguration {
     private int deadlineHours = 24;
     private int maxContextCharacters = 24000;
     private int maxContextMessages = 30;
+
+    public int getMaxWorks() {
+        return value(RuntimeSetting.COLLABORATION_WORKS, maxWorks);
+    }
+
+    public int getMaxHandoffs() {
+        return value(RuntimeSetting.COLLABORATION_HANDOFFS, maxHandoffs);
+    }
+
+    public int getMaxRuns() {
+        return value(RuntimeSetting.COLLABORATION_RUNS, maxRuns);
+    }
+
+    public int getMaxParallel() {
+        return value(RuntimeSetting.COLLABORATION_PARALLEL, maxParallel);
+    }
+
+    public int getDeadlineHours() {
+        return value(RuntimeSetting.COLLABORATION_DEADLINE_HOURS, deadlineHours);
+    }
+
+    public int getMaxContextCharacters() {
+        return value(RuntimeSetting.COLLABORATION_CONTEXT_CHARACTERS, maxContextCharacters);
+    }
+
+    public int getMaxContextMessages() {
+        return value(RuntimeSetting.COLLABORATION_CONTEXT_MESSAGES, maxContextMessages);
+    }
+
+    private int value(RuntimeSetting setting, int fallback) {
+        return runtimeSettings == null ? fallback : Math.toIntExact(runtimeSettings.value(setting, fallback));
+    }
 }

@@ -12,9 +12,9 @@ import {useT} from "@/lib/i18n/locale-provider";
 import ui from "./surface.module.css";
 import styles from "./file-picker.module.css";
 
-export function FilePicker({ref, triggerRef, selectedName, label, disabled, className, onChange, onInvalid, onInput, onFocus, ...props}:
+export function FilePicker({ref, triggerRef, selectedName, showSelection = true, label, disabled, className, onChange, onInvalid, onInput, onFocus, ...props}:
   Omit<ComponentProps<"input">, "type" | "hidden" | "value" | "defaultValue"> & {
-    selectedName?: string; label?: string; triggerRef?: Ref<HTMLButtonElement>;
+    selectedName?: string; showSelection?: boolean; label?: string; triggerRef?: Ref<HTMLButtonElement>;
   }) {
   const t = useT();
   const field = useFieldContext();
@@ -59,6 +59,6 @@ export function FilePicker({ref, triggerRef, selectedName, label, disabled, clas
       aria-describedby={validation.control["aria-describedby"]}
       aria-required={props.required || props["aria-required"]}
       onClick={() => input.current?.click()}><IconUpload size={17}/>{label ?? t("选择文件")}</Button>
-    <span className={styles.name}>{(selectedName ?? localName) || t("尚未选择文件")}</span>
+    {showSelection && <span className={styles.name}>{(selectedName ?? localName) || t("尚未选择文件")}</span>}
   </span><FieldErrorFeedback id={validation.errorId} messages={!field?.invalid && validation.error ? [validation.error] : []}/></>;
 }

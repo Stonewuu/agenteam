@@ -20,6 +20,33 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class RemoteUserEnvironmentRuntimeTest {
     @Test
+    void acceptsUnlimitedIdleLifetimeFromRemoteEnvironment() throws Exception {
+        var idle = new AtomicInteger(-1);
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 4);
+        server.createContext("/environments", exchange -> {
+            try {
+                byte[] bytes = ("{\"enabled\":true,\"status\":\"running\",\"busy\":false,\"idleSeconds\":" + idle.get() + "}")
+                    .getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, bytes.length);
+                exchange.getResponseBody().write(bytes);
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        try {
+            var remote = new RemoteUserEnvironmentRuntime(new ObjectMapper(), "http://127.0.0.1:" + server.getAddress().getPort(),
+                "environment-test-token-with-at-least-32-characters");
+            var project = new ProjectLocation("workspace", "user-environment", "enterprise", "alice", "environment");
+            assertEquals(-1, remote.manage("status", project).idleSeconds());
+            idle.set(-2);
+            assertThrows(ApiException.class, () -> remote.manage("status", project));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void reportsStatusAndCodeButNeverIncludesMalformedResponseContent() throws Exception {
         String secret = "sensitive-response-marker";
         var counter = new AtomicInteger();

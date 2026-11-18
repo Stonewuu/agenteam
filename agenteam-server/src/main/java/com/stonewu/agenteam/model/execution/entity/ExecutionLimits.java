@@ -1,22 +1,29 @@
 package com.stonewu.agenteam.model.execution.entity;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 import java.time.Duration;
 
 /**
  * 执行读取提交时固定的限制；员工来自配置，单独工作流测试来自明确保存的测试限制。
  */
 public record ExecutionLimits(int maxSteps, int timeoutSeconds) {
+    public ExecutionLimits {
+        maxSteps = LimitValue.legacyZero(maxSteps);
+        timeoutSeconds = LimitValue.legacyZero(timeoutSeconds);
+    }
     /**
-     * 框架仅接受正整数，0 在应用中表示无步骤限制，在框架边界转为其最大整数。
+     * 框架仅接受正整数，不限在框架边界转为其最大整数；兼容旧版本的零值。
      */
     public static int frameworkMaxSteps(int maxSteps) {
-        return maxSteps == 0 ? Integer.MAX_VALUE : maxSteps;
+        return LimitValue.unlimited(LimitValue.legacyZero(maxSteps)) ? Integer.MAX_VALUE : maxSteps;
     }
 
     /**
      * 零时长表示无上限；父任务、子任务和工具同时设置时，使用其中较短的有效上限。
      */
     public static Duration minTimeout(Duration first, Duration second) {
+        first = first.isNegative() ? Duration.ZERO : first;
+        second = second.isNegative() ? Duration.ZERO : second;
         if (first.isZero()) {
             return second;
         }

@@ -1,4 +1,8 @@
 {
+  "收起 {0} 次工具调用": "Collapse {0} tool calls",
+  "展开 {0} 次工具调用": "Expand {0} tool calls",
+  "工具调用 · {0} 次": "Tool calls · {0}",
+  "{0} 次未完成": "{0} unsuccessful",
   " 像素": " px",
   "{0}的思考强度": "Reasoning effort for {0}",
   "”后即可查看原有消息。": "” to view its messages.",

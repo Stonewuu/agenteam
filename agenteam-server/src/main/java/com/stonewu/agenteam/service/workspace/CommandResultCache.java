@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
@@ -210,7 +211,7 @@ public class CommandResultCache {
                 throw new ApiException(HttpStatus.CONFLICT, "COMMAND_RESULT_EXISTS", Messages.text("error.workspace.commandResultCache.prepare.1"));
             }
             // 大文件设置不要求命令一定输出同样多的内容，实际输出仍由容量监控检查。
-            long reserved = cleanLocked(area, protectedScopes, 2L * workspace.fileBytes(), 1).reservedBytes();
+            long reserved = cleanLocked(area, protectedScopes, LimitValue.unlimited(settings.maximumMb()) ? 0 : LimitValue.addCapacity(workspace.fileBytes(), workspace.fileBytes()), 1).reservedBytes();
             Path directory = area.files().resolve(PREFIX).resolve(call);
             WorkspacePaths.requireInside(area.data(), directory);
             Files.createDirectories(directory);
@@ -289,17 +290,19 @@ public class CommandResultCache {
         long used = diskBytes(area.data());
         for (var entry : entries) {
             if (entry.running()) {
-                used += Math.max(0, entry.reservedBytes() - size(area, entry));
+                used = LimitValue.addCapacity(used, Math.max(0, entry.reservedBytes() - size(area, entry)));
             }
         }
         int count = entries.size(), removed = 0;
-        long cutoff = clock.millis() - Duration.ofDays(settings.retentionDays()).toMillis();
+        long cutoff = LimitValue.unlimited(settings.retentionDays()) ? Long.MIN_VALUE
+            : clock.millis() - Duration.ofDays(settings.retentionDays()).toMillis();
         for (var entry : entries) {
             if (entry.running() || protectedScopes.contains(entry.scope())) {
                 continue;
             }
             boolean expired = Math.max(entry.completedAt(), entry.accessedAt()) < cutoff;
-            if (!expired && used + reserve <= settings.maximumBytes() && count + additional <= settings.maximumEntries()) {
+            if (!expired && reserve <= settings.maximumBytes() - used
+                && !LimitValue.exceeded((long) count + additional, settings.maximumEntries())) {
                 continue;
             }
             long size = size(area, entry);
@@ -310,7 +313,7 @@ public class CommandResultCache {
             count--;
             removed++;
         }
-        if (reserve > 0 && (used >= settings.maximumBytes() || count + additional > settings.maximumEntries())) {
+        if (additional > 0 && (used >= settings.maximumBytes() || LimitValue.exceeded((long) count + additional, settings.maximumEntries()))) {
             throw new ApiException(HttpStatus.INSUFFICIENT_STORAGE, "COMMAND_RESULT_CAPACITY",
                 Messages.text("error.workspace.commandResultCache.cleanLocked.1"));
         }

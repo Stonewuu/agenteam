@@ -92,7 +92,7 @@ def run(directory, script, working, stdout, stderr, seconds):
     process = None
     result = {"state": "completed", "exitCode": 1, "timedOut": False}
     try:
-        deadline = time.monotonic() + seconds
+        deadline = None if seconds == -1 else time.monotonic() + seconds
         with open(stdout, "wb", buffering=0) as out, open(stderr, "wb", buffering=0) as err:
             if (directory / "cancel").exists():
                 result["exitCode"] = 143
@@ -103,7 +103,7 @@ def run(directory, script, working, stdout, stderr, seconds):
                     if (directory / "cancel").exists():
                         result["exitCode"] = 143
                         break
-                    if time.monotonic() >= deadline:
+                    if deadline is not None and time.monotonic() >= deadline:
                         result.update(exitCode=124, timedOut=True)
                         break
                     time.sleep(0.05)

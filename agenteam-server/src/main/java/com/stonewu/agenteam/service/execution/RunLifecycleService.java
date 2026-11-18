@@ -1,6 +1,8 @@
 package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.configuration.system.RuntimeSettings;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.*;
@@ -61,6 +63,7 @@ public class RunLifecycleService {
     private final LivePartialOutputRecovery partialOutput;
     private final RunQuestionLifecycle questions;
     private final ConversationRunQueue queue;
+    private final RuntimeSettings settings;
 
     public RunLifecycleService(EnterpriseMapper enterprises, ConversationMapper conversations, RunMapper runs,
                                RunJobMapper jobs,
@@ -73,7 +76,8 @@ public class RunLifecycleService {
                                ScheduleRunStateService scheduleStates, ScheduleRecheckService scheduleAccess,
                                RunAttemptRetryService retries, ExecutionNotificationService notifications,
                                ApplicationEventPublisher leaseNotifications, LivePartialOutputRecovery partialOutput,
-                               RunQuestionLifecycle questions, ConversationRunQueue queue) {
+                               RunQuestionLifecycle questions, ConversationRunQueue queue, RuntimeSettings settings) {
+        this.settings = settings;
         this.queue = queue;
         this.enterprises = enterprises;
         this.conversations = conversations;
@@ -114,7 +118,7 @@ public class RunLifecycleService {
         if (!run.status().equals("queued")) {
             return Optional.empty();
         }
-        if (!activity.get(run).queuedAt().plus(Duration.ofMinutes(5)).isAfter(clock.instant())) {
+        if (settings.queueExpired(activity.get(run).queuedAt(), clock.instant())) {
             finishLocked(run, "failed", "EXECUTION_QUEUE_TIMEOUT", Messages.text("text.execution.runLifecycleService.start.1"));
             return Optional.empty();
         }
@@ -155,7 +159,7 @@ public class RunLifecycleService {
 
     public Duration remaining(RunRecord run) {
         int timeoutSeconds = ExecutionLimits.from(run).timeoutSeconds();
-        if (timeoutSeconds == 0) {
+        if (LimitValue.unlimited(timeoutSeconds)) {
             return Duration.ZERO;
         }
         long left = timeoutSeconds * 1000L - activity.get(run).elapsed(clock.instant());
@@ -250,7 +254,8 @@ public class RunLifecycleService {
     }
 
     public List<JobLease> queueTimeouts() {
-        return jobs.queuedBefore(clock.instant().minus(Duration.ofMinutes(5)), 50);
+        var timeout = settings.queueTimeout();
+        return timeout.isZero() ? List.of() : jobs.queuedBefore(clock.instant().minus(timeout), 50);
     }
 
     public List<RunApprovalMapper.ExpiredRun> expiredApprovals() {
@@ -287,8 +292,7 @@ public class RunLifecycleService {
         if (run.terminal() || !jobs.expiredAndLocked(lease, clock.instant())) {
             return;
         }
-        if (run.status().equals("queued") && activity.get(run).queuedAt().plus(Duration.ofMinutes(5))
-            .isAfter(clock.instant())) {
+        if (run.status().equals("queued") && !settings.queueExpired(activity.get(run).queuedAt(), clock.instant())) {
             jobs.requeue(lease, clock.instant());
         } else if (run.status().equals("running") && List.of("between_steps", "tools")
             .contains(activity.get(run).phase())
@@ -320,8 +324,7 @@ public class RunLifecycleService {
     @Transactional
     public void expireQueue(JobLease lease) {
         var run = locked(lease.enterpriseId(), lease.runId());
-        if (run.status().equals("queued") && !activity.get(run).queuedAt().plus(Duration.ofMinutes(5))
-            .isAfter(clock.instant())) {
+        if (run.status().equals("queued") && settings.queueExpired(activity.get(run).queuedAt(), clock.instant())) {
             finishLocked(run, "failed", "EXECUTION_QUEUE_TIMEOUT", Messages.text("text.execution.runLifecycleService.start.1"));
         }
     }

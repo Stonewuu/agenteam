@@ -1,5 +1,11 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
+import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
+
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -65,14 +71,14 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
             throw new ApiException(HttpStatus.CONFLICT, "SANDBOX_DISABLED", Messages.text("error.project.dockerProjectCommandExecutor.execute.1"));
         }
         return send(new ProjectExecutionRequest(location, callId, command, workingDirectory,
-                Math.min(timeout.toMillis(), settings.timeoutSeconds() * 1000L), settings.network(), false), timeout,
+                ExecutionDeadline.milliseconds(ExecutionLimits.minTimeout(timeout, LimitValue.seconds(settings.timeoutSeconds()))), settings.network(), false), timeout,
             control);
     }
 
     @Override
     public void recover(ProjectLocation location, Duration timeout, ToolCallControl control) {
         send(new ProjectExecutionRequest(location, null, null, null,
-            Math.min(timeout.toMillis(), settings.timeoutSeconds() * 1000L),
+            ExecutionDeadline.milliseconds(ExecutionLimits.minTimeout(timeout, LimitValue.seconds(settings.timeoutSeconds()))),
             settings.network(), true), timeout, control);
     }
 
@@ -85,8 +91,12 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
             if (!body.recoverOnly()) {
                 control.beforeSend();
             }
-            var request = request(address).timeout(timeout).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(body))).build();
+            var builder = request(address).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(body)));
+            if (!ExecutionDeadline.unlimited(timeout)) {
+                builder.timeout(timeout);
+            }
+            var request = builder.build();
             var future = client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
             control.track(() -> {
                 if (!complete.get()) {
@@ -94,7 +104,8 @@ public class RemoteProjectCommandExecutor implements ProjectCommandExecutor {
                     cancel(address, id);
                 }
             });
-            var response = future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            var response = ExecutionDeadline.unlimited(timeout) ? future.get()
+                : future.get(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
             try (var input = control.track(response.body())) {
                 byte[] bytes = input.readNBytes(16385);
                 if (bytes.length > 16384) {

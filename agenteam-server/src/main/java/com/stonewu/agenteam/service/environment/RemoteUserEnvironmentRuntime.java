@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.environment;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -79,7 +80,7 @@ public class RemoteUserEnvironmentRuntime implements UserEnvironmentRuntime {
                 }
                 var view = json.readValue(bytes, EnvironmentView.class);
                 if (view == null || !Set.of("running", "stopped", "stopping").contains(view.status() == null ? "" : view.status())
-                    || view.idleSeconds() < 1) {
+                    || !LimitValue.validInteger(view.idleSeconds(), 1)) {
                     throw new IOException(Messages.text("error.environment.remoteUserEnvironmentRuntime.manage.5"));
                 }
                 return view;

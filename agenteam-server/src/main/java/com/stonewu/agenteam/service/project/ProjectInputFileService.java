@@ -5,6 +5,7 @@ import com.stonewu.agenteam.service.i18n.Messages;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.file.FileSqlMapper;
+import com.stonewu.agenteam.mapper.file.MessageAttachmentSqlMapper;
 import com.stonewu.agenteam.mapper.project.WorkspaceProjectFileSqlMapper;
 import com.stonewu.agenteam.model.file.entity.FileObjectRow;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
@@ -25,11 +26,13 @@ import java.util.Set;
 public class ProjectInputFileService {
     private final WorkspaceProjectFileSqlMapper references;
     private final FileSqlMapper files;
+    private final MessageAttachmentSqlMapper attachments;
     private final Clock clock;
 
-    public ProjectInputFileService(WorkspaceProjectFileSqlMapper references, FileSqlMapper files, Clock clock) {
+    public ProjectInputFileService(WorkspaceProjectFileSqlMapper references, FileSqlMapper files, MessageAttachmentSqlMapper attachments, Clock clock) {
         this.references = references;
         this.files = files;
+        this.attachments = attachments;
         this.clock = clock;
     }
 
@@ -37,6 +40,17 @@ public class ProjectInputFileService {
         return references.exists(
             new LambdaQueryWrapper<WorkspaceProjectFileRow>().eq(WorkspaceProjectFileRow::getEnterpriseId, enterprise)
                 .eq(WorkspaceProjectFileRow::getUserId, user).eq(WorkspaceProjectFileRow::getFileId, file));
+    }
+
+    @Transactional
+    public void release(ProjectLocation project) {
+        var owned = new LambdaQueryWrapper<WorkspaceProjectFileRow>().eq(WorkspaceProjectFileRow::getEnterpriseId, project.enterpriseId())
+            .eq(WorkspaceProjectFileRow::getUserId, project.userId()).eq(WorkspaceProjectFileRow::getProjectId, project.projectId());
+        var ids = references.selectList(owned.select(WorkspaceProjectFileRow::getFileId)).stream().map(WorkspaceProjectFileRow::getFileId).toList();
+        if (!ids.isEmpty()) {
+            references.delete(owned);
+            attachments.expireDetachedFiles(project.enterpriseId(), ids, clock.instant());
+        }
     }
 
     @Transactional

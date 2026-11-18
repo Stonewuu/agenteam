@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.service.http.ApiException;
@@ -74,7 +76,8 @@ public final class UserWorkspaceLock implements AutoCloseable {
     public static UserWorkspaceLock acquire(Path root, Path path, Duration timeout,
                                             ToolCallControl control) throws IOException {
         WorkspacePaths.requireInside(root, path);
-        long deadline = System.nanoTime() + timeout.toNanos();
+        // 锁接口的零等待表示仅尝试一次；业务不限在进入此接口前转为 NO_TIMEOUT。
+        long deadline = timeout.isZero() ? System.nanoTime() : ExecutionDeadline.after(timeout);
         Path key = path.toAbsolutePath().normalize();
         var local = LOCAL.compute(key, (ignored, previous) -> {
             var value = previous == null ? new LocalLock() : previous;

@@ -1,0 +1,91 @@
+.sequence {
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.title {
+  overflow-wrap: anywhere;
+}
+
+.state {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.state[data-failed] {
+  color: var(--red-text);
+}
+
+.chevron {
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--motion-ease);
+}
+
+.trigger[aria-expanded=true] .chevron {
+  transform: rotate(0deg);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 4px 0 8px 9px;
+  padding: 6px 6px 6px 16px;
+  border-left: 1px solid var(--border);
+  min-width: 0;
+}
+
+.sequence[data-single] .body {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .body {
+    padding-left: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

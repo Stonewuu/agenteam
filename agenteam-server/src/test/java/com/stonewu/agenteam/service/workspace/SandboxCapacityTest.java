@@ -3,21 +3,47 @@ package com.stonewu.agenteam.service.workspace;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
+import com.stonewu.agenteam.support.TestOutputPaths;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class SandboxCapacityTest {
-    @TempDir
-    Path directory;
+    @Test
+    void changedConcurrencyKeepsExistingPermitsAndControlsSubsequentCommands() {
+        var maximum = new AtomicInteger(1);
+        var capacity = new SandboxCapacity(maximum::get, "");
+        try (var control = control(); var first = capacity.acquire(Duration.ofSeconds(2), control)) {
+            maximum.set(2);
+            try (var second = capacity.acquire(Duration.ofSeconds(2), control)) {
+                maximum.set(1);
+                first.close();
+                assertEquals("SANDBOX_QUEUE_TIMEOUT", assertThrows(ApiException.class,
+                    () -> capacity.acquire(Duration.ofMillis(100), control)).code());
+            }
+            try (var next = capacity.acquire(Duration.ofSeconds(2), control)) {
+                assertTrue(next.remaining().isPositive());
+            }
+        }
+    }
+
+    Path directory = TestOutputPaths.path("sandbox-capacity", UUID.randomUUID().toString());
+
+    @BeforeEach
+    void prepareDirectory() throws Exception {
+        Files.createDirectories(directory);
+    }
 
     @Test
     void localOnlyCapacityRetainsConfiguredParallelismAndReleasesOnce() {
@@ -66,7 +92,7 @@ class SandboxCapacityTest {
             process.destroyForcibly();
             assertTrue(process.waitFor(5, TimeUnit.SECONDS));
             try (var permit = capacity.acquire(Duration.ofSeconds(3), control)) {
-                var another = new SandboxCapacity(2, directory.toString());
+                var another = new SandboxCapacity(1, directory.toString());
                 assertThrows(ApiException.class, () -> another.acquire(Duration.ofMillis(100), control));
             }
         } finally {
@@ -97,6 +123,33 @@ class SandboxCapacityTest {
     private static ToolCallControl control() {
         return new ToolCallControl(() -> {
         });
+    }
+
+    @Test
+    void unlimitedCapacityHasNoDeadlineAndSharedSlotsFollowTheConfiguredCount() throws Exception {
+        var maximum = new AtomicInteger(2);
+        var firstProcess = new SandboxCapacity(maximum::get, directory.toString());
+        var secondProcess = new SandboxCapacity(maximum::get, directory.toString());
+        var held = new ArrayList<SandboxCapacity.Permit>();
+        try (var control = control()) {
+            held.add(firstProcess.acquire(Duration.ZERO, control));
+            held.add(secondProcess.acquire(Duration.ZERO, control));
+            assertThrows(ApiException.class, () -> secondProcess.acquire(Duration.ofMillis(50), control));
+            maximum.set(-1);
+            for (int index = 0; index < 40; index++) {
+                held.add(secondProcess.acquire(Duration.ZERO, control));
+            }
+            assertEquals(Duration.ofNanos(Long.MAX_VALUE), held.getFirst().remaining());
+            maximum.set(1);
+            assertThrows(ApiException.class, () -> firstProcess.acquire(Duration.ofMillis(50), control));
+        } finally {
+            for (var permit : held) {
+                permit.close();
+            }
+        }
+        try (var control = control(); var permit = firstProcess.acquire(Duration.ZERO, control)) {
+            assertTrue(permit.remaining().isPositive());
+        }
     }
 
     private static String quoted(String value) {

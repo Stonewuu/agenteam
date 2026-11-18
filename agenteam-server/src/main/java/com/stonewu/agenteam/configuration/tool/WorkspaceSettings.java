@@ -1,6 +1,9 @@
 package com.stonewu.agenteam.configuration.tool;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.service.system.RuntimeSettingsStore;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,12 +11,12 @@ import org.springframework.stereotype.Component;
 import com.stonewu.agenteam.service.workspace.WorkspaceLimitsStore;
 
 /**
- * 工作文件限制优先使用管理员保存的配置，容器资源仍由部署配置确定。
+ * 工作文件和环境资源优先使用管理员保存的配置。
  */
 @Component
 public record WorkspaceSettings(String root, String image, boolean executeEnabled, int workspaceMb, int fileMb,
                                 int maximumFiles, int memoryMb, int cpus, int processLimit, int timeoutSeconds,
-                                String network, WorkspaceLimitsStore limits) {
+                                String network, WorkspaceLimitsStore limits, RuntimeSettingsStore runtimeSettings) {
 
     @Autowired
     public WorkspaceSettings(@Value("${execution.workspace-files-root:.agenteam/workspace-files}") String root,
@@ -26,9 +29,9 @@ public record WorkspaceSettings(String root, String image, boolean executeEnable
                              @Value("${execution.sandbox.cpus:1}") int cpus,
                              @Value("${execution.sandbox.process-limit:128}") int processLimit,
                              @Value("${execution.sandbox.timeout-seconds:1800}") int timeoutSeconds,
-                             @Value("${execution.sandbox.network:none}") String network, WorkspaceLimitsStore limits) {
+                             @Value("${execution.sandbox.network:none}") String network, WorkspaceLimitsStore limits, RuntimeSettingsStore runtimeSettings) {
         if (root == null || root.isBlank() || root.contains(
-            ",") || image == null || image.isBlank() || workspaceMb < 16 || fileMb < 1 || fileMb > workspaceMb || maximumFiles < 10 || memoryMb < 128 || memoryMb > 8192 || cpus < 1 || cpus > 8 || processLimit < 16 || processLimit > 512 || timeoutSeconds < 1 || timeoutSeconds > 86400 || network == null || !network.matches(
+            ",") || image == null || image.isBlank() || !LimitValue.validInteger(workspaceMb, 16) || !LimitValue.validInteger(fileMb, 1) || !LimitValue.ordered(fileMb, workspaceMb) || !LimitValue.validInteger(maximumFiles, 10) || !LimitValue.validInteger(memoryMb, 128) || !LimitValue.validInteger(cpus, 1) || !LimitValue.validInteger(processLimit, 16) || !LimitValue.validInteger(timeoutSeconds, 1) || network == null || !network.matches(
             "[A-Za-z0-9_-]{1,100}") || network.equals("host")) {
             throw new IllegalArgumentException(Messages.text("error.tool.workspaceSettings.init.1"));
         }
@@ -44,6 +47,7 @@ public record WorkspaceSettings(String root, String image, boolean executeEnable
         this.timeoutSeconds = timeoutSeconds;
         this.network = network;
         this.limits = limits;
+        this.runtimeSettings = runtimeSettings;
     }
 
     public WorkspaceSettings(String root, String image, boolean executeEnabled, int workspaceMb, int fileMb,
@@ -68,11 +72,39 @@ public record WorkspaceSettings(String root, String image, boolean executeEnable
         return saved == null ? maximumFiles : saved.limits().maximumFiles();
     }
 
+    public int fileCountLimit() {
+        return LimitValue.unlimited(maximumFiles()) ? Integer.MAX_VALUE : maximumFiles();
+    }
+
     public long workspaceBytes() {
-        return workspaceMb() * 1024L * 1024;
+        return LimitValue.bytes(workspaceMb(), 1048576);
     }
 
     public long fileBytes() {
-        return fileMb() * 1024L * 1024;
+        return LimitValue.bytes(fileMb(), 1048576);
     }
+
+    public WorkspaceSettings(String root, String image, boolean executeEnabled, int workspaceMb, int fileMb,
+                             int maximumFiles, int memoryMb, int cpus, int processLimit, int timeoutSeconds,
+                             String network, WorkspaceLimitsStore limits) {
+        this(root, image, executeEnabled, workspaceMb, fileMb, maximumFiles, memoryMb, cpus, processLimit,
+            timeoutSeconds, network, limits, null);
+    }
+
+    public int memoryMb() {
+        return runtimeSettings == null ? memoryMb : Math.toIntExact(runtimeSettings.value(RuntimeSetting.SANDBOX_MEMORY_MB, memoryMb));
+    }
+
+    public int cpus() {
+        return runtimeSettings == null ? cpus : Math.toIntExact(runtimeSettings.value(RuntimeSetting.SANDBOX_CPUS, cpus));
+    }
+
+    public int processLimit() {
+        return runtimeSettings == null ? processLimit : Math.toIntExact(runtimeSettings.value(RuntimeSetting.SANDBOX_PROCESSES, processLimit));
+    }
+
+    public int timeoutSeconds() {
+        return runtimeSettings == null ? timeoutSeconds : Math.toIntExact(runtimeSettings.value(RuntimeSetting.SANDBOX_TIMEOUT_SECONDS, timeoutSeconds));
+    }
+
 }

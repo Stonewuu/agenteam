@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.model.modelpricing.request;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,6 +14,9 @@ public record ModelPriceConfiguration(String currency, String timezone, LocalDat
                                       String sourceReference, Instant sourceCheckedAt, String note, List<Rule> rules) {
     public record Rule(String name, int priority, boolean defaultRule, long contextMinTokens, Long contextMaxTokens,
                        String serviceTier, List<Time> times, List<DateCondition> dates, List<Rate> rates) {
+        public Rule {
+            contextMaxTokens = LimitValue.legacyNull(contextMaxTokens);
+        }
     }
 
     public record Time(int weekday, int startMinute, int endMinute) {

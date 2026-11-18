@@ -109,7 +109,7 @@ public class ApiRequestFilter extends OncePerRequestFilter {
                     protection.verify(request);
                 }
                 if (request.getMethod().equals("PUT") && path.matches(
-                    "/api/v1/enterprises/[^/]+/(?:files/[^/]+/content|plugins/java-packages/content)")) {
+                    "/api/v1/enterprises/[^/]+/(?:files/[^/]+/content|environment/files/content|plugins/java-packages/content)")) {
                     if (request.getContentLengthLong() > 20L * 1024 * 1024) {
                         throw tooLarge();
                     }

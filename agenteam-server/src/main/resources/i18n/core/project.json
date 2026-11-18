@@ -1,4 +1,16 @@
 {
+  "error.project.directoryOccupied": {
+    "zh-CN": "项目路径中已有同名文件，请选择其他目录。",
+    "en": "A file already occupies this project path. Choose another folder."
+  },
+  "error.project.collaborationUsesProject": {
+    "zh-CN": "这个项目已关联协作任务，无法从对话项目列表删除。",
+    "en": "This project is linked to a collaboration task and cannot be deleted."
+  },
+  "error.project.activeConversation": {
+    "zh-CN": "这个项目还有运行中的对话任务，请在任务结束后删除。",
+    "en": "A conversation is running in this project. Delete it after the run finishes."
+  },
   "error.project.createProjectInput.name.1": {
     "zh-CN": "请填写项目名称。",
     "en": "Enter a project name."

@@ -8,12 +8,14 @@ import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.workspace.WorkspacePaths;
 import com.stonewu.agenteam.service.workspace.CommandResultCache;
+import com.stonewu.agenteam.service.workspace.WorkspaceStore;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.function.Consumer;
 import java.util.Set;
 import java.util.UUID;
 
@@ -57,6 +59,42 @@ public class ProjectWorkspaceLayout {
         return files(location.workspaceId()).resolve(location.directory());
     }
 
+    /** 只创建缺少的目录，用户提前放入工作区的资料继续保留。 */
+    public void prepareProjectDirectories(ProjectLocation location, Consumer<Path> created) throws IOException {
+        Path base = files(location.workspaceId());
+        Path project = project(location);
+        WorkspacePaths.requireInside(root(), project);
+        Path parent = base;
+        for (Path part : base.relativize(project)) {
+            parent = parent.resolve(part);
+            createDirectory(parent, created);
+        }
+        for (String area : WorkspacePaths.ROOTS) {
+            createDirectory(project.resolve(area), created);
+        }
+    }
+
+    private void createDirectory(Path path, Consumer<Path> created) throws IOException {
+        WorkspacePaths.requireInside(root(), path);
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        try {
+            Files.createDirectory(path);
+            created.accept(path);
+        } catch (FileAlreadyExistsException concurrent) {
+            WorkspacePaths.requireInside(root(), path);
+            if (!Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                throw concurrent;
+            }
+        }
+    }
+
+    public void writeInitialState(ProjectLocation location, Set<String> results, Set<String> inputs) throws IOException {
+        write(state(location), new WorkspaceStore.Manifest(UUID.randomUUID().toString(), location.enterpriseId(),
+            location.userId(), location.projectId(), location.projectId(), null, 0, results, inputs, System.currentTimeMillis()));
+    }
+
     public CommandResultCache.Area commandResults(ProjectLocation location) {
         validate(location);
         return new CommandResultCache.Area(workspace(location.workspaceId()).resolve("cache"),
@@ -85,7 +123,19 @@ public class ProjectWorkspaceLayout {
     }
 
     public String fileRevision(String workspaceId) throws IOException {
-        Path path = control(workspaceId).resolve("files-revision.json");
+        return readFileRevision(control(workspaceId).resolve("files-revision.json"));
+    }
+
+    /** 项目内部写文件只需更新环境统计，其他项目的工具仍使用各自的文件版本。 */
+    public void recordStatisticsChange(String workspaceId) throws IOException {
+        write(control(workspaceId).resolve("statistics-revision.json"), new FileRevision(UUID.randomUUID().toString()));
+    }
+
+    public String statisticsRevision(String workspaceId) throws IOException {
+        return fileRevision(workspaceId) + "/" + readFileRevision(control(workspaceId).resolve("statistics-revision.json"));
+    }
+
+    private String readFileRevision(Path path) throws IOException {
         if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
             return "";
         }
@@ -111,10 +161,10 @@ public class ProjectWorkspaceLayout {
                 Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE,
                     PosixFilePermission.OWNER_EXECUTE));
         }
-        Files.createDirectories(control(id));
-        Files.createDirectories(files(id));
         WorkspacePaths.requireInside(root(), control(id));
         WorkspacePaths.requireInside(root(), files(id));
+        Files.createDirectories(control(id));
+        Files.createDirectories(files(id));
     }
 
     public void register(ProjectLocation location) throws IOException {

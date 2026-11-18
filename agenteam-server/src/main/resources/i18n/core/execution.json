@@ -536,8 +536,8 @@
     "en": "Restore this conversation before sending a message."
   },
   "error.execution.runWorker.init.1": {
-    "zh-CN": "每个工作进程的并发任务数量必须在 1 到 32 之间。",
-    "en": "Each worker must allow between 1 and 32 concurrent tasks."
+    "zh-CN": "同时执行任务数需为正整数，或选择不限。",
+    "en": "Enter a positive whole number for concurrent tasks, or select Unlimited."
   },
   "error.execution.userQuestionTool.validate.1": {
     "zh-CN": "请填写要向用户提出的问题。",

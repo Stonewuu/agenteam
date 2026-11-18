@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -145,8 +147,9 @@ public class CollaborationInputService {
         long revision = otherWork ? task.getInputRevision() : task.getInputRevision() + 1;
         boolean uncertain = uncertain(task);
         boolean followUp = "completed".equals(task.getStatus());
-        var deadline = followUp ? clock.instant().plusSeconds(60L * Math.max(10,
-            Math.min(10080, json.read(task.getPolicySnapshot()).path("deadlineMinutes").asInt(1440)))) : task.getDeadlineAt();
+        long minutes = json.read(task.getPolicySnapshot()).path("deadlineMinutes").asLong(1440);
+        var deadline = followUp ? LimitValue.deadline(clock.instant(), LimitValue.unlimited(minutes) ? -1 : 60L * minutes)
+            : task.getDeadlineAt();
         changed(tasks.update(new LambdaUpdateWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getId, taskId).eq(CollaborationTaskRow::getRevision, expectedRevision)
             .set(CollaborationTaskRow::getInputRevision, revision).set(CollaborationTaskRow::getStatus, uncertain ? "blocked" : "active")
@@ -268,9 +271,8 @@ public class CollaborationInputService {
 
     /** 历史计数保留，每次用户追问重新获得原配置的执行额度，避免把会话历史当作本次额度。 */
     private void renewBudget(ObjectNode policy, String limitField, String budgetField, int completed, int defaultLimit) {
-        int budget = Math.max("maxHandoffs".equals(limitField) ? 0 : 1,
-            policy.path(budgetField).asInt(policy.path(limitField).asInt(defaultLimit)));
-        policy.put(budgetField, budget).put(limitField, Math.addExact(completed, budget));
+        long budget = policy.path(budgetField).asLong(policy.path(limitField).asLong(defaultLimit));
+        policy.put(budgetField, budget).put(limitField, LimitValue.unlimited(budget) ? -1 : Math.addExact(completed, budget));
     }
 
     private void mutable(CollaborationTaskRow task, long expectedRevision, boolean allowCompleted) {

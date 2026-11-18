@@ -1,8 +1,11 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,15 +15,17 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 
 /**
  * 等待运行位置也计入调用时间，取消后不再启动新的容器。
  */
 @Component
 public final class SandboxCapacity {
-    private final Semaphore slots;
+    private final AtomicInteger active = new AtomicInteger();
+    private final IntSupplier maximum;
     private final Path sharedRoot;
 
     public SandboxCapacity(int maximum) {
@@ -28,32 +33,37 @@ public final class SandboxCapacity {
     }
 
     public SandboxCapacity(int maximum, String capacityRoot) {
-        slots = new Semaphore(maximum, true);
+        this(() -> maximum, capacityRoot);
+    }
+
+    public SandboxCapacity(IntSupplier maximum, String capacityRoot) {
+        this.maximum = maximum;
         sharedRoot = capacityRoot.isBlank() ? null : Path.of(capacityRoot).toAbsolutePath().normalize();
     }
 
     @Autowired
     public SandboxCapacity(SandboxRuntimeSettings runtime) {
-        this(runtime.maximumConcurrent(), runtime.capacityRoot());
+        this(runtime::maximumConcurrent, runtime.capacityRoot());
     }
 
     public Permit acquire(Duration timeout, ToolCallControl control) {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         while (true) {
             control.requireActive();
             if (System.nanoTime() >= deadline) {
                 throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "SANDBOX_QUEUE_TIMEOUT",
                     Messages.text("error.workspace.sandboxCapacity.acquire.1"));
             }
-            if (slots.tryAcquire()) {
+            int used = active.get();
+            if (!LimitValue.reached(used, maximum.getAsInt()) && active.compareAndSet(used, used + 1)) {
                 try {
                     return new Permit(deadline, sharedRoot == null ? null
-                        : SandboxHostPermit.acquire(sharedRoot, deadline, control));
+                        : SandboxHostPermit.acquire(sharedRoot, maximum, deadline, control));
                 } catch (IOException failure) {
-                    slots.release();
+                    active.decrementAndGet();
                     throw WorkspacePaths.io(failure);
                 } catch (RuntimeException failure) {
-                    slots.release();
+                    active.decrementAndGet();
                     throw failure;
                 }
             }
@@ -85,7 +95,7 @@ public final class SandboxCapacity {
                 } catch (IOException failure) {
                     throw WorkspacePaths.io(failure);
                 } finally {
-                    slots.release();
+                    active.decrementAndGet();
                 }
             }
         }

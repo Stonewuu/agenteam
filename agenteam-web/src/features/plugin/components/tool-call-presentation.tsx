@@ -9,6 +9,7 @@ import {AnimatedHeight} from "@/components/ui/animated-height";
 import {IconEye, IconListDetails} from "@/components/ui/icons";
 import {
   formatRawToolPayload,
+  isToolPayloadPreview,
   omitRepeatedPayloadFields,
   parseToolPayload,
   type PayloadRecord
@@ -79,12 +80,13 @@ export function ToolPayload({title, value, renderValue, source, part = source?.p
   const readablePosition = useRef<ToolReadingPosition>({offset: 0, top: 0, left: 0});
   const rawPosition = useRef<ToolReadingPosition>({offset: 0, top: 0, left: 0});
   const url = source?.url, sourcePart = source?.part, revision = source?.revision, readLimit = source?.readLimit;
-  const stableSource = useMemo(() => url && sourcePart && revision !== undefined ? {
+  const preview = useMemo(() => isToolPayloadPreview(value), [value]);
+  const stableSource = useMemo(() => preview && url && sourcePart && revision !== undefined ? {
     url,
     part: sourcePart,
     revision,
     readLimit
-  } : undefined, [url, sourcePart, revision, readLimit]);
+  } : undefined, [preview, url, sourcePart, revision, readLimit]);
   const displayValue = (content: string) => raw ? content : omitRepeatedPayloadFields(content, repeatedFields);
   const displayed = displayValue(value);
   if (!displayed) {

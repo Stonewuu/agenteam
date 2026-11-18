@@ -3,6 +3,8 @@ package com.stonewu.agenteam.service.chat;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.stonewu.agenteam.mapper.chat.ChatOutboundMessageMapper;
+import com.stonewu.agenteam.mapper.chat.ChatConversationMapper;
+import com.stonewu.agenteam.model.chat.entity.ChatConversationRow;
 import com.stonewu.agenteam.mapper.collaboration.CollaborationTaskMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.chat.entity.ChatMessageRow;
@@ -46,9 +48,16 @@ class CollaborationContinuationTest extends CollaborationToolTestSupport {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"direct_text", "direct_finishing", "group_reply"})
+    @ValueSource(strings = {"direct_text", "direct_finishing", "group_reply", "unlimited"})
     void completedAnswerCanContinueWithoutCreatingAnotherTaskOrLosingHistory(String scenario) throws Exception {
-        boolean direct = !scenario.equals("group_reply");
+        boolean unlimited = scenario.equals("unlimited");
+        boolean direct = !scenario.equals("group_reply") && !unlimited;
+        if (unlimited) {
+            var policy = json.createObjectNode().put("maxRuns", -1).put("maxWorks", -1).put("maxHandoffs", -1)
+                .put("maxParallel", -1).put("deadlineMinutes", -1).put("newTasksPerMinute", -1);
+            databaseAccess.mapper(ChatConversationMapper.class).update(new LambdaUpdateWrapper<ChatConversationRow>()
+                .eq(ChatConversationRow::getId, group.getId()).set(ChatConversationRow::getPolicyJson, policy.toString()));
+        }
         if (direct) {
             externalChat = "oc_followup_" + UUID.randomUUID();
         }
@@ -68,9 +77,13 @@ class CollaborationContinuationTest extends CollaborationToolTestSupport {
             lifecycle.finish(first.lease(), "completed", null, null);
             observer.observe(enterprise, link(first.run().id()).getId());
         }
-        databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
-            .eq(CollaborationTaskRow::getEnterpriseId, enterprise).eq(CollaborationTaskRow::getId, done.getId())
-            .set(CollaborationTaskRow::getDeadlineAt, Instant.now().minusSeconds(60)));
+        if (unlimited) {
+            assertNull(done.getDeadlineAt());
+        } else {
+            databaseAccess.mapper(CollaborationTaskMapper.class).update(new LambdaUpdateWrapper<CollaborationTaskRow>()
+                .eq(CollaborationTaskRow::getEnterpriseId, enterprise).eq(CollaborationTaskRow::getId, done.getId())
+                .set(CollaborationTaskRow::getDeadlineAt, Instant.now().minusSeconds(60)));
+        }
         if (scenario.equals("direct_text")) {
             var exhausted = json.createObjectNode().put("maxRuns", done.getRunCount()).put("maxWorks", 20)
                 .put("maxHandoffs", 0).put("maxParallel", 2).put("deadlineMinutes", 60).put("approvalPolicy", "full_access");
@@ -87,7 +100,12 @@ class CollaborationContinuationTest extends CollaborationToolTestSupport {
         assertEquals("active", resumed.getStatus());
         assertNull(resumed.getFinishedAt());
         assertNull(resumed.getFinalArtifactId());
-        assertTrue(resumed.getDeadlineAt().isAfter(Instant.now()));
+        if (unlimited) {
+            assertNull(resumed.getDeadlineAt());
+            assertEquals(-1, json.readTree(resumed.getPolicySnapshot()).path("maxRuns").asLong());
+        } else {
+            assertTrue(resumed.getDeadlineAt().isAfter(Instant.now()));
+        }
         assertEquals(done.getRunCount(), resumed.getRunCount(), "继续对话不能改写已发生的执行计数");
         if (scenario.equals("direct_text")) {
             assertEquals(0, json.readTree(resumed.getPolicySnapshot()).path("maxHandoffs").asInt());

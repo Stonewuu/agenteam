@@ -1,6 +1,10 @@
 package com.stonewu.agenteam.service.workspace;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.service.system.RuntimeSettingsStore;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
@@ -38,13 +42,16 @@ public class WorkspaceRetentionService {
     private final Clock clock;
     private final boolean enabled;
     private final Duration retention;
+    private final RuntimeSettingsStore runtimeSettings;
     private String after;
 
+    @Autowired
     public WorkspaceRetentionService(WorkspaceStore store, ConversationMapper conversations,
                                      SandboxContainerCleanup containers, ObjectMapper json, Clock clock,
                                      @Value("${execution.workspace.retention-enabled:true}") boolean enabled,
-                                     @Value("${execution.workspace.retention-days:30}") int days) {
-        if (days < 1 || days > 3650) {
+                                     @Value("${execution.workspace.retention-days:30}") int days, RuntimeSettingsStore runtimeSettings) {
+        this.runtimeSettings = runtimeSettings;
+        if (!LimitValue.validInteger(days, 1)) {
             throw new IllegalArgumentException(Messages.text("error.workspace.workspaceRetentionService.init.1"));
         }
         this.store = store;
@@ -54,6 +61,12 @@ public class WorkspaceRetentionService {
         this.clock = clock;
         this.enabled = enabled;
         this.retention = Duration.ofDays(days);
+    }
+
+    public WorkspaceRetentionService(WorkspaceStore store, ConversationMapper conversations,
+                                     SandboxContainerCleanup containers, ObjectMapper json, Clock clock,
+                                     boolean enabled, int days) {
+        this(store, conversations, containers, json, clock, enabled, days, null);
     }
 
     @Scheduled(fixedDelay = 60000, initialDelay = 60000)
@@ -147,8 +160,10 @@ public class WorkspaceRetentionService {
                 } else if (record.get().mode().equals("preview")) {
                     expired = record.get().createdAt().isBefore(clock.instant().minus(Duration.ofDays(7)));
                 } else {
-                    expired = Files.getLastModifiedTime(directory).toInstant()
-                        .isBefore(clock.instant().minus(retention));
+                    long days = runtimeSettings == null ? retention.toDays()
+                        : runtimeSettings.value(RuntimeSetting.WORKSPACE_RETENTION_DAYS, retention.toDays());
+                    expired = !LimitValue.unlimited(days) && Files.getLastModifiedTime(directory).toInstant()
+                        .isBefore(clock.instant().minus(Duration.ofDays(days)));
                 }
                 if (!expired) {
                     return false;

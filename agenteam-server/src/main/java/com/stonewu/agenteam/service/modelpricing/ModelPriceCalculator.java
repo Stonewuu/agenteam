@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceBook;
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceCalculation;
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceRateRow;
@@ -45,14 +47,14 @@ public class ModelPriceCalculator {
             var definition = rule.definition();
             if (usage.inputTokens() == null) {
                 // 尚不能排除较高优先级的上下文规则时，不能偷偷采用基础价。
-                if (definition.getContextMinTokens() != 0 || definition.getContextMaxTokens() != null) {
+                if (definition.getContextMinTokens() != 0 || !LimitValue.unlimited(definition.getContextMaxTokens())) {
                     return unavailable(book, "unpriced", "CONTEXT_NOT_REPORTED");
                 }
                 selected = rule;
                 break;
             }
             if (usage.inputTokens() >= definition.getContextMinTokens()
-                && (definition.getContextMaxTokens() == null || usage.inputTokens() < definition.getContextMaxTokens())) {
+                && (LimitValue.unlimited(definition.getContextMaxTokens()) || usage.inputTokens() < definition.getContextMaxTokens())) {
                 selected = rule;
                 break;
             }

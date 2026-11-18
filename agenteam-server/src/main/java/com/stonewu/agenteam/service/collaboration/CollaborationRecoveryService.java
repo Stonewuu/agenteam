@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -67,7 +69,7 @@ public class CollaborationRecoveryService {
         if (reason == null && task.getStatus().equals("completed")) {
             reason = "task_completed";
         }
-        if (reason == null && !task.getDeadlineAt().isAfter(clock.instant())) {
+        if (reason == null && LimitValue.expired(task.getDeadlineAt(), clock.instant())) {
             reason = "deadline";
         }
         if (reason == null && (task.getStatus().equals("cancelling") || task.getStatus().equals("cancelled"))) {
@@ -110,7 +112,7 @@ public class CollaborationRecoveryService {
     public void settle(String enterprise, String taskId) {
         enterprises.lockEnterprise(enterprise).orElseThrow();
         var task = access.require(enterprise, taskId);
-        boolean expired = !task.getDeadlineAt().isAfter(clock.instant());
+        boolean expired = LimitValue.expired(task.getDeadlineAt(), clock.instant());
         if (!task.getStatus().equals("cancelling") && !expired || task.getStatus().equals("completed") || task.getStatus().equals("cancelled") || task.getStatus().equals("failed")) {
             return;
         }

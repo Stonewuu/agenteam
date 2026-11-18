@@ -114,7 +114,7 @@ public class WorkspaceFileReader {
         while (true) {
             var page = json.tree(document.read(input.path("start_line").asInt(1),
                 input.hasNonNull("end_line") ? input.path("end_line").asInt() : null,
-                input.path("cursor").asText(null), settings.readLines(), bytes));
+                input.path("cursor").asText(null), settings.readLineLimit(), bytes));
             if (Utf8Text.size(page.toString()) <= maximum) {
                 return page;
             }

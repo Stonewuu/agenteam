@@ -121,6 +121,15 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
     }
 
     public List<FileInfo> files(String path, boolean recursive) {
+        return files(path, recursive, true);
+    }
+
+    /** 浏览和清理已超出容量的目录时，仍需列出其中的文件。 */
+    public List<FileInfo> directoryEntries(String path) {
+        return files(path, false, false);
+    }
+
+    private List<FileInfo> files(String path, boolean recursive, boolean enforceLimits) {
         Path directory = resolve(path, false);
         var result = new ArrayList<FileInfo>();
         long bytes = 0;
@@ -141,7 +150,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                     continue;
                 }
                 WorkspacePaths.requireInside(root, item);
-                if (++count > settings.maximumFiles() * 2L) {
+                if (enforceLimits && ++count > settings.fileCountLimit() * 2L) {
                     throw WorkspacePaths.capacity();
                 }
                 boolean folder = Files.isDirectory(item, LinkOption.NOFOLLOW_LINKS);
@@ -150,7 +159,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
                 }
                 long size = folder ? 0 : Files.size(item);
                 bytes += size;
-                if ((!project || recursive) && (size > settings.fileBytes() || bytes > settings.workspaceBytes())) {
+                if (enforceLimits && (!project || recursive) && (size > settings.fileBytes() || bytes > settings.workspaceBytes())) {
                     throw WorkspacePaths.capacity();
                 }
                 result.add(new FileInfo(root.relativize(item).toString().replace('\\', '/'), folder, size,
@@ -165,7 +174,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
 
     public void validate() {
         var entries = files("/", true);
-        if (entries.stream().filter(item -> !item.isDirectory()).count() > settings.maximumFiles()) {
+        if (entries.stream().filter(item -> !item.isDirectory()).count() > settings.fileCountLimit()) {
             throw WorkspacePaths.capacity();
         }
         for (var entry : entries) {
@@ -231,7 +240,7 @@ public final class WorkspaceFilesystem implements AbstractFilesystem {
         long previous = Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) ? Files.size(file) : 0;
         long total = entries.stream().mapToLong(FileInfo::size).sum() - previous + bytes.length;
         long count = entries.stream().filter(entry -> !entry.isDirectory()).count() + (replace ? 0 : 1);
-        if (total > settings.workspaceBytes() || count > settings.maximumFiles()) {
+        if (total > settings.workspaceBytes() || count > settings.fileCountLimit()) {
             throw WorkspacePaths.capacity();
         }
         Files.createDirectories(file.getParent());

@@ -27,6 +27,7 @@ import scheduleActions from "./en/schedule-actions.json";
 import modelBilling from "./en/model-billing.json";
 import collaboration from "./en/collaboration.json";
 import environment from "./en/environment.json";
+import runtimeSettings from "./en/runtime-settings.json";
 
 /** 界面英文文案按功能拆分；中文原文作为稳定的消息键。 */
 export const en: Readonly<Record<string, string>> = {
@@ -37,6 +38,6 @@ export const en: Readonly<Record<string, string>> = {
   ...permissions,
   ...common, ...auth, ...workspace, ...agent, ...data, ...todo, ...schedule, ...employee, ...enterprise,
   ...skill, ...knowledge, ...exports, ...user, ...plugin, ...workflow, ...resource, ...support,
-  ...integration, ...notification, ...scheduleActions, ...modelBilling, ...collaboration, ...environment, ...editionMessages,
+  ...integration, ...notification, ...scheduleActions, ...modelBilling, ...collaboration, ...environment, ...runtimeSettings, ...editionMessages,
   ...backend.en, ...editionBackendMessages.en,
 };

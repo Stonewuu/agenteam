@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -105,10 +107,10 @@ public class CollaborationSubmissionRecords {
         var role = access.participant(task, work.getParticipantId());
         access.requireRole(task, role);
         var policy = json.read(task.getPolicySnapshot());
-        if (!Set.of("active", "waiting_input", "waiting_approval", "blocked").contains(task.getStatus()) || !task.getDeadlineAt().isAfter(clock.instant())) {
+        if (!Set.of("active", "waiting_input", "waiting_approval", "blocked").contains(task.getStatus()) || LimitValue.expired(task.getDeadlineAt(), clock.instant())) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_STOPPED", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.2"));
         }
-        if (task.getRunCount() >= policy.path("maxRuns").asInt(40)) {
+        if (LimitValue.reached(task.getRunCount(), policy.path("maxRuns").asLong(40))) {
             throw new ApiException(HttpStatus.CONFLICT, "COLLABORATION_LIMIT_REACHED", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.3"));
         }
         long active = works.selectCount(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
@@ -116,7 +118,7 @@ public class CollaborationSubmissionRecords {
         long sameRole = works.selectCount(new LambdaQueryWrapper<CollaborationWorkItemRow>().eq(CollaborationWorkItemRow::getEnterpriseId, task.getEnterpriseId())
             .eq(CollaborationWorkItemRow::getTaskId, task.getId()).eq(CollaborationWorkItemRow::getParticipantId, role.getId())
             .isNotNull(CollaborationWorkItemRow::getActiveRunId));
-        if (active >= policy.path("maxParallel").asInt(2) || sameRole > 0) {
+        if (LimitValue.reached(active, policy.path("maxParallel").asLong(2)) || sameRole > 0) {
             throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT", Messages.text("error.collaboration.collaborationSubmissionRecords.prepare.4"));
         }
         var context = contexts.selectOne(new LambdaQueryWrapper<CollaborationContextRow>().eq(CollaborationContextRow::getEnterpriseId, task.getEnterpriseId())

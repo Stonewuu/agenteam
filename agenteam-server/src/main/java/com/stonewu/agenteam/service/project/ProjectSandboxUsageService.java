@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
@@ -58,7 +60,7 @@ public class ProjectSandboxUsageService {
         if (lease == null) {
             throw new ExecutionStoppedException();
         }
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         while (true) {
             try (var lock = UserWorkspaceLock.runtime(layout, project.workspaceId(),
                 DockerWorkspaceCommands.remaining(deadline), control)) {

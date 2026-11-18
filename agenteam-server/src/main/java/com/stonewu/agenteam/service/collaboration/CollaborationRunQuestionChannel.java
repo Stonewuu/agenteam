@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -41,7 +43,7 @@ public class CollaborationRunQuestionChannel implements RunQuestionChannel {
         question.setTaskId(context.task().getId());
         question.setChatConversationId(context.task().getConversationId());
         question.setBotBindingId(context.participant().getBotBindingId());
-        if (context.task().getDeadlineAt().isBefore(question.getExpiresAt())) {
+        if (context.task().getDeadlineAt() != null && context.task().getDeadlineAt().isBefore(question.getExpiresAt())) {
             question.setExpiresAt(context.task().getDeadlineAt());
         }
     }

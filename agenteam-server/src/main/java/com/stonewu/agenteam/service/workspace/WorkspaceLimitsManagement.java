@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.CommandResultSettings;
@@ -38,7 +40,11 @@ public class WorkspaceLimitsManagement {
     public WorkspaceLimitsView save(UserEntity actor, long revision, WorkspaceLimitsRequest input) {
         authorize(actor);
         InputValidation.validate(input);
-        if (input.fileMb() > input.workspaceMb()) {
+        validate("workspaceMb", input.workspaceMb(), 16);
+        validate("fileMb", input.fileMb(), 1);
+        validate("maximumFiles", input.maximumFiles(), 10);
+        validate("commandResultsMb", input.commandResultsMb(), 1);
+        if (!LimitValue.ordered(input.fileMb(), input.workspaceMb())) {
             throw ApiException.invalidField("fileMb", Messages.text("error.workspace.workspaceLimitsManagement.save.1"));
         }
         var saved = store.save(revision, new WorkspaceLimitValues(input.workspaceMb(), input.fileMb(),
@@ -53,6 +59,12 @@ public class WorkspaceLimitsManagement {
             workspace.maximumFiles(), results.maximumMb()) : saved.limits();
         return new WorkspaceLimitsView(String.valueOf(saved == null ? 1 : saved.revision()), limits.workspaceMb(),
             limits.fileMb(), limits.maximumFiles(), limits.commandResultsMb());
+    }
+
+    private static void validate(String field, int value, int minimum) {
+        if (!LimitValue.validInteger(value, minimum)) {
+            throw ApiException.invalidField(field, Messages.text("error.system.runtimeSettings.range", minimum));
+        }
     }
 
     private static void authorize(UserEntity actor) {

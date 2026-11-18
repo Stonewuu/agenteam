@@ -69,6 +69,9 @@ public class EnvironmentWorkspaceService {
                     return new EnvironmentView(true, "stopped", false, lifecycle.idleSeconds(), null);
                 }
                 project = state.project();
+                if (!Files.exists(layout.registration(project), LinkOption.NOFOLLOW_LINKS)) {
+                    project = prepare(actor);
+                }
             } catch (IOException failure) {
                 throw WorkspacePaths.io(failure);
             }
@@ -98,7 +101,10 @@ public class EnvironmentWorkspaceService {
                 var directory = layout.project(project);
                 WorkspacePaths.requireInside(layout.root(), directory);
                 WorkspacePaths.requireInside(layout.root(), directory.resolve("work"));
-                Files.createDirectories(directory.resolve("work"));
+                if (!Files.isDirectory(directory.resolve("work"), LinkOption.NOFOLLOW_LINKS)) {
+                    Files.createDirectories(directory.resolve("work"));
+                    layout.recordStatisticsChange(workspace.getId());
+                }
                 layout.register(project);
                 metadata.initializedWorkspace(workspace);
             }
@@ -126,7 +132,19 @@ public class EnvironmentWorkspaceService {
 
     public WorkspaceFilesystem files(AuthContext actor) {
         var project = location(actor);
-        return new WorkspaceFilesystem(layout.files(project.workspaceId()), settings, () -> {
+        var root = layout.files(project.workspaceId());
+        try {
+            if (Files.notExists(root, LinkOption.NOFOLLOW_LINKS)) {
+                if (metadata.workspaceInitialized(actor)) {
+                    throw ProjectWorkspaceLayout.unavailable();
+                }
+            } else {
+                WorkspacePaths.requireInside(layout.root(), root);
+            }
+        } catch (IOException failure) {
+            throw WorkspacePaths.io(failure);
+        }
+        return new WorkspaceFilesystem(root, settings, () -> {
         }, false, true);
     }
 }

@@ -5,7 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Dialog, DialogActions, DialogCancel, DialogForm} from "@/components/ui/dialog";
 import {Field} from "@/components/ui/field";
-import {Input} from "@/components/ui/input";
+import {LimitField} from "@/components/ui/limit-field";
 import {Select} from "@/components/ui/select";
 import {IconMessages} from "@/components/ui/icons";
 import {Guidance} from "@/components/ui/guidance";
@@ -18,12 +18,12 @@ import ui from "@/components/ui/surface.module.css";
 import styles from "./chat.module.css";
 
 const limits = [
-  {key: "maxWorks", label: "最多岗位工作", value: 20, min: 1, max: 100},
-  {key: "maxHandoffs", label: "最多交接次数", value: 8, min: 0, max: 20},
-  {key: "maxRuns", label: "最多执行轮次", value: 40, min: 1, max: 200},
-  {key: "maxParallel", label: "同时工作岗位", value: 2, min: 1, max: 4},
-  {key: "deadlineMinutes", label: "任务最长时间（分钟）", value: 1440, min: 10, max: 10080},
-  {key: "newTasksPerMinute", label: "每人每分钟新任务", value: 5, min: 1, max: 20},
+  {key: "maxWorks", label: "最多岗位工作", value: 20, min: 1},
+  {key: "maxHandoffs", label: "最多交接次数", value: 8, min: 0},
+  {key: "maxRuns", label: "最多执行轮次", value: 40, min: 1},
+  {key: "maxParallel", label: "同时工作岗位", value: 2, min: 1},
+  {key: "deadlineMinutes", label: "任务最长时间（分钟）", value: 1440, min: 1},
+  {key: "newTasksPerMinute", label: "每人每分钟新任务", value: 5, min: 1},
 ];
 
 export function ChatGroupEditor({path, value, onClose, onSaved}: {path: string; value: ChatGroup; onClose: () => void; onSaved: (group: ChatGroup) => void}) {
@@ -38,7 +38,7 @@ export function ChatGroupEditor({path, value, onClose, onSaved}: {path: string; 
   const [policy, setPolicy] = useState(value.resultPolicy);
   const canReceiveTogether = selected.length >= 2 && selected.every((id) => available.find((bot) => bot.botId === id)?.crossBotIdentityVerified);
   const [maximum, setMaximum] = useState<Record<string, number>>(() => Object.fromEntries(limits.map((limit) => [limit.key,
-    value.limits?.[limit.key] ?? (limit.key === "deadlineMinutes" && value.limits?.deadlineHours ? value.limits.deadlineHours * 60 : limit.value)])));
+    value.limits?.[limit.key] ?? (limit.key === "deadlineMinutes" && value.limits?.deadlineHours ? (value.limits.deadlineHours === -1 ? -1 : value.limits.deadlineHours * 60) : limit.value)])));
   return <Dialog title={value.name ?? t(value.kind === "direct" ? "机器人私聊" : "群聊设置")} icon={<IconMessages size={22}/>} onClose={onClose} busy={action.busy} wide>
     <DialogForm className={styles.fields} onSubmit={(event) => {
       event.preventDefault();
@@ -86,8 +86,9 @@ export function ChatGroupEditor({path, value, onClose, onSaved}: {path: string; 
           <option value="single_bot">{t("通过指定机器人接收")}</option><option value="multi_bot" disabled={!canReceiveTogether}>{t("通过多个岗位机器人接收")}</option>
         </Select></Field>}
         {value.platformCode === "feishu" && !canReceiveTogether && <p className={styles.muted}>{t("如需分别 @ 多个机器人，请先选择两个以上岗位，并在机器人“连接检查”中完成共同接收测试。")}</p>}
-        <div className={styles.limits}>{limits.map((limit) => <Field key={limit.key} label={t(limit.label)}><Input type="number" value={maximum[limit.key]} required
-        min={limit.min} max={limit.max} step={1} disabled={action.busy} onChange={(event) => setMaximum((current) => ({...current, [limit.key]: Number(event.target.value)}))}/></Field>)}</div>
+        <div className={styles.limits}>{limits.map((limit) => <LimitField key={limit.key} name={limit.key} label={t(limit.label)}
+          value={maximum[limit.key]} minimum={limit.min} disabled={action.busy}
+          onChange={(value) => setMaximum((current) => ({...current, [limit.key]: value === "" ? Number.NaN : Number(value)}))}/>)}</div>
       </ChatAdvancedSettings>
       <MutationFeedback action={action}/><DialogActions><DialogCancel className={ui.button} disabled={action.busy}>{t("取消")}</DialogCancel><Button className={ui.primary} disabled={action.busy || !available.length}>{t(value.status === "enabled" ? "保存" : "保存并启用")}</Button></DialogActions>
     </DialogForm>

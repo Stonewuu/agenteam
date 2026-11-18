@@ -3,19 +3,27 @@ package com.stonewu.agenteam.service.agent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.agent.AgentSubagentConfigurationMapper;
+import com.stonewu.agenteam.mapper.plugin.PluginConfigurationMapper;
+import com.stonewu.agenteam.mapper.resource.ResourceJson;
+import com.stonewu.agenteam.mapper.workflow.WorkflowToolSelectionMapper;
 import com.stonewu.agenteam.model.agent.request.AgentConfigurationInput;
+import com.stonewu.agenteam.model.resource.entity.ResourceKind;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.http.InputValidation;
 import com.stonewu.agenteam.service.memory.MemoryContentValidation;
 import com.stonewu.agenteam.service.modelprofile.ModelProfileCatalog;
 import com.stonewu.agenteam.service.resource.validation.AgentConfigurationValidator;
+import com.stonewu.agenteam.service.resource.validation.ResourceConfigValidator;
+import com.stonewu.agenteam.service.resource.ResourceConfigurationService;
 import com.stonewu.agenteam.support.ApiContractAssertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SubagentConfigurationTest {
     private final ObjectMapper json = new ObjectMapper();
@@ -41,15 +49,42 @@ class SubagentConfigurationTest {
     }
 
     @Test
-    void executionBudgetsAllowZeroAndPositiveIntegersButRejectNegativeValues() throws Exception {
-        for (int limit : List.of(0, 1, 500, Integer.MAX_VALUE)) {
+    void executionBudgetsAcceptUnlimitedAndLegacyZeroButRejectOtherNegatives() throws Exception {
+        for (int limit : List.of(-1, 0, 1, 500, Integer.MAX_VALUE)) {
             var config = config().put("maxSteps", limit).put("timeoutSeconds", limit).put("dynamicSubagentEnabled", true);
             validator.draft(config);
             assertEquals(limit, AgentSubagentConfigurationMapper.read(config).getFirst().maxSteps());
             new ApiContractAssertions().validate("AgentConfig", config);
         }
-        assertThrows(ApiException.class, () -> validator.draft(config().put("maxSteps", -1)));
-        assertThrows(ApiException.class, () -> validator.draft(config().put("timeoutSeconds", -1)));
+        assertEquals(-1, InputValidation.read(config().put("maxSteps", 0), AgentConfigurationInput.class, "config").maxSteps());
+        assertThrows(ApiException.class, () -> validator.draft(config().put("maxSteps", -2)));
+        assertThrows(ApiException.class, () -> validator.draft(config().put("timeoutSeconds", -2)));
+    }
+
+    @Test
+    void savingLegacyZeroUsesUnlimitedWithoutRewritingTheOriginalConfiguration() throws Exception {
+        var validators = new ArrayList<ResourceConfigValidator>();
+        for (var kind : ResourceKind.values()) {
+            if (kind == ResourceKind.AGENT) {
+                validators.add(validator);
+            } else {
+                var other = mock(ResourceConfigValidator.class);
+                when(other.kind()).thenReturn(kind);
+                validators.add(other);
+            }
+        }
+        var configurations = new ResourceConfigurationService(new ResourceJson(json), json, validators,
+            mock(PluginConfigurationMapper.class), mock(WorkflowToolSelectionMapper.class));
+        for (int limit : List.of(0, -1, 4000)) {
+            var original = config().put("maxSteps", limit).put("timeoutSeconds", limit);
+            var saved = configurations.draft(ResourceKind.AGENT, original);
+            assertEquals(limit == 0 ? -1 : limit, saved.path("maxSteps").asInt());
+            assertEquals(limit == 0 ? -1 : limit, saved.path("timeoutSeconds").asInt());
+            assertEquals(limit, original.path("maxSteps").asInt());
+            validator.validatePublished(original);
+            assertEquals(limit, original.path("timeoutSeconds").asInt());
+        }
+        assertThrows(ApiException.class, () -> configurations.draft(ResourceKind.AGENT, config().put("maxSteps", "0")));
     }
 
     @Test

@@ -48,12 +48,12 @@
     "en": "Select a valid reasoning level."
   },
   "error.agent.agentConfigurationInput.maxSteps.1": {
-    "zh-CN": "最多执行步骤不能为负数，填写 0 表示无上限。",
-    "en": "The step limit must not be negative. Enter 0 for unlimited steps."
+    "zh-CN": "请输入正整数，或选择不限。",
+    "en": "Enter a positive whole number, or select Unlimited."
   },
   "error.agent.agentConfigurationInput.timeoutSeconds.1": {
-    "zh-CN": "执行时间上限不能为负数，填写 0 表示无上限。",
-    "en": "The execution time limit must not be negative. Enter 0 for no limit."
+    "zh-CN": "请输入正整数，或选择不限。",
+    "en": "Enter a positive whole number, or select Unlimited."
   },
   "error.agent.agentConfigurationInput.suggestedQuestions.1": {
     "zh-CN": "条目数量超出允许范围。",

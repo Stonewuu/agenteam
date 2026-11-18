@@ -1,11 +1,18 @@
-export function formatFileSize(size: number) {
+export function formatFileSize(size: number | null) {
+  if (size == null) {
+    return "—";
+  }
   if (size < 1024) {
     return `${size} B`;
   }
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
+  const units = ["KB", "MB", "GB", "TB", "PB"];
+  let value = size / 1024;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index++;
   }
-  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  return `${value.toFixed(1)} ${units[index]}`;
 }
 
 export function fileKind(name: string): "image" | "code" | "archive" | "text" {

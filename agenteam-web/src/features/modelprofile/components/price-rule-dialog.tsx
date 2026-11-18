@@ -5,6 +5,7 @@ import {Dialog, DialogCancel} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Field} from "@/components/ui/field";
 import {Input} from "@/components/ui/input";
+import {LimitField} from "@/components/ui/limit-field";
 import {Select} from "@/components/ui/select";
 import {AnimatedHeight} from "@/components/ui/animated-height";
 import {DetailSection} from "@/components/ui/detail-section";
@@ -31,7 +32,7 @@ export function PriceRuleDialog({initial, baseRates, unit, onClose, onSave}: {
       <Button type="submit" form="model-price-rule" className={ui.primary}>{t("保留此规则")}</Button></>}>
     <AnimatedHeight preserveControlShadows><form id="model-price-rule" className={styles.stack} onSubmit={(event) => {
       event.preventDefault();
-      closing.finish(() => onSave(rule));
+      closing.finish(() => onSave({...rule, contextMaxTokens: rule.contextMaxTokens ?? -1}));
     }}>
       <Field label={t("规则名称")} required><Input className={ui.input} value={rule.name} maxLength={96} required
         onChange={(event) => setRule({...rule, name: event.target.value})}/></Field>
@@ -45,9 +46,9 @@ export function PriceRuleDialog({initial, baseRates, unit, onClose, onSave}: {
           </Select></Field>
           <Field label={t("输入下界（包含）")}><Input className={ui.input} type="number" min={0} max={100000000000} required value={rule.contextMinTokens}
             onChange={(event) => setRule({...rule, contextMinTokens: Number(event.target.value)})}/></Field>
-          <Field label={t("输入上界（不包含）")}><Input className={ui.input} type="number" min={rule.contextMinTokens + 1} max={100000000001}
-            placeholder={t("无上限")} value={rule.contextMaxTokens ?? ""}
-            onChange={(event) => setRule({...rule, contextMaxTokens: event.target.value ? Number(event.target.value) : null})}/></Field>
+          <LimitField label={t("输入上界（不包含）")} name="contextMaxTokens" minimum={rule.contextMinTokens + 1}
+            value={rule.contextMaxTokens ?? -1}
+            onChange={(value) => setRule({...rule, contextMaxTokens: value === "" ? Number.NaN : Number(value)})}/>
         </div>
       </DetailSection>
       <DetailSection title={t("单价 · {0}", [unit])} icon={<IconChartBar size={20}/>} action={<Button type="button" className={ui.button}

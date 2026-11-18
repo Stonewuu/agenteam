@@ -35,7 +35,7 @@ export const priceMeters: {value: PriceRate["meter"]; label: string}[] = [
 
 export function initialPriceRule(defaultRule = false): PriceRule {
   return {name: defaultRule ? "基础价格" : "", priority: defaultRule ? 0 : 10, defaultRule, contextMinTokens: 0,
-    contextMaxTokens: null, serviceTier: "standard", times: [], dates: [], rates: []};
+    contextMaxTokens: -1, serviceTier: "standard", times: [], dates: [], rates: []};
 }
 
 /** 只移动十进制小数点，切换计价单位时不经过 JavaScript 浮点数。 */

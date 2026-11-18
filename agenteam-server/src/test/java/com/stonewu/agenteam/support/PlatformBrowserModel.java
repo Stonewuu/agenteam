@@ -101,6 +101,16 @@ public final class PlatformBrowserModel implements AutoCloseable {
             var source = sourceCall(input, question, toolResult, lastToolResult);
             if (source != null) {
                 frame(exchange, source, "tool_calls");
+            } else if (selectedTool != null && !toolResult && question.contains("工具分组验收")) {
+                frame(exchange, Map.of("content", "开始整理三份资料。\n\n"), null);
+                frame(exchange, Map.of("reasoning_content", "先核对资料，再逐项记录。"), null);
+                var calls = new ArrayList<Map<String, Object>>();
+                for (int index = 0; index < 3; index++) {
+                    calls.add(Map.of("index", index, "id", "browser-group-" + index, "type", "function",
+                        "function", Map.of("name", selectedTool, "arguments", json.writeValueAsString(
+                            Map.of("text", "工具分组验收第 " + (index + 1) + " 条")))));
+                }
+                frame(exchange, Map.of("tool_calls", calls), "tool_calls");
             } else if (selectedTool != null && !toolResult) {
                 var arguments = writing ? Map.of("text", question.split("\\n\\n本次任务选择的技能", 2)[0]) : Map.of("url", toolsOrigin + (question.contains("大结果") ? "/large" : "/page"));
                 frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "browser-plugin-operation", "type", "function", "function", Map.of("name", selectedTool, "arguments", json.writeValueAsString(arguments))))), "tool_calls");

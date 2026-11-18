@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,7 +59,7 @@ public class LegacyProjectMigration {
             }
             return new Origins(results, inputs);
         }
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         try (var sessions = Files.list(main.getParent())) {
             for (Path session : sessions.toList()) {
                 if (!Files.isDirectory(session, LinkOption.NOFOLLOW_LINKS)) {

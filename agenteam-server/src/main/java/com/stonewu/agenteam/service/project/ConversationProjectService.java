@@ -3,6 +3,7 @@ package com.stonewu.agenteam.service.project;
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
+import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.project.ProjectViewMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.execution.entity.ConversationRecord;
@@ -34,6 +35,7 @@ public class ConversationProjectService {
     private static final ZoneId PROJECT_NAME_ZONE = ZoneId.of("Asia/Shanghai");
     private static final String PROJECT_NAME_CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789";
     private final ConversationMapper conversations;
+    private final RunMapper runs;
     private final ProjectMetadataService projects;
     private final EnterpriseAuthorizationService authorization;
     private final ConversationQueryService queries;
@@ -42,8 +44,9 @@ public class ConversationProjectService {
 
     public ConversationProjectService(ConversationMapper conversations, ProjectMetadataService projects,
                                       EnterpriseAuthorizationService authorization, ConversationQueryService queries,
-                                      Clock clock, ConversationSourcePolicy sources) {
+                                      Clock clock, ConversationSourcePolicy sources, RunMapper runs) {
         this.conversations = conversations;
+        this.runs = runs;
         this.projects = projects;
         this.authorization = authorization;
         this.queries = queries;
@@ -56,7 +59,7 @@ public class ConversationProjectService {
         var row = owned(enterprise, user, conversation, true);
         if (row.projectId() == null) {
             var project = selectedProject == null ? projects.createOwned(enterprise, user, newProjectName(), null,
-                conversation)
+                runs.usesLegacyWorkspace(enterprise, user, conversation) ? conversation : null)
                 : projects.require(enterprise, user, selectedProject);
             conversations.selectProject(row, project.getId(), true, clock.instant());
             row = owned(enterprise, user, conversation, false);
@@ -82,7 +85,8 @@ public class ConversationProjectService {
     @Transactional
     public ProjectView current(AuthContext actor, String conversation) {
         authorization.require(actor, "conversation.view");
-        return ProjectViewMapper.view(ensure(actor.enterpriseId(), actor.userId(), conversation));
+        var row = owned(actor.enterpriseId(), actor.userId(), conversation, false);
+        return row.projectId() == null ? null : ProjectViewMapper.view(projects.require(actor.enterpriseId(), actor.userId(), row.projectId()));
     }
 
     public void authorize(AuthContext actor, String conversation) {

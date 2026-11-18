@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.chat;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -268,11 +270,10 @@ public class ChatConversationService {
     }
 
     private void validateLimits(Map<String, Integer> limits) {
-        Map<String, Integer> maximum = Map.of("maxWorks", 100, "maxHandoffs", 20, "maxRuns", 200, "maxParallel", 4, "deadlineHours", 168,
-            "deadlineMinutes", 10080, "newTasksPerMinute", 20);
+        var fields = Set.of("maxWorks", "maxHandoffs", "maxRuns", "maxParallel", "deadlineHours", "deadlineMinutes", "newTasksPerMinute");
         for (var entry : limits.entrySet()) {
-            if (entry.getKey() == null || !maximum.containsKey(entry.getKey()) || entry.getValue() == null
-                || entry.getValue() < (entry.getKey().equals("maxHandoffs") ? 0 : entry.getKey().equals("deadlineMinutes") ? 10 : 1) || entry.getValue() > maximum.get(entry.getKey())) {
+            if (entry.getKey() == null || !fields.contains(entry.getKey()) || entry.getValue() == null
+                || !LimitValue.validInteger(entry.getValue(), entry.getKey().equals("maxHandoffs") ? 0 : 1)) {
                 throw ApiException.invalidField("limits", Messages.text("error.chat.chatConversationService.validateLimits.1"));
             }
         }

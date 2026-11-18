@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -110,7 +112,7 @@ public class WorkspaceStore {
             WorkspacePaths.requireInside(root, lockFile);
             channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE,
                 LinkOption.NOFOLLOW_LINKS);
-            long deadline = System.nanoTime() + timeout.toNanos();
+            long deadline = ExecutionDeadline.after(timeout);
             while (lock == null) {
                 try {
                     lock = channel.tryLock();
@@ -217,7 +219,7 @@ public class WorkspaceStore {
 
         public Duration remaining() {
             control.requireActive();
-            long nanos = deadline - System.nanoTime();
+            long nanos = ExecutionDeadline.remainingNanos(deadline);
             if (nanos <= 0) {
                 throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "WORKSPACE_TIMEOUT",
                     Messages.text("error.workspace.workspaceStore.remaining.1"));
@@ -264,7 +266,7 @@ public class WorkspaceStore {
                 throw new IllegalStateException(Messages.text("error.workspace.workspaceStore.commit.1"));
             }
             new WorkspaceFilesystem(pending, settings, this::requireActive, true).validate();
-            if (sources.size() > 10000 || inputs.size() > settings.maximumFiles()) {
+            if (sources.size() > 10000 || inputs.size() > settings.fileCountLimit()) {
                 throw WorkspacePaths.capacity();
             }
             requireActive();

@@ -12,6 +12,7 @@ import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.http.entity.PagePosition;
 import com.stonewu.agenteam.model.http.response.PageResponse;
 import com.stonewu.agenteam.model.project.entity.UserWorkspaceRow;
+import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.model.project.entity.WorkspaceProjectRow;
 import com.stonewu.agenteam.model.project.request.CreateProjectInput;
 import com.stonewu.agenteam.model.project.response.ProjectView;
@@ -20,16 +21,23 @@ import com.stonewu.agenteam.service.http.InputValidation;
 import com.stonewu.agenteam.service.http.ListPagination;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
 import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
+import com.stonewu.agenteam.service.workspace.WorkspacePaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -43,15 +51,17 @@ public class ProjectMetadataService {
     private final EnterpriseAuthorizationService authorization;
     private final ListPagination pagination;
     private final Clock clock;
+    private final ProjectWorkspaceLayout layout;
 
     public ProjectMetadataService(UserWorkspaceSqlMapper workspaces, WorkspaceProjectSqlMapper projects,
                                   EnterpriseAuthorizationService authorization, ListPagination pagination,
-                                  Clock clock) {
+                                  Clock clock, ProjectWorkspaceLayout layout) {
         this.workspaces = workspaces;
         this.projects = projects;
         this.authorization = authorization;
         this.pagination = pagination;
         this.clock = clock;
+        this.layout = layout;
     }
 
     public PageResponse<ProjectView> list(AuthContext actor, String query, String cursor, Integer limit) {
@@ -101,6 +111,11 @@ public class ProjectMetadataService {
         return found;
     }
 
+    public List<WorkspaceProjectRow> directoryNames(AuthContext actor) {
+        return projects.selectList(owned(actor.enterpriseId(), actor.userId())
+            .select(WorkspaceProjectRow::getDirectoryPath, WorkspaceProjectRow::getName));
+    }
+
     @Transactional
     public ProjectView create(AuthContext actor, CreateProjectInput input) {
         authorization.lockAndRequire(actor, "agent.run");
@@ -142,11 +157,64 @@ public class ProjectMetadataService {
         row.setName(title);
         row.setDirectoryPath(path);
         row.setDirectoryKey(ProjectPaths.directoryKey(path));
-        row.setLegacyConversationId(legacyConversation);
+        if (legacyConversation != null && !projects.exists(owned(enterprise, user)
+                .eq(WorkspaceProjectRow::getLegacyConversationId, legacyConversation))) {
+            row.setLegacyConversationId(legacyConversation);
+        }
         row.setCreatedAt(clock.instant());
         row.setUpdatedAt(clock.instant());
         projects.insert(row);
+        prepareDirectories(workspace, row);
         return row;
+    }
+
+    /** 旧版本只保存过项目记录时，从环境首次打开项目也能准备文件目录。 */
+    @Transactional
+    public void prepareMissingDirectory(AuthContext actor, String path) {
+        if (!path.startsWith("projects/")) {
+            return;
+        }
+        var workspace = userWorkspace(actor);
+        var project = projects.selectOne(owned(actor.enterpriseId(), actor.userId())
+            .eq(WorkspaceProjectRow::getDirectoryKey, ProjectPaths.directoryKey(path))
+            .isNull(WorkspaceProjectRow::getInitializedAt));
+        if (project != null && project.getDirectoryPath().equals(path)) {
+            prepareDirectories(workspace, project);
+        }
+    }
+
+    public boolean workspaceInitialized(AuthContext actor) {
+        return workspaces.exists(new LambdaQueryWrapper<UserWorkspaceRow>().eq(UserWorkspaceRow::getEnterpriseId, actor.enterpriseId())
+            .eq(UserWorkspaceRow::getUserId, actor.userId()).isNotNull(UserWorkspaceRow::getInitializedAt));
+    }
+
+    private void prepareDirectories(UserWorkspaceRow workspace, WorkspaceProjectRow row) {
+        var location = new ProjectLocation(workspace.getId(), row.getId(), row.getEnterpriseId(), row.getUserId(), row.getDirectoryPath());
+        try {
+            layout.prepareWorkspace(workspace.getId(), false);
+            var changes = new WorkspaceFileChanges(layout, workspace.getId());
+            layout.prepareProjectDirectories(location, changes::created);
+            if (row.getLegacyConversationId() == null) {
+                if (!Files.exists(layout.state(location), LinkOption.NOFOLLOW_LINKS)) {
+                    layout.writeInitialState(location, Set.of(), Set.of());
+                    changes.created(layout.state(location));
+                }
+                boolean registered = Files.exists(layout.registration(location), LinkOption.NOFOLLOW_LINKS);
+                layout.register(location);
+                if (!registered) {
+                    changes.created(layout.registration(location));
+                }
+                initialized(workspace, row);
+            } else {
+                // 旧对话的文件来源在首次使用项目时读取，提前放入的资料继续保留。
+                initializedWorkspace(workspace);
+            }
+            layout.recordStatisticsChange(workspace.getId());
+        } catch (FileAlreadyExistsException conflict) {
+            throw ApiException.invalidField("directory", Messages.text("error.project.directoryOccupied"));
+        } catch (IOException failure) {
+            throw WorkspacePaths.io(failure);
+        }
     }
 
     private void ensureWorkspace(String enterprise, String user) {
@@ -177,7 +245,7 @@ public class ProjectMetadataService {
     public UserWorkspaceRow userWorkspace(AuthContext actor) {
         authorization.lockAndRequire(actor, "agent.run");
         ensureWorkspace(actor.enterpriseId(), actor.userId());
-        return workspace(actor.enterpriseId(), actor.userId(), ProjectPaths.workspaceId(actor.enterpriseId(), actor.userId()));
+        return workspaces.lockOwned(actor.enterpriseId(), actor.userId());
     }
 
     public void initialized(UserWorkspaceRow workspace, WorkspaceProjectRow project) {

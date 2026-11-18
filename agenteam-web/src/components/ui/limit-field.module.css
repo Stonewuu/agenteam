@@ -1,0 +1,42 @@
+.field {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.heading > label:first-child {
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 2px;
+  color: var(--secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.feedback {
+  min-height: 20px;
+}
+
+@media (max-width: 640px) {
+  .heading,
+  .toggle {
+    min-height: 44px;
+  }
+}

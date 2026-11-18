@@ -241,8 +241,8 @@ export function EnvironmentTerminal({base, connected, enabled, connecting, expan
       <div className={styles.host} ref={host} hidden={!connected}/>
       {!connected && <div className={styles.empty}>
         <span className={styles.emptyIcon}><IconTerminal size={34}/></span>
-        <h3>{t("你的工作，从这里开始")}</h3>
-        <p>{t(enabled ? "连接环境，直接输入命令。目录切换和运行结果会保留在当前终端。" : "请联系管理员开启工作环境。")}</p>
+        <h3>{t("你的专属空间")}</h3>
+        {!enabled && <p>{t("请联系管理员开启工作环境。")}</p>}
         <Button className={`${ui.primary} ${styles.connect}`} disabled={!enabled || connecting} onClick={onConnect}><IconPlug size={17}/>{t(connecting ? "正在连接…" : "连接环境")}</Button>
         <div className={styles.shortcuts}><span><kbd>Tab</kbd>{t("补全")}</span><span><kbd><IconArrowUp size={11}/><IconArrowDown size={11}/></kbd>{t("历史命令")}</span><span><kbd>Ctrl C</kbd>{t("中断命令")}</span></div>
       </div>}

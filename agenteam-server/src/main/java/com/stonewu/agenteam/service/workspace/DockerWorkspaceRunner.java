@@ -1,6 +1,9 @@
 package com.stonewu.agenteam.service.workspace;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.stonewu.agenteam.configuration.tool.SandboxRuntimeSettings;
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -84,10 +87,12 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
             throw WorkspacePaths.invalid();
         }
         String scope = Utf8Text.revision("workspace", privateDirectory.toAbsolutePath().normalize().toString());
-        long timeoutNanos = Math.min(timeout.toNanos(), Duration.ofSeconds(settings.timeoutSeconds()).toNanos());
-        long deadline = System.nanoTime() + timeoutNanos;
+        Duration limited = ExecutionLimits.minTimeout(timeout, LimitValue.seconds(settings.timeoutSeconds()));
+        long timeoutNanos = ExecutionDeadline.unlimited(limited) ? Long.MAX_VALUE : limited.toNanos();
+        long deadline = ExecutionDeadline.after(limited);
         // 为冻结进程和取回输出留出时间，命令超时后仍能把实际结果交给助手。
-        long commandDeadline = deadline - Math.min(Duration.ofSeconds(10).toNanos(), timeoutNanos / 2);
+        long commandDeadline = deadline == Long.MAX_VALUE ? deadline
+            : deadline - Math.min(Duration.ofSeconds(10).toNanos(), timeoutNanos / 2);
         docker.removeForWorkspace(scope, remaining(commandDeadline), control);
         control.requireActive();
         String volume = "agenteam-workspace-" + UUID.randomUUID();
@@ -104,10 +109,10 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
         String container = "agenteam-sandbox-" + UUID.randomUUID();
         var flags = new ArrayList<>(
             List.of("--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--init",
-                "--pids-limit=" + settings.processLimit(), "--memory-swap=" + settings.memoryMb() * 1024L * 1024,
-                "--ulimit=fsize=" + settings.fileBytes() + ":" + settings.fileBytes(),
+                "--pids-limit=" + settings.processLimit(),
+                "--ulimit=fsize=" + (LimitValue.unlimited(settings.fileMb()) ? "-1:-1" : settings.fileBytes() + ":" + settings.fileBytes()),
                 "--mount=type=volume,src=" + volume + ",dst=/workspace,volume-nocopy",
-                "--tmpfs=/tmp:rw,nosuid,nodev,size=" + runtime.temporaryMb() + "m,mode=1777",
+                SandboxResourceArguments.temporaryMount(runtime.temporaryMb()),
                 "--label=com.stonewu.agenteam.managed=true",
                 "--label=com.stonewu.agenteam.workspace=" + scope));
         mount(flags, source, "/agenteam-saved");
@@ -134,7 +139,8 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
             Files.writeString(privateDirectory.resolve("sandbox.pending"), scope, StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
             docker.require(List.of("volume", "create", "--driver=local", "--opt=type=tmpfs", "--opt=device=tmpfs",
-                    "--opt=o=rw,nosuid,nodev,size=" + settings.workspaceMb() + "m,uid=65534,gid=65534,mode=0700,nr_inodes=" + settings.maximumFiles() * 4L,
+                    "--opt=o=rw,nosuid,nodev,size=" + (LimitValue.unlimited(settings.workspaceMb()) ? "0" : settings.workspaceMb() + "m")
+                        + ",uid=65534,gid=65534,mode=0700,nr_inodes=" + (LimitValue.unlimited(settings.maximumFiles()) ? 0 : settings.maximumFiles() * 4L),
                     "--label=com.stonewu.agenteam.managed=true", "--label=com.stonewu.agenteam.workspace=" + scope, volume),
                 remaining(commandDeadline), control);
             Files.writeString(scripts.resolve("launch.sh"),
@@ -195,9 +201,9 @@ public class DockerWorkspaceRunner implements SandboxExecutor {
 
     private List<String> startup(String name, String network, int memoryMb, int cpus, List<String> flags) {
         var arguments = new ArrayList<>(List.of("run", "--detach", "--name", name, "--workdir=/workspace",
-            "--network=" + network, "--memory=" + memoryMb * 1024L * 1024,
-            "--memory-swap=" + memoryMb * 1024L * 1024, "--cpus=" + cpus,
+            "--network=" + network,
             "--env=HOME=/tmp", "--env=LANG=C.UTF-8"));
+        SandboxResourceArguments.addCompute(arguments, memoryMb, cpus);
         if (!runtime.cgroupParent().isBlank()) {
             arguments.add("--cgroup-parent=" + runtime.cgroupParent());
         }

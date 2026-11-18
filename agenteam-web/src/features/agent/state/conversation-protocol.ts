@@ -165,7 +165,7 @@ export function validateSnapshot(snapshot: ConversationSnapshot) {
     }
   }
   if (snapshot.queuedMessages !== undefined && (!Array.isArray(snapshot.queuedMessages)
-    || snapshot.queuedMessages.length > 20 || snapshot.queuedMessages.some(item => !item || typeof item.runId !== "string"
+    || snapshot.queuedMessages.length > 1000 || snapshot.queuedMessages.some(item => !item || typeof item.runId !== "string"
       || !Number.isSafeInteger(item.position) || typeof item.text !== "string"))) {
     throw new SnapshotRequired();
   }

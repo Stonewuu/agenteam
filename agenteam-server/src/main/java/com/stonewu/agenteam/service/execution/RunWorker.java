@@ -1,6 +1,9 @@
 package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.configuration.system.RuntimeSettings;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.stonewu.agenteam.mapper.execution.ModelFailureMapper;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
@@ -11,7 +14,6 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.function.IntSupplier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,7 +39,7 @@ public class RunWorker implements AutoCloseable {
     private final String owner = "worker-" + UUID.randomUUID();
     private final Map<String, Active> active = new ConcurrentHashMap<>();
     private final ExecutorService executor;
-    private final int maximumConcurrent;
+    private final IntSupplier maximumConcurrent;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final RunLifecycleService lifecycle;
     private final ExecutionTaskFactory tasks;
@@ -54,19 +57,26 @@ public class RunWorker implements AutoCloseable {
     @Autowired
     public RunWorker(RunLifecycleService lifecycle, ExecutionTaskFactory tasks,
                      ProjectSandboxUsageService sandboxUsage,
-                     @Value("${execution.worker.maximum-concurrent:10}") int maximumConcurrent) {
-        if (maximumConcurrent < 1 || maximumConcurrent > 32) {
+                     RuntimeSettings settings) {
+        this(lifecycle, tasks, sandboxUsage, () -> settings.value(RuntimeSetting.WORKER_CONCURRENT));
+    }
+
+    public RunWorker(RunLifecycleService lifecycle, ExecutionTaskFactory tasks,
+                     ProjectSandboxUsageService sandboxUsage, int maximumConcurrent) {
+        this(lifecycle, tasks, sandboxUsage, () -> maximumConcurrent);
+    }
+
+    public RunWorker(RunLifecycleService lifecycle, ExecutionTaskFactory tasks,
+                     ProjectSandboxUsageService sandboxUsage, IntSupplier maximumConcurrent) {
+        int maximum = maximumConcurrent.getAsInt();
+        if (!LimitValue.validInteger(maximum, 1)) {
             throw new IllegalArgumentException(Messages.text("error.execution.runWorker.init.1"));
         }
         this.lifecycle = lifecycle;
         this.tasks = tasks;
         this.sandboxUsage = sandboxUsage;
         this.maximumConcurrent = maximumConcurrent;
-        this.executor = Executors.newFixedThreadPool(maximumConcurrent, task -> {
-            Thread thread = new Thread(task, "execution-worker");
-            thread.setDaemon(true);
-            return thread;
-        });
+        this.executor = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("execution-worker-", 0).factory());
     }
 
     private static final class Active {
@@ -117,7 +127,14 @@ public class RunWorker implements AutoCloseable {
             for (var question : lifecycle.expiredQuestions()) {
                 lifecycle.expireQuestion(question);
             }
-            while (!closed.get() && active.size() < maximumConcurrent) {
+            int maximum = maximumConcurrent.getAsInt();
+            if (!LimitValue.validInteger(maximum, 1)) {
+                throw new IllegalArgumentException(Messages.text("error.execution.runWorker.init.1"));
+            }
+            // 分轮领取，让持续到来的任务不会阻塞已有任务的租约续期；不限制执行中的总数。
+            long dispatchedAt = System.nanoTime();
+            while (!closed.get() && !LimitValue.reached(active.size(), maximum)
+                && System.nanoTime() - dispatchedAt < 500_000_000L) {
                 var claimed = lifecycle.claim(owner);
                 if (claimed.isEmpty()) {
                     break;

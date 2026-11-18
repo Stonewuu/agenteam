@@ -3,9 +3,8 @@
 import {useState} from "react";
 import {Button} from "@/components/ui/button";
 import {DetailSection} from "@/components/ui/detail-section";
-import {Field} from "@/components/ui/field";
+import {LimitField as LimitInput} from "@/components/ui/limit-field";
 import {IconDatabase, IconFileText, IconSettings} from "@/components/ui/icons";
-import {Input} from "@/components/ui/input";
 import {PageHeader} from "@/components/ui/page-header";
 import {QueryState} from "@/components/ui/query-state";
 import {SystemManagementGate} from "@/features/auth/components/system-management-gate";
@@ -63,13 +62,11 @@ function WorkspaceLimitsForm({initial}: {initial: WorkspaceLimits}) {
   }
 
   function field(name: LimitField, label: string, min: number, hint?: string) {
-    return <Field label={label} hint={hint} error={action.fieldErrors[name]?.join(" ")} reserveFeedbackSpace>
-      <Input className={ui.input} name={name} type="number" min={min} step={1} required
-             value={draft[name]} disabled={action.busy} onChange={(event) => {
-               setDraft((current) => ({...current, [name]: event.target.value}));
-               action.clearFieldError(name);
-             }}/>
-    </Field>;
+    return <LimitInput label={label} hint={hint} error={action.fieldErrors[name]?.join(" ")}
+      name={name} minimum={min} value={draft[name]} disabled={action.busy} onChange={(value) => {
+        setDraft((current) => ({...current, [name]: value}));
+        action.clearFieldError(name);
+      }}/>;
   }
 
   return <form className={styles.form} onSubmit={(event) => {
@@ -88,7 +85,7 @@ function WorkspaceLimitsForm({initial}: {initial: WorkspaceLimits}) {
     <DetailSection icon={<IconFileText size={21}/>} title={t("工作文件")} level="h2">
       <div className={styles.fields}>
         {field("workspaceMb", t("工作空间容量（MB）"), 16)}
-        {field("fileMb", t("单文件大小（MB）"), 1, t("不能超过工作空间容量。"))}
+        {field("fileMb", t("单文件大小（MB）"), 1)}
         {field("maximumFiles", t("文件数量上限"), 10)}
       </div>
       <p className={styles.note}>{t("单文件大小修改后，已启动的环境需在「我的环境」停止并重新连接。")}</p>

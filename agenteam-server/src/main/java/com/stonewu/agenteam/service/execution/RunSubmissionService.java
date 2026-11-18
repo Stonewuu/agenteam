@@ -1,6 +1,9 @@
 package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.configuration.system.RuntimeSettings;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
@@ -69,6 +72,7 @@ public class RunSubmissionService {
     private final CollaborationSubmissionRecords collaboration;
     private final CollaborationSourceAccess collaborationSources;
     private final ConversationTitleService titles;
+    private final RuntimeSettings settings;
 
     public RunSubmissionService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                 RunJobMapper jobs,
@@ -78,7 +82,8 @@ public class RunSubmissionService {
                                 EnterpriseMapper enterprises, WorkflowGraphValidator workflowGraphs,
                                 WorkflowControlNodes workflowInputs, WorkflowValues workflowValues,
                                 ConversationProjectService projects, CollaborationSubmissionRecords collaboration, CollaborationSourceAccess collaborationSources,
-                                ConversationTitleService titles) {
+                                ConversationTitleService titles, RuntimeSettings settings) {
+        this.settings = settings;
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
@@ -144,7 +149,7 @@ public class RunSubmissionService {
             if (!ConversationRunQueue.supported(active) || !List.of("running", "queued", "waiting_approval").contains(active.status())) {
                 throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY", Messages.text("error.execution.runSubmissionService.send.2"));
             }
-            if (runs.waitingCount(actor.enterpriseId(), id) >= 20) {
+            if (LimitValue.reached(runs.waitingCount(actor.enterpriseId(), id), settings.value(RuntimeSetting.CONVERSATION_QUEUED_MESSAGES))) {
                 throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_QUEUE_FULL", Messages.text("error.execution.runSubmissionService.send.3"));
             }
             var prepared = prepare(actor, id, selected, input, null, true);
@@ -290,8 +295,8 @@ public class RunSubmissionService {
     private PreparedSubmission prepare(AuthContext actor, String conversation,
                                        ExecutionConfigurationService.Selection selected, MessageInput input,
                                        String retryOf, boolean waiting) {
-        if (!waiting && (runs.activeCount(actor.enterpriseId(), null) >= 20 || runs.activeCount(actor.enterpriseId(),
-            actor.userId()) >= 3)) {
+        if (!waiting && (LimitValue.reached(runs.activeCount(actor.enterpriseId(), null), settings.value(RuntimeSetting.ENTERPRISE_ACTIVE_RUNS))
+            || LimitValue.reached(runs.activeCount(actor.enterpriseId(), actor.userId()), settings.value(RuntimeSetting.USER_ACTIVE_RUNS)))) {
             throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT",
                 Messages.text("error.execution.runSubmissionService.prepare.1"));
         }

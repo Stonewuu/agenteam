@@ -11,7 +11,7 @@ import {LoadingTransition} from "@/components/ui/loading-transition";
 import {errorMessage, reportRequestFailure} from "@/lib/http/api-client";
 import {readToolContentPreview} from "../api/tool-content";
 import {selectToolCallDetails, type ToolDetailField} from "../lib/tool-call-details";
-import {isPayloadRecord, parseToolPayload} from "../lib/tool-payload-format";
+import {isToolPayloadPreview} from "../lib/tool-payload-format";
 import type {ToolContentSource, ToolContentWindow, ToolReadingPosition} from "../types/tool-content";
 import {ToolPayloadContent, useRawToolPayload} from "./tool-call-presentation";
 import {ToolContentBoundary} from "./tool-content-boundary";
@@ -40,13 +40,15 @@ export function ToolCallDetails(props: Props) {
 
 function useToolCallDocument(value: string, source: ToolContentSource | undefined, raw: boolean) {
   const url = source?.url, part = source?.part, revision = source?.revision, readLimit = source?.readLimit;
-  const stableSource = useMemo(() => url && part && revision !== undefined ? {
+  const preview = useMemo(() => isToolPayloadPreview(value), [value]);
+  // 会话已携带完整脱敏内容时直接显示和复制，仅为截断预览补读详情。
+  const stableSource = useMemo(() => preview && url && part && revision !== undefined ? {
       url,
       part,
       revision,
       readLimit
     } : undefined,
-    [url, part, revision, readLimit]);
+    [preview, url, part, revision, readLimit]);
   const key = JSON.stringify([value, stableSource, raw]);
   const [state, setState] = useState<{ key: string; document?: ToolContentWindow; error?: string } | null>(null);
   const [retry, setRetry] = useState(0);
@@ -172,8 +174,7 @@ function ReadError({title, data}: { title: string; data: DocumentData }) {
 function DocumentContent({title, data, raw = false}: { title: string; data: DocumentData; raw?: boolean }) {
   const uiText = useT();
   const position = useRef<ToolReadingPosition>({offset: 0, top: 0, left: 0});
-  const parsed = parseToolPayload(data.value);
-  const preview = !data.source && isPayloadRecord(parsed) && parsed.truncated === true;
+  const preview = !data.source && isToolPayloadPreview(data.value);
   return <section className={styles.document}>
     <header className={payloadStyles.payloadHeading}><h5>{title}</h5><ToolPayloadCopyButton title={title}
                                                                                             value={data.value}

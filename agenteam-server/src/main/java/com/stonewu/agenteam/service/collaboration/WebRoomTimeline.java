@@ -162,7 +162,7 @@ public class WebRoomTimeline {
 
     /** 同一讨论中其他岗位已公开的对话正文；单独开启新任务后使用新的讨论起点。 */
     public Page<CollaborationRoomEntryRow> otherMessages(CollaborationTaskRow task, int limit) {
-        return entries.selectJoinPage(new Page<CollaborationRoomEntryRow>(1, limit, true), CollaborationRoomEntryRow.class,
+        return entries.selectJoinPage(new Page<CollaborationRoomEntryRow>(1, limit == -1 ? Integer.MAX_VALUE : limit, true), CollaborationRoomEntryRow.class,
             new MPJLambdaWrapper<CollaborationRoomEntryRow>().selectAll(CollaborationRoomEntryRow.class)
                 .innerJoin(CollaborationTaskRow.class, on -> on.eq(CollaborationTaskRow::getEnterpriseId, CollaborationRoomEntryRow::getEnterpriseId)
                     .eq(CollaborationTaskRow::getWebRoomId, CollaborationRoomEntryRow::getRoomId).eq(CollaborationTaskRow::getId, CollaborationRoomEntryRow::getTaskId))

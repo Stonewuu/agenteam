@@ -1,5 +1,11 @@
 package com.stonewu.agenteam.service.sandbox;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
+
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,7 +77,7 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
         String id = UUID.randomUUID().toString();
         URI address = endpoint.resolve("executions/" + id);
         Path transfer = null;
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         try {
             WorkspacePaths.requireInside(privateDirectory, source);
             WorkspacePaths.requireInside(privateDirectory, destination);
@@ -79,17 +85,22 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
             transfer = Files.createTempFile(privateDirectory, "sandbox-transfer-", ".zip");
             try (var output = Files.newOutputStream(transfer)) {
                 archives.write(output, new SandboxExecutionRequest(callId, command, workingDirectory,
-                        Math.min(timeout.toMillis(), settings.timeoutSeconds() * 1000L), settings.network()), source,
+                        ExecutionDeadline.milliseconds(ExecutionLimits.minTimeout(remaining(deadline), LimitValue.seconds(settings.timeoutSeconds()))), settings.network()), source,
                     Set.of("inputs", "tool-results", "work", "outputs"), control);
             }
-            var request = request(address).timeout(remaining(deadline)).header("Content-Type", "application/zip")
-                .POST(HttpRequest.BodyPublishers.ofFile(transfer)).build();
+            var builder = request(address).header("Content-Type", "application/zip")
+                .POST(HttpRequest.BodyPublishers.ofFile(transfer));
+            if (deadline != Long.MAX_VALUE) {
+                builder.timeout(remaining(deadline));
+            }
+            var request = builder.build();
             var future = client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
             control.track(() -> {
                 future.cancel(true);
                 cancel(address, id);
             });
-            var response = future.get(remaining(deadline).toMillis(), TimeUnit.MILLISECONDS);
+            var response = deadline == Long.MAX_VALUE ? future.get()
+                : future.get(Math.max(1, remaining(deadline).toMillis()), TimeUnit.MILLISECONDS);
             try (var body = control.track(response.body())) {
                 if (response.statusCode() != 200) {
                     throw new ApiException(
@@ -138,7 +149,7 @@ public class RemoteSandboxExecutor implements SandboxExecutor {
     }
 
     private Duration remaining(long deadline) {
-        long remaining = deadline - System.nanoTime();
+        long remaining = ExecutionDeadline.remainingNanos(deadline);
         if (remaining <= 0) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT, "SANDBOX_TIMEOUT", Messages.text("error.sandbox.remoteSandboxExecutor.remaining.1"));
         }

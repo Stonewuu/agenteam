@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.UserWorkspaceSettings;
@@ -49,7 +51,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
     public Result run(List<String> arguments, Duration timeout, ToolCallControl control) {
         var command = new ArrayList<>(List.of("docker"));
         command.addAll(arguments);
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         Process process = null;
         var threads = Executors.newVirtualThreadPerTaskExecutor();
         try {
@@ -115,7 +117,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
 
     public void remove(String container, Duration timeout) {
         requireContainer(container);
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         var result = run(List.of("rm", "--force", container), remaining(deadline));
         if (result.exitCode() != 0 && result.output().contains("already in progress")) {
             while (true) {
@@ -146,7 +148,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
         if (workspaceId == null || !workspaceId.matches("[0-9a-f]{64}")) {
             throw WorkspacePaths.invalid();
         }
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         String storage = userWorkspaces.hostPath(Path.of(userWorkspaces.root()).resolve(workspaceId).resolve("files"));
         String id = UserContainerOwnership.ownedId(this, storage, remaining(deadline), null);
         if (id != null) {
@@ -164,7 +166,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
         if (!scope.matches("[0-9a-f]{64}")) {
             throw WorkspacePaths.invalid();
         }
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         var result = run(List.of("ps", "-aq", "--filter", "label=com.stonewu.agenteam.workspace=" + scope),
             remaining(deadline), control);
         if (result.exitCode() != 0) {
@@ -219,7 +221,7 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
             throw WorkspacePaths.invalid();
         }
         Process process = null;
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         var threads = Executors.newVirtualThreadPerTaskExecutor();
         try {
             control.requireActive();
@@ -297,6 +299,9 @@ public class DockerWorkspaceCommands implements SandboxContainerCleanup {
     }
 
     public static Duration remaining(long deadline) {
+        if (deadline == Long.MAX_VALUE) {
+            return ExecutionDeadline.NO_TIMEOUT;
+        }
         long nanos = deadline - System.nanoTime();
         if (nanos <= 0) {
             throw timedOut(new TimeoutException(Messages.text("error.workspace.dockerWorkspaceCommands.remaining.1")));

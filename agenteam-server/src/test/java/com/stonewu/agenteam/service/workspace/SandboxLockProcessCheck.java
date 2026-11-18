@@ -16,7 +16,7 @@ public final class SandboxLockProcessCheck {
 
     public static void main(String[] arguments) throws Exception {
         Path directory = Path.of(arguments[0]);
-        var capacity = new SandboxCapacity(2, directory.toString());
+        var capacity = new SandboxCapacity(1, directory.toString());
         try (var control = new ToolCallControl(() -> {
         })) {
             if (arguments.length > 1) {
@@ -30,7 +30,7 @@ public final class SandboxLockProcessCheck {
                 return;
             }
             try (var permit = capacity.acquire(Duration.ofSeconds(5), control)) {
-                requireBlocked(new SandboxCapacity(2, directory.toString()), control);
+                requireBlocked(new SandboxCapacity(1, directory.toString()), control);
                 // 不能仅检查 FileLock.isValid；Linux 中句柄仍有效时，系统锁也可能已被其他句柄关闭。
                 probe(directory, "blocked");
             }

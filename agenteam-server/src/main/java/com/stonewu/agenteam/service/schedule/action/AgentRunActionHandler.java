@@ -1,6 +1,9 @@
 package com.stonewu.agenteam.service.schedule.action;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.configuration.system.RuntimeSettings;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,9 +44,12 @@ public class AgentRunActionHandler implements ScheduleActionHandler {
     private final RunMapper runs;
     private final ChannelPayloadCodec payloads;
     private final ObjectMapper json;
+    private final RuntimeSettings settings;
 
     public AgentRunActionHandler(SchedulePolicy policy, RunSubmissionService submission, ObjectProvider<RunLifecycleService> lifecycle,
-                                  RunMapper runs, ChannelPayloadCodec payloads, ObjectMapper json, AgentHireMapper hires) {
+                                  RunMapper runs, ChannelPayloadCodec payloads, ObjectMapper json, AgentHireMapper hires,
+                                  RuntimeSettings settings) {
+        this.settings = settings;
         this.policy = policy;
         this.submission = submission;
         this.lifecycle = lifecycle;
@@ -124,7 +130,8 @@ public class AgentRunActionHandler implements ScheduleActionHandler {
         policy.run(actor);
         var selected = policy.select(actor, snapshot.hireId(), snapshot.agentVersionId());
         var result = json.createObjectNode().put("prepared", true);
-        if (runs.activeCount(actor.enterpriseId(), null) >= 20 || runs.activeCount(actor.enterpriseId(), actor.userId()) >= 3) {
+        if (LimitValue.reached(runs.activeCount(actor.enterpriseId(), null), settings.value(RuntimeSetting.ENTERPRISE_ACTIVE_RUNS))
+            || LimitValue.reached(runs.activeCount(actor.enterpriseId(), actor.userId()), settings.value(RuntimeSetting.USER_ACTIVE_RUNS))) {
             return new ScheduleActionSubmission("blocked", "CONCURRENCY_LIMIT", null, null, result);
         }
         var accepted = submission.scheduled(actor, selected, snapshot.inputText(), occurrence.getScheduleId(), occurrence.getId(),

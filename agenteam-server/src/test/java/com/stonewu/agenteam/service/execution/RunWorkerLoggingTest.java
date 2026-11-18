@@ -13,8 +13,11 @@ import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import reactor.core.publisher.Sinks;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -23,6 +26,95 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(OutputCaptureExtension.class)
 class RunWorkerLoggingTest {
+    @Test
+    void largeAndUnlimitedConcurrencyCanStartMoreThanThirtyTwoTasks() throws Exception {
+        for (int limit : new int[]{1000, -1}) {
+            var lifecycle = mock(RunLifecycleService.class);
+            var tasks = mock(ExecutionTaskFactory.class);
+            var leases = IntStream.range(0, 40).mapToObj(index -> {
+                var lease = mock(JobLease.class);
+                when(lease.id()).thenReturn("job-" + index);
+                return lease;
+            }).toList();
+            var next = new AtomicInteger();
+            when(lifecycle.claim(anyString())).thenAnswer(ignored -> {
+                int index = next.getAndIncrement();
+                return index < leases.size() ? Optional.of(leases.get(index)) : Optional.empty();
+            });
+            var run = mock(RunRecord.class);
+            var task = mock(ExecutionTask.class);
+            var started = new CountDownLatch(leases.size());
+            when(lifecycle.start(any(JobLease.class))).thenReturn(Optional.of(run));
+            when(tasks.create(eq(run), any(JobLease.class))).thenReturn(task);
+            when(task.completion()).thenReturn(Mono.<Void>never().doOnSubscribe(ignored -> started.countDown()));
+            try (var worker = new RunWorker(lifecycle, tasks, null, limit)) {
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (started.getCount() != 0 && System.nanoTime() < deadline) {
+                    worker.poll();
+                    started.await(20, TimeUnit.MILLISECONDS);
+                }
+                assertTrue(started.getCount() == 0);
+                verify(task, never()).cancel();
+            }
+        }
+    }
+
+    @Test
+    void changingConcurrencyStartsMoreWorkAndDrainsWithoutCancellingActiveTasks() throws Exception {
+        var lifecycle = mock(RunLifecycleService.class);
+        var tasks = mock(ExecutionTaskFactory.class);
+        var maximum = new AtomicInteger(1);
+        var first = mock(JobLease.class);
+        var second = mock(JobLease.class);
+        var third = mock(JobLease.class);
+        when(first.id()).thenReturn("first");
+        when(second.id()).thenReturn("second");
+        when(third.id()).thenReturn("third");
+        var run = mock(RunRecord.class);
+        when(lifecycle.claim(anyString())).thenReturn(Optional.of(first), Optional.of(second), Optional.of(third), Optional.empty());
+        var firstTask = mock(ExecutionTask.class);
+        var secondTask = mock(ExecutionTask.class);
+        var thirdTask = mock(ExecutionTask.class);
+        var firstDone = Sinks.<Void>empty();
+        var secondDone = Sinks.<Void>empty();
+        var firstStarted = new CountDownLatch(1);
+        var secondStarted = new CountDownLatch(1);
+        var thirdStarted = new CountDownLatch(1);
+        when(lifecycle.start(first)).thenReturn(Optional.of(run));
+        when(lifecycle.start(second)).thenReturn(Optional.of(run));
+        when(lifecycle.start(third)).thenReturn(Optional.of(run));
+        when(tasks.create(run, first)).thenReturn(firstTask);
+        when(tasks.create(run, second)).thenReturn(secondTask);
+        when(tasks.create(run, third)).thenReturn(thirdTask);
+        when(firstTask.completion()).thenReturn(firstDone.asMono().doOnSubscribe(ignored -> firstStarted.countDown()));
+        when(secondTask.completion()).thenReturn(secondDone.asMono().doOnSubscribe(ignored -> secondStarted.countDown()));
+        when(thirdTask.completion()).thenReturn(Mono.<Void>empty().doOnSubscribe(ignored -> thirdStarted.countDown()));
+        try (var worker = new RunWorker(lifecycle, tasks, null, maximum::get)) {
+            worker.poll();
+            assertTrue(firstStarted.await(3, TimeUnit.SECONDS));
+            verify(lifecycle, times(1)).claim(anyString());
+            maximum.set(2);
+            worker.poll();
+            assertTrue(secondStarted.await(3, TimeUnit.SECONDS));
+            maximum.set(1);
+            firstDone.tryEmitEmpty();
+            for (int i = 0; i < 10; i++) {
+                worker.poll();
+                assertTrue(thirdStarted.getCount() == 1);
+                TimeUnit.MILLISECONDS.sleep(10);
+            }
+            verify(secondTask, never()).cancel();
+            verify(lifecycle, times(2)).claim(anyString());
+            secondDone.tryEmitEmpty();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (thirdStarted.getCount() != 0 && System.nanoTime() < deadline) {
+                worker.poll();
+                thirdStarted.await(10, TimeUnit.MILLISECONDS);
+            }
+            assertTrue(thirdStarted.getCount() == 0);
+        }
+    }
+
     @Test
     void cancellationAndCleanupFailuresStillEndTheRunAndReleaseTheWorkerSlot() throws Exception {
         var lifecycle = mock(RunLifecycleService.class);

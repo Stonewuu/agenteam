@@ -19,7 +19,7 @@ export function PriceConfigurationDetails({value}: {value: PriceConfiguration}) 
       <div className={styles.ruleHeading}><strong className={styles.titleWithIcon}><IconReceipt size={18}/>{rule.name}</strong><span className="badge neutral">
         {rule.defaultRule ? t("基础价格") : t("优先级 {0}", [rule.priority])}</span></div>
       {!rule.defaultRule && <p className={styles.hint}>{t("输入从 {0} 起，上界 {1}（不包含）", [rule.contextMinTokens.toLocaleString(t.formatLocale),
-        rule.contextMaxTokens === null ? t("无上限") : rule.contextMaxTokens.toLocaleString(t.formatLocale)])}<br/>
+        (rule.contextMaxTokens === null || rule.contextMaxTokens === -1) ? t("无上限") : rule.contextMaxTokens.toLocaleString(t.formatLocale)])}<br/>
         {t("服务档位：{0}", [rule.serviceTier === "standard" ? t("标准服务") : rule.serviceTier])}</p>}
       <table className={styles.table}><thead><tr><th>{t("计量项")}</th><th>{t("单价")}</th></tr></thead><tbody>
         {rule.rates.map((rate) => <tr key={`${rate.meter}-${rate.cacheTtlSeconds}`}><td>{t(priceMeters.find((item) => item.value === rate.meter)?.label ?? rate.meter)}

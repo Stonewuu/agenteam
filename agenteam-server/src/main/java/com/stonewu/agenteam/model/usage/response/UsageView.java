@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.model.usage.response;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 import java.util.List;
 
 /**
@@ -8,5 +9,9 @@ import java.util.List;
 public record UsageView(String periodStart, String periodEnd, String timezone, List<Item> items) {
     public record Item(String policyId, String subjectType, String subjectName, long usedCount, long reservedCount,
                        Long monthlyLimit, Long remainingCount) {
+        public Item {
+            monthlyLimit = LimitValue.legacyNull(monthlyLimit);
+            remainingCount = LimitValue.legacyNull(remainingCount);
+        }
     }
 }

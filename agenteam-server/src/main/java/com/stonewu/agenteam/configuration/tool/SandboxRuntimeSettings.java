@@ -1,6 +1,9 @@
 package com.stonewu.agenteam.configuration.tool;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.service.system.RuntimeSettingsStore;
+import com.stonewu.agenteam.model.system.entity.RuntimeSetting;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,11 +12,11 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 
 /**
- * 执行节点的限制和路径映射只接受部署配置，不接受模型参数。
+ * 执行节点的资源限制可由管理员调整，路径映射继续使用部署配置。
  */
 @Component
 public record SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, String localRoot, String hostRoot,
-                                     String capacityRoot, String cgroupParent) {
+                                     String capacityRoot, String cgroupParent, RuntimeSettingsStore runtimeSettings) {
 
     public SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, String localRoot, String hostRoot) {
         this(temporaryMb, maximumConcurrent, localRoot, hostRoot, "", "");
@@ -25,8 +28,8 @@ public record SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, Str
                                   @Value("${execution.sandbox.local-mount-root:}") String localRoot,
                                   @Value("${execution.sandbox.host-mount-root:}") String hostRoot,
                                   @Value("${execution.sandbox.capacity-root:}") String capacityRoot,
-                                  @Value("${execution.sandbox.cgroup-parent:}") String cgroupParent) {
-        if (temporaryMb < 16 || temporaryMb > 2048 || maximumConcurrent < 1 || maximumConcurrent > 64 || localRoot == null || hostRoot == null || localRoot.isBlank() != hostRoot.isBlank() || localRoot.contains(
+                                  @Value("${execution.sandbox.cgroup-parent:}") String cgroupParent, RuntimeSettingsStore runtimeSettings) {
+        if (!LimitValue.validInteger(temporaryMb, 16) || !LimitValue.validInteger(maximumConcurrent, 1) || localRoot == null || hostRoot == null || localRoot.isBlank() != hostRoot.isBlank() || localRoot.contains(
             ",") || hostRoot.contains(",")) {
             throw new IllegalArgumentException(Messages.text("error.tool.sandboxRuntimeSettings.init.1"));
         }
@@ -40,6 +43,7 @@ public record SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, Str
         this.hostRoot = hostRoot;
         this.capacityRoot = capacityRoot;
         this.cgroupParent = cgroupParent;
+        this.runtimeSettings = runtimeSettings;
     }
 
     public String hostPath(Path path) {
@@ -54,4 +58,23 @@ public record SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, Str
         String relative = base.relativize(absolute).toString().replace('\\', '/');
         return hostRoot.replace('\\', '/').replaceAll("/+$", "") + (relative.isEmpty() ? "" : "/" + relative);
     }
+
+    public SandboxRuntimeSettings(int temporaryMb, int maximumConcurrent, String localRoot, String hostRoot,
+                                  String capacityRoot, String cgroupParent) {
+        this(temporaryMb, maximumConcurrent, localRoot, hostRoot, capacityRoot, cgroupParent, null);
+    }
+
+    public int temporaryMb() {
+        return runtimeSettings == null ? temporaryMb : Math.toIntExact(runtimeSettings.value(RuntimeSetting.SANDBOX_TEMPORARY_MB, temporaryMb));
+    }
+
+    public int requestCapacity() {
+        int concurrent = maximumConcurrent();
+        return LimitValue.unlimited(concurrent) ? LimitValue.UNLIMITED : (int) Math.min(Integer.MAX_VALUE, concurrent * 2L);
+    }
+
+    public int maximumConcurrent() {
+        return runtimeSettings == null ? maximumConcurrent : Math.toIntExact(runtimeSettings.value(RuntimeSetting.SANDBOX_CONCURRENT, maximumConcurrent));
+    }
+
 }

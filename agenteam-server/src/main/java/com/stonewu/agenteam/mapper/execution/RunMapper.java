@@ -4,6 +4,7 @@ import com.stonewu.agenteam.service.i18n.Messages;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -142,6 +143,15 @@ public class RunMapper {
 
     public List<RunRecord> forConversation(String enterprise, String conversation) {
         return statements.forConversationAgentRun(enterprise, conversation).stream().map(this::map).toList();
+    }
+
+    /** 只有使用过旧工作目录的对话才需要迁移。已经用过项目的对话再次新建时从空目录开始。 */
+    public boolean usesLegacyWorkspace(String enterprise, String user, String conversation) {
+        var criteria = new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getExecutionConfigJson)
+            .eq(AgentRunRow::getEnterpriseId, enterprise).eq(AgentRunRow::getUserId, user)
+            .eq(AgentRunRow::getConversationId, conversation).orderByDesc(AgentRunRow::getCreatedAt, AgentRunRow::getId);
+        var rows = statements.selectPage(new Page<AgentRunRow>(1, 1, false), criteria).getRecords();
+        return !rows.isEmpty() && !json.tree(rows.getFirst().getExecutionConfigJson()).hasNonNull("workspaceProjectId");
     }
 
     /** 恢复一页历史时批量读取原资料说明，避免按每条用户消息重复查询。 */

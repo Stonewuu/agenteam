@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration.DateCondition;
@@ -68,7 +70,7 @@ final class ModelPriceCoverage {
         var dates = new HashSet<LocalDate>();
         for (var rule : rules) {
             bounds.add(rule.contextMinTokens());
-            if (rule.contextMaxTokens() != null && rule.contextMaxTokens() <= 100000000000L) {
+            if (!LimitValue.unlimited(rule.contextMaxTokens()) && rule.contextMaxTokens() <= 100000000000L) {
                 bounds.add(rule.contextMaxTokens());
             }
             rule.dates().stream().map(DateCondition::localDate).forEach(dates::add);
@@ -126,6 +128,6 @@ final class ModelPriceCoverage {
     }
 
     private static long upper(Rule rule) {
-        return rule.contextMaxTokens() == null ? Long.MAX_VALUE : rule.contextMaxTokens();
+        return LimitValue.unlimited(rule.contextMaxTokens()) ? Long.MAX_VALUE : rule.contextMaxTokens();
     }
 }

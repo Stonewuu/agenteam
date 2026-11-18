@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.collaboration;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -104,10 +106,10 @@ public class CollaborationTaskCreationService {
             return existing;
         }
         var now = clock.instant();
-        int perMinute = Math.max(1, Math.min(20, json.read(group.getPolicyJson()).path("newTasksPerMinute").asInt(5)));
-        if (tasks.selectCount(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
+        int perMinute = json.read(group.getPolicyJson()).path("newTasksPerMinute").asInt(5);
+        if (LimitValue.reached(tasks.selectCount(new LambdaQueryWrapper<CollaborationTaskRow>().eq(CollaborationTaskRow::getEnterpriseId, actor.enterpriseId())
             .eq(CollaborationTaskRow::getConversationId, group.getId()).eq(CollaborationTaskRow::getInitiatorUserId, actor.userId())
-            .gt(CollaborationTaskRow::getCreatedAt, now.minusSeconds(60))) >= perMinute) {
+            .gt(CollaborationTaskRow::getCreatedAt, now.minusSeconds(60))), perMinute)) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "COLLABORATION_NEW_TASK_RATE_LIMITED", Messages.text("error.collaboration.collaborationTaskCreationService.create.2"));
         }
         var roster = new ArrayList<CollaborationParticipantRow>();
@@ -181,7 +183,8 @@ public class CollaborationTaskCreationService {
         task.setPolicySnapshot(json.write(json.tree(executionPolicy)));
         task.setWaivedRequestedRolesJson("[]");
         task.setNextSequence(1L);
-        task.setDeadlineAt(now.plusSeconds(60L * policy.get("deadlineMinutes")));
+        long minutes = policy.get("deadlineMinutes");
+        task.setDeadlineAt(LimitValue.deadline(now, LimitValue.unlimited(minutes) ? -1 : 60L * minutes));
         task.setWorkCount(1);
         task.setHandoffCount(0);
         task.setRunCount(0);
@@ -236,14 +239,14 @@ public class CollaborationTaskCreationService {
         return role;
     }
 
-    private Map<String, Integer> limits(JsonNode input) {
+    private Map<String, Long> limits(JsonNode input) {
         var defaults = Map.of("maxWorks", configuration.getMaxWorks(), "maxHandoffs", configuration.getMaxHandoffs(),
             "maxRuns", configuration.getMaxRuns(), "maxParallel", configuration.getMaxParallel(), "deadlineHours", configuration.getDeadlineHours());
-        var result = new LinkedHashMap<String, Integer>();
-        var maximum = Map.of("maxWorks", 100, "maxHandoffs", 20, "maxRuns", 200, "maxParallel", 4, "deadlineHours", 168);
-        defaults.forEach((key, fallback) -> result.put(key, Math.max(key.equals("maxHandoffs") ? 0 : 1, Math.min(maximum.get(key), input.path(key).asInt(fallback)))));
-        result.put("deadlineMinutes", Math.max(10, Math.min(10080, input.path("deadlineMinutes").asInt(result.get("deadlineHours") * 60))));
-        result.put("newTasksPerMinute", Math.max(1, Math.min(20, input.path("newTasksPerMinute").asInt(5))));
+        var result = new LinkedHashMap<String, Long>();
+        defaults.forEach((key, fallback) -> result.put(key, input.path(key).asLong(fallback)));
+        long hours = result.get("deadlineHours");
+        result.put("deadlineMinutes", input.path("deadlineMinutes").asLong(LimitValue.unlimited(hours) ? -1 : hours * 60L));
+        result.put("newTasksPerMinute", input.path("newTasksPerMinute").asLong(5));
         return result;
     }
 }

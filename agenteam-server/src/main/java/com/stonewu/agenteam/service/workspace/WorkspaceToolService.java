@@ -1,5 +1,11 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
+import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
+
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -172,7 +178,8 @@ public class WorkspaceToolService {
                 }
             } else if (name.equals("execute")) {
                 long seconds = arguments.path("timeout_seconds").asLong(settings.timeoutSeconds());
-                if (seconds < 1 || seconds > settings.timeoutSeconds()) {
+                if (!LimitValue.validInteger(seconds, 1) || (!LimitValue.unlimited(settings.timeoutSeconds())
+                    && (LimitValue.unlimited(seconds) || seconds > settings.timeoutSeconds()))) {
                     throw new ApiException(HttpStatus.BAD_REQUEST, "SANDBOX_TIMEOUT_INVALID",
                         Messages.text("error.workspace.workspaceToolService.invoke.3"));
                 }
@@ -192,9 +199,9 @@ public class WorkspaceToolService {
                 var extracted = scope.directory().resolve("command-output-" + UUID.randomUUID());
                 try {
                     Duration remaining = scope.remaining();
-                    Duration executionTime = remaining.minusSeconds(Math.min(20, remaining.toSeconds() / 4));
-                    Duration allowed = executionTime.compareTo(
-                        Duration.ofSeconds(seconds)) < 0 ? executionTime : Duration.ofSeconds(seconds);
+                    Duration executionTime = ExecutionDeadline.unlimited(remaining) ? Duration.ZERO
+                        : remaining.minusSeconds(Math.min(20, remaining.toSeconds() / 4));
+                    Duration allowed = ExecutionLimits.minTimeout(executionTime, LimitValue.seconds(seconds));
                     String working = arguments.path("working_directory").asText(scope.persistent() ? "." : "work");
                     if (!scope.persistent()) {
                         commandCache.prepare(scope.commandResults(), call.id(), Set.of(scope.commandResults().scope()), control);

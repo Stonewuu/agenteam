@@ -56566,14 +56566,14 @@
           },
           "maxSteps": {
             "type": "integer",
-            "minimum": 0,
-            "description": "最多执行步骤，0 表示无上限。"
+            "minimum": -1,
+            "description": "最多执行步骤，-1 表示不限；兼容旧配置的 0。"
           },
           "timeoutSeconds": {
             "type": "integer",
-            "minimum": 0,
-            "default": 0,
-            "description": "整次执行的时间上限，单位为秒，0 表示无上限。"
+            "minimum": -1,
+            "default": -1,
+            "description": "整次执行的时间上限，单位为秒，-1 表示不限；兼容旧配置的 0。"
           },
           "attachmentsEnabled": {
             "type": "boolean"
@@ -64314,25 +64314,25 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0,
-                "maximum": 1000000000
+                "minimum": -1
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "-1 表示不限，兼容旧空值；0 表示没有可用次数。"
           },
           "remainingCount": {
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0,
-                "maximum": 1000000000
+                "minimum": -1
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "-1 表示不限，兼容旧空值；0 表示没有可用次数。"
           }
         },
         "additionalProperties": false,
@@ -65939,14 +65939,14 @@
           },
           "maxSteps": {
             "type": "integer",
-            "minimum": 0,
-            "description": "最多执行步骤，0 表示无上限。"
+            "minimum": -1,
+            "description": "最多执行步骤，-1 表示不限；兼容旧配置的 0。"
           },
           "timeoutSeconds": {
             "type": "integer",
-            "minimum": 0,
-            "default": 0,
-            "description": "整次执行的时间上限，单位为秒，0 表示无上限。"
+            "minimum": -1,
+            "default": -1,
+            "description": "整次执行的时间上限，单位为秒，-1 表示不限；兼容旧配置的 0。"
           },
           "attachmentsEnabled": {
             "type": "boolean"

@@ -187,10 +187,10 @@ export function AgentConfigForm({
                    aria-label={uiText("回复变化程度")}
                    onChange={(event) => set("temperature", event.target.valueAsNumber)}/>}</label>}
       <div className={ui.columns}><NumberField label={uiText("最多执行步骤")} name="config.maxSteps"
-                                               value={value.maxSteps} min={0} hint={uiText("填写 0 表示无上限。")}
+                                               value={value.maxSteps} min={1} allowUnlimited
                                                onChange={(value) => set("maxSteps", value)} errors={errors}/>
         <NumberField label={uiText("执行时间上限（秒）")} name="config.timeoutSeconds" value={value.timeoutSeconds}
-                     min={0} hint={uiText("填写 0 表示无上限。")} onChange={(value) => set("timeoutSeconds", value)}
+                     min={1} allowUnlimited onChange={(value) => set("timeoutSeconds", value)}
                      errors={errors}/></div>
       {value.agentType !== "workflow" && (model?.capabilities.supportsTools || Boolean(value.subagentVersionIds?.length || value.dynamicSubagentEnabled)) &&
         <AgentSubagentSettings enterpriseId={enterpriseId} resourceId={resourceId}

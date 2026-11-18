@@ -19,7 +19,7 @@ export function ConversationProjectControl({state, showError = true}: {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const measure = useRef<HTMLSpanElement>(null);
-  const label = state.loading ? uiText("正在加载项目…") : state.selected?.name ?? (state.existing ? uiText("项目暂不可用") : uiText("新项目"));
+  const label = state.loading ? uiText("正在加载项目…") : state.selected?.name ?? (state.error ? uiText("项目暂不可用") : uiText("选择项目"));
   useLayoutEffect(() => {
     const content = measure.current;
     if (!content || !trigger.current) {
@@ -37,8 +37,9 @@ export function ConversationProjectControl({state, showError = true}: {
     return null;
   }
   return <div className={styles.control}>
-    <Button ref={trigger} type="button" className={styles.trigger} aria-label={uiText("项目：{0}", [label])}
-            title={state.selected ? `${state.selected.name}\n${state.selected.directory}` : undefined}
+    <Button ref={trigger} type="button" className={styles.trigger} aria-label={state.selected ? uiText("项目：{0}", [label]) : label}
+            title={state.selected ? `${state.selected.name}\n${state.selected.directory}` : !state.existing
+              ? uiText("未选择项目时，发送第一条消息会自动创建项目。") : undefined}
             aria-haspopup="dialog" aria-expanded={open} disabled={state.disabled} onClick={() => setOpen(true)}>
       <IconFolder size={15}/><span>{label}</span><IconChevronDown size={12}/>
     </Button>

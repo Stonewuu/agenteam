@@ -7,7 +7,7 @@ import styles from "./usage.module.css";
 
 export function UsageOverview({ usage }: { usage: Usage }) {
   const uiText = useT();
-  const count = (value: number | null) => (value === null ? uiText("不限") : value.toLocaleString(uiText.formatLocale));
+  const count = (value: number | null) => ((value === null || value === -1) ? uiText("不限") : value.toLocaleString(uiText.formatLocale));
   const root = usage.items.find((item) => item.subjectType === "enterprise");
   return (
     <>
@@ -28,7 +28,7 @@ export function UsageOverview({ usage }: { usage: Usage }) {
                 <Icon size={20} />
               </div>
               <strong>{count(value)}</strong>
-              <small>{value === null ? uiText("不设上限") : uiText("次执行")}</small>
+              <small>{(value === null || value === -1) ? uiText("不设上限") : uiText("次执行")}</small>
             </div>
           ))}
         </section>
@@ -73,7 +73,7 @@ export function UsageOverview({ usage }: { usage: Usage }) {
             <span>
               {uiText("月度上限 ")}
               {count(root.monthlyLimit)}
-              {root.monthlyLimit !== null ? uiText(" 次") : ""}
+              {root.monthlyLimit !== null && root.monthlyLimit !== -1 ? uiText(" 次") : ""}
             </span>
           </div>
         </section>

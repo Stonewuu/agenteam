@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.mapper.usage;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseTableMapper;
 import com.stonewu.agenteam.model.usage.entity.QuotaPeriod;
@@ -20,6 +22,9 @@ import static com.stonewu.agenteam.mapper.execution.ExecutionJson.timestamp;
 @Repository
 public class QuotaMapper {
     public record Policy(String id, String type, String subjectId, Long limit) {
+        public Policy {
+            limit = LimitValue.legacyNull(limit);
+        }
     }
 
     public record Bucket(String id, long used, long reserved) {

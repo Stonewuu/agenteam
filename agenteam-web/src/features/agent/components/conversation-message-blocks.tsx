@@ -24,7 +24,7 @@ import {
 } from "@/features/file/components/conversation-message-file";
 import {CitationCard} from "@/features/knowledge/components/citation-card";
 import {ToolCallDetails} from "@/features/plugin/components/tool-call-details";
-import {toolPayloadFailure} from "@/features/plugin/lib/tool-payload-format";
+import {isToolPayloadPreview, toolPayloadFailure} from "@/features/plugin/lib/tool-payload-format";
 import {ToolContentReader} from "@/features/plugin/components/tool-content-reader";
 import {ToolContentVisibility} from "@/features/plugin/components/tool-content-visibility";
 import {ToolContentBoundary} from "@/features/plugin/components/tool-content-boundary";
@@ -34,11 +34,13 @@ import {Fragment, memo, type ReactNode, useMemo, useRef, useState} from "react";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/shadcn/collapsible";
 import executionStyles from "./conversation-execution.module.css";
 import {ConversationThinkingBlock} from "./conversation-thinking-block";
+import {ConversationToolSequence} from "./conversation-tool-sequence";
 import {ConversationToolBlock, ToolActivityIcon} from "./conversation-tool-block";
 import {useExecutionDisclosure} from "../hooks/use-execution-disclosure";
 import {
   groupBlockStatus,
   groupConversationBlocks,
+  hasVisibleConversationContent,
   isSubagentTool,
   mergeRunApprovals,
   mergeToolConfirmations,
@@ -133,11 +135,14 @@ function RenderBlocks({blocks, context}: { blocks: DisplayBlock[]; context: Reso
     const content = group.blocks.map((block) => <RenderBlock key={block.id} block={block} context={context}/>);
     if (group.kind === "thinking") {
       const status = groupBlockStatus(group.blocks);
-      return group.blocks.some(hasVisibleContent) ?
+      return group.blocks.some(hasVisibleConversationContent) ?
         <ConversationThinkingBlock key={group.id} status={status}>{content}</ConversationThinkingBlock> : null;
     }
     if (group.kind === "tool") {
-      return <Fragment key={group.id}>{groupFileToolBlocks(group.blocks).map((files) => files.action
+      return <ConversationToolSequence key={group.id} count={group.blocks.length}
+        status={groupBlockStatus(group.blocks, context.approvals)}
+        failedCount={group.blocks.filter(block => block.kind === "tool" && toolBlockStatus(block, context.approvals) === "failed").length}
+        pendingIds={pendingToolConfirmationIds(group.blocks, context.approvals)}>{groupFileToolBlocks(group.blocks).map((files) => files.action
         ? <section key={files.id} className={executionStyles.fileToolGroup} data-file-action={files.action}
                    aria-label={fileToolAction(files.blocks[0])?.label}>
           {files.blocks.length > 1 &&
@@ -146,17 +151,10 @@ function RenderBlocks({blocks, context}: { blocks: DisplayBlock[]; context: Reso
                data-multiple={files.blocks.length > 1 || undefined}>{files.blocks.map((block) => <RenderBlock
             key={block.id} block={block} context={context} grouped={files.blocks.length > 1}/>)}</div>
         </section> : <Fragment key={files.id}>{files.blocks.map((block) => <RenderBlock key={block.id} block={block}
-                                                                                        context={context}/>)}</Fragment>)}</Fragment>;
+                                                                                        context={context}/>)}</Fragment>)}</ConversationToolSequence>;
     }
     return <Fragment key={group.id}>{content}</Fragment>;
   })}</div>;
-}
-
-function hasVisibleContent(block: DisplayBlock): boolean {
-  if (("content" in block && block.content.trim()) || block.step?.publicSummary?.trim() || ("summary" in block && block.summary.trim())) {
-    return true;
-  }
-  return block.kind !== "thinking" && block.kind !== "text" || block.blocks.some(hasVisibleContent);
 }
 
 function RenderBlock({block, context, grouped = false}: {
@@ -235,7 +233,7 @@ function RenderBlock({block, context, grouped = false}: {
       }
       return <ExecutionBlock title={uiText("子智能体")} status={status} kind="agent"
                              statusText={uiText(toolStatusLabel(block, status, waitingForContent))}
-                             defaultOpen={!block.result.startsWith('{"truncated":true')}
+                             defaultOpen={!isToolPayloadPreview(block.result)}
                              icon={block.status === "running" ? <ToolActivityIcon status={block.status}/> :
                                <IconRobot size={18}/>}>
         {block.blocks.length > 0 && <RenderBlocks blocks={block.blocks} context={context}/>}
@@ -301,7 +299,7 @@ function NativeToolReply({block, url}: { block: Extract<DisplayBlock, { kind: "t
     part: "result" as const,
     revision: block.resultStatus
   } : null, [url, block.resultStatus]);
-  if (!source || !block.result.startsWith('{"truncated":true')) {
+  if (!source || !isToolPayloadPreview(block.result)) {
     return <ConversationMarkdown content={block.result}/>;
   }
   return <ToolContentBoundary><ToolContentVisibility>{(ready) => <ToolContentReader source={source} raw={false}

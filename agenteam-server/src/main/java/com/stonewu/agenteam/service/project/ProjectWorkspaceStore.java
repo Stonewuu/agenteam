@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -20,7 +22,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -88,12 +89,12 @@ public class ProjectWorkspaceStore {
         var workspace = projects.workspace(project.getEnterpriseId(), project.getUserId(), project.getWorkspaceId());
         var location = new ProjectLocation(workspace.getId(), project.getId(), project.getEnterpriseId(),
             project.getUserId(), project.getDirectoryPath());
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         UserWorkspaceLock lock = null;
         try {
             // 新项目可以重新建立用户基础目录；旧项目仍必须保留原目录，不能把空目录当成文件已恢复。
             layout.prepareWorkspace(workspace.getId(), project.getInitializedAt() != null);
-            lock = UserWorkspaceLock.acquire(layout, workspace.getId(), timeout, control);
+            lock = UserWorkspaceLock.acquire(layout, workspace.getId(), remaining(deadline), control);
             Path pending = layout.control(workspace.getId()).resolve("container.pending");
             if (Files.exists(pending, LinkOption.NOFOLLOW_LINKS)) {
                 lock.close();
@@ -103,24 +104,24 @@ public class ProjectWorkspaceStore {
             }
             Path directory = layout.project(location);
             WorkspacePaths.requireInside(layout.root(), directory);
+            if (project.getInitializedAt() == null) {
+                project = projects.require(project.getEnterpriseId(), project.getUserId(), project.getId());
+            }
             if (project.getInitializedAt() != null) {
                 layout.requireRegistered(location);
                 if (!Files.isRegularFile(layout.state(location), LinkOption.NOFOLLOW_LINKS)) {
                     throw ProjectWorkspaceLayout.unavailable();
                 }
             } else {
-                Files.createDirectories(directory);
-                for (String area : List.of("inputs", "tool-results", "work", "outputs")) {
-                    Files.createDirectories(directory.resolve(area));
-                }
+                layout.prepareProjectDirectories(location, unused -> {
+                });
                 if (!Files.exists(layout.state(location), LinkOption.NOFOLLOW_LINKS)) {
                     var origins = migration.copy(location, project.getLegacyConversationId(), directory, control,
                         remaining(deadline));
-                    layout.write(layout.state(location),
-                        new WorkspaceStore.Manifest(UUID.randomUUID().toString(), location.enterpriseId(),
-                            location.userId(),
-                            location.projectId(), location.projectId(), null, 0, origins.results(), origins.inputs(),
-                            System.currentTimeMillis()));
+                    layout.writeInitialState(location, origins.results(), origins.inputs());
+                    if (project.getLegacyConversationId() != null) {
+                        layout.recordStatisticsChange(workspace.getId());
+                    }
                 }
                 layout.register(location);
                 projects.initialized(workspace, project);
@@ -158,7 +159,7 @@ public class ProjectWorkspaceStore {
     }
 
     private static Duration remaining(long deadline) {
-        long nanos = deadline - System.nanoTime();
+        long nanos = ExecutionDeadline.remainingNanos(deadline);
         if (nanos <= 0) {
             throw new ApiException(HttpStatus.GATEWAY_TIMEOUT,
                 "WORKSPACE_TIMEOUT", Messages.text("error.project.projectWorkspaceStore.remaining.1"));
@@ -261,6 +262,7 @@ public class ProjectWorkspaceStore {
                         location.projectId(), location.projectId(), run == null ? previous.runId() : run.id(),
                         run == null ? 0 : run.leaseVersion(),
                         Set.copyOf(resultIds), Set.copyOf(inputIds), System.currentTimeMillis()));
+                layout.recordStatisticsChange(location.workspaceId());
             } catch (IOException failure) {
                 throw WorkspacePaths.io(failure);
             }

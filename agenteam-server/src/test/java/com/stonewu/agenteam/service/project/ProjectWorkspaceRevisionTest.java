@@ -40,6 +40,7 @@ class ProjectWorkspaceRevisionTest {
             project.setUserId("alice");
             project.setDirectoryPath("projects/" + id);
             when(conversations.ensure("enterprise", "alice", id)).thenReturn(project);
+            when(metadata.require("enterprise", "alice", id)).thenReturn(project);
         }
         var layout = new ProjectWorkspaceLayout(new UserWorkspaceSettings(root.toString(), ""), new ObjectMapper());
         var migration = mock(LegacyProjectMigration.class);
@@ -54,6 +55,9 @@ class ProjectWorkspaceRevisionTest {
         Files.writeString(file, "项目文件保留");
         String savedManifest = layout.read(layout.state(firstLocation), WorkspaceStore.Manifest.class).version();
         assertEquals(first, version(store, "first"));
+        layout.recordStatisticsChange(workspace.getId());
+        assertEquals(first, version(store, "first"));
+        assertEquals(second, version(store, "second"));
         layout.recordFileChange(workspace.getId());
         assertNotEquals(first, version(store, "first"));
         assertNotEquals(second, version(store, "second"));

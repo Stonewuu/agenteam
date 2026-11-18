@@ -1,5 +1,9 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.SandboxLifecycleSettings;
@@ -56,7 +60,7 @@ public class UserSandboxLifecycle {
 
     public ProjectCommandRecord begin(ProjectLocation project, String call, String hash, String command,
                                       Duration timeout, ToolCallControl control) {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         while (true) {
             UserSandboxState stopping = null;
             try (var lock = UserWorkspaceLock.runtime(layout, project.workspaceId(),
@@ -98,7 +102,7 @@ public class UserSandboxLifecycle {
                     registry.save(new UserSandboxState(project, id, generation, daemon, "running", 0, now));
                     var record = new ProjectCommandRecord(project.projectId(), hash, null, project, call, id,
                         generation,
-                        UUID.randomUUID().toString(), now + DockerWorkspaceCommands.remaining(deadline).toMillis(), now,
+                        UUID.randomUUID().toString(), ExecutionDeadline.at(clock.instant(), DockerWorkspaceCommands.remaining(deadline)), now,
                         "running");
                     registry.save(record);
                     layout.recordFileChange(project.workspaceId());
@@ -254,7 +258,8 @@ public class UserSandboxLifecycle {
                     registry.markActivity(workspace, clock.millis());
                     return false;
                 }
-                if (clock.millis() - selected.idleSince() < settings.idleSeconds() * 1000L) {
+                if (LimitValue.unlimited(settings.idleSeconds())
+                    || clock.millis() - selected.idleSince() < settings.idleSeconds() * 1000L) {
                     return false;
                 }
                 selected = new UserSandboxState(selected.project(), selected.containerId(), selected.generation(),
@@ -310,7 +315,7 @@ public class UserSandboxLifecycle {
                 complete(record, result(record, status, false));
             } else if (("missing".equals(
                 status.state()) && clock.millis() - record.updatedAt() >= settings.staleSeconds() * 1000L)
-                || clock.millis() > record.deadline() + 5000) {
+                || (!LimitValue.unlimited(record.deadline()) && clock.millis() > record.deadline() + 5000)) {
                 boolean missing = "missing".equals(status.state());
                 status = processes.cancel(record, CHECK_TIMEOUT);
                 if (status.completed()) {

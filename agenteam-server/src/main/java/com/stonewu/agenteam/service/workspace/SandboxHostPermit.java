@@ -1,6 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
 import com.stonewu.agenteam.service.i18n.Messages;
+import com.stonewu.agenteam.model.system.entity.LimitValue;
 
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
@@ -18,8 +19,9 @@ import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
+import java.util.function.IntSupplier;
 
-/** 低内存主机上的执行服务共用一个文件锁；进程退出后操作系统自动释放，不依赖过期时间。 */
+/** 同一主机的执行服务按配置共用文件锁；进程退出后由操作系统释放。 */
 final class SandboxHostPermit implements AutoCloseable {
     private static final ConcurrentMap<Path, Semaphore> LOCAL = new ConcurrentHashMap<>();
     private final FileChannel channel;
@@ -32,33 +34,45 @@ final class SandboxHostPermit implements AutoCloseable {
         this.local = local;
     }
 
-    static SandboxHostPermit acquire(Path root, long deadline, ToolCallControl control) throws IOException {
+    static SandboxHostPermit acquire(Path root, IntSupplier maximum, long deadline, ToolCallControl control) throws IOException {
         Files.createDirectories(root);
-        Path path = root.toRealPath().resolve("commands.lock");
+        Path directory = root.toRealPath();
+        while (true) {
+            int configured = maximum.getAsInt();
+            int slots = LimitValue.unlimited(configured) ? Integer.MAX_VALUE : configured;
+            for (int slot = 0; slot < slots; slot++) {
+                requireActive(deadline, control);
+                Path path = directory.resolve(slot == 0 ? "commands.lock" : "commands-" + slot + ".lock");
+                var permit = tryAcquire(path);
+                if (permit != null) {
+                    return permit;
+                }
+            }
+            control.pause(Duration.ofMillis(50));
+        }
+    }
+
+    private static SandboxHostPermit tryAcquire(Path path) throws IOException {
         var local = LOCAL.computeIfAbsent(path, ignored -> new Semaphore(1, true));
         // Linux 关闭同一进程的其他文件句柄也可能释放该文件的锁，等待者不能提前打开它。
-        while (!local.tryAcquire()) {
-            requireActive(deadline, control);
-            control.pause(Duration.ofMillis(50));
+        if (!local.tryAcquire()) {
+            return null;
         }
         FileChannel channel = null;
         boolean acquired = false;
         try {
             channel = FileChannel.open(path, StandardOpenOption.CREATE,
                 StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
-            while (true) {
-                requireActive(deadline, control);
-                try {
-                    var lock = channel.tryLock();
-                    if (lock != null) {
-                        acquired = true;
-                        return new SandboxHostPermit(channel, lock, local);
-                    }
-                } catch (OverlappingFileLockException busy) {
-                    // 同一进程中的另一执行入口持有该名额，也必须等待。
+            try {
+                var lock = channel.tryLock();
+                if (lock != null) {
+                    acquired = true;
+                    return new SandboxHostPermit(channel, lock, local);
                 }
-                control.pause(Duration.ofMillis(50));
+            } catch (OverlappingFileLockException busy) {
+                // 同一进程中的另一执行入口持有该名额，继续查找下一位置。
             }
+            return null;
         } finally {
             if (!acquired) {
                 try {

@@ -1,6 +1,6 @@
 {
   "name": "agenteam-web",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
@@ -23,7 +23,7 @@
     "test:channel-auth": "node --test tests/channel-access.test.mjs",
     "test:schedule-actions": "node --test tests/schedule-actions.test.mjs",
     "test:model-config": "node --test tests/model-token-length.test.mjs tests/model-selection.test.mjs",
-    "test:tool-payload": "tsc src/features/plugin/lib/tool-payload-format.ts src/features/plugin/lib/tool-call-details.ts --target ES2022 --module commonjs --skipLibCheck --outDir .test-build/tool-payload && node --test tests/tool-payload.test.mjs tests/tool-call-details.test.mjs tests/tool-content-preview.test.mjs",
+    "test:tool-payload": "tsc src/features/plugin/lib/tool-payload-format.ts src/features/plugin/lib/tool-call-details.ts --target ES2022 --module commonjs --skipLibCheck --outDir .test-build/tool-payload && node --test tests/tool-payload.test.mjs tests/tool-call-details.test.mjs tests/tool-content-preview.test.mjs tests/tool-call-document.test.mjs",
     "test:home-task": "node --test tests/home-task.test.mjs",
     "test:resource-deletion": "node --test tests/resource-deletion.test.mjs",
     "test:navigation": "node --test tests/navigation.test.mjs",

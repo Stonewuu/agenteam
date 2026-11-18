@@ -3,6 +3,7 @@ package com.stonewu.agenteam.controller.project;
 import com.stonewu.agenteam.model.http.response.ApiResponse;
 import com.stonewu.agenteam.model.http.response.PageResponse;
 import com.stonewu.agenteam.model.project.request.CreateProjectInput;
+import com.stonewu.agenteam.model.project.request.DeleteProjectInput;
 import com.stonewu.agenteam.model.project.request.SelectProjectInput;
 import com.stonewu.agenteam.model.project.response.ProjectView;
 import com.stonewu.agenteam.service.auth.AuthContextService;
@@ -75,5 +76,11 @@ public class ProjectApiController {
     public ResponseEntity<?> select(@PathVariable String enterpriseId, @PathVariable String conversationId,
                                     @RequestBody SelectProjectInput input, HttpServletRequest request) {
         return responses.operation(mutations.select(enterpriseId, conversationId, input, request), request);
+    }
+
+    @DeleteMapping("/projects/{projectId}")
+    public ResponseEntity<?> delete(@PathVariable String enterpriseId, @PathVariable String projectId,
+                                    @RequestBody DeleteProjectInput input, HttpServletRequest request) {
+        return responses.operation(mutations.delete(enterpriseId, projectId, input, request), request);
     }
 }

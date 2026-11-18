@@ -10,7 +10,9 @@ import {Input} from "@/components/ui/input";
 import {Field} from "@/components/ui/field";
 import {AnimatedHeight} from "@/components/ui/animated-height";
 import {Dialog, DialogActions, DialogCancel, DialogForm, useDialogControl} from "@/components/ui/dialog";
-import {IconCheck, IconFolder, IconPlus} from "@/components/ui/icons";
+import {IconArrowUpRight, IconCheck, IconFolder, IconPlus, IconTrash} from "@/components/ui/icons";
+import {enterpriseEntryPath} from "@/features/auth/lib/workspace-path";
+import {ProjectDeleteDialog} from "./project-delete-dialog";
 import {useApiPage} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import {useFormAction} from "@/features/auth/hooks/use-form-action";
@@ -32,6 +34,7 @@ export function ProjectPickerDialog({state, onClose}: {
   const [name, setName] = useState("");
   const [directory, setDirectory] = useState("");
   const [created, setCreated] = useState<WorkspaceProject | null>(null);
+  const [deleting, setDeleting] = useState<WorkspaceProject | null>(null);
   const path = organizationPath(state.enterprise, "/projects");
   const page = useApiPage<WorkspaceProject>(`${path}?${new URLSearchParams({query})}`, 0, 180, 20, !creating);
   const busy = action.busy || state.saving;
@@ -52,7 +55,7 @@ export function ProjectPickerDialog({state, onClose}: {
     }, "");
   }
 
-  return <Dialog title={creating ? uiText("创建项目") : uiText("选择项目")} size="medium" busy={busy} onClose={onClose}
+  return <><Dialog title={creating ? uiText("创建项目") : uiText("选择项目")} size="medium" busy={busy} onClose={onClose}
                  dialogRef={dialog.ref}>
     <AnimatedHeight preserveControlShadows>{creating ? <DialogForm className={styles.form} onSubmit={(event) => {
       event.preventDefault();
@@ -65,7 +68,7 @@ export function ProjectPickerDialog({state, onClose}: {
           action.clearFieldError("name");
         }}/>
       </Field>
-      <Field label={uiText("项目目录")} hint={uiText("可填写相对目录，如 reports/quarterly；留空即可。")}
+      <Field label={uiText("项目目录")} hint={uiText("留空会自动分配目录。创建后可在“我的环境”中上传文件。")}
              error={action.fieldErrors.directory?.join(" ")}>
         <Input name="directory" placeholder={uiText("例如 reports/quarterly")} autoComplete="off" maxLength={256}
                value={created?.directory ?? directory} disabled={busy || Boolean(created)} onChange={(event) => {
@@ -85,12 +88,6 @@ export function ProjectPickerDialog({state, onClose}: {
                                             onChange={(event) => setQuery(event.target.value)}/>
         <Button type="button" className={ui.button} disabled={busy || state.disabled} onClick={() => setCreating(true)}><IconPlus
           size={16}/>{uiText("创建项目")}</Button></div>
-      {!state.existing &&
-        <Button type="button" className={styles.project} aria-pressed={!state.selected} disabled={busy}
-                onClick={() => void choose(null)}>
-          <IconPlus size={19}/><span><strong>{uiText("新项目")}</strong></span>{!state.selected &&
-          <IconCheck size={16}/>}
-        </Button>}
       <div className={styles.list} aria-label={uiText("已有项目")} aria-busy={page.loading}>
         {page.loading && !page.data ?
           <p className={styles.notice} role="status">{uiText("正在加载项目…")}</p> : page.error ?
@@ -98,15 +95,17 @@ export function ProjectPickerDialog({state, onClose}: {
                                                                                                           className={styles.textButton}
                                                                                                           onClick={page.retry}>{uiText("重新加载")}</Button>
             </p>
-            : page.data?.items.length ? page.data.items.map((project) => <Button key={project.id} type="button"
-                                                                                 className={styles.project}
-                                                                                 aria-pressed={state.selected?.id === project.id}
-                                                                                 disabled={busy || state.disabled || page.loading}
-                                                                                 onClick={() => void choose(project)}>
-                <IconFolder
-                  size={19}/><span><strong>{project.name}</strong><small>{project.directory}</small></span>{state.selected?.id === project.id &&
-                <IconCheck size={16}/>}
-              </Button>) :
+            : page.data?.items.length ? page.data.items.map(project => <div className={styles.projectRow} key={project.id}>
+              <Button type="button" className={styles.project} aria-pressed={state.selected?.id === project.id}
+                disabled={busy || state.disabled || page.loading} onClick={() => void choose(project)}>
+                <IconFolder size={19}/><span><strong>{project.name}</strong><small>{project.directory}</small></span>
+                {state.selected?.id === project.id && <IconCheck size={16}/>}
+              </Button>
+              <a className={styles.rowAction} href={enterpriseEntryPath(state.enterprise, "/environment?" + new URLSearchParams({path: "/workspace/" + project.directory}))}
+                target="_blank" rel="noopener" title={uiText("打开项目目录")} aria-label={uiText("打开 {0} 的目录", [project.name])}><IconArrowUpRight size={16}/></a>
+              <Button type="button" className={styles.rowAction} disabled={busy || state.disabled || page.loading}
+                title={uiText("删除项目")} aria-label={uiText("删除项目 {0}", [project.name])} onClick={() => setDeleting(project)}><IconTrash size={16}/></Button>
+            </div>) :
               <p className={styles.notice}>{query ? uiText("没有找到匹配的项目。") : uiText("还没有项目。")}</p>}
       </div>
       {(page.previous.length > 0 || page.data?.hasMore) && <div className={styles.pagination}>
@@ -116,7 +115,23 @@ export function ProjectPickerDialog({state, onClose}: {
                 onClick={page.next}>{uiText("下一页")}</Button>
       </div>}
       {state.error && <p className={styles.error} role="alert">{localizeUiMessage(state.error ?? "", uiText)}</p>}
-      <DialogActions><DialogCancel className={ui.button} disabled={busy}>{uiText("取消")}</DialogCancel></DialogActions>
+      <DialogActions>
+        {!state.existing && state.selected && <Button type="button" className={styles.clearSelection}
+          disabled={busy || state.disabled} onClick={() => void choose(null)}>{uiText("清除选择")}</Button>}
+        <DialogCancel className={ui.button} disabled={busy}>{uiText("取消")}</DialogCancel>
+      </DialogActions>
     </div>}</AnimatedHeight>
-  </Dialog>;
+  </Dialog>
+    {deleting && <ProjectDeleteDialog base={path} project={deleting} onClose={() => setDeleting(null)} onDeleted={() => {
+      state.deleted(deleting);
+      if (page.data?.items.length === 1 && page.previous.length) {
+        page.back();
+      }
+      if (created?.id === deleting.id) {
+        setCreated(null);
+      }
+      page.retry();
+      setDeleting(null);
+    }}/>}
+  </>;
 }

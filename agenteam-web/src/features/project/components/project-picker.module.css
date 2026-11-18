@@ -86,24 +86,37 @@
   scroll-padding: 6px;
 }
 
-.project {
+.projectRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
+  gap: 2px;
   min-width: 0;
-  padding: 12px;
+  padding-inline-end: 4px;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: transparent;
-  color: var(--foreground);
-  text-align: left;
   transition: background-color 200ms var(--motion-ease), border-color 200ms var(--motion-ease);
 }
 
-.project:hover:not(:disabled), .project[aria-pressed="true"] {
+.projectRow:hover,
+.projectRow:focus-within,
+.projectRow:has(> .project[aria-pressed="true"]) {
   background: var(--surface-hover);
   border-color: var(--border);
+}
+
+.project {
+  display: flex;
+  flex: 1;
+  align-self: stretch;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
 }
 
 .project > span {
@@ -130,6 +143,43 @@
   flex-shrink: 0;
 }
 
+.rowAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.rowAction:is(:hover, :focus-visible):not(:disabled) {
+  background: var(--slate-soft);
+  color: var(--slate-text);
+}
+
+button.rowAction:is(:hover, :focus-visible):not(:disabled) {
+  background: var(--red-soft);
+  color: var(--red-text);
+}
+
+.rowAction:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.deleteBody {display:grid; gap:16px;}
+.deleteBody p {margin:0; font-size:14px;}
+.target,.deleteChoice {display:flex; align-items:center; gap:11px;}
+.target div,.deleteChoice span {display:grid; gap:4px; min-width:0; overflow-wrap:anywhere;}
+.target strong,.deleteChoice strong {font-size:14px; font-weight:550;}
+.target small,.deleteChoice small {font-size:12px; color:var(--muted-foreground);}
+.deleteChoice {padding:13px 0 0; border-top:1px solid var(--border); cursor:pointer;}
+
 .notice {
   color: var(--muted-foreground);
   font-size: 12px;
@@ -152,6 +202,20 @@
   font-size: inherit;
 }
 
+.clearSelection {
+  margin-inline-end: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.clearSelection:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
 .pagination {
   display: flex;
   justify-content: flex-end;
@@ -159,17 +223,19 @@
 }
 
 @media (max-width: 600px) {
-  .trigger, .textButton {
+  .trigger, .textButton, .clearSelection {
     min-height: 44px;
   }
 
   .search {
     flex-wrap: wrap;
   }
+
+  .rowAction {width:44px; height:44px;}
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .trigger, .project {
+  .trigger, .projectRow {
     transition: none;
   }
 }

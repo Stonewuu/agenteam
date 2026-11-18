@@ -9,9 +9,9 @@ import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
 import com.stonewu.agenteam.model.project.entity.ProjectLocation;
 import com.stonewu.agenteam.service.tool.ToolCallControl;
 import com.stonewu.agenteam.service.workspace.DockerWorkspaceCommands;
+import com.stonewu.agenteam.support.TestOutputPaths;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -29,8 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @Tag("external-process")
 class DockerProjectCommandExecutorTest {
-    @TempDir
-    Path root;
+    Path root = TestOutputPaths.path("docker-project-commands", UUID.randomUUID().toString());
     private final DockerWorkspaceCommands docker = new DockerWorkspaceCommands();
     private final Set<String> containers = new HashSet<>();
 
@@ -73,6 +73,35 @@ class DockerProjectCommandExecutorTest {
     void cleanup() {
         for (String container : containers) {
             docker.remove(container);
+        }
+    }
+
+    @Test
+    void unlimitedResourcesAndCommandTimeoutStillAllowExplicitCancellation() throws Exception {
+        var project = project("alice", "unlimited");
+        var unlimited = new WorkspaceSettings(root.toString(), "python:3.13-slim", true,
+            -1, -1, -1, -1, -1, -1, -1, "none");
+        var runtime = new SandboxRuntimeSettings(-1, -1, "", "");
+        var executor = new DockerProjectCommandExecutor(unlimited, runtime, layout(),
+            new UserContainerRuntime(unlimited, runtime, layout(), docker), docker);
+        try (var pool = Executors.newVirtualThreadPerTaskExecutor(); var control = new ToolCallControl(() -> {
+        })) {
+            assertEquals(0, executor.execute(project, "ready", "sleep 0.2; echo ready", ".", Duration.ZERO, control).exitCode());
+            assertEquals("0 0", state(project, "{{.HostConfig.Memory}} {{.HostConfig.NanoCpus}}"));
+            assertEquals("max", docker.require(List.of("exec", containerName(project), "sh", "-c",
+                "cat /sys/fs/cgroup/pids.max 2>/dev/null || cat /sys/fs/cgroup/pids/pids.max"),
+                Duration.ofSeconds(5), null).output().trim());
+            assertTrue(new ObjectMapper().readTree(state(project, "{{json .HostConfig.Tmpfs}}")).path("/tmp").asText().contains("size=0"));
+            var running = pool.submit(() -> executor.execute(project, "cancel", "touch started.txt; sleep 60", ".", Duration.ZERO, control));
+            long deadline = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+            while (!Files.exists(layout().project(project).resolve("started.txt")) && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+            assertTrue(Files.exists(layout().project(project).resolve("started.txt")));
+            assertFalse(running.isDone());
+            control.close();
+            assertThrows(Exception.class, () -> running.get(10, TimeUnit.SECONDS));
+            assertEquals("true", state(project, "{{.State.Running}}"));
         }
     }
 

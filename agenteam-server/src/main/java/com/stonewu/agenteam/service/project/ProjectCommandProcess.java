@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.project;
 
+import com.stonewu.agenteam.model.execution.entity.ExecutionDeadline;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -89,7 +91,7 @@ public class ProjectCommandProcess {
 
     public void run(ProjectCommandRecord record, String directory, Duration timeout, ToolCallControl control) {
         String output = "/agenteam-command-results/" + record.projectId() + "/command-results/" + record.callId();
-        double seconds = Math.max(0.1, timeout.toMillis() / 1000.0 - 2);
+        double seconds = ExecutionDeadline.unlimited(timeout) ? -1 : Math.max(0.1, timeout.toMillis() / 1000.0 - 2);
         docker.require(
             List.of("exec", record.containerId(), "python3", "-u", "/agenteam-command/runner.py", "run", record.token(),
                 "/agenteam-command/" + record.callId() + ".sh", directory, output + "/stdout.txt",
@@ -119,7 +121,7 @@ public class ProjectCommandProcess {
     }
 
     public Status cancel(ProjectCommandRecord record, Duration timeout) {
-        long deadline = System.nanoTime() + timeout.toNanos();
+        long deadline = ExecutionDeadline.after(timeout);
         Status current = action(record, "cancel", DockerWorkspaceCommands.remaining(deadline));
         try (var control = new ToolCallControl(() -> {
         })) {

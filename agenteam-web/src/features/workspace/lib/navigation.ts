@@ -1,5 +1,6 @@
 import {
   IconBell,
+  IconAdjustments,
   IconBook2,
   IconBuilding,
   IconCalendarClock,
@@ -53,6 +54,7 @@ export function canViewManagementSection(item: typeof managementNavigation[numbe
 }
 
 export const platformManagementNavigation: readonly PlatformNavigationItem[] = [
+  {path: "/management/runtime-settings", label: "运行设置", icon: IconAdjustments},
   {path: "/management/workspace-settings", label: "工作空间设置", icon: IconSettings},
   {path: "/management/integrations", label: "企业协作平台", capability: "enterprise.switch", icon: IconPlug},
   {path: "/management/announcements", label: "公告管理", icon: IconBell},

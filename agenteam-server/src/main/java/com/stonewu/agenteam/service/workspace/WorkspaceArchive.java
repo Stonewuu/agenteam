@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.workspace;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.configuration.tool.WorkspaceSettings;
@@ -31,7 +33,7 @@ public final class WorkspaceArchive {
         long total = 0;
         long count = 0;
         try (var archive = new TarArchiveInputStream(
-            new BoundedInput(stream, settings.workspaceBytes() + settings.maximumFiles() * 16384L, control))) {
+            new BoundedInput(stream, LimitValue.addCapacity(settings.workspaceBytes(), settings.fileCountLimit() * 16384L), control))) {
             var entry = archive.getNextEntry();
             while (entry != null) {
                 control.requireActive();
@@ -51,7 +53,7 @@ public final class WorkspaceArchive {
                     || !(entry.getLinkFlag() == TarConstants.LF_DIR || entry.getLinkFlag() == TarConstants.LF_NORMAL || entry.getLinkFlag() == TarConstants.LF_OLDNORM)) {
                     throw WorkspacePaths.invalid();
                 }
-                if (++count > settings.maximumFiles() * 2L || entry.getSize() < 0 || entry.getSize() > settings.fileBytes()) {
+                if (++count > settings.fileCountLimit() * 2L || entry.getSize() < 0 || entry.getSize() > settings.fileBytes()) {
                     throw WorkspacePaths.capacity();
                 }
                 Path path = WorkspacePaths.resolve(target, logical, false);

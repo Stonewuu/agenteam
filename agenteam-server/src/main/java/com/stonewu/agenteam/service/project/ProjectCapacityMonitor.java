@@ -59,6 +59,6 @@ public final class ProjectCapacityMonitor {
     }
 
     public boolean exceeded(Usage usage) {
-        return usage.bytes > settings.workspaceBytes() || usage.largest > settings.fileBytes() || usage.entries > settings.maximumFiles() * 2L;
+        return usage.bytes > settings.workspaceBytes() || usage.largest > settings.fileBytes() || usage.entries > settings.fileCountLimit() * 2L;
     }
 }

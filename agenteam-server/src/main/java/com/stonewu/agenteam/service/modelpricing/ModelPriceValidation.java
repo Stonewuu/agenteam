@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.modelpricing;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration;
@@ -56,8 +58,7 @@ public class ModelPriceValidation {
                 throw invalid("rules", Messages.text("error.modelpricing.modelPriceValidation.normalize.4"));
             }
             if (rule.contextMinTokens() < 0 || rule.contextMinTokens() > 100000000000L
-                || (rule.contextMaxTokens() != null && (rule.contextMaxTokens() <= rule.contextMinTokens()
-                    || rule.contextMaxTokens() > 100000000001L))) {
+                || (!LimitValue.unlimited(rule.contextMaxTokens()) && rule.contextMaxTokens() <= rule.contextMinTokens())) {
                 throw invalid("rules", Messages.text("error.modelpricing.modelPriceValidation.normalize.5"));
             }
             if (!TIERS.contains(rule.serviceTier() == null ? "" : rule.serviceTier())) {
@@ -121,7 +122,7 @@ public class ModelPriceValidation {
             throw invalid("rules", Messages.text("error.modelpricing.modelPriceValidation.requirePublishable.1"));
         }
         var base = defaults.getFirst();
-        if (!base.serviceTier().equals("standard") || base.contextMinTokens() != 0 || base.contextMaxTokens() != null
+        if (!base.serviceTier().equals("standard") || base.contextMinTokens() != 0 || !LimitValue.unlimited(base.contextMaxTokens())
             || !base.times().isEmpty() || !base.dates().isEmpty()) {
             throw invalid("rules", Messages.text("error.modelpricing.modelPriceValidation.requirePublishable.2"));
         }

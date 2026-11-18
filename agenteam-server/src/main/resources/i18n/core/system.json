@@ -1,0 +1,50 @@
+{
+  "error.system.runtimeSettings.unavailable": {
+    "zh-CN": "暂时无法读取或保存运行设置，请稍后重试。",
+    "en": "Runtime settings could not be loaded or saved. Try again shortly."
+  },
+  "error.system.runtimeSettings.section": {
+    "zh-CN": "请选择有效的设置分类。",
+    "en": "Choose a valid settings category."
+  },
+  "error.system.runtimeSettings.field": {
+    "zh-CN": "此设置不属于当前分类，请重新加载。",
+    "en": "This setting is not part of this category. Reload the page."
+  },
+  "error.system.runtimeSettings.range": {
+    "zh-CN": "请输入不小于 {0} 的整数，或选择不限。",
+    "en": "Enter a whole number of at least {0}, or select Unlimited."
+  },
+  "error.system.runtimeSettings.integerRange": {
+    "zh-CN": "数值超出整数支持的范围，请减少数值或选择不限。",
+    "en": "This value exceeds the supported integer range. Enter a smaller value or select Unlimited."
+  },
+  "error.system.runtimeSettings.denied": {
+    "zh-CN": "只有系统超级管理员可以管理运行设置。",
+    "en": "Only system administrators can manage runtime settings."
+  },
+  "error.system.runtimeSettings.order.userActiveRuns": {
+    "zh-CN": "不能超过每个企业的活动任务上限。",
+    "en": "Cannot exceed the active task limit per organization."
+  },
+  "error.system.runtimeSettings.order.toolInlineKb": {
+    "zh-CN": "不能超过长上下文模型的返回内容上限。",
+    "en": "Cannot exceed the result size for long-context models."
+  },
+  "error.system.runtimeSettings.order.toolPreviewKb": {
+    "zh-CN": "不能超过直接返回模型的内容上限。",
+    "en": "Cannot exceed the direct tool result size."
+  },
+  "error.system.runtimeSettings.order.toolReadKb": {
+    "zh-CN": "不能超过直接返回模型的内容上限。",
+    "en": "Cannot exceed the direct tool result size."
+  },
+  "error.system.runtimeSettings.order.payloadRetentionDays": {
+    "zh-CN": "不能超过通知发送尝试的保留天数。",
+    "en": "Cannot exceed delivery attempt retention."
+  },
+  "error.system.runtimeSettings.order.attemptRetentionDays": {
+    "zh-CN": "不能超过通知发送结果的保留天数。",
+    "en": "Cannot exceed delivery result retention."
+  }
+}

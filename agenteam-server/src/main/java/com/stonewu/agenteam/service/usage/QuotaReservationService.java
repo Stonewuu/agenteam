@@ -1,5 +1,7 @@
 package com.stonewu.agenteam.service.usage;
 
+import com.stonewu.agenteam.model.system.entity.LimitValue;
+
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.mapper.usage.QuotaMapper;
@@ -61,7 +63,7 @@ public class QuotaReservationService {
             if (reserved.contains(bucket.id())) {
                 continue;
             }
-            if (policy.limit() != null && bucket.used() + bucket.reserved() >= policy.limit()) {
+            if (LimitValue.reached(bucket.used() + bucket.reserved(), policy.limit())) {
                 return false;
             }
             pending.add(bucket.id());

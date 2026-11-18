@@ -18,6 +18,10 @@
     SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND constraint_type =
     'FOREIGN KEY'
   </select>
+  <select id="columnNullable" resultType="string">
+    SELECT is_nullable FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = #{table} AND column_name = #{column}
+  </select>
   <select id="version" resultType="string">SELECT VERSION()</select>
   <update id="rejectPreferenceCreation">
     ALTER TABLE user_preference ADD CONSTRAINT reject_test_user CHECK (user_id &lt;&gt; 'rejected-user')
