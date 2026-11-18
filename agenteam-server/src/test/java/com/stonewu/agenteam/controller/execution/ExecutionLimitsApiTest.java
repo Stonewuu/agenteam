@@ -59,7 +59,7 @@ class ExecutionLimitsApiTest extends ExecutionApiTestSupport {
     }
 
     @ParameterizedTest
-    @CsvSource({"0,0", "20,1200", "500,3600"})
+    @CsvSource({"0,0", "-1,-1", "20,1200", "500,3600"})
     void publishedLimitsApplyToLongRunningTasksAndStepReservations(int maxSteps, int timeoutSeconds) throws Exception {
         configureAgent(config -> config.put("maxSteps", maxSteps).put("timeoutSeconds", timeoutSeconds));
         allowModelCalls = true;
@@ -79,13 +79,13 @@ class ExecutionLimitsApiTest extends ExecutionApiTestSupport {
         var lease = lifecycle.claim("执行限制测试").orElseThrow();
         var run = lifecycle.start(lease).orElseThrow();
         assertEquals(accepted.path("runId").asText(), run.id());
-        assertEquals(maxSteps, run.executionConfig().at("/config/maxSteps").asInt());
-        assertEquals(timeoutSeconds, run.executionConfig().at("/config/timeoutSeconds").asInt());
+        assertEquals(maxSteps == 0 ? -1 : maxSteps, run.executionConfig().at("/config/maxSteps").asInt());
+        assertEquals(timeoutSeconds == 0 ? -1 : timeoutSeconds, run.executionConfig().at("/config/timeoutSeconds").asInt());
         // 保存累计活动时间来模拟长任务，不让回归测试实际等待十一分钟。
         assertEquals(1, databaseAccess.mapper(RunSqlMapper.class).update(new LambdaUpdateWrapper<AgentRunRow>()
             .eq(AgentRunRow::getEnterpriseId, enterprise).eq(AgentRunRow::getId, run.id())
             .set(AgentRunRow::getActiveMillis, Duration.ofMinutes(11).toMillis())));
-        if (timeoutSeconds == 0) {
+        if (timeoutSeconds <= 0) {
             assertEquals(Duration.ZERO, lifecycle.remaining(run));
         } else {
             assertTrue(lifecycle.remaining(run).compareTo(Duration.ofMinutes(8)) > 0);
@@ -95,7 +95,7 @@ class ExecutionLimitsApiTest extends ExecutionApiTestSupport {
             task.saveCheckpoint();
             int used = activity.get(run).usedSteps();
             assertTrue(used > 0);
-            if (maxSteps == 0) {
+            if (maxSteps <= 0) {
                 lifecycle.reserveSteps(lease, List.of(), 501, "model");
                 lifecycle.reserveSteps(lease, List.of(), 501, "model");
                 assertEquals(used + 1002, activity.get(run).usedSteps());

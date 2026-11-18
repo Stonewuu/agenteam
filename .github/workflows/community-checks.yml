@@ -46,6 +46,18 @@ jobs:
           java-version: "21"
           cache: maven
           cache-dependency-path: agenteam-server/pom.xml
+      - name: 准备固定版本的 Maven
+        working-directory: agenteam-server
+        env:
+          MVNW_VERBOSE: "true"
+        run: |
+          for repository in https://repo.maven.apache.org/maven2 https://repo1.maven.org/maven2 https://maven-central.storage-download.googleapis.com/maven2; do
+            if MVNW_REPOURL="$repository" sh ./mvnw --version; then
+              echo "MVNW_REPOURL=$repository" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          exit 1
       - name: 构建共有办公沙箱
         run: docker build --tag agenteam/sandbox-office:local deploy/sandbox
       - name: 从固定源码构建对象存储测试服务
