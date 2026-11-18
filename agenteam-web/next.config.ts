@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    agentUpgrade: "security",
+  },
   // 容器镜像仅携带生产运行所需文件，静态资源由镜像一并复制。
   output: process.env.AGENTEAM_STANDALONE === "true" ? "standalone" : undefined,
   // 独立验收实例使用各自的编译输出目录。
