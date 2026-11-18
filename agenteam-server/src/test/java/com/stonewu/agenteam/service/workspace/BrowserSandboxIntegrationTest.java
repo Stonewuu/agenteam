@@ -46,8 +46,15 @@ class BrowserSandboxIntegrationTest {
         Path output = directory.resolve("output");
         try (var control = new ToolCallControl(() -> {
         })) {
-            var result = runner.execute(source, output, directory, "browser-read",
-                "node browser-smoke.cjs && node browser-memory.cjs", "work", Duration.ofSeconds(150), control);
+            var result = runner.execute(source, output, directory, "browser-read", """
+                node browser-smoke.cjs || exit $?
+                result=0
+                node browser-memory.cjs || result=$?
+                if [ "$result" -eq 137 ]; then
+                    exec node browser-memory.cjs --verify-kernel-exit
+                fi
+                exit "$result"
+                """, "work", Duration.ofSeconds(150), control);
             var stdout = Files.readString(output.resolve(result.stdoutPath()));
             assertEquals(0, result.exitCode(), stdout + "\n" + Files.readString(output.resolve(result.stderrPath())));
             assertTrue(stdout.contains("浏览器动态正文、跳转、续读、拒绝、超时及 Git HTTP 克隆检查通过"));

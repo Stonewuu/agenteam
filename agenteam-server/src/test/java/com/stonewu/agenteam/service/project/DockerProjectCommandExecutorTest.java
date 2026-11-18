@@ -88,9 +88,13 @@ class DockerProjectCommandExecutorTest {
         })) {
             assertEquals(0, executor.execute(project, "ready", "sleep 0.2; echo ready", ".", Duration.ZERO, control).exitCode());
             assertEquals("0 0", state(project, "{{.HostConfig.Memory}} {{.HostConfig.NanoCpus}}"));
-            assertEquals("max", docker.require(List.of("exec", containerName(project), "sh", "-c",
-                "cat /sys/fs/cgroup/pids.max 2>/dev/null || cat /sys/fs/cgroup/pids/pids.max"),
-                Duration.ofSeconds(5), null).output().trim());
+            // 宿主机也可能限制进程数，用同一台机器上明确设为不限的容器核对有效上限。
+            String readProcessLimit = "cat /sys/fs/cgroup/pids.max 2>/dev/null || cat /sys/fs/cgroup/pids/pids.max";
+            String hostLimit = docker.require(List.of("run", "--rm", "--pull=never", "--network=none",
+                "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--pids-limit=-1", unlimited.image(),
+                "sh", "-c", readProcessLimit), Duration.ofSeconds(20), null).output().trim();
+            assertEquals(hostLimit, docker.require(List.of("exec", containerName(project), "sh", "-c",
+                readProcessLimit), Duration.ofSeconds(5), null).output().trim());
             assertTrue(new ObjectMapper().readTree(state(project, "{{json .HostConfig.Tmpfs}}")).path("/tmp").asText().contains("size=0"));
             var running = pool.submit(() -> executor.execute(project, "cancel", "touch started.txt; sleep 60", ".", Duration.ZERO, control));
             long deadline = System.nanoTime() + Duration.ofSeconds(15).toNanos();

@@ -41,6 +41,15 @@ async function until(check) {
   }
 }
 
+async function verifyRecovery(settings) {
+  await until(() => browserProcesses().length === 0);
+  const recovered = await readPage(settings);
+  assert.equal(recovered.isError, false, "超大网页失败后仍能执行下一次浏览器读取");
+  assert.equal(Array.from(recovered.content).length, 1000);
+  await until(() => browserProcesses().length === 0);
+  process.stdout.write("浏览器内存、连续读取、超时、取消与超大网页恢复检查通过。\n");
+}
+
 async function executeBrowserCommand(directory, runner, command, seconds, ready, cancel = false) {
   const token = randomUUID();
   const script = join(directory, token + ".sh");
@@ -112,7 +121,16 @@ async function main() {
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const origin = `http://127.0.0.1:${server.address().port}`;
   const settings = options(["read", origin, "--max-chars", "1000", "--wait-for", "[data-ready]", "--wait-ms", "0"]);
+  const checkpoint = join(tmpdir(), "browser-memory-before-pressure.json");
   try {
+    if (process.argv[2] === "--verify-kernel-exit") {
+      // 内核也可能终止测试进程。只有压力测试已开始且内核记录了内存终止，才继续核对恢复结果。
+      const before = JSON.parse(readFileSync(checkpoint, "utf8"));
+      const after = counters("memory.events");
+      assert.ok(after.max > before.max && after.oom_kill > before.oom_kill);
+      await verifyRecovery(settings);
+      return;
+    }
     const small = await readPage({...settings, url: origin + "/small"});
     assert.equal(small.isError, false);
     await until(() => browserProcesses().length === 0);
@@ -140,6 +158,7 @@ async function main() {
     const regularAnonymousPeak = peakAnonymous;
     assert.ok(regularAnonymousPeak < 420 * 1024 * 1024, "常规正文读取应给 512 MiB 沙盒保留内存余量");
     const before = counters("memory.events");
+    writeFileSync(checkpoint, JSON.stringify(before), {flag: "wx"});
     const previousRequests = pageRequests;
     const started = Date.now();
     process.stderr.write("内存压力下的命令终止检查开始\n");
@@ -158,15 +177,12 @@ async function main() {
       assert.ok([137, -9].includes(pressured.status.exitCode));
     }
     process.stderr.write(`内存压力下的命令终止检查结束，耗时 ${Date.now() - started} 毫秒\n`);
-    const recovered = await readPage(settings);
-    assert.equal(recovered.isError, false, "超大网页失败后仍能执行下一次浏览器读取");
-    await until(() => browserProcesses().length === 0);
+    await verifyRecovery(settings);
     observe();
     process.stdout.write(JSON.stringify({limitBytes: limit, smallPagePeakBytes: smallPagePeak,
       smallPageAnonymousPeakBytes: smallPageAnonymousPeak, regularPeakBytes: regularPeak,
       regularAnonymousPeakBytes: regularAnonymousPeak, observedPeakBytes: peak,
       finalAnonymousBytes: counters("memory.stat").anon, remainingBrowserProcesses: browserProcesses().length}) + "\n");
-    process.stdout.write("浏览器内存、连续读取、超时、取消与超大网页恢复检查通过。\n");
   } finally {
     clearInterval(sample);
     server.closeAllConnections();
