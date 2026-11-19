@@ -11,6 +11,7 @@ import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.execution.entity.ConversationRecord;
 import com.stonewu.agenteam.model.execution.entity.ModelSelection;
+import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.entity.ToolApprovalPolicy;
 import com.stonewu.agenteam.model.execution.request.MessageInput;
 import com.stonewu.agenteam.model.execution.request.NewConversationInput;
@@ -73,6 +74,7 @@ public class RunSubmissionService {
     private final CollaborationSourceAccess collaborationSources;
     private final ConversationTitleService titles;
     private final RuntimeSettings settings;
+    private final RunCheckpointRecovery checkpoints;
 
     public RunSubmissionService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                 RunJobMapper jobs,
@@ -82,7 +84,8 @@ public class RunSubmissionService {
                                 EnterpriseMapper enterprises, WorkflowGraphValidator workflowGraphs,
                                 WorkflowControlNodes workflowInputs, WorkflowValues workflowValues,
                                 ConversationProjectService projects, CollaborationSubmissionRecords collaboration, CollaborationSourceAccess collaborationSources,
-                                ConversationTitleService titles, RuntimeSettings settings) {
+                                ConversationTitleService titles, RuntimeSettings settings, RunCheckpointRecovery checkpoints) {
+        this.checkpoints = checkpoints;
         this.settings = settings;
         this.conversations = conversations;
         this.messages = messages;
@@ -131,13 +134,17 @@ public class RunSubmissionService {
         return send(actor, id, input, null, true);
     }
 
-    private RunAccepted send(AuthContext actor, String id, MessageInput input, String retryOf, boolean allowQueue) {
+    private RunAccepted send(AuthContext actor, String id, MessageInput input, RunRecord retryOf, boolean allowQueue) {
         authorization.lockAndRequire(actor, "agent.run");
         collaboration.requireWebConversation(actor, id);
         input = configuration.input(input);
         var conversation = conversations.find(actor.enterpriseId(), actor.userId(), id, true)
             .orElseThrow(ResourceAuthorizationService::unavailable);
         active(conversation);
+        if (retryOf != null && !checkpoints.canRetry(retryOf)) {
+            throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_RETRY_UNAVAILABLE",
+                Messages.text("error.execution.runSubmissionService.retry.1"));
+        }
         if (!conversation.mode().equals("normal")) {
             throw ApiException.invalidField("conversationId", Messages.text("error.execution.runSubmissionService.send.1"));
         }
@@ -192,17 +199,12 @@ public class RunSubmissionService {
         var original = runs.find(actor.enterpriseId(), runId, false)
             .filter(value -> value.userId().equals(actor.userId()))
             .orElseThrow(ResourceAuthorizationService::unavailable);
-        if (!(original.status().equals("failed") || original.status()
-            .equals("cancelled")) || "TOOL_RESULT_UNKNOWN".equals(original.errorCode())) {
-            throw new ApiException(HttpStatus.CONFLICT, "EXECUTION_RETRY_UNAVAILABLE",
-                Messages.text("error.execution.runSubmissionService.retry.1"));
-        }
         return send(actor, original.conversationId(), messages.input(actor.enterpriseId(), original.inputMessageId()),
-            original.id(), false);
+            original, false);
     }
 
     private RunAccepted submit(AuthContext actor, ConversationRecord conversation,
-                               ExecutionConfigurationService.Selection selected, MessageInput input, String retryOf) {
+                               ExecutionConfigurationService.Selection selected, MessageInput input, RunRecord retryOf) {
         active(conversation);
         if (conversation.activeRunId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "CONVERSATION_BUSY",
@@ -294,14 +296,14 @@ public class RunSubmissionService {
 
     private PreparedSubmission prepare(AuthContext actor, String conversation,
                                        ExecutionConfigurationService.Selection selected, MessageInput input,
-                                       String retryOf, boolean waiting) {
+                                       RunRecord retryOf, boolean waiting) {
         if (!waiting && (LimitValue.reached(runs.activeCount(actor.enterpriseId(), null), settings.value(RuntimeSetting.ENTERPRISE_ACTIVE_RUNS))
             || LimitValue.reached(runs.activeCount(actor.enterpriseId(), actor.userId()), settings.value(RuntimeSetting.USER_ACTIVE_RUNS)))) {
             throw new ApiException(HttpStatus.CONFLICT, "CONCURRENCY_LIMIT",
                 Messages.text("error.execution.runSubmissionService.prepare.1"));
         }
-        String run = UUID.randomUUID().toString(), inputId = UUID.randomUUID().toString(), outputId = UUID.randomUUID()
-            .toString();
+        String run = UUID.randomUUID().toString(), outputId = UUID.randomUUID().toString();
+        String inputId = retryOf == null ? UUID.randomUUID().toString() : retryOf.inputMessageId();
         var fixed = selected.snapshot().deepCopy();
         var inputBlocks = new ArrayList<>(skills.freeze(fixed, input));
         for (var block : sources.freeze(actor, fixed, input)) {
@@ -310,14 +312,15 @@ public class RunSubmissionService {
                     block.text(), block.status(), block.stepId(), block.approvalId(), block.file(), block.citation(),
                     block.label(), block.tool()));
         }
-        fixed.put("previousRunId",
-            conversation == null ? null : runs.previousRun(actor.enterpriseId(), conversation).orElse(null));
+        if (retryOf != null) {
+            fixed.put("previousRunId", retryOf.executionConfig().path("previousRunId").asText(null));
+            fixed.put("retryOfRunId", retryOf.id());
+        } else {
+            fixed.put("previousRunId", conversation == null ? null : runs.previousRun(actor.enterpriseId(), conversation).orElse(null));
+        }
         if (fixed.path("sourceType").asText().equals("collaboration")) {
             fixed.put("sourceContext", Messages.text("text.execution.runSubmissionService.prepare.1", fixed.path("sourceContext").asText(""), fixed.path("collaborationInputContext").asText()));
             fixed.remove("collaborationInputContext");
-        }
-        if (retryOf != null) {
-            fixed.put("retryOfRunId", retryOf);
         }
         List<ContentBlock> initialBlocks = retryOf == null ? List.of() : List.of(
             new ContentBlock(UUID.randomUUID().toString(),
@@ -354,17 +357,21 @@ public class RunSubmissionService {
         if (waiting && !now.isAfter(conversation.updatedAt().plusMillis(1))) {
             now = conversation.updatedAt().plusMillis(1);
         }
-        var inputBlocks = prepared.inputBlocks();
         var initialBlocks = prepared.initialBlocks();
-        messages.create(actor.enterpriseId(), conversation.id(), inputId, "user", input, inputBlocks, now);
-        sources.bind(actor, inputId, input.attachmentIds());
+        boolean newInput = !prepared.fixed().hasNonNull("retryOfRunId");
+        if (newInput) {
+            messages.create(actor.enterpriseId(), conversation.id(), inputId, "user", input, prepared.inputBlocks(), now);
+            sources.bind(actor, inputId, input.attachmentIds());
+        }
         messages.create(actor.enterpriseId(), conversation.id(), outputId, "assistant", null, initialBlocks, now);
         prepared.fixed().put("approvalPolicy",
             mode.equals("interactive") ? conversation.approvalPolicy() : ToolApprovalPolicy.DEFAULT.value());
         runs.create(run, actor.enterpriseId(), actor.userId(), conversation.id(), inputId, outputId,
             selected.versionId(),
             mode, prepared.fixed(), maxAttempts, waiting ? conversation.lastSequence() + 1 : null, now);
-        messages.associate(actor.enterpriseId(), inputId, run);
+        if (newInput) {
+            messages.associate(actor.enterpriseId(), inputId, run);
+        }
         messages.associate(actor.enterpriseId(), outputId, run);
         var record = runs.find(actor.enterpriseId(), run, true).orElseThrow();
         if (waiting) {
@@ -375,8 +382,10 @@ public class RunSubmissionService {
         }
         conversations.activate(actor.enterpriseId(), conversation.id(), run, now);
         events.append(record, "run.created", RunView.from(record, false), now);
-        events.append(record, "message.created",
-            messages.find(actor.enterpriseId(), conversation.id(), inputId).orElseThrow(), now);
+        if (newInput) {
+            events.append(record, "message.created",
+                messages.find(actor.enterpriseId(), conversation.id(), inputId).orElseThrow(), now);
+        }
         var last = events.append(record, "message.created",
             messages.find(actor.enterpriseId(), conversation.id(), outputId).orElseThrow(), now);
         jobs.enqueue(actor.enterpriseId(), actor.userId(), run, now);

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Stonewuu/agenteam/releases/tag/v0.4.1"><img src="https://img.shields.io/badge/version-0.4.1-AD6547?style=flat-square" alt="AgenTeam 0.4.1" /></a>
+  <a href="https://github.com/Stonewuu/agenteam/releases/latest"><img src="https://img.shields.io/github/v/release/Stonewuu/agenteam?label=version&amp;color=AD6547&amp;style=flat-square" alt="AgenTeam 最新正式版" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-596B57?style=flat-square" alt="Apache-2.0 开源许可证" /></a>
   <a href="docs/deployment/images.md"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="使用 Docker Compose 部署" /></a>
 </p>
@@ -96,7 +96,33 @@
 
 ## 快速开始
 
-### 方式一：让智能体帮你部署
+安装 Docker 和 Docker Compose（多容器启动工具）。在 Windows 上使用 Docker Desktop 的 Linux 容器模式。获取项目后，在根目录启动服务。
+
+```sh
+git clone https://github.com/Stonewuu/agenteam.git
+cd agenteam
+docker compose up -d
+```
+
+首次启动会从 Docker Hub 下载最新正式镜像，生成独立的数据库密码和服务凭据。等 `docker compose ps` 显示网关 `nginx` 健康后，运行下面的命令读取首次设置凭据。
+
+```sh
+docker compose exec backend cat /run/agenteam-secrets/setup/AGENTEAM_SETUP_CREDENTIAL
+```
+
+打开 **[http://localhost:8088](http://localhost:8088)**，完成三步设置：
+
+1. **创建工作空间**：使用上面读取的凭据创建管理员和企业。
+2. **连接模型**：在“企业管理 → 模型配置”添加模型服务、访问密钥和模型。
+3. **开始一项任务**：在“能力中心”创建、发布并上架智能体，到“数字员工”中雇佣后发起对话。处理办公文件时，为智能体启用命令执行能力。
+
+工作空间侧栏的“我的环境”提供交互终端和文件浏览。终端保留当前目录与变量，支持实时输出、命令补全、历史命令、查找和中断；文件区支持目录导航、搜索排序、列表与网格、预览和下载，也可以直接在终端打开当前目录。它与智能体使用同一个用户环境；没有操作且没有任务使用时，默认空闲 30 分钟后停止，工作文件继续保留。断开连接会关闭当前终端及其命令，智能体任务继续运行。
+
+对外提供访问时，为实际域名配置 HTTPS（加密网页连接），并设置 `PUBLIC_URL`（站点访问地址）。接入邮件服务后即可使用邮箱验证、找回密码和邮件邀请。端口、域名、低内存部署及已有部署迁移见 [Docker 部署指南](docs/deployment/images.md)。
+
+日常升级在同一目录执行 `docker compose pull` 和 `docker compose up -d`。数据和凭据保存在 Docker 命名卷中。
+
+### 让智能体帮你部署
 
 将下面的内容发给能在你的电脑或服务器上执行命令的智能体：
 
@@ -104,56 +130,6 @@
 请帮我部署这个项目：https://github.com/Stonewuu/agenteam
 请先阅读项目的部署文档，检查当前环境，完成部署后告诉我访问地址和首次设置步骤。
 ```
-
-### 方式二：使用 Docker 镜像部署
-
-**服务器安装推荐使用 Docker Hub 上最新发布的镜像。** 部署包提供配套的服务配置和初始化工具，完整步骤见 [Docker 镜像部署指南](docs/deployment/images.md)。
-
-### 方式三：从源码部署
-
-准备 Git、Docker（容器运行工具）和 Docker Compose（多容器启动工具）；Windows 使用 Docker Desktop 的 Linux 容器模式。
-
-#### 1. 获取项目
-
-```sh
-git clone https://github.com/Stonewuu/agenteam.git
-cd agenteam/deploy
-```
-
-#### 2. 生成配置
-
-Linux / macOS：
-
-```sh
-sh configure.sh single
-```
-
-Windows PowerShell：
-
-```powershell
-.\configure.ps1 -Mode single
-```
-
-配置工具会创建 `.env`，生成数据库密码、服务凭据和首次初始化凭据，并保留已有配置。
-
-#### 3. 启动服务
-
-```sh
-docker compose config --quiet
-docker compose up -d --build --wait --wait-timeout 300
-```
-
-#### 4. 完成首次设置
-
-打开 **[http://localhost:8088](http://localhost:8088)**，完成三步设置：
-
-1. **创建工作空间**：使用 `deploy/.env` 中的 `SETUP_CREDENTIAL`（首次初始化凭据）创建管理员和企业。
-2. **连接模型**：在“企业管理 → 模型配置”添加模型服务、访问密钥和模型。
-3. **开始一项任务**：在“能力中心”创建、发布并上架智能体，到“数字员工”中雇佣后发起对话。处理办公文件时，为智能体启用命令执行能力。
-
-工作空间侧栏的“我的环境”提供交互终端和文件浏览。终端保留当前目录与变量，支持实时输出、命令补全、历史命令、查找和中断；文件区支持目录导航、搜索排序、列表与网格、预览和下载，也可以直接在终端打开当前目录。它与智能体使用同一个用户环境；没有操作且没有任务使用时，默认空闲 30 分钟后停止，工作文件继续保留。断开连接会关闭当前终端及其命令，智能体任务继续运行。
-
-对外提供访问时，为实际域名配置 HTTPS（加密网页连接），并设置 `PUBLIC_URL`（站点访问地址）。接入邮件服务后即可使用邮箱验证、找回密码和邮件邀请。部署参数见 [配置示例](deploy/.env.example)，入口配置见 [Nginx 反向代理示例](examples/deployment/nginx.production.example.conf)。
 
 <a id="development"></a>
 
@@ -163,7 +139,7 @@ AgenTeam 使用 Java 21、Spring Boot 4（后端应用框架）、AgentScope 2�
 
 ### 开发环境
 
-准备 Java 21、Node.js 24、pnpm 11.15.1（前端包管理器）和 Docker，按前面的步骤生成 `deploy/.env`。
+准备 Java 21、Node.js 24、pnpm 11.15.1（前端包管理器）和 Docker，在 `deploy/` 中运行 `sh configure.sh`，Windows PowerShell 运行 `./configure.ps1`，生成本地开发用的 `deploy/.env`。
 
 ### 本地启动
 
@@ -172,7 +148,7 @@ AgenTeam 使用 Java 21、Spring Boot 4（后端应用框架）、AgentScope 2�
 在 `deploy` 目录启动依赖服务：
 
 ```sh
-docker compose -f compose.yaml -f compose.dev.yaml up -d mysql redis
+docker compose -f ../docker-compose.yaml -f compose/development.yaml up -d mysql redis
 docker build -t agenteam/sandbox-office:local sandbox
 ```
 

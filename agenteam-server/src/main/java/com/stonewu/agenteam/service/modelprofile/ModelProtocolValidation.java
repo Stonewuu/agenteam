@@ -6,6 +6,8 @@ import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.service.http.ApiException;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -27,24 +29,28 @@ public class ModelProtocolValidation {
             if (!compatible) {
                 throw invalid("reasoningMode", Messages.text("error.modelprofile.modelProtocolValidation.validate.1"));
             }
+            var errors = new LinkedHashMap<String, List<String>>();
             for (String effort : efforts) {
                 if (mode.equals("budget")) {
-                    var budget = options.thinkingBudgets().get(effort);
-                    if (budget == null || budget >= capabilities.maxOutputTokens()
-                        || (protocol.equals("anthropic") && budget != 0 && budget < 1024)) {
-                        throw invalid("thinkingBudgets", Messages.text("error.modelprofile.modelProtocolValidation.validate.2"));
+                    Integer budget = options.thinkingBudget(effort);
+                    String field = "capabilities.protocolOptions.thinkingBudgets." + effort;
+                    if ("none".equals(effort)) {
+                        if (budget != 0) {
+                            errors.put(field, List.of(Messages.text("error.modelprofile.modelProtocolValidation.validate.3")));
+                        }
+                    } else {
+                        int minimum = protocol.equals("anthropic") ? 1024 : 1;
+                        if (budget == null || budget < minimum || budget >= capabilities.maxOutputTokens()) {
+                            errors.put(field, List.of(Messages.text("error.modelprofile.modelProtocolValidation.validate.2", minimum)));
+                        }
                     }
-                    if (effort.equals("none") != (budget == 0)) {
-                        throw invalid("thinkingBudgets", Messages.text("error.modelprofile.modelProtocolValidation.validate.3"));
-                    }
-                } else if (mode.equals("adaptive") || mode.equals("level")) {
-                    String level = options.thinkingLevels().get(effort);
-                    if ((!effort.equals("none") && level == null) || (protocol.equals("gemini") && effort.equals("none"))
-                        || (protocol.equals("anthropic") && "minimal".equals(level))
-                        || (protocol.equals("gemini") && "max".equals(level))) {
-                        throw invalid("thinkingLevels", Messages.text("error.modelprofile.modelProtocolValidation.validate.4"));
-                    }
+                } else if (!mode.equals("effort") && !effort.equals("none") && options.thinkingLevel(effort) == null) {
+                    errors.put("capabilities.protocolOptions.thinkingLevels." + effort,
+                        List.of(Messages.text("error.modelprofile.modelProtocolValidation.validate.4")));
                 }
+            }
+            if (!errors.isEmpty()) {
+                throw ApiException.invalidFields(errors);
             }
         }
         if (!Set.of(0, 300, 3600).contains(options.cacheTtlSeconds())

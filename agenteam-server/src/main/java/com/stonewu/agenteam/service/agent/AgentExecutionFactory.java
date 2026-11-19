@@ -132,7 +132,7 @@ public class AgentExecutionFactory {
         }
         var states = store(run);
         boolean restored = checkpoints.restore(run, states);
-        if (!restored) {
+        if (!restored && !checkpoints.restoreModelRetry(run, states)) {
             initializeHistory(run, states);
         }
         return createScoped(run, lease, config, run.executionConfig().path("agentId").asText(null),
@@ -300,31 +300,8 @@ public class AgentExecutionFactory {
                     .isPresent()) {
                     context.addAll(state.getContext());
                 }
-                var currentDefinitions = AgentSubagentConfigurationMapper.resolve(run.executionConfig().path("config"),
-                        run.executionConfig().path("dependencies")).stream()
-                    .collect(Collectors.toMap(value -> value.id(), value -> value.historyKey()));
-                var previousDefinitions = AgentSubagentConfigurationMapper.resolve(
-                        previous.executionConfig().path("config"), previous.executionConfig().path("dependencies")).stream()
-                    .collect(Collectors.toMap(value -> value.id(), value -> value.historyKey()));
-                if (!currentDefinitions.isEmpty()) {
-                    for (var entry : state.getToolContext().getSpawnRegistry().entrySet()) {
-                        var child = entry.getValue();
-                        if (child.depth() != 1) {
-                            throw new IllegalStateException(Messages.text("error.agent.agentExecutionFactory.initializeHistory.1"));
-                        }
-                        // 已删除或修改职责的助手不复用旧上下文，避免新配置继续执行旧任务。
-                        var definition = currentDefinitions.get(child.agentId());
-                        if (definition == null || !definition.equals(previousDefinitions.get(child.agentId()))) {
-                            continue;
-                        }
-                        previousStates.get(run.userId(), child.sessionId(), "agent_state", AgentState.class)
-                            .ifPresent(childState ->
-                                states.save(run.userId(), child.sessionId(), "agent_state",
-                                    AgentState.builder().userId(run.userId()).sessionId(child.sessionId())
-                                        .context(List.copyOf(childState.getContext())).build()));
-                        toolContext.putSpawnEntry(entry.getKey(), child);
-                    }
-                }
+                AgentSubagentHistory.restore(run, previous, previousStates, state, states)
+                    .getSpawnRegistry().forEach(toolContext::putSpawnEntry);
             });
         }
         var history = AgentHistoryContext.restoreMissing(run, context, messages, runs, callRecords);

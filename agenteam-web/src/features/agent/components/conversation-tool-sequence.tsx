@@ -1,6 +1,6 @@
 "use client";
 
-import {type ReactNode, useState} from "react";
+import {type CSSProperties, type ReactNode, useState} from "react";
 import {IconChevronDown} from "@/components/ui/icons";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/shadcn/collapsible";
 import {MeasuredDisclosureContent} from "@/components/ui/disclosure";
@@ -8,7 +8,10 @@ import {useT} from "@/lib/i18n/locale-provider";
 import type {BlockStatus} from "../types/execution";
 import {useExecutionDisclosure} from "../hooks/use-execution-disclosure";
 import {ToolActivityIcon} from "./conversation-tool-block";
+import {TOOL_BORDER_GLOW_CONFIG, toolBorderGlowPadding} from "./conversation-tool-border-glow-config";
 import styles from "./conversation-tool-sequence.module.css";
+
+const panelStyle = {"--tool-glow-padding": toolBorderGlowPadding(TOOL_BORDER_GLOW_CONFIG)} as CSSProperties;
 
 /** 单项与多项使用同一容器，新增调用和收起分组不会重置已打开的工具详情。 */
 export function ConversationToolSequence({count, status, failedCount, pendingIds, children}: {
@@ -39,7 +42,8 @@ export function ConversationToolSequence({count, status, failedCount, pendingIds
         ? t("{0} 次未完成", [failedCount]) : statusText}</span>
       <IconChevronDown size={14} className={styles.chevron}/>
     </CollapsibleTrigger>}
-    <CollapsibleContent className="agenteam-disclosure-content" data-animate-height keepMounted inert={!open}>
+    <CollapsibleContent className={`agenteam-disclosure-content ${styles.panel}`} style={panelStyle}
+                        data-animate-height keepMounted inert={!open}>
       <MeasuredDisclosureContent>
         <div className={styles.body} onClickCapture={() => choose(true)} onFocusCapture={() => choose(true)}>{children}</div>
       </MeasuredDisclosureContent>

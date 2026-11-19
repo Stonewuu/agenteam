@@ -140,7 +140,7 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         assertThrows(ApiException.class, () -> active.stream(messages, List.of(), options).blockLast(Duration.ofSeconds(10)));
         assertEquals(before, modelCalls.get());
         var anotherAddress = provider("调用测试提供方", null, true);
-        anotherAddress.put("baseUrl", "http://127.0.0.1:1234/v1");
+        anotherAddress.put("baseUrl", "http://10.0.0.8:1234/v1");
         change(HttpMethod.PUT, base() + "/model-providers/" + providerId, anotherAddress, "3", UUID.randomUUID().toString())
             .andExpect(status().isOk());
         String replacement = data(write(base() + "/model-providers", provider("替换连接", "replacement-key", true),
@@ -184,6 +184,53 @@ class ModelManagementApiTest extends ExecutionApiTestSupport {
         mvc.perform(get(base() + "/model-providers").cookie(login.getResponse().getCookie("SESSION"))).andExpect(status().isForbidden());
         mvc.perform(get(base() + "/model-providers/" + providerId + "/remote-models").cookie(login.getResponse().getCookie("SESSION"))).andExpect(status().isForbidden());
         mvc.perform(get(base() + "/models").cookie(login.getResponse().getCookie("SESSION"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void geminiModelSavesMixedEffortsAndReportsOnlyInvalidMappings() throws Exception {
+        var connection = provider("Gemini 测试连接", "test-key", true);
+        connection.put("protocol", "gemini");
+        String providerId = data(write(base() + "/model-providers", connection, UUID.randomUUID().toString())
+            .andExpect(status().isCreated()).andReturn()).path("id").asText();
+        var profile = model(providerId, "可调整思考的模型", "test-model", true);
+        var capabilities = new HashMap<String, Object>();
+        capabilities.put("maxContextTokens", 32000);
+        capabilities.put("maxOutputTokens", 4096);
+        capabilities.put("supportsTools", true);
+        capabilities.put("supportsTemperature", false);
+        capabilities.put("inputTypes", List.of("text"));
+        capabilities.put("reasoningEfforts", List.of("none", "low", "medium", "high", "xhigh", "max"));
+        capabilities.put("protocolOptions", Map.of("reasoningMode", "level", "thinkingLevels", Map.of("max", "xhigh")));
+        profile.put("capabilities", capabilities);
+        var created = data(write(base() + "/models", profile, UUID.randomUUID().toString())
+            .andExpect(status().isCreated()).andReturn());
+        String path = base() + "/models/" + created.path("id").asText();
+        capabilities.put("protocolOptions", Map.of("reasoningMode", "level", "thinkingLevels", Map.of("xhigh", "high")));
+        var saved = data(change(HttpMethod.PUT, path, profile, "1", UUID.randomUUID().toString())
+            .andExpect(status().isOk()).andReturn());
+        assertEquals("high", saved.at("/capabilities/protocolOptions/thinkingLevels/xhigh").asText());
+        assertEquals("none", saved.at("/capabilities/reasoningEfforts/0").asText());
+
+        capabilities.put("protocolOptions", Map.of("reasoningMode", "level", "thinkingLevels", Map.of("low", "max")));
+        var invalid = change(HttpMethod.PUT, path, profile, "2", UUID.randomUUID().toString())
+            .andExpect(status().isUnprocessableEntity()).andReturn();
+        var fields = json.readTree(invalid.getResponse().getContentAsByteArray()).at("/error/fieldErrors");
+        assertEquals(1, fields.size());
+        assertTrue(fields.has("capabilities.protocolOptions.thinkingLevels.low"));
+
+        capabilities.put("reasoningEfforts", List.of("none", "low", "medium", "high"));
+        capabilities.put("protocolOptions", Map.of("reasoningMode", "budget", "thinkingBudgets", Map.of("low", 64, "high", 4096)));
+        var invalidBudgets = change(HttpMethod.PUT, path, profile, "2", UUID.randomUUID().toString())
+            .andExpect(status().isUnprocessableEntity()).andReturn();
+        var budgets = json.readTree(invalidBudgets.getResponse().getContentAsByteArray()).at("/error/fieldErrors");
+        assertEquals(2, budgets.size());
+        assertTrue(budgets.has("capabilities.protocolOptions.thinkingBudgets.medium"));
+        assertTrue(budgets.has("capabilities.protocolOptions.thinkingBudgets.high"));
+        capabilities.put("protocolOptions", Map.of("reasoningMode", "budget", "thinkingBudgets", Map.of("low", 64, "medium", 128, "high", -1)));
+        var negative = change(HttpMethod.PUT, path, profile, "2", UUID.randomUUID().toString())
+            .andExpect(status().isUnprocessableEntity()).andReturn();
+        assertTrue(json.readTree(negative.getResponse().getContentAsByteArray())
+            .at("/error/fieldErrors").has("capabilities.protocolOptions.thinkingBudgets.high"));
     }
 
     private void verifyRemoteModels(String providerId, String other) throws Exception {

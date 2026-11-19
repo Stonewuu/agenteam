@@ -6,6 +6,7 @@ import {Select} from "@/components/ui/select";
 import {Checkbox} from "@/components/ui/checkbox";
 import {AnimatedHeight} from "@/components/ui/animated-height";
 import {useT} from "@/lib/i18n/locale-provider";
+import {nativeThinkingLevels, resolveProtocolOptions} from "../lib/model-protocol";
 import type {ReasoningEffort} from "../lib/reasoning-effort";
 import {reasoningEffortLabels} from "../lib/reasoning-effort";
 import type {ModelProtocol, ModelProtocolOptions} from "../types/model-management";
@@ -15,7 +16,7 @@ import styles from "./model-profile-form.module.css";
 type Props = {
   protocol: ModelProtocol;
   value: ModelProtocolOptions;
-  onChange: (value: ModelProtocolOptions) => void;
+  onChange: (value: ModelProtocolOptions, field: string) => void;
   efforts: ReasoningEffort[];
   disabled: boolean;
   errors: Record<string, string[]>;
@@ -25,8 +26,9 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, disable
   const t = useT();
   const native = protocol === "anthropic" || protocol === "gemini";
   const error = (name: string) => errors[`capabilities.protocolOptions.${name}`]?.join(" ");
-  const levels = protocol === "anthropic" ? ["low", "medium", "high", "max"] as const : ["minimal", "low", "medium", "high"] as const;
-  const labels = {minimal: t("极低"), low: t("低"), medium: t("中"), high: t("高"), max: t("最高")};
+  const active = resolveProtocolOptions(value, efforts);
+  const thinkingEfforts = efforts.filter((effort) => effort !== "none");
+  const levels = nativeThinkingLevels[protocol === "anthropic" ? "adaptive" : "level"];
   function budget(effort: ReasoningEffort, input: string) {
     const values = {...value.thinkingBudgets};
     if (input === "") {
@@ -34,44 +36,50 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, disable
     } else {
       values[effort] = Number(input);
     }
-    onChange({...value, thinkingBudgets: values});
+    onChange({...value, thinkingBudgets: values}, `thinkingBudgets.${effort}`);
   }
   return <section className={styles.protocolSection} aria-label={t("协议选项")}>
     <h3 className={styles.sectionHeading}>{t("协议选项")}</h3>
     <AnimatedHeight preserveControlShadows>
       <div className={ui.form}>
-        {native && efforts.length > 0 && <>
+        {native && thinkingEfforts.length > 0 && <>
           <Field label={t("思考方式")} error={error("reasoningMode")}><Select name="capabilities.protocolOptions.reasoningMode"
             value={value.reasoningMode} disabled={disabled}
-            onChange={(event) => onChange({...value, reasoningMode: event.target.value as ModelProtocolOptions["reasoningMode"]})}>
+            onChange={(event) => onChange({...value, reasoningMode: event.target.value as ModelProtocolOptions["reasoningMode"]}, "reasoningMode")}>
             <option value="budget">{t("按 Token 预算")}</option>
             <option value={protocol === "anthropic" ? "adaptive" : "level"}>{protocol === "anthropic" ? t("自适应思考") : t("按思考强度设置")}</option>
           </Select></Field>
-          <div className={styles.lengthColumns}>{efforts.map((effort) => value.reasoningMode === "budget" ?
-            <Field key={effort} label={t("{0}：思考预算", [t(reasoningEffortLabels[effort])])}
-              error={error(`thinkingBudgets.${effort}`) ?? error("thinkingBudgets")}>
-              <Input type="number" min={0} max={1000000} step={1} name={`capabilities.protocolOptions.thinkingBudgets.${effort}`}
-                value={value.thinkingBudgets[effort] ?? ""} disabled={disabled}
+          <div className={styles.lengthColumns}>{thinkingEfforts.map((effort) => value.reasoningMode === "budget" ?
+            <Field key={`budget-${effort}`} label={t("{0}：思考预算", [t(reasoningEffortLabels[effort])])}
+              error={error(`thinkingBudgets.${effort}`)}>
+              <Input type="number" min={protocol === "anthropic" ? 1024 : 1} max={1000000} step={1} name={`capabilities.protocolOptions.thinkingBudgets.${effort}`}
+                value={active.thinkingBudgets[effort] ?? ""} disabled={disabled}
                 onChange={(event) => budget(effort, event.target.value)}/>
-            </Field> : effort !== "none" && <Field key={effort} label={t("{0}：原生等级", [t(reasoningEffortLabels[effort])])}
-              error={error(`thinkingLevels.${effort}`) ?? error("thinkingLevels")}>
-              <Select name={`capabilities.protocolOptions.thinkingLevels.${effort}`} value={value.thinkingLevels[effort] ?? ""}
-                disabled={disabled} onChange={(event) => onChange({...value,
-                  thinkingLevels: {...value.thinkingLevels, [effort]: event.target.value}})}>
-                <option value="">{t("请选择")}</option>
-                {levels.map((level) => <option key={level} value={level}>{labels[level]}</option>)}
+            </Field> : <Field key={`level-${effort}`} label={t("{0}：原生等级", [t(reasoningEffortLabels[effort])])}
+              error={error(`thinkingLevels.${effort}`)}>
+              <Select name={`capabilities.protocolOptions.thinkingLevels.${effort}`}
+                value={levels.find((level) => level === active.thinkingLevels[effort]) ?? ""}
+                disabled={disabled} onChange={(event) => {
+                  const level = levels.find((item) => item === event.target.value);
+                  if (level) {
+                    onChange({...value, thinkingLevels: {...value.thinkingLevels, [effort]: level}}, `thinkingLevels.${effort}`);
+                  }
+                }}>
+                {!levels.some((level) => level === active.thinkingLevels[effort]) &&
+                  <option value="" disabled>{t("请选择")}</option>}
+                {levels.map((level) => <option key={level} value={level}>{t(reasoningEffortLabels[level])}</option>)}
               </Select>
             </Field>)}</div>
         </>}
         {protocol === "anthropic" && <Field label={t("缓存创建有效期")} error={error("cacheTtlSeconds")}>
           <Select name="capabilities.protocolOptions.cacheTtlSeconds" value={value.cacheTtlSeconds} disabled={disabled}
-            onChange={(event) => onChange({...value, cacheTtlSeconds: Number(event.target.value)})}>
+            onChange={(event) => onChange({...value, cacheTtlSeconds: Number(event.target.value)}, "cacheTtlSeconds")}>
             <option value={0}>{t("不开启自动缓存")}</option><option value={300}>{t("5 分钟")}</option><option value={3600}>{t("1 小时")}</option>
           </Select>
         </Field>}
         {protocol !== "gemini" && <Field label={t("服务档位")} error={error("serviceTier")}>
           <Select name="capabilities.protocolOptions.serviceTier" value={value.serviceTier ?? ""} disabled={disabled}
-            onChange={(event) => onChange({...value, serviceTier: event.target.value || null})}>
+            onChange={(event) => onChange({...value, serviceTier: event.target.value || null}, "serviceTier")}>
             <option value="">{t("使用提供方默认值")}</option><option value="auto">{t("自动选择")}</option>
             {protocol === "anthropic" ? <option value="standard_only">{t("仅标准服务")}</option> : <>
               <option value="default">{t("标准服务")}</option><option value="flex">Flex</option><option value="priority">{t("优先服务")}</option>
@@ -80,7 +88,7 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, disable
         </Field>}
         {protocol === "openai" && <Field label={t("用量格式")} error={error("usageFormat")}>
           <Select name="capabilities.protocolOptions.usageFormat" value={value.usageFormat} disabled={disabled}
-            onChange={(event) => onChange({...value, usageFormat: event.target.value as ModelProtocolOptions["usageFormat"]})}>
+            onChange={(event) => onChange({...value, usageFormat: event.target.value as ModelProtocolOptions["usageFormat"]}, "usageFormat")}>
             <option value="standard">OpenAI</option><option value="deepseek">DeepSeek</option>
           </Select>
         </Field>}
@@ -92,7 +100,7 @@ export function ModelProtocolFields({protocol, value, onChange, efforts, disable
           ] as [ModelProtocolOptions["notApplicableUsage"][number], string][]).filter(([key]) => !(key === "cache_write" && protocol === "gemini"))
             .map(([key, label]) => <label key={key} className={styles.reasoningOption}><Checkbox checked={value.notApplicableUsage.includes(key)} disabled={disabled}
               onCheckedChange={(checked) => onChange({...value, notApplicableUsage: checked ? [...value.notApplicableUsage, key]
-                : value.notApplicableUsage.filter((item) => item !== key)})}/><span>{label}</span></label>)}</div>
+                : value.notApplicableUsage.filter((item) => item !== key)}, "notApplicableUsage")}/><span>{label}</span></label>)}</div>
         </Field>
       </div>
     </AnimatedHeight>

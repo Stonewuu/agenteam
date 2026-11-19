@@ -150,7 +150,10 @@ class WorkspaceApiTest extends ExecutionApiTestSupport {
         databaseAccess.mapper(ResourceVersionSqlMapper.class).update(new LambdaUpdateWrapper<ResourceVersionRow>().eq(ResourceVersionRow::getEnterpriseId, (enterprise)).eq(ResourceVersionRow::getId, (version)).set(ResourceVersionRow::getStatus, "revoked"));
         assertEquals(newHire, page("/home").at("/employees/0/agentId").asText());
         databaseAccess.mapper(ModelProfileSqlMapper.class).update(new LambdaUpdateWrapper<ModelProfileRow>().eq(ModelProfileRow::getEnterpriseId, (enterprise)).set(ModelProfileRow::getEnabled, false));
-        assertTrue(page("/home").path("employees").isEmpty());
+        var disabledModels = page("/home").path("employees");
+        assertEquals(1, disabledModels.size());
+        assertEquals(newHire, disabledModels.get(0).path("agentId").asText());
+        assertTrue(disabledModels.get(0).path("canRun").asBoolean(), "保留已雇佣员工，让用户配置或选择可用模型");
     }
 
     @Test

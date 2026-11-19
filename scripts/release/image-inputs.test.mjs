@@ -31,8 +31,10 @@ function fixture() {
     write(`agenteam/agenteam-web/${name}`, name.endsWith(".LICENSE") ? "必须保留的第三方版权声明" : "验证用内容");
   }
   write("agenteam/agenteam-web/package.json", JSON.stringify({name: "agenteam-web", version: "0.2.0"}));
-  for (const name of ["compose.yaml", "compose.registry.yaml", "compose.single.yaml", "registry/configure-server.py",
-    "compose.shared-mysql.yaml", "compose.external-mysql.yaml", "compose.low-memory.yaml", "agenteam-sandboxes.slice",
+  write("agenteam/docker-compose.yaml", readFileSync(new URL("../../docker-compose.yaml", import.meta.url), "utf8"));
+  write("agenteam/.env.example", "DB_PASSWORD=\n");
+  for (const name of ["compose/split.yaml", "registry/configure-server.py", "registry/Dockerfile.dockerignore",
+    "compose/shared-mysql.yaml", "compose/external-mysql.yaml", "compose/low-memory.yaml", "agenteam-sandboxes.slice", "container/init-storage.sh",
     "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/README.md", "nginx/15-agenteam-config.sh", "nginx/default.conf.template",
     "nginx/api.conf", "Dockerfile.artifact", "container/sandbox-entrypoint.sh", "sandbox/Dockerfile", "sandbox/package.json",
     "sandbox/package-lock.json", "sandbox/requirements.txt", "sandbox/requirements.lock", "sandbox/office/main.py", "sandbox/bin/office",
@@ -92,11 +94,14 @@ test("只复制声明的输入，保留版权文件，五类镜像同版本且�
   const result = createImageInputs(options);
   verifyImageInputs(options.output, result);
   assert.equal(Object.keys(result.targets).length, 5);
-  assert.deepEqual(Object.keys(result.contexts.deployment.files).sort(), ["compose.yaml", "compose.registry.yaml", "compose.single.yaml",
-    "compose.shared-mysql.yaml", "compose.external-mysql.yaml", "compose.low-memory.yaml", "agenteam-sandboxes.slice",
+  assert.deepEqual(Object.keys(result.contexts.deployment.files).sort(), ["docker-compose.yaml", ".env.example", "compose/split.yaml", "registry/Dockerfile.dockerignore",
+    "compose/shared-mysql.yaml", "compose/external-mysql.yaml", "compose/low-memory.yaml", "agenteam-sandboxes.slice", "container/init-storage.sh",
     "registry/configure-server.py", "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/README.md", "registry/release.env",
     "nginx/15-agenteam-config.sh", "nginx/default.conf.template", "nginx/api.conf", "docs/deployment/images.md",
     "docs/deployment/enterprise-messaging.md", "docs/deployment/web-browsing.md", "licenses/agenteam/LICENSE", "licenses/agenteam/NOTICE"].sort());
+  const compose = readFileSync(resolve(options.output, "deployment/docker-compose.yaml"), "utf8");
+  assert.ok(compose.includes("docker.io/stonewuu/agenteam-backend:0.2.0"));
+  assert.ok(!compose.includes(":latest"));
   assert.equal(readFileSync(resolve(options.output, "frontend/src/component.LICENSE"), "utf8"), "必须保留的第三方版权声明");
   assert.equal(readFileSync(resolve(options.output, "office/browser/browser-cli.cjs"), "utf8"), "验证用内容");
   assert.equal(readFileSync(resolve(options.output, "office/bin/agenteam-browser"), "utf8"), "验证用内容");

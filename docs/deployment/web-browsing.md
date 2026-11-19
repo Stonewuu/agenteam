@@ -35,10 +35,10 @@ git clone --depth 1 https://github.com/用户/仓库.git
 
 浏览器只在读取时启动，完成、超时或取消后释放进程。正文读取不加载图片、音视频、字体或额外弹窗；超长正文分段时只为当前片段建立字符数组。镜像只安装 [Playwright 官方支持的无界面浏览器程序](https://playwright.dev/docs/browsers#chromium-headless-shell)，不额外下载桌面浏览器；这减少镜像体积，运行内存仍由下面的限制管理。
 
-Linux 服务器可以在原 `COMPOSE_FILE`（容器部署文件列表）末尾追加 `compose.low-memory.yaml`。启用前，从本部署文件目录执行：
+在 Linux 部署根目录的 `.env` 中设置 `COMPOSE_PATH_SEPARATOR=,` 和 `COMPOSE_FILE=docker-compose.yaml,deploy/compose/low-memory.yaml`。如果已经使用共享数据库等附加配置，就在原文件列表末尾追加低内存配置。先从部署根目录运行以下命令：
 
 ```sh
-sudo install -m 0644 agenteam-sandboxes.slice /etc/systemd/system/agenteam-sandboxes.slice
+sudo install -m 0644 deploy/agenteam-sandboxes.slice /etc/systemd/system/agenteam-sandboxes.slice
 sudo systemctl daemon-reload
 sudo systemctl start agenteam-sandboxes.slice
 docker volume create agenteam-sandbox-capacity
@@ -52,7 +52,7 @@ docker volume create agenteam-sandbox-capacity
 - 每个用户仍使用独立文件目录和独立浏览器会话，共享卷只包含执行名额的锁文件；锁随执行进程退出自动释放。
 - 单个沙盒上限为 512 MiB（每单位 1048576 字节），整台主机所有沙盒合计硬上限为 640 MiB，并禁止使用额外交换空间；空闲命令容器保留 30 秒，容量不足时优先回收空闲容器。
 - 每个站点后端、前端、执行服务和入口分别限制为 640、160、160、32 MiB。两个站点共用一个 640 MiB 数据库、各使用一个 64 MiB 缓存服务，加上全部沙盒的 640 MiB 上限，共为 3392 MiB。启用前用 `free -m` 核对实际物理内存，并为操作系统和主机管理进程至少预留 512 MiB；其他应用需要另算。缓存服务最多保存 48 MiB 数据，剩余空间供进程和持久化操作使用。
-- MySQL 的 640 MiB 限制还需要配合内部容量配置。发布模板将数据页缓存设为 128 MiB、日志缓冲设为 16 MiB、临时表全局内存设为 32 MiB，并限制表缓存和性能诊断记录数量；不能只调整容器上限或连接数。诊断仍启用，但只保留有限的摘要和长期语句记录，超过容量时不保留全部诊断样本。已有部署需在备份后应用这些启动参数，不能仅替换前后端镜像。
+- MySQL 的 640 MiB 限制还需要配合内部容量配置。低内存配置将数据页缓存设为 128 MiB、日志缓冲设为 16 MiB、临时表全局内存设为 32 MiB，并限制表缓存和性能诊断记录数量；不能只调整容器上限或连接数。诊断仍启用，但只保留有限的摘要和长期语句记录，超过容量时不保留全部诊断样本。已有部署需在备份后应用这些启动参数，不能仅替换前后端镜像。
 - 640 MiB 后端将 Java 堆固定为 256 MiB、可用处理器设为 2，并使用 `TieredStopAtLevel=1`（限制即时编译的优化等级），为四协议开发库的类信息和本地开销留出空间。每个后端同时只领取一个任务，其他任务排队，避免多个长对话同时占用堆；有充足内存的正式部署可以使用常规配置。堆内存耗尽时进程退出，由 Docker 重启，未完成任务按已保存的状态结束或恢复。
 
 这适用于低并发测试环境，多用户的沙盒任务会排队，不能据此承诺任意并发。超出单次内存或调用时限的网页可能读取失败，错误仍返回模型选择其他方式。后台常驻服务和模型请求也需要观察实际占用；如果主机还运行其他应用，应另行计算它们的资源。

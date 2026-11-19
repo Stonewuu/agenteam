@@ -1,8 +1,8 @@
 # AgenTeam 部署文件
 
-本目录提供当前版本的服务配置、初始化工具和安装说明。先阅读 [本版本安装说明](docs/deployment/images.md)，再在服务器运行 `python3 configure-server.py --domain 实际域名` 创建首次配置。
+本目录包含与镜像版本配套的 `docker-compose.yaml`。执行 `docker compose up -d` 启动服务，打开 http://localhost:8088，使用 `docker compose exec backend cat /run/agenteam-secrets/setup/AGENTEAM_SETUP_CREDENTIAL` 读取首次设置凭据。自定义端口或资源设置时，可将 `.env.example` 复制为 `.env`。通过域名访问且需要生成反向代理配置时，在首次启动前使用 `python3 configure-server.py --domain 实际域名` 生成配置。[本版本安装说明](docs/deployment/images.md)
 
-安装程序不会覆盖已有密码。升级旧部署前，按维护说明保存数据库、文件、配置和原镜像；保留原服务名称与数据卷关系。同机运行多套独立部署时，首次启动前修改各自的项目名、端口及网络配置。
+安装程序不会覆盖已有密码。升级旧部署前，按维护说明保存数据库、文件、配置和原镜像；保留原服务名称与数据卷关系。同机运行多套独立部署时，首次启动前分别设置各自的项目名、端口及网络配置。
 
 通过[企业微信与飞书说明](docs/deployment/enterprise-messaging.md)连接企业应用、成员账号与工作通知。
 
@@ -13,7 +13,7 @@ AgenTeam 源代码的许可见 `licenses/agenteam/LICENSE`。第三方组件保�
 可以由原部署继续运行 MySQL，另一套部署只连接它，从而减少一个数据库容器的内存开销。两套应用必须使用不同数据库和专用账号，Redis（会话与实时数据缓存）、应用密钥、文件卷、容器项目名、端口和应用网段仍各自独立。以下步骤需要 Docker Compose 2.24.4 或更新版本；只适用于同一 Docker 服务上的两套部署。
 
 1. 先备份原数据库及部署配置，保留原部署的 `COMPOSE_PROJECT_NAME`、数据库名、账号、密码和数据卷。创建专用内部网络：`docker network create --internal agenteam-shared-database`。如果该网络已经存在，先确认它属于这两套部署并保持内部网络，不重复创建。
-2. 在提供 MySQL 的原部署 `.env` 中增加 `SHARED_DATABASE_NETWORK=agenteam-shared-database`，在现有 `COMPOSE_FILE` 末尾追加 `,compose.shared-mysql.yaml`。检查配置后，在维护窗口执行 `docker compose up -d --no-build --wait mysql`。此操作可能重建数据库容器以加入网络，但继续使用原数据卷；不能使用删除卷的命令。
+2. 在提供 MySQL 的原部署 `.env` 中增加 `SHARED_DATABASE_NETWORK=agenteam-shared-database`，设置 `COMPOSE_PATH_SEPARATOR=,`，在 `COMPOSE_FILE=docker-compose.yaml` 或现有文件列表末尾追加 `,deploy/compose/shared-mysql.yaml`。检查配置后，在维护窗口执行 `docker compose up -d --no-build --wait mysql`。此操作可能重建数据库容器以加入网络，但继续使用原数据卷；不能使用删除卷的命令。
 3. 使用数据库管理员连接该实例，为新部署创建空库和独立账号。以下是数据库语句示例，执行前替换密码，且不要把实际密码放入终端历史或日志：
 
 ```sql
@@ -28,7 +28,7 @@ GRANT ALL PRIVILEGES ON agenteam_community.* TO 'agenteam_community'@'%';
 
 ```dotenv
 COMPOSE_PROJECT_NAME=agenteam-community
-COMPOSE_FILE=compose.yaml,compose.registry.yaml,compose.single.yaml,compose.external-mysql.yaml
+COMPOSE_FILE=docker-compose.yaml,deploy/compose/external-mysql.yaml
 COMPOSE_PATH_SEPARATOR=,
 HTTP_PORT=8089
 NETWORK_PREFIX=172.29.45

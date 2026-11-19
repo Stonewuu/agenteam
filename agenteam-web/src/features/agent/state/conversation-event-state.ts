@@ -171,12 +171,17 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
             ? null : snapshot.conversation.unavailableReason,
           updatedAt: event.createdAt
         },
-        messages: snapshot.messages.map((message) => message.id === run.outputMessageId
-          ? {
+        messages: snapshot.messages.map((message) => {
+          if (run.retryOfRunId && message.runId === run.retryOfRunId && message.role === "assistant"
+            && (message.status === "failed" || message.status === "cancelled")) {
+            return message.supersededByRetry ? message : {...message, supersededByRetry: true};
+          }
+          return message.id === run.outputMessageId ? {
             ...message,
             status: ended ? run.status as "completed" | "failed" | "cancelled" : run.status === "queued" ? "pending" : "streaming",
             updatedAt: event.createdAt
-          } : message)
+          } : message;
+        })
       };
       break;
     }

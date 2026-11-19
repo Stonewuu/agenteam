@@ -89,6 +89,7 @@ export function validateBlocks(blocks: ContentBlock[]) {
 export function validateMessage(message: ConversationMessage) {
   const value = record(message);
   if (typeof value.id !== "string" || !value.id || typeof value.content !== "string" || !["user", "assistant", "system"].includes(value.role as string)
+    || (value.supersededByRetry !== undefined && typeof value.supersededByRetry !== "boolean")
     || !["pending", "streaming", "completed", "failed", "cancelled"].includes(value.status as string)) {
     throw new SnapshotRequired();
   }

@@ -15,6 +15,7 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.request.ApprovalDecisionRequest;
 import com.stonewu.agenteam.model.execution.response.RunApprovalView;
 import com.stonewu.agenteam.model.execution.response.RunView;
+import com.stonewu.agenteam.service.agent.AgentHistoryContext;
 import com.stonewu.agenteam.service.agent.EncryptedAgentStateStore;
 import com.stonewu.agenteam.service.audit.AuditEventService;
 import com.stonewu.agenteam.service.http.ApiException;
@@ -260,6 +261,10 @@ public class RunApprovalService {
                            boolean restored) {
         var saved = states.get(run.userId(), session, "agent_state", AgentState.class);
         if (!restored) {
+            if (session.equals(run.conversationId()) && run.executionConfig().hasNonNull("retryOfRunId")
+                && saved.filter(state -> AgentHistoryContext.endsWithToolResultsForInput(state.getContext(), first.getId())).isPresent()) {
+                return List.of();
+            }
             if (session.equals(run.conversationId()) && run.executionConfig().path("resumeWebRoomWork").asBoolean()) {
                 if (saved.isEmpty() || saved.get().getContext().isEmpty()) {
                     throw new IllegalStateException(Messages.text("error.execution.runApprovalService.input.1"));

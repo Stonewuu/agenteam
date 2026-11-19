@@ -96,7 +96,7 @@ public class ConversationAppearanceMapper {
             .toList();
         return new MessageView(message.id(), message.runId(), message.attemptNo(), message.role(), message.content(),
             message.status(), restored, message.attachments(), message.feedback(), message.createdAt(),
-            message.updatedAt());
+            message.updatedAt(), message.supersededByRetry());
     }
 
     private ContentBlock restoreBlock(ContentBlock block, Map<String, ContentBlock> blocks,

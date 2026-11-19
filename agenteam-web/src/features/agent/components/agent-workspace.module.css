@@ -127,6 +127,10 @@
   justify-content: flex-start;
 }
 
+.assistantMessageRow:empty {
+  display: none;
+}
+
 .composerWrap {
   position: fixed;
   z-index: 3;

@@ -1,5 +1,5 @@
 import type {ConversationState} from "../state/conversation-event-state";
-import type {BlockStatus, ContentBlock, ConversationMessage, RunApproval} from "../types/execution";
+import type {BlockStatus, ContentBlock, ConversationMessage, Run, RunApproval} from "../types/execution";
 import type {DisplayBlock, DisplayMessage} from "../types/conversation-display";
 import {localizeSavedToolLabel} from "../../plugin/lib/tool-display-name";
 
@@ -75,7 +75,24 @@ export function hasVisibleConversationContent(block: DisplayBlock): boolean {
     || ("summary" in block && block.summary.trim())) {
     return true;
   }
-  return block.kind !== "thinking" && block.kind !== "text" || block.blocks.some(hasVisibleConversationContent);
+  return !["thinking", "text", "summary"].includes(block.kind) || block.blocks.some(hasVisibleConversationContent);
+}
+
+/** 当前回复仍在执行，且没有正在显示的内容或交互时，在末尾提示用户继续等待。 */
+export function showReplyActivity(message: DisplayMessage, run: Run | null, blocks: DisplayBlock[]): boolean {
+  if (message.role !== "assistant" || (message.status !== "pending" && message.status !== "streaming")
+    || !run || run.id !== message.runId || run.outputMessageId !== message.id
+    || (run.status !== "running" && run.status !== "queued" && run.status !== "waiting_turn")) {
+    return false;
+  }
+  function hasActiveContent(block: DisplayBlock): boolean {
+    if (block.kind === "question" && block.question.status === "pending") {
+      return true;
+    }
+    return ("status" in block && ["pending", "running", "waiting_approval", "waiting_input"].includes(block.status)
+      && hasVisibleConversationContent(block)) || block.blocks.some(hasActiveContent);
+  }
+  return (blocks.length > 0 || !message.content.trim()) && !blocks.some(hasActiveContent);
 }
 
 /** 子任务调用保留原始工具身份，只在展示时使用子智能体版式。 */

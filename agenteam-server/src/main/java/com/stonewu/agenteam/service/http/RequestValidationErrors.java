@@ -57,7 +57,7 @@ final class RequestValidationErrors {
     }
 
     static String path(String prefix, String path) {
-        return append(prefix, path.replaceAll("\\[(\\d+)]", ".$1").replaceAll("\\.<[^>]+>", ""));
+        return append(prefix, path.replaceAll("\\[([a-zA-Z0-9_]+)]", ".$1").replaceAll("\\.<[^>]+>", ""));
     }
 
     static String constraint(ConstraintViolation<?> violation) {

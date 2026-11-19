@@ -5,9 +5,60 @@ import { createRequire } from "node:module";
 const load = createRequire(import.meta.url);
 const { fromSnapshot, applyConversationFrame } = load("../.test-build/conversation/agent/state/conversation-event-state.js");
 const { parseConversationFrame, SnapshotRequired } = load("../.test-build/conversation/agent/state/conversation-protocol.js");
-const { displayMessages, mergeRunApprovals } = load("../.test-build/conversation/agent/lib/conversation-display.js");
+const { displayMessages, mergeRunApprovals, showReplyActivity } = load("../.test-build/conversation/agent/lib/conversation-display.js");
 const time = "2026-09-14T08:00:00Z";
 const {mergeConversationMetadata, mergeConversationMetadataList} = load("../.test-build/conversation/agent/lib/conversation-metadata.js");
+
+test("完成工具后等待下一段时显示无字指示，已有活动或需要用户处理时收起", () => {
+  const reply = {id: "reply", runId: "run", role: "assistant", status: "streaming", content: ""};
+  const run = {id: "run", outputMessageId: "reply", status: "running"};
+  const tools = Array.from({length: 4}, (_, i) => ({id: String(i), kind: "tool", status: "completed", blocks: []}));
+  assert.equal(showReplyActivity(reply, run, []), true);
+  assert.equal(showReplyActivity(reply, run, tools), true);
+  for (const kind of ["text", "thinking"]) {
+    const next = {kind, status: "running", content: "", blocks: []};
+    assert.equal(showReplyActivity(reply, run, [...tools, next]), true);
+    assert.equal(showReplyActivity(reply, run, [...tools, {...next, content: "新内容"}]), false);
+  }
+  assert.equal(showReplyActivity(reply, run, [{...tools[0], status: "running"}]), false);
+  assert.equal(showReplyActivity(reply, run, [{...tools[0], blocks: [{kind: "question", question: {status: "pending"}, blocks: []}]}]), false);
+  for (const status of ["waiting_approval", "waiting_input", "cancelling", "cancelled", "failed", "completed"]) {
+    assert.equal(showReplyActivity(reply, {...run, status}, tools), false);
+  }
+  assert.equal(showReplyActivity({...reply, status: "completed"}, run, tools), false);
+  assert.equal(showReplyActivity(reply, {...run, outputMessageId: "new-attempt"}, tools), false);
+  assert.equal(showReplyActivity(reply, null, tools), false);
+});
+
+test("显式重试只收起对应失败回复的操作，刷新和再次失败仍保留正确的工具与提问", () => {
+  const saved = liveSnapshot("20", [{...block("files", "tool"), status: "completed"}]);
+  const original = {...saved.messages[0], id: "original-output", runId: "original", status: "failed"};
+  const question = {...original, id: "question", role: "user", blocks: [], content: "列出目录里的文件", status: "completed"};
+  const earlier = {...original, id: "earlier-output", runId: "earlier", blocks: []};
+  const next = {...original, id: "output", runId: "run", blocks: [], status: "pending"};
+  saved.messages = [earlier, question, original, next];
+  saved.activeRun = null;
+  const before = fromSnapshot(saved);
+  assert.equal(Boolean(before.snapshot.messages[2].supersededByRetry), false);
+  const started = {id: "run", conversationId: "conversation", outputMessageId: "output", status: "queued", lastSequence: "11"};
+  const unrelated = apply(before, liveEvent("21", "run.created", started, "11"));
+  assert.equal(Boolean(unrelated.snapshot.messages[2].supersededByRetry), false);
+  const retry = {...started, retryOfRunId: "original"};
+  const queued = apply(before, liveEvent("21", "run.created", retry, "11"));
+  for (const status of ["failed", "completed"]) {
+    const finished = apply(queued, liveEvent("22", `run.${status}`, {...retry, status, lastSequence: "12"}, "12"));
+    for (const state of [queued, finished, fromSnapshot(finished.snapshot)]) {
+      const [other, user, oldReply, newReply] = displayMessages(state);
+      assert.equal(Boolean(other.supersededByRetry), false);
+      assert.equal(oldReply.supersededByRetry, true);
+      assert.equal(oldReply.blocks[0].id, "files");
+      assert.equal(user.content, "列出目录里的文件");
+      assert.equal(displayMessages(state).filter(message => message.role === "user").length, 1);
+      assert.equal(Boolean(newReply.supersededByRetry), false);
+    }
+    assert.equal(finished.snapshot.messages[3].status, status);
+  }
+});
 
 test("自动标题、旧快照与人工改名按对话版本合并，保留完整设置及导航属性", () => {
   const original = {id: "conversation", revision: "2", title: "提示词", favorite: false, projectId: "first", navigationKey: "conversation:key"};
@@ -563,6 +614,9 @@ test("外部写入的影响只在等待确认时保留，工作流用户说明�
 test("没有真实内容的模型生命周期不产生额外卡片，失败说明仍保留", () => {
   const { mergeExecutionSteps } = load("../.test-build/conversation/agent/lib/conversation-steps.js");
   assert.deepEqual(mergeExecutionSteps([], [step("model")]), []);
+  const failedModel = {...step("model"), status: "failed"};
+  assert.deepEqual(mergeExecutionSteps([], [failedModel], "failed"), []);
+  assert.equal(mergeExecutionSteps([], [failedModel], "completed")[0].status, "failed");
   const failure = { ...step("failed-model"), status: "failed", publicSummary: "模型连接中断" };
   assert.equal(mergeExecutionSteps([], [failure])[0].summary, "模型连接中断");
 });

@@ -164,8 +164,8 @@
     "en": "The accumulated content is missing the current execution status."
   },
   "error.execution.modelFailureMapper.temporary.1": {
-    "zh-CN": "模型服务暂时无法完成请求，已保存的内容仍可查看。",
-    "en": "The model service could not complete this request. Saved content remains available."
+    "zh-CN": "模型暂时无法回复。",
+    "en": "The model is temporarily unavailable."
   },
   "error.execution.modelFailureMapper.rejected.1": {
     "zh-CN": "模型服务拒绝了当前访问，请联系管理员检查配置。",

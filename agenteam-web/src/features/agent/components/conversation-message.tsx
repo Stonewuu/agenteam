@@ -21,6 +21,7 @@ import type {Employee} from "@/features/employee/types/employee";
 import {IconBookmark, IconThumbDown, IconThumbUp, IconChartBar} from "@/components/ui/icons";
 import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {ConversationRunFeedback} from "./conversation-run-feedback";
+import {hasVisibleConversationContent, showReplyActivity} from "../lib/conversation-display";
 import {type LiveRunStep, mergeExecutionSteps, messageRunSteps, type RunStepHistory} from "../lib/conversation-steps";
 
 export function ConversationMessage({
@@ -57,9 +58,12 @@ export function ConversationMessage({
   const [feedbackMutation] = useState(() => new ApiMutation());
   const [busy, setBusy] = useState(false);
   const [usageOpen, setUsageOpen] = useState(false);
+  const [acceptedRetry, setAcceptedRetry] = useState<string | null>(null);
   const ended = ["completed", "failed", "cancelled"].includes(message.status);
-  const blocks = mergeExecutionSteps(message.blocks, messageRunSteps(message, stepHistory, liveSteps));
+  const blocks = mergeExecutionSteps(message.blocks, messageRunSteps(message, stepHistory, liveSteps), message.status);
   const run = latestRun?.id === message.runId ? latestRun : null;
+  const waitingForContent = showReplyActivity(message, run, blocks);
+  const superseded = message.supersededByRetry || (acceptedRetry !== null && acceptedRetry === message.runId);
   const memoryText = message.content.trim() || message.blocks.flatMap((block) => block.kind === "workflow" ? [block.summary] : []).join("\n");
 
   function selectedText() {
@@ -87,6 +91,9 @@ export function ConversationMessage({
     }
   }
 
+  if (superseded && !message.content.trim() && !blocks.some(hasVisibleConversationContent)) {
+    return null;
+  }
   return <div className={styles.assistantMessage}>
     <ConversationReplyAuthor avatar={employee && <ResourceAvatar icon={employee.icon} color={employee.color} size="small"/>}
       name={employeeName} createdAt={message.createdAt}/>
@@ -95,15 +102,26 @@ export function ConversationMessage({
     <div className={layout.messageBody} ref={contentRef}>{blocks.length ?
       <ConversationBlocks blocks={blocks} enterprise={enterprise} runId={message.runId} liveApprovals={liveApprovals}
                           onChanged={onChanged}/> : message.content ? <ConversationMarkdown content={message.content}/>
-        : !ended || message.status === "completed" ? <span
-          className={styles.placeholder}>{ended ? message.hasMultipleAttempts ? uiText("本次尝试没有返回内容。") : uiText("本次任务没有返回内容。") : message.status === "pending" ? uiText("等待执行…") : uiText("正在处理…")}</span> : null}</div>
+        : message.status === "completed" ? <span
+          className={styles.placeholder}>{message.hasMultipleAttempts ? uiText("本次尝试没有返回内容。") : uiText("本次任务没有返回内容。")}</span> : null}
+      {waitingForContent && <span className={styles.replyActivity} role="status"
+        aria-label={run?.status === "running" ? uiText("正在处理…") : uiText("等待执行…")}>
+        <i aria-hidden="true"/><i aria-hidden="true"/><i aria-hidden="true"/>
+      </span>}
+    </div>
     {stepHistory?.error &&
       <p className={layout.resultNotice} role="alert">{localizeUiMessage(stepHistory.error ?? "", uiText)} <Button
         type="button" className="text-button" onClick={onReloadSteps}>{uiText("重新读取执行过程")}</Button></p>}
-    {ended && (message.status !== "completed" || run?.hasStepErrors) &&
+    {ended && !superseded && (message.status !== "completed" || run?.hasStepErrors) &&
       <ConversationRunFeedback enterprise={enterprise} message={message} latestRun={latestRun} busy={retrying}
-                               error={retryError} onRetry={onRetry}/>}
-    {ended && <div className={layout.messageActions} role="group" aria-label={uiText("回复操作")}>
+                               error={retryError} onRetry={async (runId) => {
+                                 const accepted = await onRetry(runId);
+                                 if (accepted) {
+                                   setAcceptedRetry(runId);
+                                 }
+                                 return accepted;
+                               }}/>}
+    {ended && !superseded && <div className={layout.messageActions} role="group" aria-label={uiText("回复操作")}>
       {message.content && <CopyReplyButton text={message.content} messageId={message.id}/>}
       <Button type="button" aria-label={message.feedback === "positive" ? uiText("取消赞同") : uiText("赞同")}
               title={message.feedback === "positive" ? uiText("取消赞同") : uiText("赞同")}

@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.model.execution.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import java.util.Map;
 
@@ -8,5 +9,14 @@ import java.util.Map;
  */
 public record MessageView(String id, String runId, int attemptNo, String role, String content,
                           String status, List<ContentBlock> blocks, List<Map<String, Object>> attachments,
-                          String feedback, String createdAt, String updatedAt) {
+                          String feedback, String createdAt, String updatedAt,
+                          @JsonInclude(JsonInclude.Include.NON_DEFAULT) boolean supersededByRetry) {
+    public MessageView(String id, String runId, int attemptNo, String role, String content, String status,
+                       List<ContentBlock> blocks, List<Map<String, Object>> attachments, String feedback, String createdAt, String updatedAt) {
+        this(id, runId, attemptNo, role, content, status, blocks, attachments, feedback, createdAt, updatedAt, false);
+    }
+
+    public MessageView markRetried() {
+        return new MessageView(id, runId, attemptNo, role, content, status, blocks, attachments, feedback, createdAt, updatedAt, true);
+    }
 }

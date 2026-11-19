@@ -19,6 +19,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,8 +48,11 @@ class RemoteModelClientTest {
         server.stop(0);
     }
 
-    @Test
-    void appendsModelsToTheSavedBasePathAndReadsCurrentCredentialsEveryTime() {
+    @ParameterizedTest
+    @ValueSource(strings = {"127.0.0.1", "model.internal.test"})
+    void appendsModelsToTheSavedBasePathAndReadsCurrentCredentialsEveryTime(String host) {
+        var configuredClient = new RemoteModelClient(new OutboundAddressPolicy("", ignored -> List.of(InetAddress.getLoopbackAddress())),
+            mapper, new ObjectMapper());
         var header = new AtomicReference<String>();
         server.createContext("/custom/v1/models", exchange -> {
             header.set(exchange.getRequestHeaders().getFirst("Authorization"));
@@ -58,11 +62,11 @@ class RemoteModelClientTest {
                 output.write(body);
             }
         });
-        assertEquals("chat-model", client.list(provider("first-key")).getFirst().id());
+        assertEquals("chat-model", configuredClient.list(provider("first-key", host)).getFirst().id());
         assertEquals("Bearer first-key", header.get());
-        client.list(provider("rotated-key"));
+        configuredClient.list(provider("rotated-key", host));
         assertEquals("Bearer rotated-key", header.get());
-        client.list(provider(""));
+        configuredClient.list(provider("", host));
         assertNull(header.get());
     }
 
@@ -182,7 +186,11 @@ class RemoteModelClientTest {
     }
 
     private ModelProviderRecord provider(String key) {
+        return provider(key, "127.0.0.1");
+    }
+
+    private ModelProviderRecord provider(String key, String host) {
         return new ModelProviderRecord("provider", "enterprise", "本机模型", "openai",
-            "http://127.0.0.1:" + server.getAddress().getPort() + "/custom/v1/", key, true, 1, Instant.now(), Instant.now());
+            "http://" + host + ":" + server.getAddress().getPort() + "/custom/v1/", key, true, 1, Instant.now(), Instant.now());
     }
 }

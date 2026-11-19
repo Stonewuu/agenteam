@@ -9,11 +9,15 @@ if (Test-Path -LiteralPath $EnvFile) {
     throw '配置文件已经存在，请直接编辑它；初始化脚本不会覆盖已有密码。'
 }
 
-$configuration = Get-Content -LiteralPath (Join-Path $PSScriptRoot '.env.example') -Raw -Encoding UTF8
-$configuration = $configuration.Replace('DEPLOY_MODE=single', 'DEPLOY_MODE=' + $Mode)
+$configuration = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../.env.example') -Raw -Encoding UTF8
+$publicUrl = 'http://localhost:8088'
+$composeFiles = '../docker-compose.yaml,compose/source.yaml'
 if ($Mode -eq 'split') {
-    $configuration = $configuration.Replace('PUBLIC_URL=http://localhost:8088', 'PUBLIC_URL=http://localhost:3000')
+    $publicUrl = 'http://localhost:3000'
+    $composeFiles += ',compose/split.yaml'
 }
+$configuration = [regex]::Replace($configuration, '(?m)^PUBLIC_URL=\r?$', "PUBLIC_URL=$publicUrl")
+$configuration = $configuration.TrimEnd() + "`nDEPLOY_MODE=$Mode`nCOMPOSE_FILE=$composeFiles`n"
 
 $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 try {

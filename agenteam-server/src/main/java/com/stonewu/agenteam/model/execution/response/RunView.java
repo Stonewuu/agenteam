@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.model.execution.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 
 /**
@@ -8,13 +9,15 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 public record RunView(String id, String conversationId, String inputMessageId, String outputMessageId,
                       String status, String mode, int currentAttemptNo, boolean hasStepErrors,
                       String startedAt, String finishedAt, String nextAttemptAt,
-                      String errorCode, String errorMessage, boolean canRetry, String lastSequence) {
+                      String errorCode, String errorMessage, boolean canRetry, String lastSequence,
+                      @JsonInclude(JsonInclude.Include.NON_NULL) String retryOfRunId) {
     public static RunView from(RunRecord run, boolean canRetry) {
         return new RunView(run.id(), run.conversationId(), run.inputMessageId(), run.outputMessageId(),
             run.status(), run.mode(), run.currentAttemptNo(), run.hasStepErrors(),
             run.startedAt() == null ? null : run.startedAt().toString(),
             run.finishedAt() == null ? null : run.finishedAt().toString(),
             run.nextAttemptAt() == null ? null : run.nextAttemptAt().toString(),
-            run.errorCode(), run.errorMessage(), canRetry && !"collaboration".equals(run.executionConfig().path("sourceType").asText()), Long.toString(run.lastSequence()));
+            run.errorCode(), run.errorMessage(), canRetry && !"collaboration".equals(run.executionConfig().path("sourceType").asText()),
+            Long.toString(run.lastSequence()), run.executionConfig().path("retryOfRunId").asText(null));
     }
 }

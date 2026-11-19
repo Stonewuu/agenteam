@@ -19,7 +19,6 @@ import java.io.InterruptedIOException;
 import java.net.Proxy;
 import java.net.UnknownHostException;
 import java.time.Duration;
-import java.util.Set;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CancellationException;
@@ -49,10 +48,6 @@ public final class ModelHttpSession implements AutoCloseable {
         this.origin = HttpUrl.get(baseUrl);
         this.beforeDispatch = beforeDispatch;
         this.diagnostics = diagnostics;
-        boolean local = Set.of("127.0.0.1", "localhost", "::1").contains(origin.host());
-        if (!local) {
-            addresses.validateUrl(baseUrl);
-        }
         this.client = new OkHttpClient.Builder().proxy(Proxy.NO_PROXY)
             .protocols(origin.isHttps() ? List.of(Protocol.HTTP_2, Protocol.HTTP_1_1) : List.of(Protocol.HTTP_1_1))
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
@@ -62,8 +57,7 @@ public final class ModelHttpSession implements AutoCloseable {
                 if (!host.equals(origin.host())) {
                     throw new UnknownHostException(Messages.text("error.modelprofile.modelHttpSession.init.1"));
                 }
-                return local ? addresses.resolveHost(host, Duration.ofSeconds(5), true)
-                    : addresses.resolve(origin, Duration.ofSeconds(5));
+                return addresses.resolveConfiguredHost(host, Duration.ofSeconds(5));
             }).build();
     }
 

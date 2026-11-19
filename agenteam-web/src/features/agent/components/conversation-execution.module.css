@@ -267,9 +267,10 @@
 }
 
 .recovery {
-  display: grid;
-  justify-items: start;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
   margin-left: 38px;
   color: var(--secondary);
   font-size: 12px;
@@ -278,6 +279,10 @@
 .recovery p {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.recovery p[role="alert"] {
+  flex-basis: 100%;
 }
 
 .recovery button {

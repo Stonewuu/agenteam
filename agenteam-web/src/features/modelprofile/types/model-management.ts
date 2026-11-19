@@ -1,11 +1,12 @@
 import type {ReasoningEffort} from "../lib/reasoning-effort";
 
 export type ModelProtocol = "openai" | "openai_responses" | "anthropic" | "gemini";
+export type NativeThinkingLevel = Exclude<ReasoningEffort, "none">;
 export type ModelProtocolOptions = {
   version: 1;
   reasoningMode: "effort" | "budget" | "adaptive" | "level";
   thinkingBudgets: Partial<Record<ReasoningEffort, number>>;
-  thinkingLevels: Partial<Record<ReasoningEffort, "minimal" | "low" | "medium" | "high" | "max">>;
+  thinkingLevels: Partial<Record<ReasoningEffort, NativeThinkingLevel>>;
   cacheTtlSeconds: number;
   usageFormat: "standard" | "deepseek";
   notApplicableUsage: ("cache_read" | "cache_write" | "reasoning" | "tool_use_prompt")[];

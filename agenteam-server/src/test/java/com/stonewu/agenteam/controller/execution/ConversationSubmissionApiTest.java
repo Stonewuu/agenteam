@@ -190,6 +190,57 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
+    void onlyLatestFailedReplyCanBeRetriedIncludingWhenReadingOlderMessages() throws Exception {
+        var first = data(write(base() + "/conversations", body(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        String firstPath = base() + "/runs/" + first.path("runId").asText();
+        var firstLease = lifecycle.claim("retry-feedback-test").orElseThrow();
+        lifecycle.start(firstLease).orElseThrow();
+        lifecycle.finish(firstLease, "failed", "MODEL_TEMPORARY_FAILURE", "模型暂时无法回复。");
+        var second = data(write(firstPath + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        var secondLease = lifecycle.claim("retry-feedback-test").orElseThrow();
+        lifecycle.start(secondLease).orElseThrow();
+        lifecycle.finish(secondLease, "failed", "MODEL_TEMPORARY_FAILURE", "模型暂时无法回复。");
+
+        String conversation = base() + "/conversations/" + first.path("conversationId").asText();
+        var snapshot = data(mvc.perform(get(conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(3, snapshot.path("messages").size());
+        assertEquals("failed", snapshot.at("/messages/1/status").asText());
+        assertTrue(snapshot.at("/messages/1/supersededByRetry").asBoolean());
+        assertEquals("failed", snapshot.at("/messages/2/status").asText());
+        assertFalse(snapshot.at("/messages/2/supersededByRetry").asBoolean());
+        var page = data(mvc.perform(get(conversation + "/messages").cookie(cookie)
+            .param("beforeMessageId", second.path("outputMessageId").asText()).param("limit", "1"))
+            .andExpect(status().isOk()).andReturn());
+        assertEquals(first.path("outputMessageId"), page.at("/messages/0/id"));
+        assertTrue(page.at("/messages/0/supersededByRetry").asBoolean());
+        write(firstPath + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
+        var third = data(write(base() + "/runs/" + second.path("runId").asText() + "/retry", null, UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        assertEquals(first.path("inputMessageId"), third.path("inputMessageId"));
+        var thirdLease = lifecycle.claim("retry-feedback-test").orElseThrow();
+        lifecycle.start(thirdLease).orElseThrow();
+        lifecycle.finish(thirdLease, "failed", "MODEL_TEMPORARY_FAILURE", "模型暂时无法回复。");
+        String thirdPath = base() + "/runs/" + third.path("runId").asText();
+        assertTrue(data(mvc.perform(get(thirdPath).cookie(cookie)).andExpect(status().isOk()).andReturn())
+            .path("canRetry").asBoolean());
+
+        var next = data(write(conversation + "/messages", input("后续要求需要保留"), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        var nextLease = lifecycle.claim("retry-feedback-test").orElseThrow();
+        lifecycle.start(nextLease).orElseThrow();
+        lifecycle.finish(nextLease, "completed", null, null);
+        assertFalse(data(mvc.perform(get(thirdPath).cookie(cookie)).andExpect(status().isOk()).andReturn())
+            .path("canRetry").asBoolean());
+        var beforeRetry = data(mvc.perform(get(conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        write(thirdPath + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
+        var afterRetry = data(mvc.perform(get(conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertEquals(beforeRetry.path("messages"), afterRetry.path("messages"));
+        assertEquals(next.path("inputMessageId"), afterRetry.at("/messages/4/id"));
+        assertEquals(4, count("agent_run"));
+    }
+
+    @Test
     void databaseFailureRollsBackMessagesQuotaEventsAndRequestResult() throws Exception {
         databaseAccess.mapper(TestDatabaseAdministrationMapper.class).rejectRunJobCreation();
         String key = UUID.randomUUID().toString();
@@ -239,7 +290,8 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         var retried = data(write(base() + "/runs/" + run + "/retry", null, retryKey).andExpect(status().isAccepted()).andReturn());
         assertEquals(retried, data(write(base() + "/runs/" + run + "/retry", null, retryKey).andExpect(status().isAccepted()).andReturn()));
         assertEquals(2, count("agent_run"));
-        assertEquals(4, count("agent_message"));
+        assertEquals(3, count("agent_message"));
+        assertEquals(accepted.path("inputMessageId"), retried.path("inputMessageId"));
         assertEquals(1, reserved());
         var retryBlocks = json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getBlocksJson).eq(AgentMessageRow::getId, (retried.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getBlocksJson()).toList()));
         assertEquals("重新执行", retryBlocks.get(0).path("label").asText());

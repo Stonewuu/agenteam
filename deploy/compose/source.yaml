@@ -1,0 +1,36 @@
+# 从源码构建时，在根目录的 docker-compose.yaml 后加载此文件。
+x-application-build: &application-build
+  context: .
+  dockerfile: deploy/Dockerfile.source
+  target: application
+
+services:
+  storage-init:
+    image: ${APP_IMAGE:-agenteam/backend:local}
+    build: *application-build
+    pull_policy: build
+  backend:
+    image: ${APP_IMAGE:-agenteam/backend:local}
+    build: *application-build
+    pull_policy: build
+    environment:
+      AGENTEAM_SANDBOX_IMAGE: ${SANDBOX_IMAGE:-agenteam/sandbox-office:local}
+  sandbox-executor:
+    image: ${EXECUTOR_IMAGE:-agenteam/sandbox-server:local}
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.source
+      target: sandbox-server
+    pull_policy: build
+    environment:
+      AGENTEAM_SANDBOX_IMAGE: ${SANDBOX_IMAGE:-agenteam/sandbox-office:local}
+  sandbox-image:
+    image: ${SANDBOX_IMAGE:-agenteam/sandbox-office:local}
+    build:
+      context: ./deploy/sandbox
+    pull_policy: build
+  frontend:
+    image: ${FRONTEND_IMAGE:-agenteam/frontend:local}
+    build:
+      context: ./agenteam-web
+    pull_policy: build

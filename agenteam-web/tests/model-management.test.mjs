@@ -17,7 +17,13 @@ const model = {id: "model", name: "已使用的模型", revision: "4", providerI
 function component(file, exported, props, busy = false) {
   const slots = [], calls = [];
   let cursor = 0, pending;
-  const action = {busy, fieldErrors: {}, clearFieldError() {}, resetFeedback() {}, mutation: {
+  const action = {busy, fieldErrors: {}, clearFieldError(...fields) {
+    for (const field of fields) {
+      delete this.fieldErrors[field];
+    }
+  }, resetFeedback() {
+    this.fieldErrors = {};
+  }, mutation: {
     async run(path, request) {
       calls.push({path, ...request});
     },
@@ -89,7 +95,7 @@ test("已使用模型可以更换连接、型号、长度及能力，并带当�
   form.find("TokenLengthInput", (props) => props.name === "capabilities.maxOutputTokens").props.onChange("4K");
   form.find("Toggle", (props) => props.label === "支持工具调用").props.onChange(false);
   form.find("Toggle", (props) => props.label === "支持调整生成温度").props.onChange(false);
-  form.find("ModelProtocolFields").props.onChange({...protocol.defaultProtocolOptions("openai"), serviceTier: "priority"});
+  form.find("ModelProtocolFields").props.onChange({...protocol.defaultProtocolOptions("openai"), serviceTier: "priority"}, "serviceTier");
   form.find("form").props.onSubmit({preventDefault() {}});
   await form.finished();
   assert.equal(form.calls.length, 1);
@@ -105,6 +111,110 @@ test("已使用模型可以更换连接、型号、长度及能力，并带当�
   form.action.busy = true;
   assert.ok(form.nodes().filter((node) => node.type === "Fieldset" && node.props.className === "fields")
     .every((node) => node.props.disabled));
+});
+
+function geminiForm(existing) {
+  return component("model-profile-dialog", "ModelProfileDialog", {enterpriseId: "enterprise", model: existing,
+    providers: [{...provider, protocol: "gemini"}], preferredProvider: provider.id, onClose() {}, onSaved() {}});
+}
+
+function protocolFields(form) {
+  return component("model-protocol-options", "ModelProtocolFields", form.find("ModelProtocolFields").props);
+}
+
+function toggleEffort(form, label, checked) {
+  form.find("label", ({children}) => children[1]?.props?.children === label).props.children[0].props.onCheckedChange(checked);
+}
+
+function protocolSelect(form, field) {
+  return protocolFields(form).find("Select", ({name}) => name === `capabilities.protocolOptions.${field}`);
+}
+
+test("新增 Gemini 模型勾选思考档位后可以直接保存默认映射，也可同时开启不思考", async () => {
+  const form = geminiForm(null);
+  form.find("RemoteModelPicker").props.onChange("test-gemini");
+  form.find("Input", ({name}) => name === "name").props.onChange({target: {value: "Gemini"}});
+  form.find("TokenLengthInput", ({name}) => name.endsWith("maxContextTokens")).props.onChange("128K");
+  form.find("TokenLengthInput", ({name}) => name.endsWith("maxOutputTokens")).props.onChange("8K");
+  for (const effort of ["不思考", "低", "中", "高", "极高", "最高"]) {
+    toggleEffort(form, effort, true);
+  }
+  assert.equal(protocolSelect(form, "reasoningMode").props.value, "level");
+  const levels = {low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "xhigh"};
+  for (const [effort, expected] of Object.entries(levels)) {
+    assert.equal(protocolSelect(form, "thinkingLevels." + effort).props.value, expected);
+  }
+  assert.equal(protocolSelect(form, "thinkingLevels.none"), undefined);
+  form.find("form").props.onSubmit({preventDefault() {}});
+  await form.finished();
+  assert.equal(form.calls[0].method, "POST");
+  const capabilities = form.calls[0].body.capabilities;
+  assert.deepEqual([...capabilities.reasoningEfforts], ["none", "low", "medium", "high", "xhigh", "max"]);
+  assert.deepEqual({...capabilities.protocolOptions.thinkingLevels}, levels);
+  assert.deepEqual({...capabilities.protocolOptions.thinkingBudgets}, {});
+});
+
+test("编辑模型保留自定义映射，切换方式后可以取回草稿，修正一栏只清除该栏错误", async () => {
+  const options = {...protocol.defaultProtocolOptions("gemini"), reasoningMode: "budget",
+    thinkingBudgets: {low: 128}, thinkingLevels: {xhigh: "high"}};
+  const form = geminiForm({...model, capabilities: {...model.capabilities,
+    reasoningEfforts: ["none", "low", "medium", "xhigh"], protocolOptions: options}});
+  assert.equal(protocolSelect(form, "reasoningMode").props.value, "budget");
+  const budget = (effort) => protocolFields(form).find("Input", ({name}) => name.endsWith("." + effort));
+  assert.equal(budget("low").props.value, 128);
+  assert.equal(budget("medium").props.value, "");
+  assert.equal(budget("none"), undefined);
+  Object.assign(form.action.fieldErrors, {
+    "capabilities.protocolOptions.thinkingBudgets.medium": ["请填写预算。"],
+    "capabilities.protocolOptions.thinkingBudgets.xhigh": ["请填写预算。"],
+    name: ["请填写显示名称。"],
+  });
+  assert.equal(protocolFields(form).find("Field", ({label}) => label === "低：思考预算").props.error, undefined);
+  assert.equal(protocolFields(form).find("Field", ({label}) => label === "中：思考预算").props.error, "请填写预算。");
+  budget("medium").props.onChange({target: {value: "256"}});
+  assert.deepEqual(Object.keys(form.action.fieldErrors).sort(), ["capabilities.protocolOptions.thinkingBudgets.xhigh", "name"]);
+  protocolSelect(form, "reasoningMode").props.onChange({target: {value: "level"}});
+  assert.deepEqual(Object.keys(form.action.fieldErrors), ["name"]);
+  assert.equal(protocolSelect(form, "thinkingLevels.xhigh").props.value, "high");
+  protocolSelect(form, "thinkingLevels.low").props.onChange({target: {value: "minimal"}});
+  toggleEffort(form, "低", false);
+  toggleEffort(form, "低", true);
+  assert.equal(protocolSelect(form, "thinkingLevels.low").props.value, "minimal");
+  protocolSelect(form, "reasoningMode").props.onChange({target: {value: "budget"}});
+  assert.equal(budget("medium").props.value, 256);
+  protocolSelect(form, "reasoningMode").props.onChange({target: {value: "level"}});
+  form.find("form").props.onSubmit({preventDefault() {}});
+  await form.finished();
+  assert.equal(form.calls[0].method, "PUT");
+  assert.deepEqual({...form.calls[0].body.capabilities.protocolOptions.thinkingLevels},
+    {low: "minimal", medium: "medium", xhigh: "high"});
+  assert.deepEqual({...form.calls[0].body.capabilities.protocolOptions.thinkingBudgets}, {low: 128, medium: 256});
+  const reopened = geminiForm({...model, capabilities: form.calls[0].body.capabilities});
+  protocolSelect(reopened, "reasoningMode").props.onChange({target: {value: "budget"}});
+  assert.equal(protocolFields(reopened).find("Input", ({name}) => name.endsWith(".medium")).props.value, 256);
+});
+
+test("预算模式自动填写关闭值，原生等级的默认值随协议变化", () => {
+  const budget = {...protocol.defaultProtocolOptions("gemini"), reasoningMode: "budget", thinkingBudgets: {high: 320}};
+  const active = protocol.resolveProtocolOptions(budget, ["none", "low", "high"]);
+  assert.deepEqual({...active.thinkingBudgets}, {none: 0, high: 320});
+  const adaptive = protocol.resolveProtocolOptions(protocol.defaultProtocolOptions("anthropic"), ["none", "minimal", "xhigh", "max"]);
+  assert.deepEqual({...adaptive.thinkingLevels}, {minimal: "low", xhigh: "xhigh", max: "max"});
+  for (const type of ["openai", "openai_responses"]) {
+    const direct = protocol.resolveProtocolOptions(protocol.defaultProtocolOptions(type), ["none", "high"]);
+    assert.equal(direct.reasoningMode, "effort");
+    assert.deepEqual({...direct.thinkingLevels}, {});
+    assert.deepEqual({...direct.thinkingBudgets}, {});
+  }
+});
+
+test("未启用的无效预算不会影响保存，原有档位映射仍可在重新启用时使用", () => {
+  const value = {...protocol.defaultProtocolOptions("gemini"), thinkingBudgets: {high: -1, low: 256},
+    thinkingLevels: {xhigh: "high"}};
+  const saved = protocol.resolveProtocolOptions(value, ["none", "low"]);
+  assert.deepEqual({...saved.thinkingBudgets}, {low: 256});
+  assert.deepEqual({...saved.thinkingLevels}, {low: "low", xhigh: "high"});
+  assert.equal(protocol.resolveProtocolOptions(saved, ["xhigh"]).thinkingLevels.xhigh, "high");
 });
 
 test("已使用连接可以修改协议和地址，空密钥仍表示保留原值", async () => {

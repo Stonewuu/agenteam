@@ -11,9 +11,27 @@ x-low-memory-sandbox: &low-memory-sandbox
   AGENTEAM_SANDBOX_PROCESS_LIMIT: "128"
 
 services:
-  storage-init:
+  mysql:
     command:
-      - chown 10001:10001 /app-data /user-workspaces /executor-data /sandbox-capacity
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --innodb-buffer-pool-size=134217728
+      - --innodb-log-buffer-size=16777216
+      - --max-connections=50
+      - --key-buffer-size=1048576
+      - --table-open-cache=512
+      - --table-definition-cache=400
+      - --tmp-table-size=8388608
+      - --max-heap-table-size=8388608
+      - --temptable-max-ram=33554432
+      - --performance-schema-digests-size=512
+      - --performance-schema-events-statements-history-long-size=100
+      - --performance-schema-max-table-handles=1024
+    mem_limit: ${MYSQL_MEMORY:-640m}
+
+  storage-init:
+    command: ["/sandbox-capacity"]
     volumes:
       - sandbox-capacity:/sandbox-capacity
 
@@ -44,7 +62,7 @@ services:
     memswap_limit: 160m
 
   redis:
-    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --maxmemory 48mb --maxmemory-policy noeviction"]
+    command: ["--appendonly", "yes", "--maxmemory", "48mb", "--maxmemory-policy", "noeviction"]
     mem_limit: 64m
     memswap_limit: 64m
 

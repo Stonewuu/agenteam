@@ -4,33 +4,71 @@ AgenTeam 提供配套的 Docker 镜像、服务配置与初始化工具。从 Do
 
 项目在正式 Release（版本发布页面）发布后自动构建镜像，成功后提供对应版本和 `latest`（最新正式版标签）。维护者配置见[自动镜像发布说明](https://github.com/Stonewuu/agenteam/blob/main/docs/development/image-publication.md)。
 
-本文使用 0.4.1 镜像，平台为 `linux/amd64`（64 位 x86 Linux）。
+## 从仓库根目录启动
+
+在装有 Docker 和 Docker Compose 的主机上运行以下命令。正式镜像提供 `linux/amd64`（64 位 x86 Linux）版本。
+
+```sh
+git clone https://github.com/Stonewuu/agenteam.git
+cd agenteam
+docker compose up -d
+docker compose ps
+```
+
+网关 `nginx` 健康后打开 [http://localhost:8088](http://localhost:8088)。执行下面的命令读取首次设置凭据，按网页提示创建管理员和企业。
+
+```sh
+docker compose exec backend cat /run/agenteam-secrets/setup/AGENTEAM_SETUP_CREDENTIAL
+```
+
+首次启动会生成每套部署自己的密码和凭据，并存入 Docker 命名卷。后续启动复用同一套数据和凭据。需要自定义时，将根目录的 [配置示例](../../.env.example) 复制为 `.env`。例如设置 `HTTP_PORT=8090` 后，本机入口为 `http://localhost:8090`。向其他机器提供访问时，设置实际的 `PUBLIC_URL` 并配置 HTTPS 反向代理。默认只向本机开放网页端口。
+
+## 可选部署方式
+
+根目录的 `docker-compose.yaml` 包含完整服务。需要其他部署方式时，在它后面加载对应的附加配置。
+
+| 用途 | 仓库中的文件 |
+| --- | --- |
+| 从本机源码构建前后端和沙盒 | `deploy/compose/source.yaml` |
+| 在宿主机开发时连接数据库和缓存 | `deploy/compose/development.yaml` |
+| 分别开放网页和接口端口 | `deploy/compose/split.yaml` |
+| 让另一套站点使用当前数据库 | `deploy/compose/shared-mysql.yaml` |
+| 连接已有共享数据库 | `deploy/compose/external-mysql.yaml` |
+| 4 GB 主机上的低并发部署 | `deploy/compose/low-memory.yaml` |
+
+如需从源码构建，在仓库根目录运行以下命令。
+
+```sh
+docker compose -f docker-compose.yaml -f deploy/compose/source.yaml up -d --build
+```
+
+原来使用多个 Compose 文件的源码部署沿用 `deploy/.env`、项目名和卷。更新仓库后，在 `deploy/.env` 中将单端口源码部署的 `COMPOSE_FILE` 改为 `../docker-compose.yaml,compose/source.yaml`，双端口再追加 `,compose/split.yaml`。继续从 `deploy/` 执行原来的启动命令。其他附加文件在 `deploy/.env` 中也写成 `compose/文件名.yaml`。已从旧部署包安装的站点继续使用随包配置。首次迁移时保留原数据库密码和服务凭据；已有数据库账号继续使用原密码。
 
 ## 镜像清单
 
 | 用途 | 镜像 |
 | --- | --- |
-| 后端 | `docker.io/stonewuu/agenteam-backend:0.4.1` |
-| 前端 | `docker.io/stonewuu/agenteam-frontend:0.4.1` |
-| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:0.4.1` |
-| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:0.4.1` |
-| 部署文件 | `docker.io/stonewuu/agenteam-deployment:0.4.1` |
+| 后端 | `docker.io/stonewuu/agenteam-backend:latest` |
+| 前端 | `docker.io/stonewuu/agenteam-frontend:latest` |
+| 命令执行服务 | `docker.io/stonewuu/agenteam-sandbox-server:latest` |
+| 办公沙箱 | `docker.io/stonewuu/agenteam-sandbox-office:latest` |
+| 部署文件 | `docker.io/stonewuu/agenteam-deployment:latest` |
 
 部署包包含本版本的 Compose（多容器服务配置）文件、入口代理配置和初始化工具。使用部署包即可完成服务器安装。
 
-## 提取部署文件
+## 使用独立部署包配置域名
 
 在 Linux 服务器准备 Docker、Docker Compose、Python 3，以及指向该服务器的域名。以下命令在空的部署工作目录执行：
 
 ```sh
-deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:0.4.1)
-docker cp "$deployment_container":/deployment ./agenteam-0.4.1
+deployment_container=$(docker create docker.io/stonewuu/agenteam-deployment:latest)
+docker cp "$deployment_container":/deployment ./agenteam-install
 docker rm "$deployment_container"
-cd agenteam-0.4.1
+cd agenteam-install
 python3 configure-server.py --domain app.example.com
 ```
 
-把 `app.example.com` 换成实际域名。工具创建 `.env` 和 `agenteam.nginx.conf`，不会覆盖现有文件；数据库密码、服务凭据和 `SETUP_CREDENTIAL`（首次初始化凭据）只保存在本地配置中。
+把 `app.example.com` 换成实际域名。工具创建 `.env` 和 `agenteam.nginx.conf`，不会覆盖现有文件；数据库密码、服务凭据和 `SETUP_CREDENTIAL`（首次初始化凭据）可在本地配置中查看。
 
 同一服务器安装多套独立部署时，每套使用不同目录，并在首次启动前分别设置 `COMPOSE_PROJECT_NAME`（服务及数据卷名称前缀）、`HTTP_PORT`（本机入口端口）和 `NETWORK_PREFIX`（容器网络地址前缀）。同步调整 `TRUSTED_EDGE_PROXIES`（可信入口代理地址）及 Nginx 转发端口，避免复用另一套部署的数据卷、容器名称或网络。升级现有部署时保留原名称与数据卷关系，不要通过改名前缀来“升级”。
 
@@ -61,11 +99,11 @@ jdbc:mariadb://数据库主机:3306/数据库名?connectionTimeZone=UTC&forceCon
 
 随包的私有容器网络使用 `sslMode=trust` 加密连接，但不验证服务器证书。连接其他网络中的数据库时，使用 `sslMode=verify-full` 并配置可信证书及匹配的主机名，配置方法见 [MariaDB 驱动加密连接说明](https://mariadb.com/docs/connectors/mariadb-connector-j/using-tls-ssl-with-mariadb-java-connector)。应用中的外部只读数据源在生产环境仍强制校验服务器身份。
 
-同机两套部署共用 MySQL 时，使用随包的 `compose.shared-mysql.yaml` 与 `compose.external-mysql.yaml`，步骤见部署包根目录 README.md 的“共用一个 MySQL 实例”。每套应用使用独立库和专用账号；连接共享实例的一套不再启动自己的 MySQL 容器。
+同机两套部署共用 MySQL 时，提供数据库的一套加载 `deploy/compose/shared-mysql.yaml`，使用该库的一套加载 `deploy/compose/external-mysql.yaml`。每套应用使用独立库和专用账号。账号和网络配置见部署包根目录 README.md 的“共用一个 MySQL 实例”。
 
 ## 更新到最新版
 
-首次选择跟随最新正式版时，将 `.env` 中以下五个镜像设为 `latest`（最新正式版标签），移除这些引用末尾原有的 `@sha256:...` 内容摘要；其他配置保持原值。此设置只需做一次：
+根目录启动默认跟随最新正式版。使用固定版本部署包时，如需跟随最新版本，可将 `.env` 中以下五个镜像设为 `latest`（最新正式版标签），移除这些引用末尾原有的 `@sha256:...` 内容摘要；其他配置保持原值。此设置只需做一次：
 
 ```dotenv
 APP_IMAGE=docker.io/stonewuu/agenteam-backend:latest
@@ -84,11 +122,11 @@ docker compose up -d
 
 确认 `pull` 成功后再执行 `up`。镜像由项目发布流程构建，无需在服务器编译；Compose 会替换有变化的容器并保留持久数据，数据库迁移随应用启动自动执行。正常升级不需要重新初始化、生成密码或手工修改版本号。
 
-部署文件镜像不属于常驻服务。只有发布说明明确要求调整部署结构或处理不兼容变更时，才需要按该版本说明操作。需要固定版本时，可以使用上表中的版本号标签。
+部署文件镜像不属于常驻服务。只有发布说明明确要求调整部署结构或处理不兼容变更时，才需要按该版本说明操作。需要固定版本时，可以将业务镜像的 `latest` 换为同一正式版本号。
 
 ## 内存与异常任务
 
-默认镜像部署给后端容器 2 GiB（每 GiB 为 1024 MiB），Java 堆最多使用其中的 65%，其余空间供类信息、线程和网络缓冲使用。低内存主机可使用[低并发部署配置](web-browsing.md#4-gb-测试服务器)，不要只降低容器上限而保留高并发。
+默认由主机和各服务管理内存。MySQL、Redis、前端、后端、网关和命令执行服务均未设置容器内存上限。需要单独限制某项服务时，可在 `.env` 设置 `MYSQL_MEMORY`、`BACKEND_MEMORY`、`FRONTEND_MEMORY` 或 `EXECUTOR_MEMORY`，例如 `MYSQL_MEMORY=2g`。运行工具命令的用户沙盒有独立的资源配额。4 GB 主机可按[低并发部署说明](web-browsing.md)启用低内存配置。
 
 模型输入会在生成请求副本前检查内存预算；超出预算时任务明确失败，已保存的内容保持可读。旧工具结果通过引用重新读取完整内容，最近一轮结果保留原文。明确设置的任务时限继续生效；没有设置时限时，单次模型请求默认最多等待十五分钟没有输出，整项任务设为不限时也不会关闭这个保护。
 
@@ -98,7 +136,7 @@ docker compose up -d
 
 ## 数据备份
 
-数据库、Redis 持久数据、业务文件、配置和密钥应按日常运维策略备份并定期验证恢复，普通镜像更新不要求重复完整恢复演练。停止服务用 `docker compose stop`；`docker compose down -v` 会删除数据卷，不用于普通升级。
+数据库、Redis 持久数据、业务文件、配置和保存密码的五个凭据卷应一同备份并定期验证恢复，普通镜像更新不要求重复完整恢复演练。停止服务用 `docker compose stop`；`docker compose down -v` 会删除数据卷，不用于普通升级。
 
 ## 查看项目版权信息
 

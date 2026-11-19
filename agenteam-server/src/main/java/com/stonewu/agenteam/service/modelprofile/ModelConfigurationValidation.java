@@ -25,9 +25,7 @@ public class ModelConfigurationValidation {
         String baseUrl = value.baseUrl().trim();
         try {
             URI uri = URI.create(baseUrl);
-            boolean loopback = Set.of("127.0.0.1", "localhost", "[::1]").contains(uri.getHost());
-            if (!("https".equals(uri.getScheme()) || ("http".equals(
-                uri.getScheme()) && loopback)) || uri.getHost() == null
+            if (!Set.of("http", "https").contains(uri.getScheme()) || uri.getHost() == null
                 || (uri.getPort() != -1 && (uri.getPort() < 1 || uri.getPort() > 65535))
                 || uri.getUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) {
                 throw new IllegalArgumentException();

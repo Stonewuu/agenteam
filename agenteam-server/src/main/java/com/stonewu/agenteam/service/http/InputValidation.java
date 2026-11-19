@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-import org.springframework.http.HttpStatus;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,8 +68,7 @@ public final class InputValidation {
             }
         }
         if (!fields.isEmpty()) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_FAILED",
-                RequestValidationErrors.summary(fields), Map.of(), fields);
+            throw ApiException.invalidFields(fields);
         }
     }
 

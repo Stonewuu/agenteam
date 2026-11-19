@@ -44,6 +44,13 @@ public class ToolCallMapper {
         return statements.findToolCall(enterprise, id, lock).stream().map(this::map).findFirst();
     }
 
+    public boolean hasSubmittedWrite(RunRecord run) {
+        return statements.exists(new LambdaQueryWrapper<ToolCallRow>()
+            .eq(ToolCallRow::getEnterpriseId, run.enterpriseId()).eq(ToolCallRow::getRunId, run.id())
+            .ne(ToolCallRow::getOperationClass, "read")
+            .and(query -> query.isNotNull(ToolCallRow::getSubmittedAt).or().in(ToolCallRow::getStatus, "succeeded", "unknown")));
+    }
+
     public Optional<ToolCallRecord> framework(RunRecord run, String session, String call) {
         return statements.frameworkToolCall(run.enterpriseId(), run.id(), run.currentAttemptNo(), session, call)
             .stream().map(this::map).findFirst();

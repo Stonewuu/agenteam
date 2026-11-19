@@ -132,7 +132,7 @@ public class LiveSnapshotMapper {
             .filter(block -> block.type().equals("text") && block.parentBlockId() == null)
             .map(ContentBlock::text).collect(Collectors.joining("\n\n")) : original.content();
         return new MessageView(original.id(), original.runId(), original.attemptNo(), original.role(), content, status,
-            blocks, original.attachments(), original.feedback(), original.createdAt(), original.updatedAt());
+            blocks, original.attachments(), original.feedback(), original.createdAt(), original.updatedAt(), original.supersededByRetry());
     }
 
     private ConversationView conversation(ConversationView value, RunView active) {

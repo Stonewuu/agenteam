@@ -5,9 +5,9 @@ import {readThirdPartyInputs, verifyThirdPartyInputs} from "./third-party-inputs
 
 const productImages = {backend: "APP_IMAGE", frontend: "FRONTEND_IMAGE", executor: "EXECUTOR_IMAGE",
   office: "SANDBOX_IMAGE", deployment: "DEPLOYMENT_IMAGE"};
-const deploymentFiles = ["compose.yaml", "compose.registry.yaml", "compose.single.yaml",
-  "compose.shared-mysql.yaml", "compose.external-mysql.yaml", "compose.low-memory.yaml", "agenteam-sandboxes.slice",
-  "registry/configure-server.py", "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/README.md",
+const deploymentFiles = ["compose/split.yaml", "compose/shared-mysql.yaml", "compose/external-mysql.yaml",
+  "compose/low-memory.yaml", "container/init-storage.sh", "agenteam-sandboxes.slice",
+  "registry/configure-server.py", "registry/nginx-host.conf.template", "registry/Dockerfile", "registry/Dockerfile.dockerignore", "registry/README.md",
   "nginx/15-agenteam-config.sh", "nginx/default.conf.template", "nginx/api.conf"];
 const frontendFiles = ["Dockerfile", ".dockerignore", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
   "next.config.ts", "tsconfig.json", "postcss.config.mjs"];
@@ -160,6 +160,23 @@ export function createImageInputs({community, productRoot = community, frontend,
     for (const [name, source] of entries) {
       copyInput(source, folder, name, records);
     }
+    if (kind === "deployment") {
+      // 独立部署包使用当前发行版的镜像地址和版本号。
+      const composePath = resolve(folder, "docker-compose.yaml");
+      let compose = readFileSync(composePath, "utf8");
+      for (const [product, reference] of Object.entries(communityTargets("latest"))) {
+        if (product !== "deployment") {
+          const variable = productImages[product];
+          const original = "${" + variable + ":-" + reference + "}";
+          if (!compose.includes(original)) {
+            throw new Error(`根目录部署配置缺少镜像：${variable}`);
+          }
+          compose = compose.replaceAll(original, "${" + variable + ":-" + targets[product] + "}");
+        }
+      }
+      writeFileSync(composePath, compose);
+      records["docker-compose.yaml"] = sha256(compose);
+    }
     const bundle = kind === "office" ? sharedDocuments : productDocuments;
     if (bundle) {
       for (const [name, checksum] of bundle.files) {
@@ -197,7 +214,9 @@ export function createImageInputs({community, productRoot = community, frontend,
   const office = resolve(community, "deploy/sandbox");
   save("office", [...[...officeFiles, ...sourceTree(office, "office"), ...sourceTree(office, "browser"), ...sourceTree(office, "bin")]
     .map((name) => [name, resolve(office, name)]), ...licenseEntries(sharedDocuments)]);
-  save("deployment", [...deploymentFiles.map((name) => [name, resolve(community, "deploy", name)]),
+  save("deployment", [["docker-compose.yaml", resolve(community, "docker-compose.yaml")],
+    [".env.example", resolve(community, ".env.example")],
+    ...deploymentFiles.map((name) => [name, resolve(community, "deploy", name)]),
     ["registry/release.env", releaseFile],
     ["docs/deployment/images.md", resolve(productRoot, "docs/deployment/images.md")],
     ["docs/deployment/enterprise-messaging.md", resolve(community, "docs/deployment/enterprise-messaging.md")],

@@ -130,7 +130,7 @@ public class ExecutionMessageMapper {
             message -> new MessageView(message.id(), message.runId(), message.attemptNo(), message.role(),
                 message.content(), message.status(),
                 message.blocks(), List.copyOf(files.getOrDefault(message.id(), List.of())), message.feedback(),
-                message.createdAt(), message.updatedAt())).toList();
+                message.createdAt(), message.updatedAt(), message.supersededByRetry())).toList();
     }
 
     public void save(String enterprise, String id, String content, List<ContentBlock> blocks, String status,

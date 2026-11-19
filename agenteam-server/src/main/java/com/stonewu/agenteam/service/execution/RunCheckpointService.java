@@ -1,6 +1,5 @@
 package com.stonewu.agenteam.service.execution;
 
-import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,19 +13,19 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.service.agent.EncryptedAgentStateStore;
 import com.stonewu.agenteam.service.agent.ExecutionPaths;
 import com.stonewu.agenteam.service.collaboration.WebRoomQueue;
-import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.security.PayloadEncryption;
 import io.agentscope.core.state.AgentState;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static com.stonewu.agenteam.service.execution.RunCheckpointRecovery.binding;
+import static com.stonewu.agenteam.service.execution.RunCheckpointRecovery.unavailable;
 
 /**
  * 文件内容确认后再进入短事务，检查点与消息一样拒绝旧租约。
@@ -44,6 +43,7 @@ public class RunCheckpointService {
     private final ObjectMapper mapper;
     private final PayloadEncryption encryption;
     private final RunActivityMapper activity;
+    private final RunCheckpointRecovery recovery;
     private final ExecutionPaths paths;
     private final Clock clock;
     private final TransactionTemplate transactions;
@@ -53,7 +53,8 @@ public class RunCheckpointService {
                                 RunLifecycleService lifecycle,
                                 ResourceJson json, ObjectMapper mapper, PayloadEncryption encryption,
                                 ExecutionPaths paths, Clock clock, PlatformTransactionManager transactions,
-                                RunActivityMapper activity, WebRoomQueue roomQueue) {
+                                RunActivityMapper activity, WebRoomQueue roomQueue, RunCheckpointRecovery recovery) {
+        this.recovery = recovery;
         this.roomQueue = roomQueue;
         this.checkpoints = checkpoints;
         this.conversations = conversations;
@@ -147,47 +148,14 @@ public class RunCheckpointService {
     }
 
     public boolean restore(RunRecord run, EncryptedAgentStateStore target) {
-        if (checkpoints.find(run.enterpriseId(), run.id()).isEmpty()) {
-            return false;
-        }
-        load(run).copyTo(target);
-        return true;
+        return recovery.restore(run, target);
+    }
+
+    public boolean restoreModelRetry(RunRecord run, EncryptedAgentStateStore target) {
+        return recovery.restoreModelRetry(run, target);
     }
 
     public EncryptedAgentStateStore load(RunRecord run) {
-        try {
-            var checkpoint = checkpoints.find(run.enterpriseId(), run.id())
-                .orElseThrow(RunCheckpointService::unavailable);
-            if (checkpoint.leaseVersion() > run.leaseVersion() || !json.hash(run.executionConfig())
-                .equals(checkpoint.state().path("configurationHash").asText())
-                || checkpoint.state().path("version").asInt() != 1 || !checkpoint.state().path("files").isObject()) {
-                throw unavailable();
-            }
-            var states = new EncryptedAgentStateStore(
-                paths.checkpointPath(run, checkpoint.leaseVersion(), checkpoint.stateKey()),
-                binding(run, checkpoint.leaseVersion(), checkpoint.stateKey()), encryption, mapper);
-            Map<String, String> files = new HashMap<>();
-            checkpoint.state().path("files").fields()
-                .forEachRemaining(entry -> files.put(entry.getKey(), entry.getValue().asText()));
-            if (files.isEmpty() || !states.matches(files)) {
-                throw unavailable();
-            }
-            return states;
-        } catch (RuntimeException invalid) {
-            throw unavailable(invalid);
-        }
-    }
-
-    private String binding(RunRecord run, long lease, String key) {
-        return run.enterpriseId() + ":" + run.userId() + ":" + run.id() + ":" + lease + ":" + key;
-    }
-
-    private static ApiException unavailable() {
-        return unavailable(null);
-    }
-
-    private static ApiException unavailable(Throwable cause) {
-        return new ApiException(HttpStatus.CONFLICT, "EXECUTION_STATE_UNAVAILABLE",
-            Messages.text("error.execution.runCheckpointService.unavailable.1"), cause);
+        return recovery.load(run);
     }
 }

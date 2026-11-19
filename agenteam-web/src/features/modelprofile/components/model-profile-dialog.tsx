@@ -23,7 +23,7 @@ import {MutationFeedback} from "@/features/workspace/components/mutation-feedbac
 import {RemoteModelPicker} from "./remote-model-picker";
 import {TokenLengthInput} from "./token-length-input";
 import {ModelProtocolFields} from "./model-protocol-options";
-import {defaultProtocolOptions} from "../lib/model-protocol";
+import {defaultProtocolOptions, resolveProtocolOptions} from "../lib/model-protocol";
 import {formatTokenLength, parseTokenLength, tokenLengthError} from "../lib/model-token-length";
 import {reasoningEffortLabels, reasoningEfforts} from "../lib/reasoning-effort";
 import type {ManagedModel, ModelCapabilities, ModelProvider, RemoteModel, ModelProtocolOptions} from "../types/model-management";
@@ -49,7 +49,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
   const [name, setName] = useState(model?.name ?? "");
   const [providerId, setProviderId] = useState(initialProvider);
   const protocol = providers.find((provider) => provider.id === providerId)?.protocol ?? "openai";
-  const [protocolOptions, setProtocolOptions] = useState<ModelProtocolOptions>(model?.capabilities.protocolOptions ?? defaultProtocolOptions(protocol));
+  const [protocolOptions, setProtocolOptions] = useState(() => defaultProtocolOptions(protocol, model?.capabilities.protocolOptions));
   const [modelName, setModelName] = useState(model?.modelName ?? "");
   const [enabled, setEnabled] = useState(model?.enabled ?? true);
   const [options, setOptions] = useState<CapabilityOptions>(model ? {
@@ -69,16 +69,27 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
   const [initialDraft] = useState(draft);
   const closing = useConfirmClose(draft !== initialDraft, action.busy, onClose);
 
-  function clearError(field: string) {
-    action.clearFieldError(field);
+  function clearError(field: string, ...related: string[]) {
+    const fields = [field, ...related];
+    action.clearFieldError(field, ...related);
     setLocalErrors((current) => {
-      if (!current[field]) {
+      if (!fields.some((name) => current[name])) {
         return current;
       }
       const next = {...current};
-      delete next[field];
+      for (const name of fields) {
+        delete next[name];
+      }
       return next;
     });
+  }
+
+  function changeProtocolOptions(value: ModelProtocolOptions, field: string) {
+    setProtocolOptions(value);
+    const prefix = "capabilities.protocolOptions.";
+    const hidden = field === "reasoningMode" ? Object.keys(errors).filter((name) =>
+      name.startsWith(prefix + "thinkingBudgets") || name.startsWith(prefix + "thinkingLevels")) : [];
+    clearError(prefix + field, ...hidden);
   }
 
   function resetCapabilities() {
@@ -144,7 +155,8 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
         method: model ? "PUT" : "POST", revision: model?.revision,
         body: {
           providerId, name: name.trim(), modelName: modelName.trim(), enabled,
-          capabilities: {...options, protocolOptions, maxContextTokens, maxOutputTokens}
+          capabilities: {...options, protocolOptions: resolveProtocolOptions(protocolOptions, options.reasoningEfforts ?? []),
+            maxContextTokens, maxOutputTokens}
         },
       });
       closing.finish(onSaved);
@@ -208,8 +220,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                                 presets={[128_000, 256_000, 1_000_000, 2_000_000]}
                                 error={errors["capabilities.maxContextTokens"]?.[0]} onChange={(value) => {
                 setContextLength(value);
-                clearError("capabilities.maxContextTokens");
-                clearError("capabilities.maxOutputTokens");
+                clearError("capabilities.maxContextTokens", "capabilities.maxOutputTokens");
               }}/>
               <TokenLengthInput label={uiText("最大输出长度")} name="capabilities.maxOutputTokens" value={outputLength}
                                 presets={[16_000, 32_000, 64_000, 128_000]}
@@ -263,7 +274,9 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                     <span>{uiText("可多选")}</span>
                   </div>
                   <p id={`${reasoningId}-hint`}
-                     className={formStyles.capabilityHint}>{uiText("按提供方说明选择，不支持调整时留空。")}</p>
+                     className={formStyles.capabilityHint}>{protocol === "gemini"
+                       ? uiText("选择模型支持的档位。“不思考”需要模型支持将思考预算设为 0。")
+                       : uiText("按提供方说明选择，不支持调整时留空。")}</p>
                   <div className={formStyles.reasoningOptions}>
                     {reasoningEfforts.map((effort) => <label className={formStyles.reasoningOption} key={effort}>
                       <Checkbox name="capabilities.reasoningEfforts"
@@ -275,7 +288,8 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
                                     ...current,
                                     reasoningEfforts: reasoningEfforts.filter((value) => value === effort ? checked : current.reasoningEfforts?.includes(value))
                                   }));
-                                  clearError("capabilities.reasoningEfforts");
+                                  clearError("capabilities.reasoningEfforts", `capabilities.protocolOptions.thinkingBudgets.${effort}`,
+                                    `capabilities.protocolOptions.thinkingLevels.${effort}`);
                                 }}/>
                       <span>{localizeCatalog(reasoningEffortLabels, uiText)[effort]}</span>
                     </label>)}
@@ -287,10 +301,7 @@ export function ModelProfileDialog({enterpriseId, model, providers, preferredPro
           </CollapsibleContent>
         </Collapsible>
         <ModelProtocolFields protocol={protocol} value={protocolOptions} efforts={options.reasoningEfforts ?? []}
-          disabled={action.busy} errors={errors} onChange={(value) => {
-            setProtocolOptions(value);
-            action.resetFeedback();
-          }}/>
+          disabled={action.busy} errors={errors} onChange={changeProtocolOptions}/>
         <div className={formStyles.enabled}><Toggle label={uiText("启用此模型")} checked={enabled}
                                                     disabled={action.busy} onChange={setEnabled}/></div>
         <MutationFeedback action={feedback}/>

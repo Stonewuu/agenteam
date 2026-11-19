@@ -104,6 +104,56 @@ class ModelProtocolBoundaryTest {
     }
 
     @ParameterizedTest
+    @CsvSource({"none,off", "minimal,MINIMAL", "low,LOW", "medium,MEDIUM", "high,HIGH", "xhigh,XHIGH", "max,HIGH", "default,default"})
+    void geminiCanTurnThinkingOffOrSendOneNativeLevel(String effort, String expected) {
+        reply = "data: {\"candidates\":[]}\n\n";
+        var settings = new ModelProtocolOptions("level", Map.of("low", 128, "xhigh", 2048), Map.of("max", "high"),
+            0, "standard", List.of(), null);
+        invoke("gemini", settings, effort.equals("default") ? null : effort, factory, "测试",
+            List.of("none", "minimal", "low", "medium", "high", "xhigh", "max"));
+        var thinking = request.get().at("/generationConfig/thinkingConfig");
+        if (expected.equals("off")) {
+            assertThat(thinking.required("thinkingBudget").intValue()).isZero();
+            assertThat(thinking.required("includeThoughts").booleanValue()).isFalse();
+            assertThat(thinking.has("thinkingLevel")).isFalse();
+        } else if (expected.equals("default")) {
+            assertThat(thinking.has("thinkingBudget")).isFalse();
+            assertThat(thinking.has("thinkingLevel")).isFalse();
+        } else {
+            assertThat(thinking.required("thinkingLevel").asText()).isEqualTo(expected);
+            assertThat(thinking.has("thinkingBudget")).isFalse();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"none,disabled", "minimal,low", "xhigh,xhigh", "max,max"})
+    void anthropicCanDisableThinkingOrUseAdaptiveEffort(String effort, String expected) {
+        reply = "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n";
+        var settings = new ModelProtocolOptions("adaptive", Map.of(), Map.of(), 0, "standard", List.of(), null);
+        invoke("anthropic", settings, effort, factory, "测试", List.of("none", "minimal", "xhigh", "max"));
+        var body = request.get();
+        if (effort.equals("none")) {
+            assertThat(body.at("/thinking/type").asText()).isEqualTo(expected);
+            assertThat(body.at("/output_config/effort").isMissingNode()).isTrue();
+        } else {
+            assertThat(body.at("/thinking/type").asText()).isEqualTo("adaptive");
+            assertThat(body.at("/output_config/effort").asText()).isEqualTo(expected);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"none,0", "low,128", "high,2048"})
+    void geminiBudgetModeKeepsExplicitBudgetsAndSuppliesZeroForOff(String effort, int expected) {
+        reply = "data: {\"candidates\":[]}\n\n";
+        var settings = new ModelProtocolOptions("budget", Map.of("low", 128, "high", 2048), Map.of("high", "high"), 0,
+            "standard", List.of(), null);
+        invoke("gemini", settings, effort, factory, "测试", List.of("none", "low", "high"));
+        var thinking = request.get().at("/generationConfig/thinkingConfig");
+        assertThat(thinking.required("thinkingBudget").intValue()).isEqualTo(expected);
+        assertThat(thinking.has("thinkingLevel")).isFalse();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"openai", "openai_responses", "anthropic", "gemini"})
     void httpErrorsKeepDiagnosticsWithoutRetryOrPrivateContent(String protocol, CapturedOutput output) {
         status = 429;
@@ -211,10 +261,15 @@ class ModelProtocolBoundaryTest {
 
     private void invoke(String protocol, ModelProtocolOptions settings, String effort, ModelProtocolFactory selected,
                         String prompt) {
+        invoke(protocol, settings, effort, selected, prompt, effort == null ? List.of() : List.of(effort));
+    }
+
+    private void invoke(String protocol, ModelProtocolOptions settings, String effort, ModelProtocolFactory selected,
+                        String prompt, List<String> supportedEfforts) {
         var now = Instant.now();
         String url = "http://127.0.0.1:" + server.getAddress().getPort() + (protocol.startsWith("openai") ? "/v1" : "");
         var profile = new ModelProfileRecord("model", "enterprise", "provider", "测试模型", "test-model",
-            new ModelCapabilities(true, true, 4096, 32000, List.of("text"), effort == null ? List.of() : List.of(effort), settings),
+            new ModelCapabilities(true, true, 4096, 32000, List.of("text"), supportedEfforts, settings),
             true, 1, "测试连接", protocol, url, true, now, now);
         var provider = new ModelProviderRecord("provider", "enterprise", "测试连接", protocol, url, "private-api-key", true, 1, now, now);
         var context = new ModelCallContext("enterprise", "user", null, null, 0, 0, null, null, null, "preview", "preview", "测试");

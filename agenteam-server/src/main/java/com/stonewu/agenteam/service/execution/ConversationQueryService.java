@@ -62,13 +62,16 @@ public class ConversationQueryService {
     private final CollaborationParticipantMapper collaborationParticipants;
     private final CollaborationMessageDisplayService collaborationMessages;
     private final BackgroundJobSqlMapper backgroundJobs;
+    private final RunCheckpointRecovery checkpoints;
 
     public ConversationQueryService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                     ExecutionConfigurationService configuration,
                                     EnterpriseAuthorizationService authorization,
                                     ListPagination pagination, Clock clock, ResourceVersionMapper versions,
                                     ConversationAppearanceMapper appearances, CollaborationParticipantMapper collaborationParticipants,
-                                    CollaborationMessageDisplayService collaborationMessages, BackgroundJobSqlMapper backgroundJobs) {
+                                    CollaborationMessageDisplayService collaborationMessages, BackgroundJobSqlMapper backgroundJobs,
+                                    RunCheckpointRecovery checkpoints) {
+        this.checkpoints = checkpoints;
         this.conversations = conversations;
         this.messages = messages;
         this.runs = runs;
@@ -155,9 +158,15 @@ public class ConversationQueryService {
     }
 
     public List<MessageView> decorateMessages(AuthContext actor, String conversation, List<MessageView> values) {
+        var failed = values.stream().filter(message -> message.role().equals("assistant")
+                && (message.status().equals("failed") || message.status().equals("cancelled")))
+            .map(MessageView::runId).filter(Objects::nonNull).distinct().toList();
+        var retried = runs.retriedRuns(actor.enterpriseId(), actor.userId(), conversation, failed);
         return appearances.messages(actor.enterpriseId(), actor.userId(), conversation,
                 collaborationMessages.display(actor, conversation, values))
-            .stream().map(ToolPayloadPreview::message).toList();
+            .stream().map(ToolPayloadPreview::message)
+            .map(message -> message.runId() != null && message.role().equals("assistant") && retried.contains(message.runId())
+                ? message.markRetried() : message).toList();
     }
 
     public record MessageHistory(List<MessageView> messages, String nextBeforeMessageId, boolean hasMore) {
@@ -183,8 +192,7 @@ public class ConversationQueryService {
             .filter(value -> value.userId().equals(actor.userId()))
             .orElseThrow(ResourceAuthorizationService::unavailable);
         var conversation = readable(actor, run.conversationId());
-        boolean retry = Set.of("failed", "cancelled").contains(run.status()) && !"TOOL_RESULT_UNKNOWN".equals(
-            run.errorCode())
+        boolean retry = checkpoints.canRetry(run)
             && view(actor, conversation, new HashMap<>()).canContinue();
         return RunView.from(run, retry);
     }

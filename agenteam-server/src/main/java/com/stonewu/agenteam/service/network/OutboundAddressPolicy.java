@@ -63,15 +63,21 @@ public class OutboundAddressPolicy {
     }
 
     public List<InetAddress> resolveHost(String host, Duration timeout, boolean privateAllowed) {
+        List<InetAddress> addresses = resolveConfiguredHost(host, timeout);
+        for (InetAddress address : addresses) {
+            if (metadataOrLinkLocal(address) || (!privateAllowed && !publicAddress(address))) {
+                throw denied();
+            }
+        }
+        return addresses;
+    }
+
+    /** 已由管理员配置的模型服务只做域名解析，保留解析超时和并发限制。 */
+    public List<InetAddress> resolveConfiguredHost(String host, Duration timeout) {
         try {
             List<InetAddress> addresses = lookup(host, timeout);
             if (addresses.isEmpty()) {
-                throw denied();
-            }
-            for (InetAddress address : addresses) {
-                if (metadataOrLinkLocal(address) || (!privateAllowed && !publicAddress(address))) {
-                    throw denied();
-                }
+                throw new UnknownHostException(Messages.text("error.network.outboundAddressPolicy.lookup.2"));
             }
             return addresses;
         } catch (UnknownHostException unavailable) {

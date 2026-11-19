@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.stonewu.agenteam.mapper.execution.RunSqlMapper">
+  <select id="retriedRuns" resultType="string">
+    SELECT DISTINCT execution_config_json-&gt;&gt;'$.retryOfRunId'
+    FROM agent_run
+    WHERE enterprise_id = #{enterprise} AND user_id = #{user} AND conversation_id = #{conversation}
+      AND execution_config_json-&gt;&gt;'$.retryOfRunId' IN
+      <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
   <select id="findAgentRunLocked" resultType="com.stonewu.agenteam.model.execution.entity.RunQueryRow">
     SELECT * FROM agent_run WHERE enterprise_id = #{enterprise} AND id = #{id} FOR UPDATE
   </select>

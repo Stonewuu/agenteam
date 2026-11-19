@@ -163,6 +163,7 @@
   "有 {0} 次调用未完整计价。": "{0} calls are not fully priced.",
   "与当前价格对比": "Compare with active prices",
   "按思考强度设置": "Reasoning effort",
+  "选择模型支持的档位。“不思考”需要模型支持将思考预算设为 0。": "Select the levels this model supports. To offer thinking off, the model must accept a thinking budget of 0.",
   "原生思考等级": "Native thinking level",
   "暂时无法计算金额": "Unable to calculate the amount yet",
   "暂无已记录的模型用量。": "No model usage recorded yet.",

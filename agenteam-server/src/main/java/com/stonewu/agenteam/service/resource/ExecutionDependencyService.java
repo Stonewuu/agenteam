@@ -15,6 +15,8 @@ import com.stonewu.agenteam.service.permission.ResourceAuthorizationService;
 import com.stonewu.agenteam.service.resource.FixedDependencyService.ResolvedGraph;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -23,6 +25,7 @@ import java.util.*;
  */
 @Service
 public class ExecutionDependencyService {
+    private static final Logger LOG = LoggerFactory.getLogger(ExecutionDependencyService.class);
     private static final Set<String> OPTIONAL_AGENT_FIELDS = Set.of("pluginVersionIds", "skillVersionIds",
         "knowledgeVersionIds", "dataVersionIds", "workflowVersionIds", "subagentVersionIds");
     private final ResourceMapper resources;
@@ -117,7 +120,17 @@ public class ExecutionDependencyService {
                 return null;
             }
             if (depth > 0 || validateRootModel || kind != ResourceKind.AGENT) {
-                configurations.use(actor, kind, config);
+                try {
+                    configurations.use(actor, kind, config);
+                } catch (ApiException unavailable) {
+                    if (depth > 0 && kind == ResourceKind.AGENT && "MODEL_UNAVAILABLE".equals(unavailable.code())) {
+                        // 让依赖失效沿原流程传递，由所属能力判断能否移除；入口模型仍必须可用。
+                        LOG.warn("Agent dependency model unavailable: enterprise={}, model={}", actor.enterpriseId(),
+                            config.path("modelProfileId").asText(), unavailable);
+                        return null;
+                    }
+                    throw unavailable;
+                }
             }
             return config;
         }

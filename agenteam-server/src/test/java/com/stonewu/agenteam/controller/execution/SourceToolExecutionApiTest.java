@@ -15,6 +15,7 @@ import com.stonewu.agenteam.mapper.file.FileSqlMapper;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeDocumentSqlMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallSqlMapper;
+import com.stonewu.agenteam.mapper.execution.RunCheckpointMapper;
 import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.file.entity.FileObjectRow;
 import com.stonewu.agenteam.model.knowledge.entity.KnowledgeDocumentRow;
@@ -29,6 +30,8 @@ import com.stonewu.agenteam.support.HttpsDataTestServer;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -44,6 +47,7 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -373,6 +377,105 @@ class SourceToolExecutionApiTest extends ModelToolApiTestSupport {
         var preview = data(write(base() + "/data/" + resource + "/import-preview", Map.of("fileId", file, "name", "数据资料"), UUID.randomUUID().toString()).andExpect(status().isOk()).andReturn());
         var collection = data(write(base() + "/data/" + resource + "/import", Map.of("previewToken", preview.path("previewToken").asText(), "name", "数据资料", "fields", preview.path("fields")), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
         return new Data(resource, publish(resource), collection);
+    }
+
+    @Autowired
+    private RunCheckpointMapper checkpoints;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"read", "write", "write-without-checkpoint"})
+    void retryAfterModelFailureUsesTheOriginalQuestionAndCompletedToolResultOnce(String scenario) throws Exception {
+        boolean writeFile = !scenario.equals("read");
+        String question = writeFile ? "保存测试文件" : "列出目录里的文件";
+        int toolCount = writeFile ? 1 : 4;
+        var modelRequests = new CopyOnWriteArrayList<JsonNode>();
+        modelResponse = exchange -> {
+            var request = json.readTree(exchange.getRequestBody());
+            modelRequests.add(request);
+            switch (modelRequests.size()) {
+                case 1 -> {
+                    var calls = new ArrayList<Map<String, Object>>();
+                    String toolName = modelTool(request, writeFile ? "write_file" : "list_files");
+                    var arguments = writeFile ? Map.of("path", "work/retry-example.txt", "content", "测试内容") : Map.of();
+                    for (int i = 0; i < toolCount; i++) {
+                        calls.add(tool(i, "saved-" + i, toolName, arguments));
+                    }
+                    toolCalls(exchange, calls);
+                }
+                case 2 -> {
+                    byte[] body = "{\"error\":{\"message\":\"temporarily unavailable\",\"code\":\"unavailable\"}}".getBytes(StandardCharsets.UTF_8);
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.sendResponseHeaders(503, body.length);
+                    try (var output = exchange.getResponseBody()) {
+                        output.write(body);
+                    }
+                }
+                default -> frame(exchange, Map.of("content", "目录检查完成。"), "stop");
+            }
+        };
+        allowModelCalls = true;
+        var first = data(write(base() + "/conversations", Map.of("agentId", agent, "input", input(question),
+            "approvalPolicy", "full_access"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> visibleMessage(first.path("conversationId").asText(), first.path("outputMessageId").asText())
+                .path("status").asText().equals("failed"));
+        }
+        String originalRun = first.path("runId").asText();
+        String originalPath = base() + "/runs/" + originalRun;
+        var failed = snapshot(first);
+        assertFalse(failed.at("/messages/1/supersededByRetry").asBoolean());
+        var failedRun = data(mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertTrue(failedRun.path("canRetry").asBoolean());
+        if (scenario.equals("write-without-checkpoint")) {
+            var writes = databaseAccess.mapper(ToolCallSqlMapper.class).selectList(new LambdaQueryWrapper<ToolCallRow>()
+                .eq(ToolCallRow::getEnterpriseId, enterprise).eq(ToolCallRow::getRunId, originalRun));
+            assertEquals(1, writes.size());
+            assertEquals("succeeded", writes.getFirst().getStatus());
+            checkpoints.remove(enterprise, originalRun);
+            var details = data(mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isOk()).andReturn());
+            assertFalse(details.path("canRetry").asBoolean());
+            write(originalPath + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
+            assertEquals(2, modelRequests.size());
+            return;
+        }
+        var retry = data(write(originalPath + "/retry", null, UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        assertEquals(first.path("inputMessageId"), retry.path("inputMessageId"));
+        var pending = snapshot(retry);
+        assertEquals(originalRun, pending.at("/activeRun/retryOfRunId").asText());
+        assertTrue(pending.at("/messages/1/supersededByRetry").asBoolean());
+        assertFalse(pending.at("/messages/2/supersededByRetry").asBoolean());
+        finish(retry);
+        assertEquals(3, modelRequests.size());
+        var original = modelRequests.get(1);
+        var resumed = modelRequests.get(2);
+        for (int i = 0; i < toolCount; i++) {
+            assertEquals(modelTextForCall(original, "saved-" + i), modelTextForCall(resumed, "saved-" + i));
+        }
+        int questions = 0;
+        int results = 0;
+        for (var message : resumed.path("messages")) {
+            if ("user".equals(message.path("role").asText()) && message.path("content").toString().contains(question)) {
+                questions++;
+            }
+            if (message.path("tool_call_id").asText().startsWith("saved-")) {
+                results++;
+            }
+        }
+        assertEquals(1, questions);
+        assertEquals(toolCount, results);
+        assertEquals(0L, databaseAccess.mapper(ToolCallSqlMapper.class).selectCount(new LambdaQueryWrapper<ToolCallRow>()
+            .eq(ToolCallRow::getEnterpriseId, enterprise).eq(ToolCallRow::getRunId, retry.path("runId").asText())));
+        var refreshed = snapshot(retry);
+        assertEquals(3, refreshed.path("messages").size());
+        assertEquals(first.path("outputMessageId"), refreshed.at("/messages/1/id"));
+        assertEquals(failed.at("/messages/1/blocks"), refreshed.at("/messages/1/blocks"));
+        assertTrue(refreshed.at("/messages/1/supersededByRetry").asBoolean());
+        assertEquals("completed", refreshed.at("/messages/2/status").asText());
+        var details = data(mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertFalse(details.path("canRetry").asBoolean());
+        write(originalPath + "/retry", null, UUID.randomUUID().toString()).andExpect(status().isConflict());
     }
 
     private String create(String kind, Object config) throws Exception {

@@ -11,6 +11,7 @@ export type RunQuestion = {
 };
 export type Run = {
   id: string;
+  retryOfRunId?: string;
   conversationId: string;
   inputMessageId: string;
   outputMessageId: string;
@@ -73,6 +74,7 @@ export type Citation = {
 };
 export type ConversationMessage = {
   id: string;
+  supersededByRetry?: boolean;
   runId: string | null;
   attemptNo: number;
   role: "user" | "assistant" | "system";

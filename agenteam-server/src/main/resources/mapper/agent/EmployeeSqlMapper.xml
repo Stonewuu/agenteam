@@ -94,8 +94,6 @@
       <property name="alias" value="r"/>
     </include>
     AND h.status = 'active' AND v.status = 'available'
-    AND (JSON_UNQUOTE(JSON_EXTRACT(v.config_json, '$.agentType')) = 'workflow' OR (mp.enabled = TRUE AND
-    provider.enabled = TRUE))
     ORDER BY (h.last_used_at IS NOT NULL) DESC, h.last_used_at DESC, h.hired_at DESC, r.id DESC LIMIT 3
   </select>
 </mapper>

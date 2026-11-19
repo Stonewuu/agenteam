@@ -26,14 +26,18 @@ export function ConversationRunFeedback({enterprise, message, latestRun, busy, e
   const uiText = useT();
   const [retried, setRetried] = useState(false);
   const live = latestRun?.id === message.runId ? latestRun : null;
-  const query = useApiQuery<Run>(message.runId && !live ? runPath(enterprise, message.runId) : null, message.updatedAt);
+  // 结束事件只报告状态，重试权限由执行详情按当前任务与工具结果判断。
+  const needsDetails = !live || live.status === "failed" || live.status === "cancelled";
+  const query = useApiQuery<Run>(message.runId && needsDetails ? runPath(enterprise, message.runId) : null, message.updatedAt);
   const attempts = useApiQuery<RunAttempt[]>(message.hasMultipleAttempts && message.runId ? `${runPath(enterprise, message.runId)}/attempts` : null, message.updatedAt);
-  const run = live ?? query.data;
+  const run = query.data?.id === message.runId ? query.data : live;
   const attempt = attempts.data?.find((value) => value.attemptNo === message.attemptNo);
-  const reason = attempt?.errorSummary || (run?.currentAttemptNo === message.attemptNo ? run.errorMessage : null)
-    || (message.status === "cancelled" ? uiText("已停止。") : message.status === "failed" ? uiText("本次执行未能完成，请稍后重试。") : "");
+  const current = run?.currentAttemptNo === message.attemptNo ? run : null;
+  const reason = current?.errorCode === "MODEL_TEMPORARY_FAILURE" ? uiText("模型暂时无法回复。")
+    : attempt?.errorSummary || current?.errorMessage
+      || (message.status === "cancelled" ? uiText("已停止。") : message.status === "failed" ? uiText("回复未完成。") : "");
   return <div className={styles.recovery} aria-label={uiText("执行结果")}>
-    <p>{localizeUiMessage(reason, uiText)}</p>
+    {reason && <p>{localizeUiMessage(reason, uiText)}</p>}
     {query.error && <p role="alert">{localizeUiMessage(query.error ?? "", uiText)}<Button type="button"
                                                                                           onClick={query.retry}>{uiText("重新加载")}</Button>
     </p>}
@@ -43,13 +47,8 @@ export function ConversationRunFeedback({enterprise, message, latestRun, busy, e
     {run?.canRetry && run.currentAttemptNo === message.attemptNo &&
       <Button type="button" disabled={busy} onClick={() => {
         setRetried(true);
-        void onRetry(run.id).then((accepted) => {
-          if (accepted) {
-            query.retry();
-            attempts.retry();
-          }
-        });
-      }}><IconRefresh size={16}/>{busy && retried ? uiText("正在重新执行…") : uiText("重新执行")}</Button>}
+        void onRetry(run.id);
+      }}><IconRefresh size={16}/>{busy && retried ? uiText("正在重试…") : uiText("重试")}</Button>}
     {retried && error && <p role="alert">{localizeUiMessage(error ?? "", uiText)}</p>}
   </div>;
 }

@@ -113,10 +113,15 @@ export function resolveToolBorderGlowConfig(options: ToolBorderGlowOptions = {})
   };
 }
 
+/** 给光晕留出淡至透明的距离，画布和折叠面板使用相同的绘制范围。 */
+export function toolBorderGlowPadding(config: ToolBorderGlowConfig) {
+  return `${Math.ceil(Math.max(config.glowWidth * 2.5, config.edgeWidth * 3))}px`;
+}
+
 /** 同一份配置同时驱动画布、彩色边框和静态光晕。 */
 export function createToolBorderGlowStyle(config: ToolBorderGlowConfig): CSSProperties {
   const variables: Record<string, string | number> = {
-    "--tool-glow-padding": `${Math.ceil(Math.max((config.glowWidth / 19) * 24, config.edgeWidth * 3))}px`,
+    "--tool-glow-padding": toolBorderGlowPadding(config),
     "--tool-glow-scale": config.glowWidth / 19,
     "--tool-glow-intensity": config.glowIntensity,
     "--tool-glow-edge-width": `${config.edgeWidth}px`,

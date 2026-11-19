@@ -12,15 +12,19 @@ import com.stonewu.agenteam.mapper.file.FileSqlMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallSqlMapper;
 import com.stonewu.agenteam.model.file.entity.FileObjectRow;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRow;
+import com.stonewu.agenteam.service.execution.RunWorker;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,6 +50,77 @@ class DelegatedToolExecutionApiTest extends ModelToolApiTestSupport {
     @AfterAll
     void closeEnvironment() throws Exception {
         ENVIRONMENT.close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void retryAfterParentModelFailureContinuesTheExistingChildAndItsHistory(boolean cancelFirstRetry) throws Exception {
+        configureAgent(config -> {
+            config.put("dynamicSubagentEnabled", true);
+            config.put("maxSteps", 20);
+        });
+        var parentCalls = new AtomicInteger();
+        var childCalls = new AtomicInteger();
+        var childHistory = new AtomicReference<JsonNode>();
+        var continuedResult = new AtomicReference<String>();
+        modelResponse = exchange -> {
+            var request = json.readTree(exchange.getRequestBody());
+            boolean root = false;
+            for (var tool : request.path("tools")) {
+                if (tool.at("/function/name").asText().equals("agent_spawn")) {
+                    root = true;
+                }
+            }
+            if (!root) {
+                if (childCalls.incrementAndGet() == 2) {
+                    childHistory.set(request);
+                }
+                frame(exchange, Map.of("content", "子智能体保留了需要核对的三份材料。"), "stop");
+                return;
+            }
+            switch (parentCalls.getAndIncrement()) {
+                case 0 -> toolCalls(exchange, List.of(tool(0, "initial-child", "agent_spawn",
+                    Map.of("agent_id", "general-purpose", "label", "复核助手", "task", "先记住原始核对要求"))));
+                case 1 -> {
+                    byte[] response = "{\"error\":{\"message\":\"temporarily unavailable\",\"code\":\"unavailable\"}}"
+                        .getBytes(StandardCharsets.UTF_8);
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.sendResponseHeaders(503, response.length);
+                    try (exchange) {
+                        exchange.getResponseBody().write(response);
+                    }
+                }
+                case 2 -> toolCalls(exchange, List.of(tool(0, "continued-child", "agent_send",
+                    Map.of("label", "复核助手", "message", "继续核对原有材料"))));
+                default -> {
+                    continuedResult.set(modelTextForCall(request, "continued-child"));
+                    frame(exchange, Map.of("content", "核对完成。"), "stop");
+                }
+            }
+        };
+        var original = submit("请委派助手核对材料");
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            await(() -> visibleMessage(original.path("conversationId").asText(), original.path("outputMessageId").asText())
+                .path("status").asText().equals("failed"));
+        }
+        var retry = data(write(base() + "/runs/" + original.path("runId").asText() + "/retry", null,
+            UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
+        if (cancelFirstRetry) {
+            String retryPath = base() + "/runs/" + retry.path("runId").asText();
+            write(retryPath + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
+            retry = data(write(retryPath + "/retry", null, UUID.randomUUID().toString())
+                .andExpect(status().isAccepted()).andReturn());
+        }
+        finish(retry);
+        assertEquals(2, childCalls.get(), "重试应继续调用原子智能体，而不是丢失子会话");
+        assertNotNull(childHistory.get());
+        assertTrue(childHistory.get().toString().contains("先记住原始核对要求"));
+        assertTrue(childHistory.get().toString().contains("子智能体保留了需要核对的三份材料。"));
+        assertTrue(childHistory.get().toString().contains("继续核对原有材料"));
+        assertTrue(continuedResult.get().contains("子智能体保留了需要核对的三份材料。"));
+        assertEquals(original.path("inputMessageId"), retry.path("inputMessageId"));
+        assertEquals(4, parentCalls.get());
     }
 
     @Test

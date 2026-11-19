@@ -67,7 +67,8 @@ public final class GeminiModelSession extends ChatModelBase implements AutoClose
         return Flux.defer(() -> {
             var start = Instant.now();
             var collector = new GeminiNativeStateCollector(provider, getModelName());
-            var config = GenerateContentConfig.builder().candidateCount(1);
+            // 每条调用记录对应一次上游请求，避免开发库自行追加请求。
+            var config = GenerateContentConfig.builder().candidateCount(1).automaticContinuation(false);
             var conversation = messages;
             if (!messages.isEmpty() && messages.getFirst().getRole() == MsgRole.SYSTEM) {
                 var system = formatter.format(List.of(messages.getFirst()));

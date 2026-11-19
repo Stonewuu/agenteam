@@ -175,7 +175,8 @@ class RunRecoveryExecutionTest extends ExecutionApiTestSupport {
             assertEquals("新进程读取固定配置后完成任务。", output.content());
             assertEquals("重新执行", output.blocks().getFirst().label());
             assertEquals(2, count("agent_run"));
-            assertEquals(4, count("agent_message"));
+            assertEquals(3, count("agent_message"));
+            assertEquals(original.path("inputMessageId"), accepted.path("inputMessageId"));
             assertEquals(0, reserved());
             assertEquals("cancelled", state(original));
             assertTrue(databaseAccess.mapper(QuotaEntryTableMapper.class).selectCount(new LambdaQueryWrapper<QuotaEntryRow>()

@@ -52,12 +52,15 @@ export function useFormAction() {
     }
   }
 
-  function clearFieldError(field: string) {
-    if (!fieldErrors[field]) {
+  function clearFieldError(field: string, ...related: string[]) {
+    const fields = [field, ...related];
+    if (!fields.some((name) => fieldErrors[name])) {
       return;
     }
     const remaining = {...fieldErrors};
-    delete remaining[field];
+    for (const name of fields) {
+      delete remaining[name];
+    }
     setFieldErrors(remaining);
     if (!conflict) {
       setError(fieldErrorMessages(remaining).join("\n"));

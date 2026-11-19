@@ -40,7 +40,8 @@ public class ModelProfileTestData {
                 entry.secretEnvironment() == null ? "" : secrets.apply(entry.secretEnvironment()), true);
             var capability = entry.capabilities();
             var model = new ModelProfileWriteRequest(providerId, entry.name(), entry.modelName(), new ModelCapabilities(capability.supportsTools(), capability.supportsTemperature(),
-                capability.maxOutputTokens(), capability.maxContextTokens(), capability.inputTypes().stream().sorted().toList(), capability.reasoningEfforts()), entry.enabled());
+                capability.maxOutputTokens(), capability.maxContextTokens(), capability.inputTypes().stream().sorted().toList(),
+                capability.reasoningEfforts(), capability.protocolOptions()), entry.enabled());
             if (profiles.find(entry.enterpriseId(), id).isEmpty()) {
                 providers.insert(entry.enterpriseId(), providerId, provider, clock.instant());
                 profiles.insert(entry.enterpriseId(), id, model, clock.instant());

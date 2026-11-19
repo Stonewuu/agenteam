@@ -19,6 +19,9 @@ import java.util.List;
  */
 @Mapper
 public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
+    List<String> retriedRuns(@Param("enterprise") String enterprise, @Param("user") String user,
+                             @Param("conversation") String conversation, @Param("ids") List<String> ids);
+
     default List<RunQueryRow> findAgentRun(String enterprise, String id, boolean lock) {
         if (lock) {
             return findAgentRunLocked(enterprise, id, lock);

@@ -58,6 +58,11 @@ public final class ApiException extends ResponseStatusException {
             Map.of(field, List.of(message)), cause);
     }
 
+    public static ApiException invalidFields(Map<String, List<String>> fields) {
+        return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_FAILED",
+            RequestValidationErrors.summary(fields), Map.of(), fields);
+    }
+
     public static ApiException versionConflict(long revision) {
         return new ApiException(HttpStatus.CONFLICT, "VERSION_CONFLICT", Messages.text("http.versionConflict"),
             Map.of("currentRevision", Long.toString(revision)), Map.of());

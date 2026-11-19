@@ -72,8 +72,8 @@
     "en": "This model does not support the selected reasoning effort. Choose another option."
   },
   "error.modelprofile.modelConfigurationValidation.provider.1": {
-    "zh-CN": "模型地址必须使用加密连接，且不能包含账号、查询参数或片段；本机模型可使用普通连接。",
-    "en": "Model addresses must use HTTPS and cannot contain credentials, query parameters, or fragments. Local models may use HTTP."
+    "zh-CN": "请输入有效的 HTTP 或 HTTPS 模型地址，不要包含账号、查询参数或片段。",
+    "en": "Enter a valid HTTP or HTTPS model address without credentials, query parameters, or fragments."
   },
   "error.modelprofile.modelConfigurationValidation.provider.2": {
     "zh-CN": "密钥不能包含换行或控制字符。",
@@ -108,16 +108,16 @@
     "en": "This API does not support the selected reasoning mode."
   },
   "error.modelprofile.modelProtocolValidation.validate.2": {
-    "zh-CN": "请为每个思考等级填写小于最大输出长度的预算；Anthropic 启用思考时至少为 1024。",
-    "en": "Set a budget below the maximum output length for each reasoning level. Anthropic requires at least 1024 when thinking is enabled."
+    "zh-CN": "请填写至少为 {0} 且小于最大输出长度的思考预算。",
+    "en": "Enter a thinking budget of at least {0} and below the maximum output length."
   },
   "error.modelprofile.modelProtocolValidation.validate.3": {
-    "zh-CN": "关闭思考的预算必须为 0，其他等级必须大于 0。",
-    "en": "The budget must be 0 when reasoning is off and greater than 0 for other levels."
+    "zh-CN": "关闭思考时，预算应为 0。",
+    "en": "Use a budget of 0 to turn thinking off."
   },
   "error.modelprofile.modelProtocolValidation.validate.4": {
-    "zh-CN": "请为每个等级填写当前接口支持的按思考强度设置。",
-    "en": "Set the reasoning effort supported by the current API for each level."
+    "zh-CN": "请选择该档位对应的原生等级。",
+    "en": "Choose a native reasoning level for this setting."
   },
   "error.modelprofile.modelProtocolValidation.validate.5": {
     "zh-CN": "只有 Anthropic 可配置 5 分钟或 1 小时的缓存创建有效期。",

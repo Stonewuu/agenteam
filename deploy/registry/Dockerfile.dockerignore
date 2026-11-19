@@ -1,7 +1,14 @@
 *
-!compose.yaml
-!compose.registry.yaml
-!compose.single.yaml
+!docker-compose.yaml
+!.env.example
+!compose/
+!compose/shared-mysql.yaml
+!compose/external-mysql.yaml
+!compose/low-memory.yaml
+!compose/split.yaml
+!container/
+!container/init-storage.sh
+!agenteam-sandboxes.slice
 !registry/
 registry/*
 !registry/Dockerfile

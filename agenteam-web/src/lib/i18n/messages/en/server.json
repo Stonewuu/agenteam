@@ -341,7 +341,7 @@
   "流程型员工不能在对话中切换模型。": "Workflow AI employees cannot switch models within a conversation.",
   "当前模型不支持所选思考强度，请重新选择。": "This model does not support the selected reasoning effort. Choose another option.",
   "当前模型不支持所选思考等级，请重新选择。": "This model does not support the selected reasoning effort. Select another option.",
-  "模型地址必须使用加密连接，且不能包含账号、查询参数或片段；本机模型可使用普通连接。": "Model addresses must use HTTPS and cannot contain credentials, query parameters, or fragments. Local models may use HTTP.",
+  "请输入有效的 HTTP 或 HTTPS 模型地址，不要包含账号、查询参数或片段。": "Enter a valid HTTP or HTTPS model address without credentials, query parameters, or fragments.",
   "密钥不能包含换行或控制字符。": "A key cannot contain line breaks or control characters.",
   "当前企业已存在同名配置，请修改名称。": "A configuration with this name already exists in the organization. Change the name.",
   "当前账号不能查看模型选项。": "This account cannot view model options.",

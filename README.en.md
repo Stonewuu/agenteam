@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Stonewuu/agenteam/releases/tag/v0.4.1"><img src="https://img.shields.io/badge/version-0.4.1-AD6547?style=flat-square" alt="AgenTeam 0.4.1" /></a>
+  <a href="https://github.com/Stonewuu/agenteam/releases/latest"><img src="https://img.shields.io/github/v/release/Stonewuu/agenteam?label=version&amp;color=AD6547&amp;style=flat-square" alt="Latest AgenTeam release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-596B57?style=flat-square" alt="Apache-2.0 license" /></a>
   <a href="docs/deployment/images.md"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="Deploy with Docker Compose" /></a>
 </p>
@@ -88,7 +88,31 @@ Assign owners, due dates, and priorities to personal and team to-dos. Schedule a
 
 ## Quick start
 
-### Option 1: Ask an AI agent to deploy
+Install Docker with Docker Compose. On Windows, use Docker Desktop in Linux container mode. Clone the repository and start the released images from its root.
+
+```sh
+git clone https://github.com/Stonewuu/agenteam.git
+cd agenteam
+docker compose up -d
+```
+
+The first start downloads the latest release and generates database and service credentials. When `docker compose ps` shows that `nginx` is healthy, read the first-time setup credential with the following command.
+
+```sh
+docker compose exec backend cat /run/agenteam-secrets/setup/AGENTEAM_SETUP_CREDENTIAL
+```
+
+Open **[http://localhost:8088](http://localhost:8088)** and complete the setup:
+
+1. **Create your workspace:** Use the credential from the command above to create an administrator and organization.
+2. **Connect a model:** Add a provider, access key, and model under organization model settings.
+3. **Start a task:** Create, publish, and list an agent in Capabilities, then hire it under AI employees and start a conversation. Enable command execution when the agent needs to process office files.
+
+For public access, configure HTTPS for your domain and set `PUBLIC_URL`. Connect a mail service to use email verification, password recovery, and invitations. See the [Docker deployment guide](docs/deployment/images.md) for ports, domains, low-memory deployments, and migration.
+
+To update, run `docker compose pull` and `docker compose up -d` in the same directory. Docker named volumes retain your data and credentials.
+
+### Ask an AI agent to deploy
 
 Send the following to an agent that can run commands on your computer or server:
 
@@ -96,54 +120,6 @@ Send the following to an agent that can run commands on your computer or server:
 Please deploy this project for me: https://github.com/Stonewuu/agenteam
 Read the deployment documentation and check the current environment first. After deployment, tell me the access URL and initial setup steps.
 ```
-
-### Option 2: Deploy with Docker images
-
-**For a server installation, use the latest released images on Docker Hub.** The deployment package includes service configuration and setup tools. Follow the [Docker deployment guide](docs/deployment/images.md) for the complete installation steps.
-
-### Option 3: Deploy from source
-
-Prepare Git, Docker, and Docker Compose. On Windows, use Docker Desktop in Linux container mode.
-
-#### 1. Get the project
-
-```sh
-git clone https://github.com/Stonewuu/agenteam.git
-cd agenteam/deploy
-```
-
-#### 2. Generate configuration
-
-Linux / macOS:
-
-```sh
-sh configure.sh single
-```
-
-Windows PowerShell:
-
-```powershell
-.\configure.ps1 -Mode single
-```
-
-The setup tool creates `.env` with generated database passwords, service credentials, and a setup credential. Existing configuration is preserved.
-
-#### 3. Start the services
-
-```sh
-docker compose config --quiet
-docker compose up -d --build --wait --wait-timeout 300
-```
-
-#### 4. Complete the initial setup
-
-Open **[http://localhost:8088](http://localhost:8088)** and complete the setup:
-
-1. **Create your workspace:** Use `SETUP_CREDENTIAL` from `deploy/.env` to create an administrator and organization.
-2. **Connect a model:** Add a provider, access key, and model under organization model settings.
-3. **Start a task:** Create, publish, and list an agent in Capabilities, then hire it under AI employees and start a conversation. Enable command execution when the agent needs to process office files.
-
-For public access, configure HTTPS for your domain and set `PUBLIC_URL`. Connect a mail service to use email verification, password recovery, and invitations. See the [configuration example](deploy/.env.example) and [Nginx reverse proxy example](examples/deployment/nginx.production.example.conf).
 
 <a id="development"></a>
 
@@ -153,7 +129,7 @@ AgenTeam uses Java 21, Spring Boot 4, AgentScope 2, Next.js 16, and React 19. My
 
 ### Development environment
 
-Prepare Java 21, Node.js 24, pnpm 11.15.1, and Docker. Generate `deploy/.env` as described above.
+Prepare Java 21, Node.js 24, pnpm 11.15.1, and Docker. From `deploy/`, run `sh configure.sh` or `./configure.ps1` in PowerShell to generate `deploy/.env` for local development.
 
 ### Run locally
 
@@ -162,7 +138,7 @@ Prepare Java 21, Node.js 24, pnpm 11.15.1, and Docker. Generate `deploy/.env` as
 Start dependencies from `deploy`:
 
 ```sh
-docker compose -f compose.yaml -f compose.dev.yaml up -d mysql redis
+docker compose -f ../docker-compose.yaml -f compose/development.yaml up -d mysql redis
 docker build -t agenteam/sandbox-office:local sandbox
 ```
 

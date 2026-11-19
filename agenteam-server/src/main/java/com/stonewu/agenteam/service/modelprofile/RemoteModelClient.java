@@ -21,7 +21,6 @@ import java.io.InterruptedIOException;
 import java.net.Proxy;
 import java.time.Duration;
 import java.util.List;
-import java.util.Set;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Comparator;
@@ -62,12 +61,9 @@ public class RemoteModelClient {
             default -> "/models";
         };
         HttpUrl url = HttpUrl.get(base + route);
-        boolean local = Set.of("127.0.0.1", "localhost", "::1").contains(url.host());
-        // 本机模型沿用配置表单允许的地址，其他地址复用现有外部网络限制。
+        // 模型地址由管理员配置，直接使用解析结果连接，包括内网和代理提供的地址。
         var connection = client.newBuilder().proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false)
-            .retryOnConnectionFailure(false).dns(host -> local
-                ? addresses.resolveHost(host, Duration.ofSeconds(5), true)
-                : addresses.resolve(url, Duration.ofSeconds(5))).build();
+            .retryOnConnectionFailure(false).dns(host -> addresses.resolveConfiguredHost(host, Duration.ofSeconds(5))).build();
         var diagnostic = new ModelRequestDiagnostics(json, provider.id(), provider.apiKey(), List.of());
         var results = new LinkedHashMap<String, RemoteModelView>();
         var tokens = new HashSet<String>();

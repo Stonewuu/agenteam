@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -164,6 +165,10 @@ public class RunMapper {
             .eq(AgentRunRow::getConversationId, conversation).in(AgentRunRow::getId, ids);
         return statements.selectList(criteria).stream().collect(Collectors.toMap(AgentRunRow::getId,
             row -> json.tree(row.getExecutionConfigJson()).path("sourceContext").asText("")));
+    }
+
+    public Set<String> retriedRuns(String enterprise, String user, String conversation, List<String> ids) {
+        return ids.isEmpty() ? Set.of() : Set.copyOf(statements.retriedRuns(enterprise, user, conversation, ids));
     }
 
     public Optional<String> previousRun(String enterprise, String conversation) {

@@ -173,6 +173,21 @@ class GeminiProtocolModelTest {
     }
 
     @Test
+    void continuationTokenDoesNotIssueAnotherModelRequest() {
+        var response = json.createObjectNode();
+        var candidate = response.putArray("candidates").addObject();
+        candidate.put("finishReason", "CONTINUATION").put("continuationToken", signature("next"));
+        candidate.putObject("content").put("role", "model").putArray("parts").add(text("第一段答复"));
+        replies.add("data: " + response + "\n\n");
+        var chunks = model().stream(List.of(new UserMessage("测试请求")), List.of(), null)
+            .collectList().block(Duration.ofSeconds(8));
+        assertNotNull(chunks);
+        assertTrue(chunks.stream().flatMap(chunk -> chunk.getContent().stream())
+            .anyMatch(block -> block instanceof TextBlock text && "第一段答复".equals(text.getText())));
+        assertEquals(1, requests.size());
+    }
+
+    @Test
     void originalCountsLargerThanIntegerSurviveTheOfficialSdkConversion() {
         var original = usage().put("promptTokenCount", 3000000000L).put("totalTokenCount", 3000001800L);
         replies.add(event(List.of(text("计量大数")), true, original));

@@ -18,6 +18,7 @@ import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
 import com.stonewu.agenteam.model.execution.entity.ModelSelection;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRow;
+import com.stonewu.agenteam.model.modelprofile.entity.ModelProtocolOptions;
 import com.stonewu.agenteam.model.permission.entity.DataScope;
 import com.stonewu.agenteam.service.execution.ConversationModelService;
 import com.stonewu.agenteam.service.execution.RunWorker;
@@ -26,18 +27,23 @@ import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import com.stonewu.agenteam.support.ModelProfileFixture;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -72,18 +78,27 @@ class ConversationModelSelectionApiTest extends ExecutionApiTestSupport {
         ENVIRONMENT.close();
     }
 
-    @Test
-    void defaultsAndExplicitSelectionReachTheActualModelEvenWhenDefaultIsDisabled() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"none", "subagent", "workflow"})
+    void defaultsAndExplicitSelectionReachTheActualModelEvenWhenDefaultIsDisabled(String dependency) throws Exception {
         String alternative = reasoningModel(enterprise, "alternative");
         var initialOptions = options(null);
         schemas.validate("ConversationModelOptions", initialOptions);
         String defaultId = initialOptions.at("/defaultSelection/modelProfileId").asText();
         assertTrue(initialOptions.at("/defaultSelection/reasoningEffort").isNull());
+        if (!dependency.equals("none")) {
+            addAgentDependency(dependency);
+        }
         databaseAccess.mapper(ModelProfileSqlMapper.class).update(new LambdaUpdateWrapper<ModelProfileRow>()
             .eq(ModelProfileRow::getEnterpriseId, enterprise).eq(ModelProfileRow::getId, defaultId)
             .set(ModelProfileRow::getEnabled, false));
         assertTrue(data(mvc.perform(get(base() + "/employees/" + agent).cookie(cookie)).andExpect(status().isOk()).andReturn()).path("canRun").asBoolean());
         mvc.perform(get(base() + "/agents/" + agent + "/input-options").param("kind", "skill").cookie(cookie)).andExpect(status().isOk());
+        assertTrue(options(null).path("models").findValues("id").stream().anyMatch(id -> id.asText().equals(alternative)));
+        var home = data(mvc.perform(get(base() + "/home").cookie(cookie)).andExpect(status().isOk()).andReturn());
+        assertTrue(home.path("employees").findValues("agentId").stream().anyMatch(id -> id.asText().equals(agent)),
+            "默认模型停用后，已雇佣员工仍应显示在首页以便切换模型");
+        write(base() + "/conversations", body(null), UUID.randomUUID().toString()).andExpect(status().isConflict());
 
         var accepted = create(selection(alternative, "high"));
         String conversation = accepted.path("conversationId").asText();
@@ -91,6 +106,8 @@ class ConversationModelSelectionApiTest extends ExecutionApiTestSupport {
         assertEquals(alternative, config.path("modelProfileId").asText());
         assertEquals("high", config.path("reasoningEffort").asText());
         assertFalse(config.has("temperature"));
+        assertTrue(config.path("subagentVersionIds").isEmpty());
+        assertTrue(config.path("workflowVersionIds").isEmpty());
         var captured = new AtomicReference<JsonNode>();
         modelResponse = exchange -> {
             captured.set(json.readTree(exchange.getRequestBody()));
@@ -115,6 +132,46 @@ class ConversationModelSelectionApiTest extends ExecutionApiTestSupport {
         assertEquals(selection(alternative, "high"), snapshot(conversation).at("/conversation/modelSelection"));
         assertEquals(selection(alternative, "high"), options(conversation).path("selection"));
         assertFalse(options(conversation).toString().contains("isolated-execution-secret"));
+        var current = snapshot(conversation).path("conversation");
+        change(HttpMethod.PUT, path(conversation) + "/model-selection", selection(alternative, "low"),
+            current.path("revision").asText(), UUID.randomUUID().toString()).andExpect(status().isOk());
+        assertEquals(selection(alternative, "low"), options(conversation).path("selection"));
+    }
+
+    private void addAgentDependency(String kind) throws Exception {
+        var child = (ObjectNode) data(mvc.perform(get(base() + "/resources/" + agent).cookie(cookie))
+            .andExpect(status().isOk()).andReturn()).path("draft").deepCopy();
+        child.putArray("subagentVersionIds");
+        child.putArray("workflowVersionIds");
+        child.put("dynamicSubagentEnabled", false);
+        String version = publishDependency("agent", child);
+        if (kind.equals("subagent")) {
+            configureAgent(config -> config.putArray("subagentVersionIds").add(version));
+            return;
+        }
+        var nodes = List.of(
+            dependencyNode("start", "start", Map.of("inputSchema", Map.of("type", "object"))),
+            dependencyNode("work", "agent", Map.of("agentVersionId", version, "inputMapping", Map.of("text", "${input.text}"))),
+            dependencyNode("end", "end", Map.of("outputMapping", Map.of("result", "${input.text}"))));
+        var edges = List.of(
+            Map.of("edgeId", "first", "source", "start", "target", "work", "branch", "default"),
+            Map.of("edgeId", "second", "source", "work", "target", "end", "branch", "default"));
+        String workflow = publishDependency("workflow", json.valueToTree(Map.of("icon", "GitBranch", "color", "blue",
+            "nodes", nodes, "edges", edges)));
+        configureAgent(config -> config.putArray("workflowVersionIds").add(workflow));
+    }
+
+    private Map<String, Object> dependencyNode(String id, String type, Map<String, Object> config) {
+        return Map.of("nodeId", id, "name", id, "type", type, "position", Map.of("x", 0, "y", 0),
+            "timeoutSeconds", 60, "failurePolicy", "stop", "config", config);
+    }
+
+    private String publishDependency(String kind, JsonNode config) throws Exception {
+        var resource = data(write(base() + "/resources", Map.of("kind", kind, "name", "模型切换依赖", "description", "验证依赖模型停用",
+            "tagIds", List.of(), "config", config), UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn());
+        return data(change(HttpMethod.POST, base() + "/resources/" + resource.at("/resource/id").asText() + "/publish",
+            Map.of("releaseNote", "模型选择回归"), "1", UUID.randomUUID().toString()).andExpect(status().isCreated()).andReturn())
+            .at("/version/id").asText();
     }
 
     @Test
@@ -210,6 +267,89 @@ class ConversationModelSelectionApiTest extends ExecutionApiTestSupport {
         var administrator = new AuthContext(users.findById(admin).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> modelSelections.select(administrator, id, selected, 1)).getStatusCode().value());
         assertEquals(1, conversations.find(enterprise, member.id(), id, false).orElseThrow().revision());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void geminiPublishesTheFirstPartBeforeTheNextEventAndKeepsItWhenReopened(boolean withSummary) throws Exception {
+        var settings = new ModelProtocolOptions("level", Map.of(), Map.of("high", "high"), 0, "standard", List.of(), null);
+        var capabilities = new ModelCapabilities(true, false, 8192, 32768, List.of("text"), List.of("high"), settings);
+        var profile = new ModelProfileFixture(enterprise, admin, "gemini-stream", 1, "Gemini 测试模型", "gemini",
+            "models/test-model", "http://127.0.0.1:" + modelServer.getAddress().getPort(), "EXECUTION_TEST_SECRET", capabilities, true);
+        String modelId = models.saveProfiles(List.of(profile), ignored -> "isolated-execution-secret").getFirst();
+        String summary = "先核对模型信息。";
+        String answer = "核对完成。";
+        var firstPart = json.createObjectNode().put("text", withSummary ? summary : answer);
+        if (withSummary) {
+            firstPart.put("thought", true);
+        }
+        var continueResponse = new CountDownLatch(1);
+        var request = new AtomicReference<JsonNode>();
+        modelResponse = exchange -> {
+            request.set(json.readTree(exchange.getRequestBody()));
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+            exchange.sendResponseHeaders(200, 0);
+            try (var output = exchange.getResponseBody()) {
+                output.write(geminiEvent(firstPart, false));
+                output.flush();
+                if (!continueResponse.await(15, TimeUnit.SECONDS)) {
+                    throw new IOException("未收到继续发送测试响应的信号");
+                }
+                if (withSummary) {
+                    output.write(geminiEvent(json.createObjectNode().put("text", answer), false));
+                }
+                output.write(geminiEvent(json.createObjectNode().put("text", "").put("thoughtSignature", "c2ln"), true));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IOException("模型响应测试被中断", interrupted);
+            }
+        };
+        var accepted = create(selection(modelId, "high"));
+        allowModelCalls = true;
+        String run = accepted.path("runId").asText();
+        String conversation = accepted.path("conversationId").asText();
+        String outputId = accepted.path("outputMessageId").asText();
+        try (var worker = new RunWorker(lifecycle, tasks)) {
+            worker.poll();
+            try {
+                await(() -> firstPart.path("text").asText().equals(visibleMessage(conversation, outputId).at("/blocks/0/text").asText()));
+            } finally {
+                continueResponse.countDown();
+            }
+            await(() -> runs.find(enterprise, run, false).orElseThrow().terminal());
+        }
+        var finished = runs.find(enterprise, run, false).orElseThrow();
+        assertEquals("completed", finished.status(), finished.errorMessage());
+        assertNotNull(request.get());
+        var thinking = request.get().at("/generationConfig/thinkingConfig");
+        assertEquals("HIGH", thinking.path("thinkingLevel").asText());
+        assertTrue(thinking.path("includeThoughts").asBoolean());
+        var message = snapshot(conversation).at("/messages/1");
+        assertEquals(outputId, message.path("id").asText());
+        assertEquals("completed", message.path("status").asText());
+        assertEquals(answer, message.path("content").asText());
+        assertFalse(message.toString().contains("thoughtSignature"));
+        var blocks = message.path("blocks");
+        assertEquals(withSummary ? 2 : 1, blocks.size());
+        if (withSummary) {
+            assertEquals("thinking", blocks.get(0).path("type").asText());
+            assertEquals(summary, blocks.get(0).path("text").asText());
+        }
+        var last = blocks.get(blocks.size() - 1);
+        assertEquals("text", last.path("type").asText());
+        assertEquals(answer, last.path("text").asText());
+    }
+
+    private byte[] geminiEvent(ObjectNode part, boolean finished) {
+        var frame = json.createObjectNode();
+        var candidate = frame.putArray("candidates").addObject();
+        candidate.putObject("content").put("role", "model").putArray("parts").add(part);
+        if (finished) {
+            candidate.put("finishReason", "STOP");
+            frame.putObject("usageMetadata").put("promptTokenCount", 4).put("candidatesTokenCount", 2)
+                .put("thoughtsTokenCount", 3).put("totalTokenCount", 9);
+        }
+        return ("data: " + frame + "\n\n").getBytes(StandardCharsets.UTF_8);
     }
 
     private ObjectNode selection(String model, String effort) {

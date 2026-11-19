@@ -21,7 +21,7 @@ export function messageRunSteps(message: DisplayMessage, history: RunStepHistory
 }
 
 /** 内容块保持原父子关系；独立步骤进入最近的实际父步骤，已有内容不重复包裹。 */
-export function mergeExecutionSteps(blocks: DisplayBlock[], steps: RunStep[]): DisplayBlock[] {
+export function mergeExecutionSteps(blocks: DisplayBlock[], steps: RunStep[], messageStatus?: DisplayMessage["status"]): DisplayBlock[] {
   const byId = new Map(steps.map((step) => [step.id, step]));
   const represented = new Map<string, DisplayBlock>();
   const copy = (values: DisplayBlock[]): DisplayBlock[] => values.map((value) => {
@@ -42,9 +42,14 @@ export function mergeExecutionSteps(blocks: DisplayBlock[], steps: RunStep[]): D
     if (step.kind === "agent" && step.parentStepId === null && !step.publicSummary) {
       continue;
     }
-    // 模型开始和结束由真实思考、正文体现，不能为每次调用再生成一张空卡片。
-    if (step.kind === "model" && !step.publicSummary && ["pending", "running", "completed"].includes(step.status)) {
-      continue;
+    if (step.kind === "model" && !step.publicSummary) {
+      const parent = step.parentStepId ? byId.get(step.parentStepId) : null;
+      const rootModel = !step.parentStepId || (parent?.kind === "agent" && !parent.parentStepId);
+      // 整轮失败或停止时，根模型的同一状态已由回复下方说明，子任务的独立失败仍可查看。
+      if (["pending", "running", "completed"].includes(step.status) || (rootModel && step.status === messageStatus
+        && (messageStatus === "failed" || messageStatus === "cancelled"))) {
+        continue;
+      }
     }
     const block: DisplayBlock = {
       kind: "step",

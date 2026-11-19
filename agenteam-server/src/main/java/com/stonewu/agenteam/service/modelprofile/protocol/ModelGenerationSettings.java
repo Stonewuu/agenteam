@@ -44,7 +44,7 @@ public final class ModelGenerationSettings {
             builder.additionalBodyParam("service_tier", nativeOptions.serviceTier());
         }
         if (nativeOptions.reasoningMode().equals("budget") && requested.getReasoningEffort() != null) {
-            builder.thinkingBudget(nativeOptions.thinkingBudgets().get(requested.getReasoningEffort()));
+            builder.thinkingBudget(nativeOptions.thinkingBudget(requested.getReasoningEffort()));
         }
         if (provider.protocol().equals("openai_responses") && !capability.reasoningEfforts().isEmpty()
             && !"none".equals(requested.getReasoningEffort())) {
@@ -66,17 +66,20 @@ public final class ModelGenerationSettings {
             params.thinking(ThinkingConfigDisabled.builder().build());
         } else if (settings.reasoningMode().equals("adaptive")) {
             params.thinking(ThinkingConfigAdaptive.builder().display(ThinkingConfigAdaptive.Display.SUMMARIZED).build());
-            params.outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.of(settings.thinkingLevels().get(effort))).build());
+            params.outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.of(settings.thinkingLevel(effort))).build());
         } else {
-            params.thinking(ThinkingConfigEnabled.builder().budgetTokens(settings.thinkingBudgets().get(effort))
+            params.thinking(ThinkingConfigEnabled.builder().budgetTokens(settings.thinkingBudget(effort))
                 .display(ThinkingConfigEnabled.Display.SUMMARIZED).build());
         }
     }
 
     public static void gemini(GenerateContentConfig.Builder params, GenerateOptions options, ModelProtocolOptions settings) {
-        if (options.getReasoningEffort() != null && settings.reasoningMode().equals("level")) {
+        String effort = options.getReasoningEffort();
+        if ("none".equals(effort)) {
+            params.thinkingConfig(ThinkingConfig.builder().thinkingBudget(0).includeThoughts(false).build());
+        } else if (effort != null && settings.reasoningMode().equals("level")) {
             params.thinkingConfig(ThinkingConfig.builder().includeThoughts(true)
-                .thinkingLevel(settings.thinkingLevels().get(options.getReasoningEffort()).toUpperCase(Locale.ROOT)).build());
+                .thinkingLevel(settings.thinkingLevel(effort).toUpperCase(Locale.ROOT)).build());
         }
     }
 }

@@ -10,6 +10,7 @@ import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRecord;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
+import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.harness.agent.memory.compaction.ConversationCompactor;
 
 import java.util.ArrayDeque;
@@ -26,6 +27,11 @@ public final class AgentHistoryContext {
 
     public static boolean hasSummary(List<Msg> context) {
         return context.stream().anyMatch(AgentHistoryContext::isSummary);
+    }
+
+    public static boolean endsWithToolResultsForInput(List<Msg> context, String inputId) {
+        return !context.isEmpty() && context.getLast().getContent().stream().anyMatch(ToolResultBlock.class::isInstance)
+            && context.stream().anyMatch(message -> message.getRole() == MsgRole.USER && inputId.equals(message.getId()));
     }
 
     /** 按原输入编号定位较早历史，不重复已有轮次，也不重新加入摘要已经覆盖的全文。 */

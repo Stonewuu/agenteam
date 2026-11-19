@@ -61565,6 +61565,11 @@
           "hasStepErrors": {
             "type": "boolean"
           },
+          "retryOfRunId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
           "startedAt": {
             "anyOf": [
               {
@@ -62077,6 +62082,9 @@
                 "type": "null"
               }
             ]
+          },
+          "supersededByRetry": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -70751,6 +70759,7 @@
                 "low",
                 "medium",
                 "high",
+                "xhigh",
                 "max"
               ]
             }
