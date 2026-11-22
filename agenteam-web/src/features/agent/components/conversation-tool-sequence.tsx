@@ -8,6 +8,7 @@ import {useT} from "@/lib/i18n/locale-provider";
 import type {BlockStatus} from "../types/execution";
 import {useExecutionDisclosure} from "../hooks/use-execution-disclosure";
 import {ToolActivityIcon} from "./conversation-tool-block";
+import {ConversationToolGlowLayer} from "./conversation-tool-glow-layer";
 import {TOOL_BORDER_GLOW_CONFIG, toolBorderGlowPadding} from "./conversation-tool-border-glow-config";
 import styles from "./conversation-tool-sequence.module.css";
 
@@ -45,7 +46,9 @@ export function ConversationToolSequence({count, status, failedCount, pendingIds
     <CollapsibleContent className={`agenteam-disclosure-content ${styles.panel}`} style={panelStyle}
                         data-animate-height keepMounted inert={!open}>
       <MeasuredDisclosureContent>
-        <div className={styles.body} onClickCapture={() => choose(true)} onFocusCapture={() => choose(true)}>{children}</div>
+        <ConversationToolGlowLayer viewportClassName={styles.scrollArea}>
+          <div className={styles.body} onClickCapture={() => choose(true)} onFocusCapture={() => choose(true)}>{children}</div>
+        </ConversationToolGlowLayer>
       </MeasuredDisclosureContent>
     </CollapsibleContent>
   </Collapsible>;

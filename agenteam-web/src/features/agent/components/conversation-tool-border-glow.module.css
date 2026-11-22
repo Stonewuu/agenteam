@@ -1,4 +1,25 @@
 /* 改编自 React Bits Border Glow，许可见 conversation-tool-border-glow.LICENSE。 */
+.layerRoot {
+  position: relative;
+  min-width: 0;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.frame.anchor {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .frame {
   --tool-glow-rgb: 111 131 205;
   --tool-border-opacity: var(--tool-light-border-opacity);

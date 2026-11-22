@@ -36,6 +36,7 @@ import executionStyles from "./conversation-execution.module.css";
 import {ConversationThinkingBlock} from "./conversation-thinking-block";
 import {ConversationToolSequence} from "./conversation-tool-sequence";
 import {ConversationToolBlock, ToolActivityIcon} from "./conversation-tool-block";
+import {ConversationToolIcon} from "./conversation-tool-icon";
 import {useExecutionDisclosure} from "../hooks/use-execution-disclosure";
 import {
   groupBlockStatus,
@@ -244,6 +245,7 @@ function RenderBlock({block, context, grouped = false}: {
     const file = fileToolPresentation(block);
     const completed = status === "completed";
     return <ConversationToolBlock
+      icon={<ConversationToolIcon label={block.label} sourceKind={block.sourceKind}/>}
       label={file ? uiText(completed ? file.completed : file.label) : localizeSavedToolLabel(block.label, uiText)}
       status={status} statusText={file && completed && !grouped ? "" : uiText(toolStatusLabel(block, status, waitingForContent))}
       toolCallId={block.toolCallId} waitingForContent={waitingForContent}

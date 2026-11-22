@@ -153,6 +153,12 @@ export function toolOperationLabel(operationClass: string): string {
   } as Record<string, string>)[operationClass] ?? "未分类";
 }
 
+/** 从未翻译的调用标题读取已登记的内置工具分类。 */
+export function savedToolBuiltinCode(label: string): string | null {
+  const resource = /^(.+?)\s*[：:/·]/.exec(label.trim())?.[1].trim();
+  return resource && Object.hasOwn(builtinResources, resource) ? builtinResources[resource] : null;
+}
+
 /** 旧对话没有插件编号，只转换已登记内置插件的完整旧标题，不猜测外部同名方法。 */
 export function localizeSavedToolLabel(label: string, text: (message: string) => string = (message) => message): string {
   const match = /^(.+?)\s*[：:/·]\s*(.+)$/.exec(label.trim());

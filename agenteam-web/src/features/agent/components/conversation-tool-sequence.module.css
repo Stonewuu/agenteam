@@ -69,6 +69,15 @@
   transform: rotate(0deg);
 }
 
+/* 光效由独立绘制层呈现，滚动区域只按内容和视口限制高度。 */
+.sequence:not([data-single]) .scrollArea {
+  box-sizing: border-box;
+  max-height: calc(50dvh - 44px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
 .body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

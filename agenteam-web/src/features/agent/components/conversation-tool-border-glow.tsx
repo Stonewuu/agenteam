@@ -2,8 +2,10 @@
 
 
 import {useEffect, useRef} from "react";
+import {createPortal} from "react-dom";
 import {Color, Mesh, Program, Renderer, Triangle} from "ogl";
-import {TOOL_BORDER_GLOW_CONFIG, type ToolBorderGlowConfig} from "./conversation-tool-border-glow-config";
+import {createToolBorderGlowStyle, TOOL_BORDER_GLOW_CONFIG, type ToolBorderGlowConfig} from "./conversation-tool-border-glow-config";
+import {useToolGlowLayer} from "./conversation-tool-glow-layer";
 import styles from "./conversation-tool-border-glow.module.css";
 
 const vertexShader = `
@@ -129,10 +131,12 @@ function calculateGlowProgress(elapsedSeconds: number, config: ToolBorderGlowCon
 }
 
 /** 颜色和亮度都按圆角边框的实际周长移动，不依赖中心角度或鼠标位置。 */
-export function ConversationToolBorderGlow({toolCallId, config = TOOL_BORDER_GLOW_CONFIG, staticTop = false}: {
-  toolCallId: string; config?: ToolBorderGlowConfig; staticTop?: boolean;
+export function ConversationToolBorderGlow({card, toolCallId, config = TOOL_BORDER_GLOW_CONFIG, staticTop = false}: {
+  card: HTMLDivElement | null; toolCallId: string; config?: ToolBorderGlowConfig; staticTop?: boolean;
 }) {
   const containerRef = useRef<HTMLSpanElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const layer = useToolGlowLayer(card, anchorRef, config);
   const staticTopRef = useRef(staticTop);
   const modeUpdaterRef = useRef<((fixed: boolean) => void) | null>(null);
   const approvalOriginRef = useRef({toolCallId, enabled: staticTop});
@@ -144,7 +148,6 @@ export function ConversationToolBorderGlow({toolCallId, config = TOOL_BORDER_GLO
 
   useEffect(() => {
     const container = containerRef.current;
-    const card = container?.parentElement;
     if (!container || !card) {
       return;
     }
@@ -381,8 +384,13 @@ export function ConversationToolBorderGlow({toolCallId, config = TOOL_BORDER_GLO
       forcedColors.removeEventListener("change", syncPlayback);
       release();
     };
-  }, [toolCallId, config]);
+  }, [toolCallId, config, card, layer]);
 
-  return <span ref={containerRef} className={styles.edgeLight} data-static-top={staticTop || undefined}
+  const light = <span ref={containerRef} className={styles.edgeLight} data-static-top={staticTop || undefined}
                aria-hidden="true"/>;
+  if (layer === undefined) {
+    return light;
+  }
+  return layer ? createPortal(<div ref={anchorRef} className={`${styles.frame} ${styles.anchor}`}
+                                  style={createToolBorderGlowStyle(config)} data-tool-glow={toolCallId}>{light}</div>, layer) : null;
 }

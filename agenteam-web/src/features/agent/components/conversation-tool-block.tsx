@@ -2,7 +2,7 @@
 
 import {useT} from "@/lib/i18n/locale-provider";
 
-import {type ReactNode, useId, useMemo} from "react";
+import {type ReactNode, useId, useMemo, useState} from "react";
 import {
   IconAlertCircle,
   IconCheck,
@@ -47,6 +47,7 @@ export function ToolActivityIcon({status}: { status: BlockStatus }) {
 
 export function ConversationToolBlock({
                                         label,
+                                        icon,
                                         status,
                                         statusText,
                                         toolCallId,
@@ -60,6 +61,7 @@ export function ConversationToolBlock({
                                         grouped = false
                                       }: {
   label: string;
+  icon: ReactNode;
   status: BlockStatus;
   statusText: string;
   toolCallId: string;
@@ -74,6 +76,7 @@ export function ConversationToolBlock({
 }) {
   const uiText = useT();
   const titleId = useId();
+  const [card, setCard] = useState<HTMLDivElement | null>(null);
   // 按具体参数复用配置，避免调用方重复创建同值对象时重启动画。
   const glowConfigKey = JSON.stringify(glowConfig ?? {});
   const glowSettings = useMemo(() => resolveToolBorderGlowConfig(JSON.parse(glowConfigKey) as ToolBorderGlowOptions), [glowConfigKey]);
@@ -83,23 +86,25 @@ export function ConversationToolBlock({
   const waitingForApproval = status === "waiting_approval";
   return <ToolCallPresentation compact onModeChange={() => setOpen(true)}
                                renderLayout={({modeButton, content}) => <Collapsible
-                                 className={`${styles.card} ${glowStyles.frame}`} data-tool-call={toolCallId}
+                                 ref={setCard} className={`${styles.card} ${glowStyles.frame}`} data-tool-call={toolCallId}
                                  data-state={status}
                                  style={createToolBorderGlowStyle(glowSettings)}
                                  data-active={active || undefined} data-waiting={waitingForContent || undefined}
                                  data-grouped={grouped || undefined}
                                  role="group" aria-labelledby={titleId} open={expanded} onOpenChange={setOpen}>
                                  {(active || waitingForApproval) &&
-                                   <ConversationToolBorderGlow toolCallId={toolCallId} config={glowSettings}
+                                   <ConversationToolBorderGlow card={card} toolCallId={toolCallId} config={glowSettings}
                                                                staticTop={waitingForApproval}/>}
                                  <div className={styles.header}>
-                                   <span className={styles.icon} aria-hidden="true"><ToolActivityIcon status={status}/></span>
+                                   <span className={styles.icon} aria-hidden="true">{icon}</span>
                                    <span className={styles.heading}>
           <strong id={titleId} className={grouped ? styles.groupedTitle : styles.title} title={label}>{label}</strong>
                                      {subject && <span className={styles.subject}>{subject}</span>}
         </span>
-                                   {statusText && <span className={status === "completed" ? "sr-only" : styles.status}
-                                                        role="status">{statusText}</span>}
+                                   {statusText && <span className={styles.status} role="status">
+                                     <span className={styles.statusIcon} aria-hidden="true"><ToolActivityIcon status={status}/></span>
+                                     <span className={status === "completed" ? "sr-only" : undefined}>{statusText}</span>
+                                   </span>}
                                    {expanded && <div className={styles.modeControl}>{modeButton}</div>}
                                    {!waitingForContent && <CollapsibleTrigger className={styles.trigger}
                                                        aria-label={(expanded ? uiText("收起") : uiText("查看")) + label + uiText("详情")}>

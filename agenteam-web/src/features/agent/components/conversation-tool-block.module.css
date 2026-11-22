@@ -141,27 +141,32 @@
   height: 16px;
 }
 
-.card[data-state="running"] .icon {
-  color: var(--accent-text);
-}
-
-.card[data-state="waiting_approval"] .icon {
-  color: var(--amber-text);
-}
-
-.card[data-state="completed"] .icon {
-  color: var(--mint-text);
-}
-
-.card[data-state="failed"] .icon {
-  color: var(--red-text);
-}
-
 .status {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
+  gap: 4px;
   margin-left: auto;
   color: var(--secondary);
   font-size: 11px;
+}
+
+.statusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.statusIcon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.card[data-state="completed"] .status {
+  color: var(--mint-text);
 }
 
 /* 没有详情按钮时，文字右边缘与详情按钮最右侧图标对齐。 */
