@@ -52,7 +52,7 @@ export function ConversationPane({
   const uiText = useT();
   const {stream, employee, afterComposerTransition} = workspace;
   const displayEmployee = workspace.displayEmployee;
-  const loading = Boolean(workspace.conversationId) && !stream.state;
+  const loading = Boolean(workspace.conversationId) && !stream.state && !workspace.messages.length;
   const focusPending = useRef<string | null>(null);
   useEffect(() => {
     const id = workspace.conversationId;
@@ -102,7 +102,7 @@ export function ConversationPane({
             <p>{stream.error || uiText("正在加载会话消息…")}</p>{stream.error &&
             <Button type="button" onClick={stream.reload}>{uiText("重新加载")}</Button>}
           </div> : <>
-            {!workspace.conversationId && <div className={controls.welcome}>
+            {!workspace.conversationId && !workspace.messages.length && <div className={controls.welcome}>
               {displayEmployee && <ResourceAvatar icon={workspace.employeeAppearance?.icon ?? ""}
                                                   color={workspace.employeeAppearance?.color} size="large"/>}
               <h2>{displayEmployee ? uiText("和{0}一起开始", [displayEmployee.name]) : uiText("开始一段新对话")}</h2>
@@ -118,7 +118,7 @@ export function ConversationPane({
                                                     onClick={(event) => onChooseEmployee({anchor: event.currentTarget})}>{uiText("选择员工")}</Button>
                 </div>}
             </div>}
-            {!workspace.conversationId && canUseSkills &&
+            {!workspace.conversationId && !workspace.messages.length && canUseSkills &&
               <WorkspaceSkills enterprise={enterprise} selectedAgent={workspace.selectedAgent}
                                onSelect={workspace.startSkill}/>}
             {stream.state?.snapshot.hasOlderMessages &&
@@ -181,14 +181,14 @@ export function ConversationPane({
                                                                                          approvalPolicy={workspace.approvalPolicy}
                                                                                          model={workspace.model}
                                                                                          project={workspace.project}
-                                                                                         skills={workspace.skills.selected}
+                                                                                         skills={workspace.sending ? [] : workspace.skills.selected}
                                                                                          canChooseSkills={canUseSkills && (workspace.employeeLoading || Boolean(workspace.detail?.agentId ?? workspace.selectedAgent ?? displayEmployee?.agentId))}
                                                                                          skillsLoading={workspace.skills.loading}
                                                                                          onChooseSkills={onChooseSkills}
                                                                                          onRemoveSkill={(id) => workspace.skills.choose(workspace.skills.selected.filter((skill) => skill.versionId !== id))}
                                                                                          files={workspace.files}
                                                                                          attachmentsEnabled={workspace.displayAttachmentsEnabled}
-                                                                                         documents={workspace.selectedDocuments}
+                                                                                         documents={workspace.sending ? [] : workspace.selectedDocuments}
                                                                                          canChooseDocuments={canUseKnowledge && (workspace.employeeLoading || Boolean(workspace.detail?.agentId ?? workspace.selectedAgent ?? displayEmployee?.agentId))}
                                                                                          onChooseDocuments={onChooseDocuments}
                                                                                          onRemoveDocument={(id) => workspace.chooseDocuments(workspace.selectedDocuments.filter((document) => document.documentId !== id))}

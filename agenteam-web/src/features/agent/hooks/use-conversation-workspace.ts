@@ -12,6 +12,7 @@ import type {Employee} from "@/features/employee/types/employee";
 import {conversationPath, loadRun, runPath, textInput} from "../api/conversation-api";
 import type {Conversation, RunAccepted} from "../types/execution";
 import {displayMessages} from "../lib/conversation-display";
+import {createConversationSubmission, mergeConversationSubmissions, observeConversationSubmissions, type ConversationSubmission} from "../lib/conversation-submissions";
 import {useConversationList} from "./use-conversation-list";
 import {useConversationMetadata} from "./use-conversation-metadata";
 import {useConversationStream} from "./use-conversation-stream";
@@ -93,7 +94,20 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const queueMutation = useRef(new ApiMutation());
   const retryMutation = useRef(new ApiMutation());
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [submissions, setSubmissions] = useState<ConversationSubmission[]>([]);
   const draftKey = `${userId}:${enterpriseId}:${conversationId ?? `new:${selectedAgent ?? ""}`}`;
+  const savedMessages = useMemo(() => displayMessages(stream.state), [stream.state]);
+  const observedSubmissions = observeConversationSubmissions(submissions, draftKey, savedMessages);
+  if (observedSubmissions !== submissions) {
+    setSubmissions(observedSubmissions);
+  }
+  const messages = useMemo(() => mergeConversationSubmissions(savedMessages, observedSubmissions, draftKey),
+    [savedMessages, observedSubmissions, draftKey]);
+  const sending = submissions.some(value => value.scope === draftKey && !value.accepted);
+  const scrollMessages = useMemo(() => messages.map(message => ({
+    id: message.id, content: message.content, status: message.status,
+    blocks: stream.state?.snapshot.messages.find(saved => saved.id === message.id)?.blocks
+  })), [messages, stream.state]);
   const files = useFileUploads(enterpriseId, "attachment", draftKey);
   const [documents, setDocuments] = useState<Record<string, DocumentOption[]>>({});
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
@@ -111,7 +125,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     preserveHistoryPosition,
     awayFromBottom,
     hasUnseenContent
-  } = useConversationScroll(draftKey, stream.state?.snapshot.messages, stream.state?.steps);
+  } = useConversationScroll(draftKey, scrollMessages, stream.state?.steps);
   const currentRoute = useRef(pathname + "?" + params.toString());
   const historySnapshot = stream.state?.snapshot;
   useEffect(() => {
@@ -122,7 +136,6 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
       void stream.loadOlder();
     }
   }, [draftKey, conversationId, historySnapshot, stream]);
-  const messages = useMemo(() => displayMessages(stream.state), [stream.state]);
   const base = ``;
 
   useEffect(() => {
@@ -271,6 +284,14 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     setSubmitting(true);
     setActionError("");
     const route = currentRoute.current;
+    const submission = createConversationSubmission({
+      scope: draftKey, text: content, messages, queued: canQueue,
+      attachments: files.items.flatMap(item => item.reference?.status === "ready" ? [item.reference] : []),
+      labels: [...skills.selected.map(skill => skill.name), ...selectedDocuments.map(document => document.name)]
+    });
+    setSubmissions(current => [...current, submission]);
+    setDraft("");
+    scrollToBottom();
     try {
       const input = {
         ...textInput(content),
@@ -291,6 +312,9 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
           projectId: project.selected?.id ?? null
         },
       });
+      setSubmissions(current => current.map(value => value.id === submission.id ? {
+        ...value, accepted: response, scope: `${userId}:${enterpriseId}:${response.conversationId}`
+      } : value));
       list.refresh();
       if (!conversationId) {
         approvalPolicy.resetDraft();
@@ -311,6 +335,8 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
         navigate(`${base}/conversations/${encodeURIComponent(response.conversationId)}`, true);
       }
     } catch (failed) {
+      setSubmissions(current => current.filter(value => value.id !== submission.id));
+      setDrafts(current => ({...current, [draftKey]: text}));
       if (currentRoute.current === route) {
         setActionError(errorMessage(failed, uiText("消息未能发送，请重试。")));
       }
@@ -407,6 +433,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     draft,
     setDraft,
     submitting,
+    sending,
     stopping,
     actionError,
     sidebarOpen,
@@ -433,7 +460,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     skillPickerOpen,
     setSkillPickerOpen,
     startSkill,
-    files,
+    files: sending ? {...files, items: [], fileIds: []} : files,
     attachmentsEnabled,
     displayAttachmentsEnabled: conversationId && stream.state ? attachmentsEnabled : Boolean(displayEmployee?.attachmentsEnabled),
     sourceError,

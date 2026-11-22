@@ -55,6 +55,8 @@ export type DisplayBlock = (
   ) & { blocks: DisplayBlock[]; stepId?: string | null; step?: RunStep };
 
 export type DisplayMessage = Omit<ConversationMessage, "blocks"> & {
+  clientId?: string;
+  localDelivery?: "sending" | "accepted";
   blocks: DisplayBlock[];
   hasMultipleAttempts: boolean
 };

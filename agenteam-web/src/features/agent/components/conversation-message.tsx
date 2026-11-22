@@ -21,6 +21,7 @@ import type {Employee} from "@/features/employee/types/employee";
 import {IconBookmark, IconThumbDown, IconThumbUp, IconChartBar} from "@/components/ui/icons";
 import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {ConversationRunFeedback} from "./conversation-run-feedback";
+import {ConversationActivityIcon} from "./conversation-activity-icon";
 import {hasVisibleConversationContent, showReplyActivity} from "../lib/conversation-display";
 import {type LiveRunStep, mergeExecutionSteps, messageRunSteps, type RunStepHistory} from "../lib/conversation-steps";
 
@@ -62,7 +63,7 @@ export function ConversationMessage({
   const ended = ["completed", "failed", "cancelled"].includes(message.status);
   const blocks = mergeExecutionSteps(message.blocks, messageRunSteps(message, stepHistory, liveSteps), message.status);
   const run = latestRun?.id === message.runId ? latestRun : null;
-  const waitingForContent = showReplyActivity(message, run, blocks);
+  const waitingForContent = Boolean(message.localDelivery) || showReplyActivity(message, run, blocks);
   const superseded = message.supersededByRetry || (acceptedRetry !== null && acceptedRetry === message.runId);
   const memoryText = message.content.trim() || message.blocks.flatMap((block) => block.kind === "workflow" ? [block.summary] : []).join("\n");
 
@@ -105,8 +106,9 @@ export function ConversationMessage({
         : message.status === "completed" ? <span
           className={styles.placeholder}>{message.hasMultipleAttempts ? uiText("本次尝试没有返回内容。") : uiText("本次任务没有返回内容。")}</span> : null}
       {waitingForContent && <span className={styles.replyActivity} role="status"
-        aria-label={run?.status === "running" ? uiText("正在处理…") : uiText("等待执行…")}>
-        <i aria-hidden="true"/><i aria-hidden="true"/><i aria-hidden="true"/>
+        aria-label={message.localDelivery === "sending" ? uiText("正在发送…")
+          : run?.status === "running" ? uiText("正在处理…") : uiText("等待执行…")}>
+        <ConversationActivityIcon/>
       </span>}
     </div>
     {stepHistory?.error &&

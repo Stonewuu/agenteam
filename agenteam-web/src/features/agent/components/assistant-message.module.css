@@ -568,32 +568,13 @@
 .replyActivity {
   display: flex;
   align-items: center;
-  gap: 4px;
   width: fit-content;
   height: 22px;
-  padding-inline: 2px;
-  color: var(--secondary);
-  animation: reply-activity-in .15s ease-out .15s both;
+  animation: reply-activity-in 180ms ease-out both;
 }
 
 .replyActivity:not(:first-child) {
   margin-top: 8px;
-}
-
-.replyActivity i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: reply-dot 1.3s ease-in-out infinite both;
-}
-
-.replyActivity i:nth-child(2) { animation-delay: .15s; }
-.replyActivity i:nth-child(3) { animation-delay: .3s; }
-
-@keyframes reply-dot {
-  0%, 65%, 100% { opacity: .38; transform: translateY(0); }
-  30% { opacity: .95; transform: translateY(-2px); }
 }
 
 @keyframes reply-activity-in {
@@ -603,7 +584,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .replyActivity { animation: none; }
-  .replyActivity i { animation: none; opacity: .72; }
 }
 
 .placeholder {

@@ -24,10 +24,11 @@ import {
 } from "./conversation-tool-border-glow-config";
 import styles from "./conversation-tool-block.module.css";
 import glowStyles from "./conversation-tool-border-glow.module.css";
+import {ConversationActivityIcon} from "./conversation-activity-icon";
 
 export function ToolActivityIcon({status}: { status: BlockStatus }) {
   if (status === "running") {
-    return <span className={styles.fluid} aria-hidden="true"><i/><i/><i/></span>;
+    return <ConversationActivityIcon/>;
   }
   if (status === "completed") {
     return <IconCheck size={19}/>;

@@ -210,46 +210,6 @@
   white-space: pre-wrap;
 }
 
-/* 活跃状态沿用原有动效，只缩小图标所占空间。 */
-.fluid {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  contain: layout paint;
-}
-
-.fluid > i {
-  position: absolute;
-  inset: 5px 3px 3px 5px;
-  border-radius: 44% 56% 62% 38%;
-  background: var(--accent);
-  animation: tool-fluid 2.4s ease-in-out infinite;
-}
-
-.fluid > i:nth-child(2) {
-  inset: 3px 7px 7px 3px;
-  background: color-mix(in srgb, var(--accent) 55%, var(--surface));
-  animation-delay: -.8s;
-  animation-direction: reverse;
-}
-
-.fluid > i:nth-child(3) {
-  inset: 9px 5px 4px 9px;
-  background: color-mix(in srgb, var(--accent) 72%, var(--surface));
-  animation-delay: -1.6s;
-}
-
-@keyframes tool-fluid {
-  0%, 100% {
-    transform: rotate(0deg) scale(.8);
-    opacity: .72;
-  }
-  50% {
-    transform: rotate(180deg) scale(1.08);
-    opacity: 1;
-  }
-}
-
 @keyframes tool-mode-enter {
   from {
     opacity: 0;
@@ -300,17 +260,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fluid > i, .modeControl {
+  .modeControl {
     animation: none;
   }
 
   .chevron {
     transition: none;
-  }
-}
-
-@media (forced-colors: active) {
-  .fluid > i {
-    background: Highlight;
   }
 }

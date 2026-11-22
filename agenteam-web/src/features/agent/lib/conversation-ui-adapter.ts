@@ -3,7 +3,7 @@ import type {DisplayMessage} from "../types/conversation-display";
 
 export function toAssistantMessage(message: DisplayMessage): ThreadMessageLike {
   return {
-    id: message.id, role: message.role === "user" ? "user" : "assistant", content: message.content,
+    id: message.clientId ?? message.id, role: message.role === "user" ? "user" : "assistant", content: message.content,
     ...(message.role !== "user" ? {
       status: message.status === "pending" || message.status === "streaming"
         ? {type: "running" as const} : message.status === "failed" ? {

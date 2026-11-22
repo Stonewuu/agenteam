@@ -64,7 +64,7 @@ export function ConversationComposerSurface({text, onText, onSubmit, canSubmit, 
       {selections}
       <ComposerTransition part="text"><Textarea ref={input} className={styles.composerInput} data-composer-part="text"
         aria-label={t("输入消息")} placeholder={placeholder ?? t("描述你希望完成的任务")} value={text} rows={2}
-        maxLength={maxLength} disabled={submitting} onPaste={event => pasteUpload(event, files.add, allowUpload)}
+        maxLength={maxLength} readOnly={submitting} aria-busy={submitting} onPaste={event => pasteUpload(event, files.add, allowUpload)}
         onChange={event => {
           onText(event.target.value);
           if (onCommand && !(event.nativeEvent as InputEvent).isComposing) {
