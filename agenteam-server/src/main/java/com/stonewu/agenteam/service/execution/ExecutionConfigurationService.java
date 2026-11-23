@@ -121,6 +121,21 @@ public class ExecutionConfigurationService {
         return new InputOptions(version.id(), snapshot.path("config"), snapshot.path("dependencies"));
     }
 
+    /** 仅核验会话能否继续使用该固定版本及其依赖，跳过无需使用的完整快照序列化。 */
+    public void verifyInputOptions(AuthContext actor, String agent, String fixedVersion) {
+        var source = published(actor, agent, fixedVersion);
+        var version = source.version();
+        var resource = source.resource();
+        var configured = new ResourceRecord(resource.id(), resource.enterpriseId(), resource.kind(), version.name(),
+            resource.description(),
+            version.config().path("agentType").asText(), resource.ownerUserId(), resource.ownerDisplayName(),
+            resource.source(), resource.status(),
+            resource.publishedVersionId(), resource.nextVersionNo(), resource.revision(), resource.createdAt(),
+            resource.updatedAt(),
+            resource.deletedAt(), version.config(), resource.configHash(), null);
+        dependencies.prepareInputOptions(actor, configured);
+    }
+
     public Selection preview(AuthContext actor, String agent, JsonNode config) {
         var resource = policy.authorize(actor, agent, "preview", true, false);
         if (resource.kind() != ResourceKind.AGENT || !resource.status().equals("active")) {

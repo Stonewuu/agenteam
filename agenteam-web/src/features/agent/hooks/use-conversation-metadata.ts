@@ -5,17 +5,64 @@ import {ApiError} from "@/lib/http/api-client";
 import {loadConversationMetadata} from "../api/conversation-api";
 import type {Conversation} from "../types/execution";
 
-/** 后台独立生成，页面只读取结果；单个定时器集中刷新可见对话。 */
-export function useConversationMetadata(enterprise: string, ids: readonly string[], enabled: boolean,
+const SETTLED_TTL_MS = 60000;
+const settledMetadata = new Map<string, number>();
+
+function metadataKey(enterprise: string, id: string, revision: string) {
+  return `${enterprise}:${id}:${revision}`;
+}
+
+function isSettled(enterprise: string, id: string, revision: string, now: number) {
+  if (!revision) {
+    return false;
+  }
+  const key = metadataKey(enterprise, id, revision);
+  const until = settledMetadata.get(key);
+  if (until === undefined) {
+    return false;
+  }
+  if (until <= now) {
+    settledMetadata.delete(key);
+    return false;
+  }
+  return true;
+}
+
+function markSettled(enterprise: string, id: string, revision: string, now: number) {
+  if (!revision) {
+    return;
+  }
+  if (settledMetadata.size >= 500) {
+    const oldest = settledMetadata.keys().next().value;
+    if (oldest) {
+      settledMetadata.delete(oldest);
+    }
+  }
+  settledMetadata.set(metadataKey(enterprise, id, revision), now + SETTLED_TTL_MS);
+}
+
+/** 后台独立生成，页面只读取结果；已确认无待生成标题的同一版本短期内不重复查询。 */
+export function useConversationMetadata(enterprise: string, items: readonly { id: string; revision: string }[], enabled: boolean,
                                         onUpdate: (values: Conversation[]) => void) {
-  const binding = JSON.stringify([...new Set(ids)].sort());
+  const unique = new Map<string, string>();
+  for (const item of items) {
+    const previous = unique.get(item.id);
+    if (!previous || item.revision) {
+      unique.set(item.id, item.revision);
+    }
+  }
+  const binding = JSON.stringify([...unique.entries()].sort(([left], [right]) => left.localeCompare(right)));
   const update = useEffectEvent(onUpdate);
   useEffect(() => {
-    const all = JSON.parse(binding) as string[];
-    if (!enabled || !all.length) {
+    const entries = JSON.parse(binding) as [string, string][];
+    if (!enabled || !entries.length) {
       return;
     }
-    let pending = all;
+    const selectPending = () => {
+      const now = Date.now();
+      return entries.filter(([id, revision]) => !isSettled(enterprise, id, revision, now)).map(([id]) => id);
+    };
+    let pending = selectPending();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let request: AbortController | undefined;
     let stopped = false;
@@ -30,12 +77,15 @@ export function useConversationMetadata(enterprise: string, ids: readonly string
       try {
         const next: string[] = [];
         const values: Conversation[] = [];
+        const now = Date.now();
         for (let start = 0; start < pending.length; start += 50) {
           const batch = await loadConversationMetadata(enterprise, pending.slice(start, start + 50), current.signal);
           for (const item of batch) {
             values.push(item.conversation);
             if (item.titlePending) {
               next.push(item.conversation.id);
+            } else {
+              markSettled(enterprise, item.conversation.id, item.conversation.revision, now);
             }
           }
         }
@@ -65,11 +115,15 @@ export function useConversationMetadata(enterprise: string, ids: readonly string
       clearTimeout(timer);
       request?.abort();
       if (!document.hidden) {
-        pending = all;
-        timer = setTimeout(() => void read(), 0);
+        pending = selectPending();
+        if (pending.length) {
+          timer = setTimeout(() => void read(), 0);
+        }
       }
     };
-    timer = setTimeout(() => void read(), 0);
+    if (pending.length) {
+      timer = setTimeout(() => void read(), 0);
+    }
     document.addEventListener("visibilitychange", visible);
     return () => {
       stopped = true;

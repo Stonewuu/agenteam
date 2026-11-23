@@ -113,9 +113,10 @@ public class ConversationNavigationService {
         var after = pagination.read(cursor, binding);
         var found = new ArrayList<ConversationNavigationItem>();
         var availability = new HashMap<String, String>();
+        int batchSize = text.isEmpty() ? Math.min(100, Math.max(limit + 5, limit * 2)) : 100;
         while (found.size() <= limit) {
             var candidates = navigation.list(actor.enterpriseId(), actor.userId(), states, favorite, employee,
-                text, kind, after, 100, clock.instant().minus(Duration.ofDays(30)));
+                text, kind, after, batchSize, clock.instant().minus(Duration.ofDays(30)));
             if (candidates.isEmpty()) {
                 break;
             }
@@ -139,7 +140,7 @@ public class ConversationNavigationService {
             }
             var last = candidates.getLast();
             after = new PagePosition(last.getGroupUpdatedAt(), last.getEntryKey(), null);
-            if (candidates.size() < 100) {
+            if (candidates.size() < batchSize) {
                 break;
             }
         }

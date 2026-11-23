@@ -2,7 +2,7 @@
 
 import {useT} from "@/lib/i18n/locale-provider";
 
-import {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
 import {workspaceParts} from "@/features/auth/lib/workspace-path";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
@@ -29,6 +29,7 @@ import {useBlockNavigation, useGuardedNavigation} from "@/features/workspace/com
 import {useConversationApprovalPolicy} from "./use-conversation-approval-policy";
 import {useConversationModel} from "./use-conversation-model";
 import {useComposerHandoff} from "../components/composer-handoff-context";
+import type {ComposerHandoff} from "../lib/composer-handoff";
 import {useConversationProject} from "@/features/project/hooks/use-conversation-project";
 
 export type ConversationLocation = {
@@ -50,34 +51,51 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const scope = useId();
   const guarded = useGuardedNavigation(embedded ? scope : undefined);
   const parts = workspaceParts(pathname);
-  const conversationId = parts[0] === "conversations" && parts[1] ? decodeURIComponent(parts[1]) : null;
+  const routeConversationId = parts[0] === "conversations" && parts[1] ? decodeURIComponent(parts[1]) : null;
   const handoff = useComposerHandoff();
-  const arrival = handoff?.value?.conversationId === conversationId ? handoff.value : null;
+  const handoffValue = handoff?.value;
+  const sameHandoffScope = handoffValue?.userId === userId && handoffValue.enterpriseId === enterpriseId;
+  const pendingArrival = Boolean(sameHandoffScope && parts[0] === "new-task"
+    && params.get("submission") === handoffValue?.submission.id);
+  const arrival = sameHandoffScope && (pendingArrival || routeConversationId && handoffValue?.conversationId === routeConversationId)
+    ? handoffValue : null;
+  const conversationId = routeConversationId ?? (pendingArrival ? arrival?.conversationId ?? null : null);
+  const creating = Boolean(arrival && arrival.status !== "accepted");
+  const creationPending = arrival?.status === "sending";
   const recent = useApiQuery<HomeSummary>(!conversationId && !params.get("agent") && canRun ? organizationPath(enterpriseId, "/home") : null);
   const selectedAgent = conversationId ? null : params.get("agent") ?? recent.data?.employees[0]?.agentId ?? null;
   const localList = useConversationList(enterpriseId, !sharedList, userId);
   const list = sharedList ?? localList;
   const stream = useConversationStream(enterpriseId, conversationId);
-  const metadataIds = list.items.filter(value => value.mode === "normal" && !value.collaboration).map(value => value.id);
-  if (conversationId) {
-    metadataIds.push(conversationId);
+  const metadataItems = list.items.filter(value => value.mode === "normal" && !value.collaboration)
+    .map(value => ({id: value.id, revision: value.revision}));
+  if (conversationId && !metadataItems.some(value => value.id === conversationId)) {
+    metadataItems.push({id: conversationId, revision: stream.state?.snapshot.conversation.revision ?? ""});
   }
-  useConversationMetadata(enterpriseId, metadataIds, location?.active !== false, values => {
+  useConversationMetadata(enterpriseId, metadataItems, location?.active !== false, values => {
     stream.updateMetadata(values);
     list.updateMetadata(values);
   });
   useConversationResultViewed(enterpriseId, conversationId, stream.state?.latestRun,
     location?.active !== false && Boolean(stream.state && !stream.state.replaying && !stream.loading && !stream.error));
-  const steps = useConversationStepHistory(enterpriseId, stream.state?.snapshot.messages, stream.historyVersion, stream.historySequence);
+  const steps = useConversationStepHistory(enterpriseId, stream.state?.snapshot.messages, stream.historyVersion,
+    stream.historySequence, stream.state?.snapshot.stepHistory);
   const detail = stream.state?.snapshot.conversation;
   const skills = useConversationSkills(userId, enterpriseId, detail?.agentId ?? selectedAgent, conversationId, params.get("skill"), canUseSkills);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
-  const employeeId = detail ? detail.agentId : selectedAgent ?? arrival?.employee.agentId ?? null;
-  const employee = useApiQuery<Employee>(employeeId ? organizationPath(enterpriseId, `/employees/${encodeURIComponent(employeeId)}`) : null);
   const [chosenEmployee, setChosenEmployee] = useState<Employee | null>(null);
-  const employeeLoading = !conversationId && (recent.loading || employee.loading);
-  const displayEmployee = employee.data ?? (chosenEmployee?.agentId === employeeId ? chosenEmployee
-    : recent.data?.employees.find((value) => value.agentId === employeeId) ?? (arrival?.employee.agentId === employeeId ? arrival.employee : null));
+  const employeeId = detail ? detail.agentId : selectedAgent ?? arrival?.employee.agentId ?? null;
+  const preloadedEmployee = !conversationId && employeeId
+    ? (chosenEmployee?.agentId === employeeId ? chosenEmployee
+      : recent.data?.employees?.find((value) => value.agentId === employeeId)
+        ?? (arrival?.employee.agentId === employeeId ? arrival.employee : null))
+    : null;
+  // 已有对话由会话快照提供外观与可用状态，新对话优先复用首页/选择器已读取的员工详情。
+  const employee = useApiQuery<Employee>(!conversationId && employeeId && !preloadedEmployee
+    ? organizationPath(enterpriseId, `/employees/${encodeURIComponent(employeeId)}`) : null);
+  const resolvedEmployee = employee.data ?? preloadedEmployee;
+  const employeeLoading = !conversationId && (recent.loading || (!preloadedEmployee && employee.loading));
+  const displayEmployee = resolvedEmployee ?? (arrival?.employee.agentId === employeeId ? arrival.employee : null);
   const employeeAppearance = detail ? {
     icon: detail.agentIcon ?? "",
     color: detail.agentColor ?? "purple"
@@ -89,6 +107,14 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const [stopping, setStopping] = useState(false);
   const [actionError, setActionError] = useState("");
   const pending = useRef(false);
+  const launchedHandoff = useRef<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const mutation = useRef(new ApiMutation());
   const stopMutation = useRef(new ApiMutation());
   const queueMutation = useRef(new ApiMutation());
@@ -97,13 +123,21 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const [submissions, setSubmissions] = useState<ConversationSubmission[]>([]);
   const draftKey = `${userId}:${enterpriseId}:${conversationId ?? `new:${selectedAgent ?? ""}`}`;
   const savedMessages = useMemo(() => displayMessages(stream.state), [stream.state]);
-  const observedSubmissions = observeConversationSubmissions(submissions, draftKey, savedMessages);
+  const arrivingSubmission = arrival?.submission;
+  const existingSubmission = submissions.find(value => value.id === arrivingSubmission?.id);
+  const handoffChanged = arrivingSubmission?.scope === draftKey && (!existingSubmission
+    || existingSubmission.scope !== arrivingSubmission.scope || existingSubmission.accepted !== arrivingSubmission.accepted
+    || existingSubmission.failed !== arrivingSubmission.failed);
+  const handedSubmissions = handoffChanged ? [...submissions.filter(value => value.id !== arrivingSubmission.id),
+    {...arrivingSubmission, inputObserved: existingSubmission?.inputObserved ?? false,
+      replyObserved: existingSubmission?.replyObserved ?? false}] : submissions;
+  const observedSubmissions = observeConversationSubmissions(handedSubmissions, draftKey, savedMessages);
   if (observedSubmissions !== submissions) {
     setSubmissions(observedSubmissions);
   }
   const messages = useMemo(() => mergeConversationSubmissions(savedMessages, observedSubmissions, draftKey),
     [savedMessages, observedSubmissions, draftKey]);
-  const sending = submissions.some(value => value.scope === draftKey && !value.accepted);
+  const sending = observedSubmissions.some(value => value.scope === draftKey && !value.accepted && !value.failed);
   const scrollMessages = useMemo(() => messages.map(message => ({
     id: message.id, content: message.content, status: message.status,
     blocks: stream.state?.snapshot.messages.find(saved => saved.id === message.id)?.blocks
@@ -112,12 +146,13 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const [documents, setDocuments] = useState<Record<string, DocumentOption[]>>({});
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
   const selectedDocuments = documents[draftKey] ?? [];
-  const attachmentsEnabled = conversationId ? Boolean(stream.state?.snapshot.attachmentsEnabled) : Boolean(employee.data?.attachmentsEnabled);
+  const attachmentsEnabled = conversationId ? Boolean(stream.state?.snapshot.attachmentsEnabled) : Boolean(resolvedEmployee?.attachmentsEnabled);
   const sourceError = files.items.length && !attachmentsEnabled ? uiText("当前员工不接收附件，请移除所选文件。")
     : selectedDocuments.length && !canUseKnowledge ? uiText("当前无法引用资料，请移除所选资料。") : "";
   const sourcesReady = !sourceError && (!files.items.length || files.ready);
   const draft = drafts[draftKey] ?? "";
-  useBlockNavigation(Boolean(draft) || files.items.length > 0 || selectedDocuments.length > 0, submitting, embedded ? scope : undefined);
+  useBlockNavigation(Boolean(draft) || files.items.length > 0 || selectedDocuments.length > 0 || arrival?.status === "failed",
+    submitting || creationPending, embedded ? scope : undefined);
   const {
     conversationRef,
     shouldStickToBottomRef,
@@ -144,6 +179,18 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
 
   const refreshList = list.refresh;
   const reloadConversation = stream.reload;
+  const acceptedConversationId = pendingArrival ? arrival?.conversationId : null;
+  useEffect(() => {
+    if (acceptedConversationId) {
+      const path = `/conversations/${encodeURIComponent(acceptedConversationId)}`;
+      refreshList();
+      if (location) {
+        location.navigate(path, true);
+      } else {
+        window.history.replaceState(null, "", path);
+      }
+    }
+  }, [acceptedConversationId, refreshList, location]);
   const latestRunId = stream.state?.latestRun?.id;
   const latestRunStatus = stream.state?.latestRun?.status;
   const changed = useCallback(() => {
@@ -157,7 +204,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     conversationId,
     conversation: detail,
     enabled: canRun && (!conversationId || canManage),
-    busy: submitting || Boolean(stream.state?.snapshot.activeRun),
+    busy: submitting || creating || Boolean(stream.state?.snapshot.activeRun),
     onChanged: changed,
     initialPolicy: arrival?.approvalPolicy
   });
@@ -167,7 +214,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     draftKey,
     conversation: detail,
     enabled: canRun && (!conversationId || Boolean(detail)),
-    busy: submitting || approvalPolicy.saving || Boolean(stream.state?.snapshot.activeRun),
+    busy: submitting || creating || approvalPolicy.saving || Boolean(stream.state?.snapshot.activeRun),
     onChanged: changed,
     initialOptions: arrival?.modelOptions
   });
@@ -177,15 +224,15 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     conversationId,
     conversation: detail,
     enabled: canRun,
-    busy: submitting || approvalPolicy.saving || model.saving || Boolean(stream.state?.snapshot.activeRun),
+    busy: submitting || creating || approvalPolicy.saving || model.saving || Boolean(stream.state?.snapshot.activeRun),
     onChanged: changed,
     initialProject: arrival?.project
   });
   useEffect(() => {
-    if (arrival && (stream.error || detail && employee.data && (model.loaded || !canRun))) {
+    if (arrival?.conversationId && detail && (displayEmployee || conversationId) && (model.loaded || !canRun)) {
       finishHandoff?.(arrival.conversationId);
     }
-  }, [arrival, detail, employee.data, finishHandoff, stream.error, model.loaded, canRun]);
+  }, [arrival, detail, displayEmployee, conversationId, finishHandoff, stream.error, model.loaded, canRun]);
   useEffect(() => {
     const refresh = (event: Event) => {
       const detail = (event as CustomEvent<{ enterpriseId: string; conversationId: string }>).detail;
@@ -196,8 +243,16 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     window.addEventListener("agenteam:conversation-changed", refresh);
     return () => window.removeEventListener("agenteam:conversation-changed", refresh);
   }, [enterpriseId, conversationId, reloadConversation]);
+  const observedRunRef = useRef<{ id: string; status: string } | null>(null);
   useEffect(() => {
-    if (latestRunId && latestRunStatus && ["completed", "failed", "cancelled"].includes(latestRunStatus)) {
+    if (!latestRunId || !latestRunStatus) {
+      return;
+    }
+    const previous = observedRunRef.current;
+    observedRunRef.current = {id: latestRunId, status: latestRunStatus};
+    const terminal = ["completed", "failed", "cancelled"];
+    // 仅在当前页面观测到执行从未完成转为终态时刷新侧栏列表，打开已完成历史对话不重复刷列表。
+    if (previous && previous.id === latestRunId && !terminal.includes(previous.status) && terminal.includes(latestRunStatus)) {
       refreshList();
     }
   }, [latestRunId, latestRunStatus, refreshList]);
@@ -229,6 +284,9 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
       files.clear();
       skills.clear();
       setDocuments((current) => ({...current, [draftKey]: []}));
+      if (creating && arrival) {
+        handoff?.discard(arrival.submission.id);
+      }
       action();
     };
     if (guarded) {
@@ -270,30 +328,34 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const activeRun = stream.state?.snapshot.activeRun;
   const canQueue = Boolean(activeRun?.mode === "interactive" && ["queued", "running", "waiting_approval"].includes(activeRun.status)
     && detail?.mode === "normal" && detail.status === "active" && !detail.collaborationTaskId && canRun);
-  const canSendHere = conversationId ? (activeRun ? canQueue : Boolean(detail?.canContinue)) : Boolean(employee.data?.canRun);
+  const canSendHere = conversationId ? (activeRun ? canQueue : Boolean(detail?.canContinue)) : Boolean(resolvedEmployee?.canRun);
 
-  async function submitMessageContent(text = draft) {
-    const content = text.trim();
-    if (!model.ready || project.saving) {
+  async function submitMessageContent(text = draft, initial?: ComposerHandoff) {
+    const content = initial?.input.text ?? text.trim();
+    if (pending.current || !canRun) {
       return;
     }
-    if (approvalPolicy.saving || (!content && !files.fileIds.length) || !sourcesReady || pending.current || !canRun || skills.error || skills.loading || !canSendHere) {
+    if (!initial && (creating || !model.ready || project.saving || approvalPolicy.saving
+      || (!content && !files.fileIds.length) || !sourcesReady || skills.error || skills.loading || !canSendHere)) {
       return;
     }
     pending.current = true;
     setSubmitting(true);
     setActionError("");
     const route = currentRoute.current;
-    const submission = createConversationSubmission({
+    const submission = initial ? {...initial.submission, failed: false} : createConversationSubmission({
       scope: draftKey, text: content, messages, queued: canQueue,
       attachments: files.items.flatMap(item => item.reference?.status === "ready" ? [item.reference] : []),
       labels: [...skills.selected.map(skill => skill.name), ...selectedDocuments.map(document => document.name)]
     });
-    setSubmissions(current => [...current, submission]);
+    setSubmissions(current => [...current.filter(value => value.id !== submission.id), submission]);
+    if (initial) {
+      handoff?.update(submission);
+    }
     setDraft("");
     scrollToBottom();
     try {
-      const input = {
+      const input = initial?.input ?? {
         ...textInput(content),
         skillVersionIds: skills.selected.map((skill) => skill.versionId),
         attachmentIds: files.fileIds,
@@ -306,15 +368,17 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
       const response = await mutation.current.run<RunAccepted>(conversationId ? `${conversationPath(enterpriseId, conversationId)}/messages?queue=true` : conversationPath(enterpriseId), {
         method: "POST",
         body: conversationId ? input : {
-          agentId: selectedAgent,
+          agentId: initial?.employee.agentId ?? selectedAgent,
           input,
-          approvalPolicy: approvalPolicy.value,
-          projectId: project.selected?.id ?? null
+          approvalPolicy: initial?.approvalPolicy ?? approvalPolicy.value,
+          projectId: (initial ? initial.project : project.selected)?.id ?? null
         },
       });
-      setSubmissions(current => current.map(value => value.id === submission.id ? {
-        ...value, accepted: response, scope: `${userId}:${enterpriseId}:${response.conversationId}`
-      } : value));
+      const confirmed = {...submission, accepted: response, scope: `${userId}:${enterpriseId}:${response.conversationId}`};
+      setSubmissions(current => current.map(value => value.id === submission.id ? confirmed : value));
+      if (initial) {
+        handoff?.update(confirmed);
+      }
       list.refresh();
       if (!conversationId) {
         approvalPolicy.resetDraft();
@@ -325,7 +389,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
       skills.clear();
       files.clear();
       setDocuments((current) => ({...current, [draftKey]: []}));
-      if (currentRoute.current !== route) {
+      if (!mounted.current || currentRoute.current !== route) {
         return;
       }
       setDraft("");
@@ -335,16 +399,33 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
         navigate(`${base}/conversations/${encodeURIComponent(response.conversationId)}`, true);
       }
     } catch (failed) {
-      setSubmissions(current => current.filter(value => value.id !== submission.id));
-      setDrafts(current => ({...current, [draftKey]: text}));
-      if (currentRoute.current === route) {
-        setActionError(errorMessage(failed, uiText("消息未能发送，请重试。")));
+      const message = errorMessage(failed, uiText("消息未能发送，请重试。"));
+      if (initial) {
+        const rejected = {...submission, failed: true};
+        setSubmissions(current => current.map(value => value.id === submission.id ? rejected : value));
+        handoff?.update(rejected, message);
+      } else {
+        setSubmissions(current => current.filter(value => value.id !== submission.id));
+        setDrafts(current => ({...current, [draftKey]: text}));
+        if (currentRoute.current === route) {
+          setActionError(message);
+        }
       }
     } finally {
       pending.current = false;
       setSubmitting(false);
     }
   }
+
+  const sendArrivingMessage = useEffectEvent((initial: ComposerHandoff) => {
+    void submitMessageContent(initial.input.text, initial);
+  });
+  useEffect(() => {
+    if (arrival?.status === "sending" && canRun && launchedHandoff.current !== arrival.submission.id) {
+      launchedHandoff.current = arrival.submission.id;
+      sendArrivingMessage(arrival);
+    }
+  }, [arrival, canRun]);
 
   async function changeQueue(run: string, prioritize: boolean) {
     if (!conversationId) {
@@ -427,13 +508,19 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     employeeLoading,
     composerHandoff: Boolean(arrival),
     focusComposerAfterSend: Boolean(arrival?.focusInput),
-    employeeReady: Boolean(conversationId || employee.data),
+    employeeReady: Boolean(conversationId || resolvedEmployee),
     selectedAgent,
     conversationId,
     draft,
     setDraft,
-    submitting,
+    submitting: submitting || creating,
     sending,
+    creationError: arrival?.status === "failed" ? arrival.error : "",
+    retryCreation: () => {
+      if (arrival?.status === "failed" && canRun) {
+        void submitMessageContent(arrival.input.text, arrival);
+      }
+    },
     stopping,
     actionError,
     sidebarOpen,
@@ -470,7 +557,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     chooseDocuments: (value: DocumentOption[]) => setDocuments((current) => ({...current, [draftKey]: value})),
     canQueue,
     changeQueue,
-    canSubmit: canRun && model.ready && !project.saving && !approvalPolicy.saving && !submitting && !skills.error && !skills.loading && sourcesReady && canSendHere,
+    canSubmit: canRun && !creating && model.ready && !project.saving && !approvalPolicy.saving && !submitting && !skills.error && !skills.loading && sourcesReady && canSendHere,
     title: detail?.title ?? (conversationId ? uiText("对话任务") : uiText("新对话")),
     agentName: detail?.agentName ?? displayEmployee?.name ?? "",
     newTaskPath: `${base}/new-task`

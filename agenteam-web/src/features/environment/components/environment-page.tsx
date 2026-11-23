@@ -74,9 +74,19 @@ function EnvironmentContent({enterpriseId, initialPath}: {enterpriseId: string; 
   }, []);
 
   const reload = model.reload;
+  const lastTerminalKey = useRef<string | null>(null);
   useEffect(() => {
+    const nextKey = terminalState ? `${terminalState.status}:${terminalState.busy}` : null;
+    if (nextKey === null) {
+      lastTerminalKey.current = null;
+      return;
+    }
+    if (lastTerminalKey.current === nextKey) {
+      return;
+    }
+    lastTerminalKey.current = nextKey;
     void reload();
-  }, [terminalState?.busy, terminalState?.status, reload]);
+  }, [terminalState, reload]);
 
   const finish = async () => {
     setClosing(true);

@@ -120,6 +120,12 @@ export type ConversationNavigationItem = {
 };
 export type QueuedMessage = {runId: string; position: number | null; text: string};
 
+export type SnapshotStepHistory = {
+  steps: RunStep[];
+  attempts: RunAttempt[];
+  hasMore?: boolean;
+};
+
 export type ConversationSnapshot = {
   queuedMessages?: QueuedMessage[];
   conversation: Conversation;
@@ -141,6 +147,7 @@ export type ConversationSnapshot = {
     step: RunStep;
   }[];
   approvals?: RunApproval[];
+  stepHistory?: Record<string, SnapshotStepHistory>;
 };
 export type MessageHistory = {
   messages: ConversationMessage[];

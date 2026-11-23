@@ -41,8 +41,17 @@ export function EnvironmentFiles({base, version, initialPath, terminalDirectory,
   const revision = version + ":" + refresh;
   const usage = useApiQuery<EnvironmentUsage>(base + "/files/usage" + (refreshAfter ? "?" + new URLSearchParams({after: refreshAfter}) : ""),
     revision + ":" + path, 0, false, {revalidateOnFocus: true});
+  const [usageSample, setUsageSample] = useState<{ latest: string; changes: number }>({latest: "", changes: 0});
+  const currentSampleId = usage.data?.sampleId ?? "";
+  if (currentSampleId && currentSampleId !== usageSample.latest) {
+    // 仅在已有统计样本之后发生变化时刷新目录，首次拿到样本不重复读取文件列表。
+    setUsageSample({
+      latest: currentSampleId,
+      changes: usageSample.latest ? usageSample.changes + 1 : usageSample.changes
+    });
+  }
   const listing = useApiQuery<EnvironmentDirectory>(base + "/files?" + new URLSearchParams({path, offset: String(offset), query: search, sort}),
-    revision + ":" + (usage.data?.sampleId ?? ""), 0, false, {revalidateOnFocus: true});
+    revision + ":" + usageSample.changes, 0, false, {revalidateOnFocus: true});
   const current = listing.data;
   const selected = current?.entries.find(file => file.path === selectedPath);
   const reload = () => setRefresh(value => value + 1);

@@ -211,7 +211,8 @@ function PreviewEmpty() {
 function PreviewResult({preview, enterprise}: { preview: ReturnType<typeof useAgentPreview>; enterprise: string }) {
   const uiText = useT();
   const messages = displayMessages(preview.stream.state).filter((message) => message.role === "assistant");
-  const history = useConversationStepHistory(enterprise, preview.stream.state?.snapshot.messages, preview.stream.historyVersion, preview.stream.historySequence);
+  const history = useConversationStepHistory(enterprise, preview.stream.state?.snapshot.messages, preview.stream.historyVersion,
+    preview.stream.historySequence, preview.stream.state?.snapshot.stepHistory);
   return <div className={styles.resultContent} aria-label={uiText("{0}的预览结果", [preview.input!.modelName])}>
     <header>
       <div><h3>{preview.input!.modelName}</h3>

@@ -1,25 +1,46 @@
 "use client";
 
 
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {apiRequest, errorMessage} from "@/lib/http/api-client";
 import type {ApiPage} from "@/lib/http/use-api-query";
 import {runPath} from "../api/conversation-api";
-import type {ConversationMessage, RunAttempt, RunStep} from "../types/execution";
+import type {ConversationMessage, RunAttempt, RunStep, SnapshotStepHistory} from "../types/execution";
 import {validateRunStep, validateRunStepTree} from "../state/conversation-protocol";
 import type {RunStepHistory} from "../lib/conversation-steps";
 
-/** 每次读取快照后补齐历史步骤；每个执行只读取一次，限制并行请求数量。 */
-export function useConversationStepHistory(enterprise: string, messages: readonly ConversationMessage[] | undefined, refresh: number, sequence: string) {
+/** 每次读取快照后优先复用快照随附的步骤历史；仅补齐缺失或超出单批上限的历史轮次。 */
+export function useConversationStepHistory(enterprise: string, messages: readonly ConversationMessage[] | undefined,
+                                           refresh: number, sequence: string,
+                                           initialHistory?: Record<string, SnapshotStepHistory>) {
   const runIds = JSON.stringify([...new Set(messages?.filter((message) => message.role === "assistant" && message.runId).map((message) => message.runId) ?? [])]);
   const [history, setHistory] = useState<{
     enterprise: string;
     values: ReadonlyMap<string, RunStepHistory>
   }>({enterprise, values: new Map()});
-  const [retry, setRetry] = useState(0);
+  const [retryState, setRetryState] = useState({refresh, count: 0});
+  const forceFetch = retryState.refresh === refresh && retryState.count > 0;
+
+  const embedded = useMemo(() => {
+    const map = new Map<string, RunStepHistory>();
+    if (!initialHistory) {
+      return map;
+    }
+    for (const [id, entry] of Object.entries(initialHistory)) {
+      if (!entry.hasMore) {
+        map.set(id, {steps: entry.steps, attempts: entry.attempts, sequence, error: ""});
+      }
+    }
+    return map;
+  }, [initialHistory, sequence]);
+
   useEffect(() => {
+    const allIds = JSON.parse(runIds) as string[];
+    const queue = forceFetch ? allIds : allIds.filter((id) => !embedded.has(id));
+    if (!queue.length) {
+      return;
+    }
     const controller = new AbortController();
-    const queue = JSON.parse(runIds) as string[];
     const update = (id: string, value: RunStepHistory) => {
       if (!controller.signal.aborted) {
         setHistory((current) => ({
@@ -49,10 +70,25 @@ export function useConversationStepHistory(enterprise: string, messages: readonl
     void Promise.all([read(), read(), read()]);
     return () => controller.abort();
     // 逐字输出不重新查询历史；完整快照变化或手动重试时才读取。
-  }, [enterprise, runIds, refresh, retry, sequence]);
+  }, [enterprise, runIds, refresh, retryState.count, forceFetch, sequence, embedded]);
+
+  const combined = useMemo(() => {
+    const fetched = history.enterprise === enterprise ? history.values : new Map<string, RunStepHistory>();
+    if (!embedded.size) {
+      return fetched;
+    }
+    const merged = new Map(embedded);
+    for (const [id, value] of fetched) {
+      if (forceFetch || !merged.has(id)) {
+        merged.set(id, value);
+      }
+    }
+    return merged;
+  }, [enterprise, history, embedded, forceFetch]);
+
   return {
-    history: history.enterprise === enterprise ? history.values : new Map<string, RunStepHistory>(),
-    retry: () => setRetry((value) => value + 1)
+    history: combined,
+    retry: () => setRetryState((current) => ({refresh, count: current.refresh === refresh ? current.count + 1 : 1}))
   };
 }
 

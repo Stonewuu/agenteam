@@ -9,6 +9,7 @@ export type ConversationSubmission = {
   reply: DisplayMessage;
   queued: boolean;
   accepted?: RunAccepted;
+  failed?: boolean;
   inputObserved: boolean;
   replyObserved: boolean;
 };
@@ -75,19 +76,19 @@ export function mergeConversationSubmissions(messages: DisplayMessage[], submiss
     const accepted = submission.accepted;
     const reply = messages.find(message => accepted ? message.id === accepted.outputMessageId
       : input?.runId && message.role === "assistant" && message.runId === input.runId);
-    const delivery = accepted ? "accepted" : "sending";
+    const delivery = submission.failed ? "failed" : accepted ? "accepted" : "sending";
     if (input) {
       result[result.findIndex(message => message.id === input.id)] = {...input, clientId: submission.input.id};
     } else if (!submission.inputObserved) {
       const local: DisplayMessage = {...submission.input, id: accepted?.inputMessageId ?? submission.input.id,
         clientId: submission.input.id, runId: accepted?.runId ?? null, localDelivery: delivery,
-        status: accepted ? "completed" : "pending"};
+        status: submission.failed ? "failed" : accepted ? "completed" : "pending"};
       const replyIndex = reply ? result.findIndex(message => message.id === reply.id) : -1;
       result.splice(replyIndex < 0 ? result.length : replyIndex, 0, local);
     }
     if (reply) {
       result[result.findIndex(message => message.id === reply.id)] = {...reply, clientId: submission.reply.id};
-    } else if (!submission.queued && accepted?.status !== "waiting_turn" && !submission.replyObserved) {
+    } else if (!submission.failed && !submission.queued && accepted?.status !== "waiting_turn" && !submission.replyObserved) {
       const inputIndex = result.findIndex(message => message.clientId === submission.input.id);
       if (inputIndex >= 0) {
         result.splice(inputIndex + 1, 0, {...submission.reply, id: accepted?.outputMessageId ?? submission.reply.id,

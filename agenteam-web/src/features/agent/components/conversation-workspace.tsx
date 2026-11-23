@@ -1,22 +1,22 @@
 "use client";
 
-import {localizeUiMessage} from "@/lib/i18n/ui-message";
+import { localizeUiMessage } from "@/lib/i18n/ui-message";
 
-import {useT} from "@/lib/i18n/locale-provider";
+import { useT } from "@/lib/i18n/locale-provider";
 
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 
-import {AssistantRuntimeProvider, useExternalStoreRuntime} from "@assistant-ui/react";
-import {useRouter} from "next/navigation";
-import {toast} from "@/components/ui/toast";
-import {type ReactNode, useCallback, useEffect, useRef, useState} from "react";
-import {useComposerSelection} from "../hooks/use-composer-selection";
-import type {ComposerSelectionContext} from "../lib/composer-selection";
-import {useConversationNavigation} from "./conversation-navigation-context";
-import {useCollaborationConversation} from "../hooks/use-collaboration-conversation";
-import {conversationSelected} from "../lib/conversation-navigation";
-import {ConversationRoleSwitcher} from "./conversation-role-switcher";
+import { AssistantRuntimeProvider, useExternalStoreRuntime } from "@assistant-ui/react";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/ui/toast";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useComposerSelection } from "../hooks/use-composer-selection";
+import type { ComposerSelectionContext } from "../lib/composer-selection";
+import { useConversationNavigation } from "./conversation-navigation-context";
+import { useCollaborationConversation } from "../hooks/use-collaboration-conversation";
+import { conversationSelected } from "../lib/conversation-navigation";
+import { ConversationRoleSwitcher } from "./conversation-role-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,43 +24,43 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/shadcn/dropdown-menu";
 
-import {Dialog, DialogAction, DialogActions, DialogCancel} from "@/components/ui/dialog";
-import type {EnterpriseContext, IdentityUser} from "@/features/auth/types/identity";
-import type {Employee} from "@/features/employee/types/employee";
-import type {Conversation} from "../types/execution";
-import {appendMessageText, toAssistantMessage} from "../lib/conversation-ui-adapter";
-import {type ConversationLocation, useConversationWorkspace} from "../hooks/use-conversation-workspace";
-import {DocumentPickerDialog} from "@/features/knowledge/components/document-picker-dialog";
+import { Dialog, DialogAction, DialogActions, DialogCancel } from "@/components/ui/dialog";
+import type { EnterpriseContext, IdentityUser } from "@/features/auth/types/identity";
+import type { Employee } from "@/features/employee/types/employee";
+import type { Conversation } from "../types/execution";
+import { appendMessageText, toAssistantMessage } from "../lib/conversation-ui-adapter";
+import { type ConversationLocation, useConversationWorkspace } from "../hooks/use-conversation-workspace";
+import { DocumentPickerDialog } from "@/features/knowledge/components/document-picker-dialog";
 
-import {ConversationPane} from "./conversation-pane";
-import {EmployeePicker} from "./employee-picker";
-import {ConversationManagementDialog} from "./conversation-management-dialog";
-import {SkillPickerDialog} from "@/features/skill/components/skill-picker-dialog";
+import { ConversationPane } from "./conversation-pane";
+import { EmployeePicker } from "./employee-picker";
+import { ConversationManagementDialog } from "./conversation-management-dialog";
+import { SkillPickerDialog } from "@/features/skill/components/skill-picker-dialog";
 import styles from "./agent-workspace.module.css";
 import controls from "./conversation-controls.module.css";
-import {IconDots, IconDownload, IconSidebarRight, IconStar, IconChartBar} from "@/components/ui/icons";
-import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
-import {useConversationSidebar} from "../hooks/use-conversation-sidebar";
-import {ConversationSidebar, type ConversationSidebarHandle} from "./conversation-sidebar";
-import {ConversationFileProvider} from "@/features/file/components/conversation-file-context";
-import {createFilePreviewTab} from "@/features/file/components/conversation-file-preview-tab";
-import type {ConversationFileTarget} from "@/features/file/types/conversation-files";
+import { IconDots, IconDownload, IconSidebarRight, IconStar, IconChartBar } from "@/components/ui/icons";
+import { ConversationModelUsageDialog } from "@/features/usage/components/conversation-model-usage-dialog";
+import { useConversationSidebar } from "../hooks/use-conversation-sidebar";
+import { ConversationSidebar, type ConversationSidebarHandle } from "./conversation-sidebar";
+import { ConversationFileProvider } from "@/features/file/components/conversation-file-context";
+import { createFilePreviewTab } from "@/features/file/components/conversation-file-preview-tab";
+import type { ConversationFileTarget } from "@/features/file/types/conversation-files";
 import sidebarStyles from "./conversation-sidebar.module.css";
-import {useFormAction} from "@/features/auth/hooks/use-form-action";
-import {conversationPath} from "../api/conversation-api";
+import { useFormAction } from "@/features/auth/hooks/use-form-action";
+import { conversationPath } from "../api/conversation-api";
 import ui from "@/components/ui/surface.module.css";
 
-import {NotificationOpenedMarker} from "@/features/notification/components/notification-opened-marker";
-import {MemoryEditor} from "@/features/memory/components/memory-editor";
-import type {MemoryContext, MemorySource} from "@/features/memory/types/memory";
-import {useApiQuery} from "@/lib/http/use-api-query";
-import {organizationPath} from "@/features/enterprise/api/organization-api";
-import {ExportControl} from "@/features/export/components/export-control";
+import { NotificationOpenedMarker } from "@/features/notification/components/notification-opened-marker";
+import { MemoryEditor } from "@/features/memory/components/memory-editor";
+import type { MemoryContext, MemorySource } from "@/features/memory/types/memory";
+import { useApiQuery } from "@/lib/http/use-api-query";
+import { organizationPath } from "@/features/enterprise/api/organization-api";
+import { ExportControl } from "@/features/export/components/export-control";
 
 
 
 
-export default function ConversationWorkspace({user, context, location, headerActions, onRunFinished}: {
+export default function ConversationWorkspace({ user, context, location, headerActions, onRunFinished }: {
   user: IdentityUser; context: EnterpriseContext; location?: ConversationLocation;
   headerActions?: ReactNode; onRunFinished?: () => void;
 }) {
@@ -76,7 +76,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
   const collaboration = useCollaborationConversation(user.id, enterprise, workspace.conversationId, workspace.detail?.collaborationTaskId);
   const listed = navigation?.list.items.find(value => conversationSelected(value, workspace.conversationId));
   const group = collaboration.group ?? listed?.collaboration;
-  const title = group?.title ?? workspace.title;
+  const title = group?.title ?? workspace.detail?.title ?? listed?.title ?? workspace.title;
   const isFavorite = collaboration.item?.favorite ?? listed?.favorite ?? workspace.detail?.favorite ?? false;
   const setCurrentConversation = navigation?.setCurrentConversation;
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
   const setSidebarOpen = sidebar.setOpen;
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
-    sidebarToggle.current?.focus({preventScroll: true});
+    sidebarToggle.current?.focus({ preventScroll: true });
   }, [setSidebarOpen]);
   const canViewFiles = context.permissions.includes("conversation.view");
   const openFile = useCallback((file: ConversationFileTarget) => {
@@ -115,7 +115,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
     workspace.setDocumentPickerOpen(false);
   });
   const favorite = useFormAction();
-  const {conversationRef, ...view} = workspace;
+  const { conversationRef, ...view } = workspace;
   const [manage, setManage] = useState<Conversation | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [usageConversation, setUsageConversation] = useState<string | null>(null);
@@ -172,7 +172,7 @@ export default function ConversationWorkspace({user, context, location, headerAc
       await favorite.mutation.run(conversationPath(enterprise, detail.id), {
         method: "PATCH",
         revision: detail.revision,
-        body: {favorite: !isFavorite}
+        body: { favorite: !isFavorite }
       });
       workspace.changed();
       collaboration.retry();
@@ -180,155 +180,157 @@ export default function ConversationWorkspace({user, context, location, headerAc
   }
 
   return <ConversationFileProvider enterprise={enterprise} conversation={workspace.conversationId}
-                                   openFile={canViewFiles ? openFile : undefined}><AssistantRuntimeProvider
-    runtime={runtime}>
-    <div className={`${styles.shell} ${sidebarStyles.layout}`} ref={sidebarContainer} data-embedded={Boolean(location)}
-         data-sidebar-open={canViewFiles && sidebar.open} data-sidebar-compact={sidebar.compact}
-         data-sidebar-full={canViewFiles && sidebar.open && sidebar.full && !sidebar.compact}>
-      <div className={styles.main} data-conversation-main
-           inert={canViewFiles && sidebar.open && sidebar.full && !sidebar.compact}>
-        <header className={styles.mainTopbar}>
-          <div className={controls.heading}><h1 title={title}>{title}</h1></div>
-          <div className={`${styles.accountActions} ${controls.conversationActions}`}>
-            {workspace.detail?.collaborationTaskId && workspace.conversationId &&
-              <ConversationRoleSwitcher group={group} current={workspace.conversationId}
-                taskId={workspace.detail.collaborationTaskId}/>}
-            <div className={controls.desktopActions}>
-              {workspace.detail && <Button className="icon-button" type="button" aria-label={uiText("查看对话累计用量")}
-                title={uiText("查看对话累计用量")} onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={19}/></Button>}
-              {workspace.detail && context.permissions.includes("conversation.manage") &&
-                <Button className="icon-button" type="button"
-                        aria-label={isFavorite ? uiText("取消收藏对话") : uiText("收藏对话")}
-                        aria-pressed={isFavorite} disabled={favorite.busy}
-                        onClick={toggleFavorite}><IconStar size={19}
-                                                           variant={isFavorite ? "Bold" : "Linear"}/></Button>}
-              {workspace.detail && context.permissions.includes("conversation.export") &&
-                <Button className="icon-button" type="button" aria-label={uiText("导出对话")}
-                        onClick={() => setExportOpen(true)}><IconDownload size={19}/></Button>}
-              {workspace.detail && context.permissions.includes("conversation.manage") &&
-                <Button className="icon-button" aria-label={uiText("管理当前对话")}
-                        onClick={() => setManage({...workspace.detail!, title, favorite: isFavorite})}><IconDots size={20}/></Button>}
-            </div>
-            {workspace.detail &&
-              <div className={controls.mobileActions}><DropdownMenu><DropdownMenuTrigger
-                render={<Button className="icon-button" aria-label={uiText("更多对话操作")}><IconDots
-                  size={20}/></Button>}/><DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={17}/>{uiText("对话累计用量")}</DropdownMenuItem>
+    openFile={canViewFiles ? openFile : undefined}><AssistantRuntimeProvider
+      runtime={runtime}>
+      <div className={`${styles.shell} ${sidebarStyles.layout}`} ref={sidebarContainer} data-embedded={Boolean(location)}
+        data-sidebar-open={canViewFiles && sidebar.open} data-sidebar-compact={sidebar.compact}
+        data-sidebar-full={canViewFiles && sidebar.open && sidebar.full && !sidebar.compact}>
+        <div className={styles.main} data-conversation-main
+          inert={canViewFiles && sidebar.open && sidebar.full && !sidebar.compact}>
+          <header className={styles.mainTopbar}>
+            <div className={controls.heading}><h1 title={title}>{title}</h1></div>
+            <div className={`${styles.accountActions} ${controls.conversationActions}`}>
+              {workspace.detail?.collaborationTaskId && workspace.conversationId &&
+                <ConversationRoleSwitcher group={group} current={workspace.conversationId}
+                  taskId={workspace.detail.collaborationTaskId} />}
+              <div className={controls.desktopActions}>
+                {workspace.detail && <Button className="icon-button" type="button" aria-label={uiText("查看对话累计用量")}
+                  title={uiText("查看对话累计用量")} onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={19} /></Button>}
                 {workspace.detail && context.permissions.includes("conversation.manage") &&
-                  <DropdownMenuItem disabled={favorite.busy} onClick={toggleFavorite}><IconStar
-                    size={17}/>{isFavorite ? uiText("取消收藏") : uiText("收藏对话")}</DropdownMenuItem>}
+                  <Button className="icon-button" type="button"
+                    aria-label={isFavorite ? uiText("取消收藏对话") : uiText("收藏对话")}
+                    aria-pressed={isFavorite} disabled={favorite.busy}
+                    onClick={toggleFavorite}><IconStar size={19}
+                      variant={isFavorite ? "Bold" : "Linear"} /></Button>}
                 {workspace.detail && context.permissions.includes("conversation.export") &&
-                  <DropdownMenuItem onClick={() => setExportOpen(true)}><IconDownload size={17}/>{uiText("导出对话")}
-                  </DropdownMenuItem>}
+                  <Button className="icon-button" type="button" aria-label={uiText("导出对话")}
+                    onClick={() => setExportOpen(true)}><IconDownload size={19} /></Button>}
                 {workspace.detail && context.permissions.includes("conversation.manage") &&
-                  <DropdownMenuItem onClick={() => setManage({...workspace.detail!, title, favorite: isFavorite})}><IconDots
-                    size={17}/>{uiText("管理当前对话")}</DropdownMenuItem>}
-              </DropdownMenuContent></DropdownMenu></div>}
-            {canViewFiles && (!sidebar.open || sidebar.compact) &&
-              <span className={sidebarStyles.toggleSpace} aria-hidden="true"/>}
-            {headerActions}
-          </div>
-        </header>
-        <NotificationOpenedMarker enterpriseId={enterprise} targetType="conversation"
-                                  targetId={workspace.stream.state?.snapshot.conversation.id ?? null}/>
-        {favorite.error && <p className={ui.error} role="alert">{localizeUiMessage(favorite.error ?? "", uiText)}</p>}
-        <ConversationPane enterprise={enterprise} canRun={canRun} canStop={canStop} canUseSkills={canUseSkills}
-                          canUseKnowledge={canUseKnowledge} workspace={view} conversationRef={conversationRef}
-                          composerInput={composerInput} onChooseEmployee={(source) => showPicker("employee", source)}
-                          onChooseSkills={(source) => showPicker("skill", source)}
-                          onChooseDocuments={(source) => showPicker("document", source)}
-                          onMemory={memoryAgent && memoryContext.data?.canSave && !memoryContext.loading ? (message, text) => setMemorySource({
-                            agentId: memoryAgent,
-                            source: {sourceMessageId: message.id, text}
-                          }) : undefined}/>
+                  <Button className="icon-button" aria-label={uiText("管理当前对话")}
+                    onClick={() => setManage({ ...workspace.detail!, title, favorite: isFavorite })}><IconDots size={20} /></Button>}
+              </div>
+              {workspace.detail &&
+                <div className={controls.mobileActions}><DropdownMenu><DropdownMenuTrigger
+                  render={<Button className="icon-button" aria-label={uiText("更多对话操作")}><IconDots
+                    size={20} /></Button>} /><DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setUsageConversation(workspace.detail!.id)}><IconChartBar size={17} />{uiText("对话累计用量")}</DropdownMenuItem>
+                    {workspace.detail && context.permissions.includes("conversation.manage") &&
+                      <DropdownMenuItem disabled={favorite.busy} onClick={toggleFavorite}><IconStar
+                        size={17} />{isFavorite ? uiText("取消收藏") : uiText("收藏对话")}</DropdownMenuItem>}
+                    {workspace.detail && context.permissions.includes("conversation.export") &&
+                      <DropdownMenuItem onClick={() => setExportOpen(true)}><IconDownload size={17} />{uiText("导出对话")}
+                      </DropdownMenuItem>}
+                    {workspace.detail && context.permissions.includes("conversation.manage") &&
+                      <DropdownMenuItem onClick={() => setManage({ ...workspace.detail!, title, favorite: isFavorite })}><IconDots
+                        size={17} />{uiText("管理当前对话")}</DropdownMenuItem>}
+                  </DropdownMenuContent></DropdownMenu></div>}
+              {canViewFiles && (!sidebar.open || sidebar.compact) &&
+                <span className={sidebarStyles.toggleSpace} aria-hidden="true" />}
+              {headerActions}
+            </div>
+          </header>
+          <NotificationOpenedMarker enterpriseId={enterprise} targetType="conversation"
+            targetId={workspace.stream.state?.snapshot.conversation.id ?? null} />
+          {favorite.error && <p className={ui.error} role="alert">{localizeUiMessage(favorite.error ?? "", uiText)}</p>}
+          <ConversationPane enterprise={enterprise} canRun={canRun} canStop={canStop} canUseSkills={canUseSkills}
+            canUseKnowledge={canUseKnowledge}
+            isCollaboration={Boolean(group || listed?.collaborationTaskId)}
+            workspace={view} conversationRef={conversationRef}
+            composerInput={composerInput} onChooseEmployee={(source) => showPicker("employee", source)}
+            onChooseSkills={(source) => showPicker("skill", source)}
+            onChooseDocuments={(source) => showPicker("document", source)}
+            onMemory={memoryAgent && memoryContext.data?.canSave && !memoryContext.loading ? (message, text) => setMemorySource({
+              agentId: memoryAgent,
+              source: { sourceMessageId: message.id, text }
+            }) : undefined} />
+        </div>
+        {canViewFiles && <ConversationSidebar ref={sidebarPanels}
+          key={(workspace.conversationId ?? "new") + ":" + (workspace.project.projectId ?? "")}
+          id={sidebar.id} enterprise={enterprise}
+          conversation={workspace.conversationId} open={sidebar.open}
+          compact={sidebar.compact}
+          container={sidebarContainer}
+          onRestoreConversation={sidebar.restoreConversation}
+          width={sidebar.width} maximumWidth={sidebar.maximumWidth}
+          onWidthChange={sidebar.setWidth} onResizeEnd={sidebar.finishResize}
+          tab={sidebar.tab} onTabChange={sidebar.setTab} running={Boolean(active)}
+          refreshKey={(workspace.stream.state?.latestRun?.id ?? "") + ":" + (workspace.stream.state?.latestRun?.status ?? "") + ":" + (workspace.stream.fileRefreshKey ?? "")}
+          onClose={closeSidebar} />}
+        {canViewFiles && <Button ref={sidebarToggle} className={`icon-button ${sidebarStyles.sharedToggle}`} type="button"
+          aria-label={sidebar.open ? uiText("收起对话侧栏") : uiText("展开对话侧栏")}
+          title={sidebar.open ? uiText("收起对话侧栏") : uiText("文件与上下文")}
+          aria-expanded={sidebar.open} aria-controls={sidebar.id}
+          onClick={() => sidebar.setOpen(!sidebar.open)}><IconSidebarRight size={20} /></Button>}
       </div>
-      {canViewFiles && <ConversationSidebar ref={sidebarPanels}
-                                            key={(workspace.conversationId ?? "new") + ":" + (workspace.project.projectId ?? "")}
-                                            id={sidebar.id} enterprise={enterprise}
-                                            conversation={workspace.conversationId} open={sidebar.open}
-                                            compact={sidebar.compact}
-                                            container={sidebarContainer}
-                                            onRestoreConversation={sidebar.restoreConversation}
-                                            width={sidebar.width} maximumWidth={sidebar.maximumWidth}
-                                            onWidthChange={sidebar.setWidth} onResizeEnd={sidebar.finishResize}
-                                            tab={sidebar.tab} onTabChange={sidebar.setTab} running={Boolean(active)}
-                                            refreshKey={(workspace.stream.state?.latestRun?.id ?? "") + ":" + (workspace.stream.state?.latestRun?.status ?? "") + ":" + (workspace.stream.fileRefreshKey ?? "")}
-                                            onClose={closeSidebar}/>}
-      {canViewFiles && <Button ref={sidebarToggle} className={`icon-button ${sidebarStyles.sharedToggle}`} type="button"
-                               aria-label={sidebar.open ? uiText("收起对话侧栏") : uiText("展开对话侧栏")}
-                               title={sidebar.open ? uiText("收起对话侧栏") : uiText("文件与上下文")}
-                               aria-expanded={sidebar.open} aria-controls={sidebar.id}
-                               onClick={() => sidebar.setOpen(!sidebar.open)}><IconSidebarRight size={20}/></Button>}
-    </div>
-    {usageConversation && <ConversationModelUsageDialog enterpriseId={enterprise} conversationId={usageConversation}
-      onClose={() => setUsageConversation(null)}/>}
-    {exportOpen && workspace.detail &&
-      <Dialog title={uiText("导出对话")} onClose={() => setExportOpen(false)}><ExportControl enterpriseId={enterprise}
-                                                                                             userId={user.id}
-                                                                                             path={organizationPath(enterprise, `/conversations/${encodeURIComponent(workspace.detail.id)}/export`)}
-                                                                                             title={uiText("导出对话")}
-                                                                                             description={uiText("将已保存的对话导出为表格文件。")}/></Dialog>}
-    {memorySource &&
-      <MemoryEditor enterpriseId={enterprise} agentId={memorySource.agentId} initial={null} source={memorySource.source}
-                    onClose={() => setMemorySource(null)} onReload={() => {
-        setMemorySource(null);
-        memoryContext.retry();
-      }} onSaved={() => {
-        setMemorySource(null);
-        toast.success(uiText("偏好已保存。"), {
-          actionProps: {
-            children: uiText("管理偏好"),
-            onClick: () => router.push(`/memories/${encodeURIComponent(memorySource.agentId)}`)
+      {usageConversation && <ConversationModelUsageDialog enterpriseId={enterprise} conversationId={usageConversation}
+        onClose={() => setUsageConversation(null)} />}
+      {exportOpen && workspace.detail &&
+        <Dialog title={uiText("导出对话")} onClose={() => setExportOpen(false)}><ExportControl enterpriseId={enterprise}
+          userId={user.id}
+          path={organizationPath(enterprise, `/conversations/${encodeURIComponent(workspace.detail.id)}/export`)}
+          title={uiText("导出对话")}
+          description={uiText("将已保存的对话导出为表格文件。")} /></Dialog>}
+      {memorySource &&
+        <MemoryEditor enterpriseId={enterprise} agentId={memorySource.agentId} initial={null} source={memorySource.source}
+          onClose={() => setMemorySource(null)} onReload={() => {
+            setMemorySource(null);
+            memoryContext.retry();
+          }} onSaved={() => {
+            setMemorySource(null);
+            toast.success(uiText("偏好已保存。"), {
+              actionProps: {
+                children: uiText("管理偏好"),
+                onClick: () => router.push(`/memories/${encodeURIComponent(memorySource.agentId)}`)
+              }
+            });
+          }} />}
+      {workspace.pickerOpen &&
+        <EmployeePicker enterprise={enterprise} selectedId={workspace.detail?.agentId ?? workspace.selectedAgent}
+          anchor={selection.context?.anchor ?? composerInput} initialQuery={selection.context?.query}
+          returnFocus={composerInput} onClose={() => workspace.setPickerOpen(false)} onSelect={selected}
+          showMarket={context.permissions.includes("agent.market_view")} />}
+      {workspace.skillPickerOpen && canUseSkills && (workspace.detail?.agentId ?? workspace.selectedAgent) &&
+        <SkillPickerDialog enterprise={enterprise}
+          agent={(workspace.detail?.agentId ?? workspace.selectedAgent)!}
+          conversation={workspace.conversationId} selected={workspace.skills.selected}
+          anchor={selection.context?.anchor} returnFocus={composerInput}
+          initialQuery={selection.context?.query}
+          onChange={(value) => {
+            workspace.skills.choose(value);
+            selection.consume();
+          }}
+          onClose={() => workspace.setSkillPickerOpen(false)} />}
+      {workspace.documentPickerOpen && canUseKnowledge && (workspace.detail?.agentId ?? workspace.selectedAgent) &&
+        <DocumentPickerDialog enterpriseId={enterprise}
+          agentId={(workspace.detail?.agentId ?? workspace.selectedAgent)!}
+          conversationId={workspace.conversationId} selected={workspace.selectedDocuments}
+          anchor={selection.context?.anchor} returnFocus={composerInput}
+          initialQuery={selection.context?.query}
+          onChange={(value) => {
+            workspace.chooseDocuments(value);
+            selection.consume();
+          }} onChooseEmployee={() => showPicker("employee", selection.context ?? undefined)}
+          onClose={() => workspace.setDocumentPickerOpen(false)} />}
+      {nextEmployee &&
+        <Dialog title={uiText("使用“{0}”开始新对话？", [nextEmployee.name])} onClose={() => setNextEmployee(null)}>
+          <p className={ui.description}>{uiText("确认后将开始一段新对话。")}</p><DialogActions className={ui.footer}>
+            <DialogCancel className={ui.button}>{uiText("取消")}</DialogCancel>
+            <DialogAction className={ui.primary} onAction={(close) => close(() => {
+              workspace.startNewTask(nextEmployee.agentId, nextEmployee);
+              setNextEmployee(null);
+            })}>{uiText("开始新对话")}</DialogAction>
+          </DialogActions>
+        </Dialog>}
+      {manage && <ConversationManagementDialog key={`${manage.id}:${manage.revision}`} enterprise={enterprise}
+        conversation={manage} onClose={() => setManage(null)}
+        onChanged={(action, value) => {
+          workspace.changed();
+          if (action === "deleted" && workspace.conversationId === manage.id) {
+            workspace.startNewTask();
           }
-        });
-      }}/>}
-    {workspace.pickerOpen &&
-      <EmployeePicker enterprise={enterprise} selectedId={workspace.detail?.agentId ?? workspace.selectedAgent}
-                      anchor={selection.context?.anchor ?? composerInput} initialQuery={selection.context?.query}
-                      returnFocus={composerInput} onClose={() => workspace.setPickerOpen(false)} onSelect={selected}
-                      showMarket={context.permissions.includes("agent.market_view")}/>}
-    {workspace.skillPickerOpen && canUseSkills && (workspace.detail?.agentId ?? workspace.selectedAgent) &&
-      <SkillPickerDialog enterprise={enterprise}
-                         agent={(workspace.detail?.agentId ?? workspace.selectedAgent)!}
-                         conversation={workspace.conversationId} selected={workspace.skills.selected}
-                         anchor={selection.context?.anchor} returnFocus={composerInput}
-                         initialQuery={selection.context?.query}
-                         onChange={(value) => {
-                           workspace.skills.choose(value);
-                           selection.consume();
-                         }}
-                         onClose={() => workspace.setSkillPickerOpen(false)}/>}
-    {workspace.documentPickerOpen && canUseKnowledge && (workspace.detail?.agentId ?? workspace.selectedAgent) &&
-      <DocumentPickerDialog enterpriseId={enterprise}
-                            agentId={(workspace.detail?.agentId ?? workspace.selectedAgent)!}
-                            conversationId={workspace.conversationId} selected={workspace.selectedDocuments}
-                            anchor={selection.context?.anchor} returnFocus={composerInput}
-                            initialQuery={selection.context?.query}
-                            onChange={(value) => {
-                              workspace.chooseDocuments(value);
-                              selection.consume();
-                            }} onChooseEmployee={() => showPicker("employee", selection.context ?? undefined)}
-                            onClose={() => workspace.setDocumentPickerOpen(false)}/>}
-    {nextEmployee &&
-      <Dialog title={uiText("使用“{0}”开始新对话？", [nextEmployee.name])} onClose={() => setNextEmployee(null)}>
-        <p className={ui.description}>{uiText("确认后将开始一段新对话。")}</p><DialogActions className={ui.footer}>
-        <DialogCancel className={ui.button}>{uiText("取消")}</DialogCancel>
-        <DialogAction className={ui.primary} onAction={(close) => close(() => {
-          workspace.startNewTask(nextEmployee.agentId, nextEmployee);
-          setNextEmployee(null);
-        })}>{uiText("开始新对话")}</DialogAction>
-      </DialogActions>
-      </Dialog>}
-    {manage && <ConversationManagementDialog key={`${manage.id}:${manage.revision}`} enterprise={enterprise}
-                                             conversation={manage} onClose={() => setManage(null)}
-                                             onChanged={(action, value) => {
-                                               workspace.changed();
-                                               if (action === "deleted" && workspace.conversationId === manage.id) {
-                                                 workspace.startNewTask();
-                                               }
-                                               if (action === "restored" && value) {
-                                                 workspace.selectConversation(value);
-                                               }
-                                             }}/>}
-  </AssistantRuntimeProvider></ConversationFileProvider>;
+          if (action === "restored" && value) {
+            workspace.selectConversation(value);
+          }
+        }} />}
+    </AssistantRuntimeProvider></ConversationFileProvider>;
 }

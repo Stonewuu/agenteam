@@ -6,7 +6,7 @@ import "./composer-transition.css";
 
 export const composerSendTransition = "composer-send";
 
-/** 仅首页发送成功时连接两个输入框；普通导航和输入不触发过渡。 */
+/** 首页提交后立即连接两个输入框，普通导航和输入不触发过渡。 */
 export function ComposerTransition({part, children}: {
   part: "surface" | "text" | "employee" | "tools" | "policy" | "submit"; children: ReactNode;
 }) {

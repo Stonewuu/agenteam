@@ -1,7 +1,7 @@
 "use client";
 
 
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {ApiError, apiRequest, errorMessage} from "@/lib/http/api-client";
 import type {ApiPage} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
@@ -12,8 +12,12 @@ export function useSchedules(enterpriseId: string, query: string) {
   const [refresh, setRefresh] = useState(0);
   const [result, setResult] = useState<{ enterpriseId: string; query: string; items: Schedule[] } | null>(null);
   const [request, setRequest] = useState({query, loading: true, error: ""});
+  const previousQuery = useRef(query);
   useEffect(() => {
     const controller = new AbortController();
+    // 仅在搜索词变化时防抖，首次进入和后台刷新立即发起请求。
+    const delay = previousQuery.current !== query ? 300 : 0;
+    previousQuery.current = query;
     const timer = window.setTimeout(() => {
       setRequest({query, loading: true, error: ""});
 
@@ -57,7 +61,7 @@ export function useSchedules(enterpriseId: string, query: string) {
       }
 
       void load();
-    }, 300);
+    }, delay);
     return () => {
       controller.abort();
       window.clearTimeout(timer);

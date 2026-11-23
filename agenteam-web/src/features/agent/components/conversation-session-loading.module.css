@@ -1,0 +1,378 @@
+.thread,
+.composerSkeleton {
+  --skeleton-base: color-mix(in srgb, var(--border) 72%, var(--surface-hover));
+  --skeleton-shine: color-mix(in srgb, var(--surface-hover) 82%, var(--surface));
+}
+
+:global([data-theme="dark"]) .thread,
+:global([data-theme="dark"]) .composerSkeleton {
+  --skeleton-base: var(--surface-hover);
+  --skeleton-shine: color-mix(in srgb, var(--border) 55%, var(--surface-hover));
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  padding: 6px 0 24px;
+  animation: skeletonFadeIn 220ms var(--motion-ease) both;
+}
+
+.shimmer {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-shine) 45%,
+    var(--skeleton-base) 90%
+  );
+  background-size: 200% 100%;
+  animation: sessionShimmer 1.65s ease-in-out infinite;
+}
+
+.userTurn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.userMeta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.userBubble {
+  display: grid;
+  gap: 10px;
+  width: min(360px, 76%);
+  padding: 16px 19px;
+  border: 1px solid var(--border-light);
+  border-radius: 18px 5px 18px 18px;
+  background: var(--surface);
+}
+
+.userBubbleCompact {
+  display: grid;
+  width: min(240px, 64%);
+  padding: 15px 19px;
+  border: 1px solid var(--border-light);
+  border-radius: 18px 5px 18px 18px;
+  background: var(--surface);
+}
+
+.assistantTurn {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.assistantMeta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 28px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+}
+
+.nameLine {
+  width: 84px;
+  height: 13px;
+}
+
+.timeLine {
+  width: 48px;
+  height: 11px;
+}
+
+.assistantBody {
+  display: grid;
+  gap: 12px;
+  padding-left: 38px;
+}
+
+.line {
+  height: 13px;
+}
+
+.userLineLong {
+  width: 92%;
+}
+
+.userLineShort {
+  width: 58%;
+}
+
+.userLineCompact {
+  width: 82%;
+}
+
+.line92 {
+  width: 92%;
+}
+
+.line86 {
+  width: 86%;
+}
+
+.line84 {
+  width: 84%;
+}
+
+.line80 {
+  width: 80%;
+}
+
+.line76 {
+  width: 76%;
+}
+
+.line64 {
+  width: 64%;
+}
+
+.line58 {
+  width: 58%;
+}
+
+.line52 {
+  width: 52%;
+}
+
+.line46 {
+  width: 46%;
+}
+
+.detailCard {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.cardTitle {
+  width: 128px;
+  height: 12px;
+}
+
+.cardStatus {
+  width: 44px;
+  height: 11px;
+  margin-left: auto;
+}
+
+.detailLines {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.secondaryTurn {
+  opacity: 0.62;
+}
+
+.composerSkeleton {
+  pointer-events: none;
+  gap: 16px;
+  animation: skeletonFadeIn 220ms var(--motion-ease) both;
+}
+
+.composerLines {
+  min-height: calc(2.5lh + 4px);
+  padding: 6px 2px 0;
+}
+
+.composerPlaceholder {
+  width: min(210px, 55%);
+  height: 14px;
+}
+
+.composerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.composerLeft,
+.composerRight {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.employeePill {
+  width: 108px;
+  height: 36px;
+  border-radius: 999px;
+}
+
+.toolCircle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+
+.controlPill {
+  width: 96px;
+  height: 32px;
+  border-radius: 999px;
+}
+
+.controlPillShort {
+  width: 74px;
+  height: 32px;
+  border-radius: 999px;
+}
+
+.sendCircle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+.errorCard {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+  margin-top: 12px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--red) 28%, var(--border));
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.errorIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--red-soft);
+  color: var(--red-text);
+}
+
+.errorCopy {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.errorCopy p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+@keyframes sessionShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes skeletonFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 680px) {
+  .controlPillShort {
+    display: none;
+  }
+
+  .employeePill {
+    width: 92px;
+    height: 36px;
+  }
+
+  .controlPill {
+    width: 68px;
+  }
+}
+
+@media (max-width: 600px) {
+  .thread {
+    gap: 26px;
+  }
+
+  .userBubble {
+    width: 86%;
+    padding: 13px 15px;
+  }
+
+  .userBubbleCompact {
+    width: 72%;
+    padding: 13px 15px;
+  }
+
+  .assistantBody {
+    padding-left: 0;
+  }
+
+  .errorCard :global(.button) {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread,
+  .shimmer,
+  .composerSkeleton {
+    animation: none;
+  }
+
+  .shimmer {
+    background: var(--skeleton-base);
+  }
+}
+
+@media (forced-colors: active) {
+  .shimmer {
+    border: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .userBubble,
+  .userBubbleCompact,
+  .detailCard,
+  .errorCard {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}

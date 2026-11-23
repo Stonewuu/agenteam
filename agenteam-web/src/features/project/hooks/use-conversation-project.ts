@@ -40,7 +40,7 @@ export function useConversationProject({
     : conversationId && visible && current ? `${conversationPath(enterprise, conversationId)}/project` : null);
   const previous = saved?.conversation.id === conversationId && saved?.project.id === current?.projectId ? saved?.project : initialProject;
   const candidate = conversationId ? query.data ?? (!current || previous?.id === current.projectId ? previous : null)
-    : draft?.key === draftKey ? draft.project : null;
+    : draft?.key === draftKey ? draft.project : initialProject ?? null;
   const selected = candidate?.id === deletedId ? null : candidate ?? null;
   const disabled = !enabled || busy || saving || Boolean(conversationId && (!current || current.status !== "active" || current.activeRunId || query.loading));
 

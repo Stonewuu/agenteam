@@ -6,6 +6,7 @@ import ts from "typescript";
 import {chineseText, loadSource} from "./i18n-test-runtime.mjs";
 
 const submissions = loadSource("features/agent/lib/conversation-submissions");
+const {prepareComposerHandoff} = loadSource("features/agent/lib/composer-handoff");
 const {toAssistantMessage} = loadSource("features/agent/lib/conversation-ui-adapter");
 const {createConversationSubmission, mergeConversationSubmissions, observeConversationSubmissions} = submissions;
 const scope = "user:enterprise:conversation";
@@ -70,7 +71,7 @@ const hookSource = readFileSync(new URL("../src/features/agent/hooks/use-convers
 const compiled = ts.transpileModule(hookSource, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText;
 
 // 使用实际发送入口，替换网络和页面上下文，控制接口响应顺序。
-function workspace({queued = false, fresh = false} = {}) {
+function workspace({queued = false, fresh = false, handoff = null, search = "agent=agent"} = {}) {
   const slots = [];
   const effects = [];
   const requests = [];
@@ -95,7 +96,7 @@ function workspace({queued = false, fresh = false} = {}) {
       const index = cursor++;
       return slots[index] ??= {current: value};
     },
-    useMemo: operation => operation(), useCallback: operation => operation, useId: () => "scope",
+    useMemo: operation => operation(), useCallback: operation => operation, useEffectEvent: operation => operation, useId: () => "scope",
     useEffect: operation => effects.push(operation)
   };
   const files = {items: [{reference: attachment}], fileIds: [attachment.id], ready: true, clear() {
@@ -112,7 +113,7 @@ function workspace({queued = false, fresh = false} = {}) {
   }, latestRun: null}, reload() {}, updateMetadata() {}};
   const policy = {ready: true, saving: false, value: "default", resetDraft() {}};
   const modules = {
-    react, "next/navigation": {usePathname: () => path, useSearchParams: () => new URLSearchParams("agent=agent")},
+    react, "next/navigation": {usePathname: () => path, useSearchParams: () => new URLSearchParams(search)},
     "@/lib/i18n/locale-provider": {useT: () => chineseText},
     "@/features/auth/lib/workspace-path": {workspaceParts: value => value.split("/").filter(Boolean)},
     "@/lib/http/api-client": {ApiMutation: class {
@@ -136,9 +137,9 @@ function workspace({queued = false, fresh = false} = {}) {
     "@/features/file/hooks/use-file-uploads": {useFileUploads: () => files},
     "@/features/skill/hooks/use-conversation-skills": {useConversationSkills: () => skills},
     "./use-conversation-approval-policy": {useConversationApprovalPolicy: () => policy},
-    "./use-conversation-model": {useConversationModel: () => ({...policy, configurable: false})},
+    "./use-conversation-model": {useConversationModel: () => ({...policy, configurable: false, loaded: true})},
     "@/features/project/hooks/use-conversation-project": {useConversationProject: () => policy},
-    "../components/composer-handoff-context": {useComposerHandoff: () => null}
+    "../components/composer-handoff-context": {useComposerHandoff: () => handoff}
   };
   const exports = {};
   vm.runInNewContext(compiled, {exports, crypto, URLSearchParams, window: {
@@ -162,7 +163,7 @@ function workspace({queued = false, fresh = false} = {}) {
     }
     throw new Error("对话状态未能稳定");
   }
-  return {render, requests, files, skills, stream, resolve: value => complete(value), reject: error => fail(error), navigate: value => {
+  return {render, requests, files, skills, stream, path: () => path, resolve: value => complete(value), reject: error => fail(error), navigate: value => {
     path = value;
   }};
 }
@@ -223,4 +224,99 @@ test("新对话创建后在快照读取完成前保持消息，切换对话后�
   assert.equal(page.render().actionError, "");
   page.navigate("/conversations/conversation");
   assert.equal(page.render().draft, "补充内容");
+});
+
+test("工作台交接的已提交消息在对话加载期间保留，交接结束和服务器消息到达不会重复显示", () => {
+  const submission = {...sending(), accepted};
+  const handoff = {value: {conversationId: "conversation", userId: "user", enterpriseId: "enterprise", status: "accepted", submission, focusInput: true,
+    employee: {agentId: "agent", name: "工作助手", icon: "Notes", color: "orange"}}, finish() {
+      handoff.value = null;
+    }};
+  const page = workspace({handoff});
+  const savedState = page.stream.state;
+  page.stream.state = null;
+  const waiting = page.render();
+  assert.equal(waiting.messages.length, 2);
+  assert.equal(waiting.messages[0].id, "input");
+  assert.equal(waiting.messages[1].id, "output");
+  assert.equal(waiting.messages[1].localDelivery, "accepted");
+  assert.equal(waiting.composerHandoff, true);
+  assert.equal(waiting.focusComposerAfterSend, true);
+  assert.equal(waiting.canSubmit, false);
+  page.stream.error = "对话读取超时";
+  const delayed = page.render();
+  assert.notEqual(handoff.value, null);
+  assert.equal(delayed.agentName, "工作助手");
+  assert.equal(delayed.messages[0].id, "input");
+  page.stream.error = "";
+  page.stream.state = {...savedState, snapshot: {...savedState.snapshot, messages: waiting.messages.map(message => ({
+    ...message, blocks: [], localDelivery: undefined, status: "completed",
+    content: message.role === "assistant" ? "已处理" : message.content
+  }))}};
+  const received = page.render();
+  assert.equal(handoff.value, null);
+  assert.equal(received.messages.length, 2);
+  assert.equal(received.messages[1].content, "已处理");
+  assert.equal(received.messages[1].clientId, waiting.messages[1].clientId);
+  assert.equal(page.render().messages[1].localDelivery, undefined);
+  const otherScope = workspace({handoff: {value: {conversationId: "conversation",
+    employee: {agentId: "agent"}, submission: {...submission, scope: "another-user:enterprise:conversation"}}}});
+  assert.equal(otherScope.render().messages.length, 0);
+});
+
+test("对话页复用发送入口创建任务，失败原位重试并保留附件，成功后更新地址", async () => {
+  const initial = prepareComposerHandoff({userId: "user", enterpriseId: "enterprise", employee: {agentId: "agent", name: "工作助手"},
+    approvalPolicy: "auto_approve", focusInput: true, project: {id: "project"},
+    input: {text: "检查项目文件", attachmentIds: [attachment.id], skillVersionIds: ["skill"],
+      knowledgeReferences: [{documentId: "document", generation: 1}], links: []}, attachments: [attachment], labels: ["技能"]});
+  const submission = initial.submission;
+  const handoff = {value: initial, update(next, error = "") {
+      handoff.value = {...handoff.value, submission: next, error, conversationId: next.accepted?.conversationId ?? null,
+        status: next.failed ? "failed" : next.accepted ? "accepted" : "sending"};
+    }, finish() {
+      handoff.value = null;
+    }};
+  const page = workspace({fresh: true, handoff, search: `agent=agent&submission=${submission.id}`});
+  const pending = page.render();
+  assert.equal(pending.messages.length, 2);
+  assert.equal(pending.messages[0].content, submission.input.content);
+  assert.equal(pending.canSubmit, false);
+  assert.equal(pending.submitting, true);
+  page.render();
+  page.render();
+  assert.equal(page.requests.length, 1);
+  assert.equal(page.requests[0].route, "/conversations");
+  assert.equal(page.requests[0].options.body.input, initial.input);
+  assert.equal(page.requests[0].options.body.approvalPolicy, "auto_approve");
+  assert.equal(page.requests[0].options.body.projectId, "project");
+  page.reject(new Error("发送失败"));
+  await new Promise(resolve => setImmediate(resolve));
+  const failed = page.render();
+  assert.equal(failed.messages.length, 1);
+  assert.equal(failed.creationError, "发送失败");
+  assert.equal(failed.messages[0].localDelivery, "failed");
+  failed.retryCreation();
+  failed.retryCreation();
+  assert.equal(page.requests.length, 2);
+  assert.equal(page.requests[1].options.body.input, initial.input);
+  assert.equal(page.render().messages.length, 2);
+  page.resolve(accepted);
+  await new Promise(resolve => setImmediate(resolve));
+  const confirmed = page.render();
+  assert.equal(confirmed.conversationId, "conversation");
+  assert.equal(page.path(), "/conversations/conversation");
+  assert.equal(page.render().messages.length, 2);
+  assert.equal(confirmed.messages[0].clientId, pending.messages[0].clientId);
+  assert.equal(confirmed.messages[0].id, "input");
+  assert.equal(page.requests.length, 2);
+});
+
+test("创建接口早于对话页打开时也直接显示已提交消息，并替换为服务器对话地址", () => {
+  const submission = {...sending(), accepted};
+  const handoff = {value: {userId: "user", enterpriseId: "enterprise", conversationId: "conversation", status: "accepted",
+    submission, employee: {agentId: "agent", name: "工作助手"}, focusInput: false}};
+  const page = workspace({fresh: true, handoff, search: `agent=agent&submission=${submission.id}`});
+  assert.equal(page.render().messages.length, 2);
+  assert.equal(page.path(), "/conversations/conversation");
+  assert.equal(page.render().messages[0].id, "input");
 });

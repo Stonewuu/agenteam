@@ -6,11 +6,27 @@ import {notificationsChanged} from "@/features/notification/components/notificat
 import {runPath} from "../api/conversation-api";
 import type {Run} from "../types/execution";
 
+const acknowledgedRuns = new Set<string>();
+
+function markAcknowledged(key: string) {
+  if (acknowledgedRuns.size >= 200) {
+    const oldest = acknowledgedRuns.values().next().value;
+    if (oldest) {
+      acknowledgedRuns.delete(oldest);
+    }
+  }
+  acknowledgedRuns.add(key);
+}
+
 /** 页面已显示成功结果且处于前台时，取消这次执行的完成提醒。 */
 export function useConversationResultViewed(enterprise: string, conversation: string | null, run: Run | null | undefined, ready: boolean) {
   const runId = ready && run?.status === "completed" && run.mode !== "preview" && run.conversationId === conversation ? run.id : null;
   useEffect(() => {
     if (!runId) {
+      return;
+    }
+    const cacheKey = `${enterprise}:${runId}`;
+    if (acknowledgedRuns.has(cacheKey)) {
       return;
     }
     const controller = new AbortController();
@@ -29,6 +45,7 @@ export function useConversationResultViewed(enterprise: string, conversation: st
       try {
         await apiRequest<void>(path, {method: "POST", signal: controller.signal, timeoutMs: 5000});
         acknowledged = true;
+        markAcknowledged(cacheKey);
         if (!controller.signal.aborted) {
           notificationsChanged();
         }
@@ -39,6 +56,7 @@ export function useConversationResultViewed(enterprise: string, conversation: st
         reportRequestFailure(error, "POST", path);
         if (error instanceof ApiError && [401, 403, 404].includes(error.status)) {
           acknowledged = true;
+          markAcknowledged(cacheKey);
           return;
         }
         failures += 1;

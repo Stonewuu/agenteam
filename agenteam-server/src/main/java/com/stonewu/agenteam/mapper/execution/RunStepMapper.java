@@ -4,13 +4,18 @@ package com.stonewu.agenteam.mapper.execution;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.entity.RunStepQueryRow;
+import com.stonewu.agenteam.model.execution.entity.RunStepRow;
 import com.stonewu.agenteam.model.execution.response.RunStepView;
 import com.stonewu.agenteam.model.execution.response.WorkflowStepDetails;
 import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.stonewu.agenteam.mapper.execution.ExecutionJson.instant;
 import static com.stonewu.agenteam.mapper.execution.ExecutionJson.timestamp;
@@ -62,11 +67,47 @@ public class RunStepMapper {
         return statements.pageRunStep(enterprise, run, afterOrder, afterId, limit).stream().map(this::map).toList();
     }
 
+    public record RunStepBatch(List<RunStepView> steps, boolean hasMore) {
+    }
+
+    /** 一次查询返回多个执行的步骤概要；触及总量上限时标记未读全的轮次，交由分页接口补齐。 */
+    public Map<String, RunStepBatch> listByRuns(String enterprise, Collection<String> runIds, int totalLimit) {
+        if (runIds == null || runIds.isEmpty() || totalLimit <= 0) {
+            return Map.of();
+        }
+        var rows = statements.listByRuns(enterprise, runIds, totalLimit + 1);
+        boolean truncated = rows.size() > totalLimit;
+        String truncatedFromRun = truncated ? rows.getLast().getRunId() : null;
+        if (truncated) {
+            rows = rows.subList(0, totalLimit);
+        }
+        Map<String, List<RunStepView>> grouped = new LinkedHashMap<>();
+        for (var row : rows) {
+            grouped.computeIfAbsent(row.getRunId(), ignored -> new ArrayList<>()).add(mapRow(row));
+        }
+        Map<String, RunStepBatch> result = new LinkedHashMap<>();
+        for (String id : runIds) {
+            boolean incomplete = truncated && (!grouped.containsKey(id) || id.equals(truncatedFromRun));
+            result.put(id, new RunStepBatch(incomplete ? List.of() : grouped.getOrDefault(id, List.of()), incomplete));
+        }
+        return result;
+    }
+
     private RunStepView map(RunStepQueryRow row) {
         var start = instant(row.getStartedAt());
         var end = instant(row.getFinishedAt());
         return new RunStepView(row.getId(), row.getParentStepId(), row.getAttemptId(), row.getKind(),
             row.getTitle(), row.getDisplayOrder(), row.getStatus(), row.getPublicSummary(),
+            start == null ? null : start.toString(), end == null ? null : end.toString(),
+            json.read(row.getWorkflowJson(), WorkflowStepDetails.class));
+    }
+
+    private RunStepView mapRow(RunStepRow row) {
+        var start = row.getStartedAt();
+        var end = row.getFinishedAt();
+        return new RunStepView(row.getId(), row.getParentStepId(), row.getAttemptId(), row.getKind(),
+            row.getTitle(), row.getDisplayOrder() == null ? 0 : Math.toIntExact(row.getDisplayOrder()),
+            row.getStatus(), row.getPublicSummary(),
             start == null ? null : start.toString(), end == null ? null : end.toString(),
             json.read(row.getWorkflowJson(), WorkflowStepDetails.class));
     }

@@ -22,6 +22,12 @@ type SwitchState = {
 };
 const IdentitySwitchContext = createContext<SwitchState | null>(null);
 
+const PUBLIC_AUTH_ROUTES = ["/login", "/register", "/setup", "/invite", "/reset-password"];
+
+function isPublicAuthRoute(path: string) {
+  return PUBLIC_AUTH_ROUTES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 /** 位于所有页面之外，目标用户无企业或没有页面权限时仍可返回管理员。 */
 export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
   const pathname = usePathname();
@@ -30,6 +36,10 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
   const [error, setError] = useState("");
   const [headers, setHeaders] = useState(0);
   const refreshing = useRef(false);
+  const lastCheckAt = useRef(0);
+  const previousPath = useRef(pathname);
+  const checkController = useRef<AbortController | null>(null);
+  const triggerCheckRef = useRef<((force: boolean) => void) | null>(null);
 
   const registerHeader = useCallback(() => {
     setHeaders(value => value + 1);
@@ -37,17 +47,24 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
     const reload = () => {
       if (!refreshing.current) {
         refreshing.current = true;
         window.location.reload();
       }
     };
-    async function refresh() {
+    const checkImpersonation = async (force: boolean) => {
       if (document.visibilityState === "hidden") {
         return;
       }
+      const now = Date.now();
+      if (!force && now - lastCheckAt.current < 3000) {
+        return;
+      }
+      lastCheckAt.current = now;
+      checkController.current?.abort();
+      const controller = new AbortController();
+      checkController.current = controller;
       try {
         const next = await apiRequest<ImpersonationStatus>("/api/v1/auth/impersonation", {signal: controller.signal});
         if (controller.signal.aborted) {
@@ -69,7 +86,13 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
           console.error("Failed to check the current signed-in identity", failure);
         }
       }
-    }
+    };
+    triggerCheckRef.current = (force) => {
+      void checkImpersonation(force);
+    };
+    const softRefresh = () => {
+      void checkImpersonation(false);
+    };
     const storage = (event: StorageEvent) => {
       if (event.key === "agenteam:identity-change") {
         reload();
@@ -85,17 +108,26 @@ export function IdentitySwitchBoundary({children}: {children: ReactNode}) {
     }
     window.addEventListener(identityChangedEvent, reload);
     window.addEventListener("storage", storage);
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
-    void refresh();
+    window.addEventListener("focus", softRefresh);
+    document.addEventListener("visibilitychange", softRefresh);
+    void checkImpersonation(true);
     return () => {
-      controller.abort();
+      triggerCheckRef.current = null;
+      checkController.current?.abort();
       channel?.close();
       window.removeEventListener(identityChangedEvent, reload);
       window.removeEventListener("storage", storage);
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", softRefresh);
+      document.removeEventListener("visibilitychange", softRefresh);
     };
+  }, []);
+
+  useEffect(() => {
+    const previous = previousPath.current;
+    previousPath.current = pathname;
+    if (isPublicAuthRoute(previous) && !isPublicAuthRoute(pathname)) {
+      triggerCheckRef.current?.(true);
+    }
   }, [pathname]);
 
   async function restore() {

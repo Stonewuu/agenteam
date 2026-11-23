@@ -170,6 +170,23 @@ export function validateSnapshot(snapshot: ConversationSnapshot) {
       || !Number.isSafeInteger(item.position) || typeof item.text !== "string"))) {
     throw new SnapshotRequired();
   }
+  if (snapshot.stepHistory !== undefined) {
+    const entries = record(snapshot.stepHistory);
+    for (const entry of Object.values(entries)) {
+      const item = record(entry);
+      if (!Array.isArray(item.steps) || !Array.isArray(item.attempts)
+        || (item.hasMore !== undefined && typeof item.hasMore !== "boolean")) {
+        throw new SnapshotRequired();
+      }
+      if (item.hasMore) {
+        for (const step of item.steps) {
+          validateRunStep(step as RunStep);
+        }
+      } else {
+        validateRunStepTree(item.steps as RunStep[]);
+      }
+    }
+  }
   sequence(value.lastSequence);
   if (typeof conversation.id !== "string" || !conversation.id || typeof conversation.title !== "string" || !Array.isArray(value.messages) || typeof value.attachmentsEnabled !== "boolean") {
     throw new SnapshotRequired();

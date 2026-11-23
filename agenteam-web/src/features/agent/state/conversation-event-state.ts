@@ -43,6 +43,15 @@ export function streamSequence(snapshot: ConversationSnapshot): string {
   return snapshot.protocolVersion === 2 ? snapshot.streamCursor?.sequence ?? "0" : snapshot.lastSequence;
 }
 
+/** 空跑初始补齐且会话已结束时不再重复拉取完整快照，收到新事件或仍有执行时照常刷新。 */
+export function shouldRefreshAfterStreamEnd({hadActiveRun, hasActiveRun, receivedEvent}: {
+  hadActiveRun: boolean;
+  hasActiveRun: boolean;
+  receivedEvent: boolean;
+}): boolean {
+  return hadActiveRun || hasActiveRun || receivedEvent;
+}
+
 export function applyConversationFrame(state: ConversationState, frame: ConversationFrame, enterpriseId: string): ConversationState {
   if (frame.kind === "reset") {
     throw new SnapshotRequired(frame.reason);

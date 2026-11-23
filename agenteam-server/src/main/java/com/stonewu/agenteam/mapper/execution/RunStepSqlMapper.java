@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -28,9 +29,21 @@ public interface RunStepSqlMapper extends MPJBaseMapper<RunStepRow> {
                     @Param("value5") Timestamp value5, @Param("now") Timestamp now, @Param("value6") boolean value6);
 
     default List<RunStepQueryRow> listRunStep(String enterprise, String run) {
-        var criteria = new LambdaQueryWrapper<RunStepRow>().orderByAsc(RunStepRow::getDisplayOrder)
+        var criteria = selectSummaryColumns(new LambdaQueryWrapper<RunStepRow>())
+            .orderByAsc(RunStepRow::getDisplayOrder)
             .orderByAsc(RunStepRow::getId).eq(RunStepRow::getEnterpriseId, enterprise).eq(RunStepRow::getRunId, run);
         return selectList(criteria).stream().map(RunStepSqlMapper::stepRow).toList();
+    }
+
+    default List<RunStepRow> listByRuns(String enterprise, Collection<String> runIds, int limit) {
+        if (runIds == null || runIds.isEmpty() || limit <= 0) {
+            return List.of();
+        }
+        var criteria = selectSummaryColumns(new LambdaQueryWrapper<RunStepRow>())
+            .eq(RunStepRow::getEnterpriseId, enterprise)
+            .in(RunStepRow::getRunId, runIds)
+            .orderByAsc(RunStepRow::getRunId, RunStepRow::getDisplayOrder, RunStepRow::getId);
+        return selectPage(new Page<RunStepRow>(1, limit, false), criteria).getRecords();
     }
 
     default List<String> inputRunStep(String enterprise, String run, String step) {
@@ -41,13 +54,21 @@ public interface RunStepSqlMapper extends MPJBaseMapper<RunStepRow> {
 
     default List<RunStepQueryRow> pageRunStep(String enterprise, String run, int afterOrder, String afterId,
                                               int limit) {
-        var query = new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getEnterpriseId, enterprise)
+        var query = selectSummaryColumns(new LambdaQueryWrapper<RunStepRow>())
+            .eq(RunStepRow::getEnterpriseId, enterprise)
             .eq(RunStepRow::getRunId, run)
             .and(part -> part.gt(RunStepRow::getDisplayOrder, afterOrder)
                 .or(equal -> equal.eq(RunStepRow::getDisplayOrder, afterOrder).gt(RunStepRow::getId, afterId)))
             .orderByAsc(RunStepRow::getDisplayOrder, RunStepRow::getId);
         return selectPage(new Page<RunStepRow>(1, limit, false), query).getRecords().stream()
             .map(RunStepSqlMapper::stepRow).toList();
+    }
+
+    private static LambdaQueryWrapper<RunStepRow> selectSummaryColumns(LambdaQueryWrapper<RunStepRow> query) {
+        return query.select(RunStepRow::getId, RunStepRow::getRunId, RunStepRow::getAttemptId,
+            RunStepRow::getParentStepId, RunStepRow::getKind, RunStepRow::getTitle, RunStepRow::getDisplayOrder,
+            RunStepRow::getStatus, RunStepRow::getPublicSummary, RunStepRow::getWorkflowJson,
+            RunStepRow::getStartedAt, RunStepRow::getFinishedAt);
     }
 
     default int removeRunStep(String enterpriseId, String id) {

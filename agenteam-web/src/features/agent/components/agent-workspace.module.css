@@ -27,29 +27,6 @@
   --conversation-gutter: 16px;
 }
 
-.sessionLoading {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-  width: 100%;
-  padding: 24px 0;
-  color: var(--muted-foreground);
-  font-size: 13px;
-  text-align: left;
-}
-
-@keyframes loadingSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes loadingShimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
 .main {
   display: flex;
   flex: 1;

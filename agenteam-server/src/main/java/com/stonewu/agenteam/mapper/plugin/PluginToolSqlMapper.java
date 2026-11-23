@@ -7,6 +7,7 @@ import com.stonewu.agenteam.model.plugin.entity.PluginToolRow;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -46,8 +47,22 @@ public interface PluginToolSqlMapper extends MPJBaseMapper<PluginToolRow> {
     default List<PluginToolQueryRow> listPluginTool(String enterprise, String version) {
         var criteria = new LambdaQueryWrapper<PluginToolRow>().orderByAsc(PluginToolRow::getName)
             .eq(PluginToolRow::getEnterpriseId, enterprise).eq(PluginToolRow::getPluginVersionId, version);
-        return selectList(criteria).stream().map(storedRow -> {
-            var mappedRow = new PluginToolQueryRow();
+        return selectList(criteria).stream().map(PluginToolSqlMapper::toQueryRow).toList();
+    }
+
+    default List<PluginToolQueryRow> listPluginToolsByVersions(String enterprise, Collection<String> versions) {
+        if (versions == null || versions.isEmpty()) {
+            return List.of();
+        }
+        var criteria = new LambdaQueryWrapper<PluginToolRow>()
+            .eq(PluginToolRow::getEnterpriseId, enterprise)
+            .in(PluginToolRow::getPluginVersionId, versions)
+            .orderByAsc(PluginToolRow::getPluginVersionId, PluginToolRow::getName);
+        return selectList(criteria).stream().map(PluginToolSqlMapper::toQueryRow).toList();
+    }
+
+    private static PluginToolQueryRow toQueryRow(PluginToolRow storedRow) {
+        var mappedRow = new PluginToolQueryRow();
             mappedRow.setEntryId(storedRow.getEntryId());
             mappedRow.setSourceJson(storedRow.getSourceJson());
             if (storedRow.getId() != null) {
@@ -102,6 +117,5 @@ public interface PluginToolSqlMapper extends MPJBaseMapper<PluginToolRow> {
                 mappedRow.setTimeoutSeconds(storedRow.getTimeoutSeconds());
             }
             return mappedRow;
-        }).toList();
     }
 }

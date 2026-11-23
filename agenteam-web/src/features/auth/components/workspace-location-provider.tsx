@@ -1,6 +1,6 @@
 "use client";
 
-import {createContext, type ReactNode, useContext, useEffect, useState} from "react";
+import {createContext, type ReactNode, useContext, useEffect, useRef, useState} from "react";
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
 import {loadEnterpriseContext, loadIdentity, signOut} from "../api/identity-api";
 import type {EnterpriseContext, IdentityUser} from "../types/identity";
@@ -31,6 +31,9 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
   const router = useRouter();
   const key = pathname + (query ? `?${query}` : "");
   const [location, setLocation] = useState<Location | null>(null);
+  const locationRef = useRef<Location | null>(null);
+  const resolvedRefreshRef = useRef(-1);
+  const lastFocusRefreshRef = useRef(0);
   const [failure, setFailure] = useState<{key: string; message: string; enterprise: string; user: IdentityUser | null} | null>(null);
   const [refresh, setRefresh] = useState(0);
   const explicit = pathname.startsWith("/enterprises/") || pathname === "/open";
@@ -42,19 +45,25 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
 
   useEffect(() => {
     const reload = () => setRefresh(value => value + 1);
+    const softReload = () => {
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < 3000) {
+        return;
+      }
+      lastFocusRefreshRef.current = now;
+      reload();
+    };
     const visible = () => {
       if (document.visibilityState === "visible") {
-        reload();
+        softReload();
       }
     };
-    window.addEventListener("popstate", reload);
-    window.addEventListener("focus", reload);
+    window.addEventListener("focus", softReload);
     window.addEventListener("agenteam:identity-changed", reload);
     window.addEventListener("agenteam:access-denied", reload);
     document.addEventListener("visibilitychange", visible);
     return () => {
-      window.removeEventListener("popstate", reload);
-      window.removeEventListener("focus", reload);
+      window.removeEventListener("focus", softReload);
       window.removeEventListener("agenteam:identity-changed", reload);
       window.removeEventListener("agenteam:access-denied", reload);
       document.removeEventListener("visibilitychange", visible);
@@ -62,6 +71,21 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
   }, []);
 
   useEffect(() => {
+    const forceResolve = refresh !== resolvedRefreshRef.current;
+    const current = locationRef.current;
+    const globalRoute = pathname.startsWith("/management/") || pathname === "/settings";
+    const currentRemembered = current && typeof window !== "undefined"
+      ? storedEnterprise(current.user.id, current.user.identityRevision ?? "", key) : undefined;
+    // 同标签页同企业内的常规跳转直接复用已确认的身份与企业上下文，仅在强制刷新、切企业或显式入口时重新拉取。
+    if (!forceResolve && !explicit && current !== null
+      && (current.context !== null || globalRoute)
+      && (!currentRemembered || currentRemembered === current.enterpriseId)) {
+      if (current.enterpriseId) {
+        rememberWorkspace(current.user.id, current.user.identityRevision ?? "", current.enterpriseId, key);
+      }
+      return;
+    }
+    resolvedRefreshRef.current = refresh;
     const controller = new AbortController();
     let user: IdentityUser | null = null;
     let enterprise = "";
@@ -94,7 +118,7 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
         }
         const resource = resourceDestination(destination.split(/[?#]/, 1)[0]);
         // 同一标签页内已绑定企业的导航沿用该范围；外部、刷新和明确入口重新定位详情。
-        if (resource && (!location || explicit)) {
+        if (resource && (!current || explicit)) {
           const found = await apiRequest<{enterpriseId: string}>(
             `/api/v1/navigation/resource?${new URLSearchParams(resource)}`, {signal: controller.signal});
           if (enterprise && found.enterpriseId !== enterprise) {
@@ -111,7 +135,10 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
         const global = pathname.startsWith("/management/") || pathname === "/settings";
         if (!enterprise) {
           if (global) {
-            setLocation({user, enterpriseId: "", context: null});
+            const nextLocation = {user, enterpriseId: "", context: null};
+            locationRef.current = nextLocation;
+            lastFocusRefreshRef.current = Date.now();
+            setLocation(nextLocation);
           } else {
             router.replace("/no-enterprise");
           }
@@ -122,7 +149,10 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
           context = await loadEnterpriseContext(enterprise, controller.signal);
         } catch (error) {
           if (global && error instanceof ApiError && [403, 404].includes(error.status)) {
-            setLocation({user, enterpriseId: "", context: null});
+            const nextLocation = {user, enterpriseId: "", context: null};
+            locationRef.current = nextLocation;
+            lastFocusRefreshRef.current = Date.now();
+            setLocation(nextLocation);
             setFailure(null);
             return;
           }
@@ -136,7 +166,10 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
                 : context.permissions.includes("capabilities.view") ? "/capabilities" : "/settings";
         }
         rememberWorkspace(user.id, user.identityRevision ?? "", enterprise, destination);
-        setLocation({user, enterpriseId: enterprise, context});
+        const nextLocation = {user, enterpriseId: enterprise, context};
+        locationRef.current = nextLocation;
+        lastFocusRefreshRef.current = Date.now();
+        setLocation(nextLocation);
         setFailure(null);
         if (explicit) {
           router.replace(destination);
@@ -155,9 +188,7 @@ export function WorkspaceLocationProvider({children}: {children: ReactNode}) {
     }
     void resolve();
     return () => controller.abort();
-    // location 只用于判断本标签页是否已经绑定企业，更新它不重复触发读取。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, query, refresh, router]);
+  }, [pathname, query, refresh, router, explicit, key]);
 
   return <LoadingTransition state={failed ? "error" : matches ? "ready" : "loading"}>
     {failed ? <EnterpriseErrorPage enterpriseId={failure.enterprise} user={failure.user} message={failure.message}

@@ -34,12 +34,12 @@ public class RunQueryService {
     }
 
     public List<RunAttemptView> attempts(AuthContext actor, String run) {
-        conversations.run(actor, run);
+        conversations.readableRun(actor, run);
         return attempts.list(actor.enterpriseId(), run);
     }
 
     public PageResponse<RunStepView> steps(AuthContext actor, String run, String cursor, Integer limit) {
-        conversations.run(actor, run);
+        conversations.readableRun(actor, run);
         int size = pagination.limit(limit);
         var binding = new ListPagination.Binding(actor.userId(), actor.enterpriseId(), "run-steps", run,
             "display_order");

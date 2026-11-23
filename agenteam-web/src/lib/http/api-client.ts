@@ -74,6 +74,85 @@ type ApiOptions = {
 let csrf: string | undefined;
 let csrfLoading: Promise<string> | undefined;
 
+type InFlightGet = {
+  controller: AbortController;
+  subscribers: number;
+  promise: Promise<unknown>;
+};
+
+const inFlightGets = new Map<string, InFlightGet>();
+
+function abortError() {
+  return new DOMException("The operation was aborted.", "AbortError");
+}
+
+/** 合并同一时刻完全相同的只读 GET 请求；仅在所有订阅方都取消时才中止底层连接，不做过期缓存。 */
+export function runDedupedGet<T>(key: string, signal: AbortSignal | undefined, start: (sharedSignal: AbortSignal) => Promise<T>): Promise<T> {
+  if (signal?.aborted) {
+    return Promise.reject(abortError());
+  }
+  let entry = inFlightGets.get(key);
+  if (!entry) {
+    const controller = new AbortController();
+    const created: InFlightGet = {
+      controller,
+      subscribers: 0,
+      promise: Promise.resolve()
+    };
+    created.promise = start(controller.signal).finally(() => {
+      if (inFlightGets.get(key) === created) {
+        inFlightGets.delete(key);
+      }
+    });
+    // 防止所有调用方各自取消后底层共享 Promise 产生未捕获拒绝。
+    created.promise.catch(() => undefined);
+    inFlightGets.set(key, created);
+    entry = created;
+  }
+  const active = entry;
+  active.subscribers += 1;
+  if (!signal) {
+    return active.promise.finally(() => {
+      active.subscribers = Math.max(0, active.subscribers - 1);
+    }) as Promise<T>;
+  }
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const onAbort = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      active.subscribers = Math.max(0, active.subscribers - 1);
+      if (active.subscribers === 0) {
+        if (inFlightGets.get(key) === active) {
+          inFlightGets.delete(key);
+        }
+        active.controller.abort();
+      }
+      reject(abortError());
+    };
+    signal.addEventListener("abort", onAbort, {once: true});
+    active.promise.then((value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      signal.removeEventListener("abort", onAbort);
+      active.subscribers = Math.max(0, active.subscribers - 1);
+      resolve(value as T);
+    }, (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      signal.removeEventListener("abort", onAbort);
+      active.subscribers = Math.max(0, active.subscribers - 1);
+      reject(error);
+    });
+  });
+}
+
 export function clearCsrf() {
   csrf = undefined;
   csrfLoading = undefined;
@@ -123,6 +202,36 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   }
   if (options.requestKey) {
     headers.set("Idempotency-Key", options.requestKey);
+  }
+  if (method === "GET" && options.body === undefined && !options.rawBody && !options.requestKey) {
+    const dedupeKey = `${path}\0${headers.get("X-Identity-Revision") ?? ""}\0${headers.get("Accept-Language") ?? ""}\0${options.timeoutMs ?? 30000}`;
+    return runDedupedGet<T>(dedupeKey, options.signal, async (sharedSignal) => {
+      try {
+        return await withTimeout(sharedSignal, async (signal) => {
+          const response = await fetch(path, {
+            method, headers, cache: "no-store", credentials: "same-origin", signal,
+          });
+          return parseApiResponse<T>(response);
+        }, options.timeoutMs);
+      } catch (error) {
+        if (sharedSignal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+          throw error;
+        }
+        const failure = error instanceof ApiError ? error : new ApiError(0, "NETWORK_ERROR", "暂时无法连接服务，请检查网络。如果刚提交过操作，请先确认是否已完成。", {}, {}, undefined, error);
+        reportRequestFailure(failure, method, path);
+        if (error instanceof ApiError) {
+          if (error.code === "IDENTITY_CHANGED") {
+            identityRequestRejected();
+          }
+          notifyAccessFailure(path, error);
+          if (error.status === 401) {
+            clearCsrf();
+          }
+          throw error;
+        }
+        throw failure;
+      }
+    });
   }
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

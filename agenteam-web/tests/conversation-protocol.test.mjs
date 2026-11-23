@@ -672,3 +672,27 @@ test("独立步骤进入真实子智能体，已有正文和工具不增加重�
   assert.equal(merged[0].blocks[0].blocks[1].summary, "检查来源后继续");
   assert.equal(blocks[0].blocks[0].blocks.length, 1);
 });
+
+test("已完成历史对话空跑初始补齐后不触发重复整页刷新", async () => {
+  const { shouldRefreshAfterStreamEnd } = await import("../.test-build/conversation/agent/state/conversation-event-state.js");
+  assert.equal(shouldRefreshAfterStreamEnd({ hadActiveRun: false, hasActiveRun: false, receivedEvent: false }), false);
+  assert.equal(shouldRefreshAfterStreamEnd({ hadActiveRun: true, hasActiveRun: false, receivedEvent: false }), true);
+  assert.equal(shouldRefreshAfterStreamEnd({ hadActiveRun: false, hasActiveRun: true, receivedEvent: false }), true);
+  assert.equal(shouldRefreshAfterStreamEnd({ hadActiveRun: false, hasActiveRun: false, receivedEvent: true }), true);
+});
+
+test("快照可选随附步骤历史通过协议校验，结构损坏时要求重载", () => {
+  const withHistory = {
+    ...snapshot(),
+    stepHistory: {
+      run: {
+        steps: [step("root", null, "agent", 0), step("tool-step", "root", "tool", 1)],
+        attempts: [{ id: "attempt-1", attemptNo: 1, outputMessageId: "output", status: "completed", startedAt: time, finishedAt: time, errorSummary: null }],
+        hasMore: false,
+      },
+    },
+  };
+  assert.doesNotThrow(() => fromSnapshot(withHistory));
+  const broken = { ...withHistory, stepHistory: { run: { steps: "invalid", attempts: [] } } };
+  assert.throws(() => fromSnapshot(broken), SnapshotRequired);
+});

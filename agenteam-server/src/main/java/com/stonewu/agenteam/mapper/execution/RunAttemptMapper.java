@@ -6,6 +6,9 @@ import com.stonewu.agenteam.model.execution.response.RunAttemptView;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,5 +52,20 @@ public class RunAttemptMapper {
                 start == null ? null : start.toString(), end == null ? null : end.toString(), row.getErrorSummary());
 
         }).toList();
+    }
+
+    public Map<String, List<RunAttemptView>> listByRuns(String enterprise, Collection<String> runIds) {
+        if (runIds == null || runIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, List<RunAttemptView>> grouped = new LinkedHashMap<>();
+        for (var row : statements.listByRuns(enterprise, runIds)) {
+            var start = row.getStartedAt();
+            var end = row.getFinishedAt();
+            grouped.computeIfAbsent(row.getRunId(), ignored -> new ArrayList<>()).add(
+                new RunAttemptView(row.getId(), row.getAttemptNo(), row.getOutputMessageId(), row.getStatus(),
+                    start == null ? null : start.toString(), end == null ? null : end.toString(), row.getErrorSummary()));
+        }
+        return grouped;
     }
 }

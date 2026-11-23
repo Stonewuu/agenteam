@@ -13,23 +13,42 @@ export function useEnvironment(enterpriseId: string) {
   const [loaded, setLoaded] = useState(false);
   const lastActivity = useRef(0);
   const version = useRef(0);
+  const inFlight = useRef<{ task: Promise<void>; signal?: AbortSignal } | null>(null);
 
   const reload = useCallback(async (signal?: AbortSignal) => {
-    const current = version.current;
-    try {
-      const state = await apiRequest<Environment>(base, {signal});
-      if (!signal?.aborted && current === version.current) {
-        setEnvironment(state);
-        setConnected(value => value && state.status === "running");
-        setError("");
-        setLoaded(true);
-      }
-    } catch (failure) {
-      if (!signal?.aborted) {
-        setError(errorMessage(failure));
-        setLoaded(true);
-      }
+    if (inFlight.current && !inFlight.current.signal?.aborted) {
+      return inFlight.current.task;
     }
+    const current = version.current;
+    const entry: { task: Promise<void>; signal?: AbortSignal } = {task: Promise.resolve(), signal};
+    const clear = () => {
+      if (inFlight.current === entry) {
+        inFlight.current = null;
+      }
+    };
+    signal?.addEventListener("abort", clear, {once: true});
+    const runTask = async () => {
+      try {
+        const state = await apiRequest<Environment>(base, {signal});
+        if (!signal?.aborted && current === version.current) {
+          setEnvironment(state);
+          setConnected(value => value && state.status === "running");
+          setError("");
+          setLoaded(true);
+        }
+      } catch (failure) {
+        if (!signal?.aborted) {
+          setError(errorMessage(failure));
+          setLoaded(true);
+        }
+      }
+    };
+    entry.task = runTask().finally(() => {
+      signal?.removeEventListener("abort", clear);
+      clear();
+    });
+    inFlight.current = entry;
+    return entry.task;
   }, [base]);
 
   useEffect(() => {
@@ -38,10 +57,11 @@ export function useEnvironment(enterpriseId: string) {
     const poll = async () => {
       await reload(controller.signal);
       if (!controller.signal.aborted) {
-        timer = setTimeout(poll, 15000);
+        timer = setTimeout(() => void poll(), 15000);
       }
     };
-    void poll();
+    // 推迟到提交后启动首次读取，避免严格模式重复挂载立刻中止请求。
+    timer = setTimeout(() => void poll(), 0);
     return () => {
       controller.abort();
       clearTimeout(timer);

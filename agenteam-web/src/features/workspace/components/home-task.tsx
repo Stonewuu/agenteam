@@ -13,7 +13,6 @@ import {Button} from "@/components/ui/button";
 import Link from "next/link";
 import {useRef, useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
-import {useFormAction} from "@/features/auth/hooks/use-form-action";
 import {useFileUploads} from "@/features/file/hooks/use-file-uploads";
 import {FileUploadSelection} from "@/features/file/components/file-upload-picker";
 import {useConversationSkills} from "@/features/skill/hooks/use-conversation-skills";
@@ -22,9 +21,8 @@ import {DocumentPickerDialog} from "@/features/knowledge/components/document-pic
 import {EmployeePicker} from "@/features/agent/components/employee-picker";
 import {useComposerSelection} from "@/features/agent/hooks/use-composer-selection";
 import {useNewConversationApprovalPolicy} from "@/features/agent/hooks/use-new-conversation-approval-policy";
-import {useConversationNavigation} from "@/features/agent/components/conversation-navigation-context";
 import {composerCommand, type ComposerSelectionContext} from "@/features/agent/lib/composer-selection";
-import {conversationPath, textInput} from "@/features/agent/api/conversation-api";
+import {textInput} from "@/features/agent/api/conversation-api";
 import {useConversationModel} from "@/features/agent/hooks/use-conversation-model";
 import {useConversationProject} from "@/features/project/hooks/use-conversation-project";
 import {ComposerProjectFrame} from "@/features/agent/components/composer-project-frame";
@@ -33,7 +31,6 @@ import {
   ConversationModelFeedback,
   ConversationModelPlaceholder
 } from "@/features/agent/components/conversation-model-controls";
-import type {RunAccepted} from "@/features/agent/types/execution";
 import type {Employee} from "@/features/employee/types/employee";
 import type {DocumentOption} from "@/features/knowledge/types/knowledge";
 import {Dialog, DialogAction, DialogActions, DialogCancel} from "@/components/ui/dialog";
@@ -52,7 +49,6 @@ import {ConversationApprovalPolicy} from "@/features/agent/components/conversati
 import {composerSendTransition, ComposerTransition} from "@/features/agent/components/composer-transition";
 import {useComposerHandoff} from "@/features/agent/components/composer-handoff-context";
 import {useBlockNavigation} from "./navigation-guard";
-import {MutationFeedback} from "./mutation-feedback";
 import styles from "./home-page.module.css";
 import ui from "@/components/ui/surface.module.css";
 
@@ -63,22 +59,20 @@ const suggestions = [
   {icon: IconNotes, title: "整理会议纪要", text: "帮我把会议记录整理成纪要和行动清单"},
 ];
 
-export function HomeTask({enterprise, userId, employees, permissions, onChanged}: {
+export function HomeTask({enterprise, userId, employees, permissions}: {
   enterprise: string;
   userId: string;
   employees: Employee[];
-  permissions: string[];
-  onChanged: () => void
+  permissions: string[]
 }) {
   const uiText = useT();
   const router = useRouter();
-  const navigation = useConversationNavigation();
-  const action = useFormAction();
   const handoff = useComposerHandoff();
   const [approvalPolicy, setApprovalPolicy] = useNewConversationApprovalPolicy(userId, enterprise);
   const [navigating, startNavigation] = useTransition();
-  const busy = action.busy || navigating;
+  const busy = handoff?.value?.status === "sending" || navigating;
   const input = useRef<HTMLTextAreaElement>(null);
+  const leaving = useRef(false);
   const [draft, setDraft] = useState("");
   const [selected, setSelected] = useState<Employee | null>(null);
   const [picker, setPicker] = useState(false);
@@ -109,7 +103,7 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
   const canMarket = permissions.includes("agent.market_view");
   const files = useFileUploads(enterprise, "attachment", `${userId}:home:${employee?.agentId ?? ""}`);
   const skills = useConversationSkills(userId, enterprise, employee?.agentId ?? null, null, null, canSkills);
-  const ready = Boolean(employee?.canRun) && model.ready && !project.saving && !busy && !skills.loading && !skills.error && (!files.items.length || files.ready && employee?.attachmentsEnabled);
+  const ready = Boolean(employee?.canRun && handoff) && model.ready && !project.saving && !busy && !skills.loading && !skills.error && (!files.items.length || files.ready && employee?.attachmentsEnabled);
   useBlockNavigation(Boolean(draft || files.items.length || skills.selected.length || documents.length), busy);
   const fill = (text: string) => {
     setDraft(text);
@@ -124,55 +118,29 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
     setDocumentPicker(kind === "document");
   }
 
-  async function send(focusInput = false) {
-    if (!ready || !employee || !draft.trim() && !files.fileIds.length) {
+  function send(focusInput = false) {
+    if (leaving.current || !ready || !employee || !handoff || !draft.trim() && !files.fileIds.length) {
       return;
     }
-    await action.execute(async () => {
-      try {
-        const accepted = await action.mutation.run<RunAccepted>(conversationPath(enterprise), {
-          method: "POST", body: {
-            agentId: employee.agentId, approvalPolicy, projectId: project.selected?.id ?? null, input: {
-              ...textInput(draft.trim()),
-              attachmentIds: files.fileIds,
-              skillVersionIds: skills.selected.map((skill) => skill.versionId),
-              knowledgeReferences: documents.map((document) => ({
-                documentId: document.documentId,
-                generation: document.generation
-              })),
-              modelSelection: model.configurable ? model.selection : null,
-            }
-          }
-        });
-        handoff?.prepare({
-          conversationId: accepted.conversationId,
-          employee,
-          approvalPolicy,
-          focusInput,
-          modelOptions: model.handoff,
-          project: project.selected
-        });
-        navigation?.list.refresh();
-        const navigate = () => startNavigation(() => {
-          setDraft("");
-          files.clear();
-          skills.clear();
-          setDocuments([]);
-          router.push(`${root}/conversations/${encodeURIComponent(accepted.conversationId)}`, {
-            scroll: false,
-            transitionTypes: [composerSendTransition]
-          });
-        });
-        if (handoff?.navigate) {
-          await handoff.navigate(navigate);
-        } else {
-          navigate();
-        }
-      } catch (error) {
-        onChanged();
-        throw error;
-      }
-    }, "");
+    leaving.current = true;
+    const started = handoff.prepare({
+      userId, enterpriseId: enterprise, employee, approvalPolicy, focusInput,
+      modelOptions: model.handoff, project: project.selected,
+      input: {...textInput(draft.trim()), attachmentIds: files.fileIds,
+        skillVersionIds: skills.selected.map(skill => skill.versionId),
+        knowledgeReferences: documents.map(document => ({documentId: document.documentId, generation: document.generation})),
+        modelSelection: model.configurable ? model.selection : null},
+      attachments: files.items.flatMap(item => item.reference?.status === "ready" ? [item.reference] : []),
+      labels: [...skills.selected.map(skill => skill.name), ...documents.map(document => document.name)]
+    });
+    const params = new URLSearchParams({agent: employee.agentId, submission: started.submission.id});
+    void handoff.navigate(() => startNavigation(() => {
+      setDraft("");
+      files.clear();
+      skills.clear();
+      setDocuments([]);
+      router.push(`${root}/new-task?${params}`, {scroll: false, transitionTypes: [composerSendTransition]});
+    }));
   }
 
   return <><div className={styles.taskShell}>
@@ -186,7 +154,7 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
       }}>
         <ComposerTransition part="text"><Textarea ref={input} className={styles.input} data-composer-part="text"
                                                   aria-label={uiText("任务内容")} rows={4} maxLength={20000}
-                                                  value={draft} disabled={busy || noEmployees}
+                                                  value={draft} disabled={noEmployees} readOnly={busy} aria-busy={busy}
                                                   onPaste={(event) => pasteUpload(event, files.add, !busy && Boolean(employee?.attachmentsEnabled))}
                                                   placeholder={employee || noEmployees ? uiText("描述任务目标、需要处理的内容和预期结果…") : uiText("选择一位数字员工，开始新的任务")}
                                                   onChange={(event) => {
@@ -246,7 +214,7 @@ export function HomeTask({enterprise, userId, employees, permissions, onChanged}
         <ConversationModelFeedback state={model}/>
         {!employee && !noEmployees && canMarket &&
           <Link className="text-button" href={`${root}/employees`}>{uiText("前往员工广场")}</Link>}
-        <MutationFeedback action={action} showFieldErrors/>{skills.error &&
+        {skills.error &&
         <p className={ui.error} role="alert">{localizeUiMessage(skills.error ?? "", uiText)}</p>}
       </form>
     </section>

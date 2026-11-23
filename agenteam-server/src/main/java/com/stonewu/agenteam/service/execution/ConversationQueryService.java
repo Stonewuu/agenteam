@@ -137,6 +137,10 @@ public class ConversationQueryService {
     }
 
     public SnapshotBase snapshotBase(AuthContext actor, String id) {
+        return snapshotBase(actor, id, true);
+    }
+
+    public SnapshotBase snapshotBase(AuthContext actor, String id, boolean decorate) {
         var row = readable(actor, id);
         var latest = new ArrayList<>(messages.history(actor.enterpriseId(), id, null, 101));
         boolean older = latest.size() > 100;
@@ -149,8 +153,9 @@ public class ConversationQueryService {
         boolean attachments = row.agentVersionId() != null && versions.find(actor.enterpriseId(), row.agentVersionId())
             .filter(version -> version.resourceId().equals(row.agentId()))
             .map(version -> version.config().path("attachmentsEnabled").asBoolean()).orElse(false);
+        var ordered = latest.reversed();
         var snapshot = new ConversationSnapshotView(view(actor, row, new HashMap<>()),
-            decorateMessages(actor, id, latest.reversed()),
+            decorate ? decorateMessages(actor, id, ordered) : ordered,
             run == null ? null : RunView.from(run, false), Long.toString(row.lastSequence()), older, before,
             attachments, 1, null, List.of(), List.of(), run != null && ConversationRunQueue.supported(run)
                 ? messages.waiting(actor.enterpriseId(), id) : List.of());
@@ -185,6 +190,15 @@ public class ConversationQueryService {
         return new MessageHistory(
             decorateMessages(actor, id, rows.reversed()),
             more ? rows.getLast().id() : null, more);
+    }
+
+    /** 只验证当前成员对执行及其所属会话的读取权限，不重复计算可续聊依赖图。 */
+    public RunRecord readableRun(AuthContext actor, String id) {
+        RunRecord run = runs.find(actor.enterpriseId(), id, false)
+            .filter(value -> value.userId().equals(actor.userId()))
+            .orElseThrow(ResourceAuthorizationService::unavailable);
+        readable(actor, run.conversationId());
+        return run;
     }
 
     public RunView run(AuthContext actor, String id) {
@@ -236,7 +250,7 @@ public class ConversationQueryService {
             if (!checked.containsKey(key)) {
                 String failure = null;
                 try {
-                    configuration.inputOptions(actor, row.agentId(), row.agentVersionId());
+                    configuration.verifyInputOptions(actor, row.agentId(), row.agentVersionId());
                 } catch (ResponseStatusException unavailable) {
                     logUnavailable(row.id(), unavailable);
                     failure = Messages.text("text.execution.conversationQueryService.view.5");

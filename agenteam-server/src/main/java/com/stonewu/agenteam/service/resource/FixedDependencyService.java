@@ -97,12 +97,14 @@ public class FixedDependencyService {
         for (var dependency : loaded.values()) {
             collectPluginVersions(dependency.resource().kind(), dependency.version().config(), exposedPlugins);
         }
-        for (String version : exposedPlugins) {
+        var exposedLoaded = exposedPlugins.stream().filter(loaded::containsKey).toList();
+        var toolsByVersion = pluginTools.listByVersions(actor.enterpriseId(), exposedLoaded);
+        for (String version : exposedLoaded) {
             var dependency = loaded.get(version);
             if (dependency == null) {
                 continue;
             }
-            pluginTools.list(actor.enterpriseId(), version).stream().filter(tool -> tool.enabled())
+            toolsByVersion.getOrDefault(version, List.of()).stream().filter(tool -> tool.enabled())
                 .forEach(tool -> tools.add(ToolInvocationIdentity.of(dependency.version(), tool)));
         }
         if (tools.size() > 100) {

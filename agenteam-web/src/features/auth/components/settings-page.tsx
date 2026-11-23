@@ -54,9 +54,11 @@ export function SettingsPage() {
   const enterpriseIdentity = useEnterpriseIdentity();
   const params = useSearchParams();
   const requested = params.get("tab") ?? "profile";
-  const [user, setUser] = useState<IdentityUser | null>(null);
+  const shellUser = enterpriseIdentity?.user ?? null;
+  const [loadedUser, setLoadedUser] = useState<IdentityUser | null>(null);
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const user = loadedUser ?? (refresh === 0 ? shellUser : null);
   const available = localizeCatalog(sections, uiText).filter((item) =>
     (item.value !== "security" || user?.authenticationMethod === "channel" || Boolean(user?.capabilities.includes("account.password.change")))
     && (item.value !== "channels" || user?.authenticationMethod === "channel" || Boolean(user?.capabilities.includes("account.external.bind"))));
@@ -72,18 +74,22 @@ export function SettingsPage() {
     return () => window.removeEventListener("agenteam:identity-changed", refreshIdentity);
   }, []);
   const changed = useCallback((next: IdentityUser) => {
-    setUser((current) => {
-      if (!current || current.id !== next.id) {
+    setLoadedUser((current) => {
+      const base = current ?? shellUser;
+      if (!base || base.id !== next.id) {
         return next;
       }
       const atLeast = (left: string, right: string) => left.length > right.length || (left.length === right.length && left >= right);
-      const profile = atLeast(next.revision, current.revision) ? next : current;
-      const preferences = atLeast(next.preferences.revision, current.preferences.revision) ? next.preferences : current.preferences;
+      const profile = atLeast(next.revision, base.revision) ? next : base;
+      const preferences = atLeast(next.preferences.revision, base.preferences.revision) ? next.preferences : base.preferences;
       return {...profile, preferences};
     });
     window.dispatchEvent(new Event("agenteam:identity-changed"));
-  }, []);
+  }, [shellUser]);
   useEffect(() => {
+    if (refresh === 0 && shellUser) {
+      return;
+    }
     const controller = new AbortController();
     loadIdentity(controller.signal).then((identity) => {
       if (controller.signal.aborted) {
@@ -93,7 +99,7 @@ export function SettingsPage() {
         router.replace(loginPath());
         return;
       }
-      setUser(identity);
+      setLoadedUser(identity);
     }).catch((failure) => {
       if (!controller.signal.aborted) {
         console.error("Failed to read personal settings", failure);
@@ -101,7 +107,7 @@ export function SettingsPage() {
       }
     });
     return () => controller.abort();
-  }, [router, refresh]);
+  }, [router, refresh, shellUser]);
   return <>
     <PageHeader title={uiText("个人设置")} description={uiText("管理账号资料、界面外观和通知偏好。")}
                 icon={<IconUser size={26} variant="Bulk"/>} actions={<>{user && !user.enterprises.length &&

@@ -40,6 +40,8 @@ import java.util.UUID;
 public class UserSandboxLifecycle {
     private static final Logger LOG = LoggerFactory.getLogger(UserSandboxLifecycle.class);
     private static final Duration CHECK_TIMEOUT = Duration.ofSeconds(15);
+    private static final Duration STATUS_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration STATUS_LOCK_TIMEOUT = Duration.ofSeconds(3);
     private final ProjectWorkspaceLayout layout;
     private final UserSandboxRegistry registry;
     private final UserContainerRuntime containers;
@@ -122,23 +124,25 @@ public class UserSandboxLifecycle {
     }
 
     public EnvironmentView environment(ProjectLocation project, boolean connect) {
+        long deadline = ExecutionDeadline.after(connect ? CHECK_TIMEOUT : STATUS_TIMEOUT);
+        Duration lockTimeout = connect ? CHECK_TIMEOUT : STATUS_LOCK_TIMEOUT;
         try (var control = new ToolCallControl(() -> {
-        }); var lock = UserWorkspaceLock.runtime(layout, project.workspaceId(), CHECK_TIMEOUT, control)) {
+        }); var lock = UserWorkspaceLock.runtime(layout, project.workspaceId(), lockTimeout, control)) {
             layout.requireRegistered(project);
             var state = registry.state(project.workspaceId());
             if (state != null && "stopping".equals(state.status())) {
                 return new EnvironmentView(true, "stopping", true, settings.idleSeconds(), state.updatedAt());
             }
-            String daemon = containers.daemon(CHECK_TIMEOUT, control);
+            String daemon = containers.daemon(DockerWorkspaceCommands.remaining(deadline), control);
             if (state != null && !daemon.equals(state.daemonId())) {
                 throw new ApiException(HttpStatus.CONFLICT, "PROJECT_EXECUTION_HOST_CHANGED",
                     Messages.text("error.project.userSandboxLifecycle.environment.1"));
             }
-            String id = containers.ownedId(project, CHECK_TIMEOUT);
-            boolean running = id != null && containers.running(id, CHECK_TIMEOUT);
+            String id = containers.ownedId(project, DockerWorkspaceCommands.remaining(deadline));
+            boolean running = id != null && containers.running(id, DockerWorkspaceCommands.remaining(deadline));
             if (connect) {
-                containers.start(project, CHECK_TIMEOUT, control);
-                id = containers.ownedId(project, CHECK_TIMEOUT);
+                containers.start(project, DockerWorkspaceCommands.remaining(deadline), control);
+                id = containers.ownedId(project, DockerWorkspaceCommands.remaining(deadline));
                 String generation = state != null && running && id.equals(state.containerId())
                     ? state.generation() : UUID.randomUUID().toString();
                 state = new UserSandboxState(project, id, generation, daemon, "running", clock.millis(), clock.millis());

@@ -10,6 +10,7 @@ import com.stonewu.agenteam.model.execution.entity.RunAttemptRow;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -80,6 +81,20 @@ public interface RunAttemptSqlMapper extends MPJBaseMapper<RunAttemptRow> {
             }
             return mappedRow;
         }).toList();
+    }
+
+    default List<RunAttemptRow> listByRuns(String enterprise, Collection<String> runIds) {
+        if (runIds == null || runIds.isEmpty()) {
+            return List.of();
+        }
+        var criteria = new LambdaQueryWrapper<RunAttemptRow>()
+            .select(RunAttemptRow::getId, RunAttemptRow::getRunId, RunAttemptRow::getAttemptNo,
+                RunAttemptRow::getOutputMessageId, RunAttemptRow::getStatus, RunAttemptRow::getStartedAt,
+                RunAttemptRow::getFinishedAt, RunAttemptRow::getErrorSummary)
+            .eq(RunAttemptRow::getEnterpriseId, enterprise)
+            .in(RunAttemptRow::getRunId, runIds)
+            .orderByAsc(RunAttemptRow::getRunId, RunAttemptRow::getAttemptNo);
+        return selectList(criteria);
     }
 
     default int removeRunAttempt(String enterpriseId, String id) {

@@ -73,7 +73,7 @@ function HomeContent({user, context}: { user: IdentityUser; context: EnterpriseC
         {result.data && <>
           {allowed("agent.run") && allowed("conversation.view") &&
             <HomeTask enterprise={enterprise} userId={user.id} employees={result.data.employees}
-                      permissions={context.permissions} onChanged={changed}/>}
+                      permissions={context.permissions}/>}
           <div className={styles.sections}>
             {allowed("conversation.view") && <section className={styles.section}>
               <header><h2><IconMessages size={18} variant="Bulk"/>{uiText("最近的任务")}</h2><Link

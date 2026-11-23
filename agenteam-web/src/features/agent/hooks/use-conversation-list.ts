@@ -33,6 +33,7 @@ export function useConversationList(enterprise: string, enabled = true, user = "
   const controller = useRef<AbortController | null>(null);
   const loadingMore = useRef(false);
   const previousBinding = useRef("");
+  const previousQuery = useRef(filter.query);
   const refresh = useCallback(() => setVersion((value) => value + 1), []);
   const updateMetadata = useCallback((values: Conversation[]) => {
     setItems(previous => mergeConversationMetadataList(previous, values));
@@ -64,6 +65,9 @@ export function useConversationList(enterprise: string, enabled = true, user = "
     }
     const request = new AbortController();
     controller.current = request;
+    // 仅搜索词输入变化时防抖，首次加载、刷新与筛选切换立即发起请求。
+    const delay = previousQuery.current !== filter.query ? 300 : 0;
+    previousQuery.current = filter.query;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
@@ -88,7 +92,7 @@ export function useConversationList(enterprise: string, enabled = true, user = "
             setLoading(false);
           }
         });
-    }, 300);
+    }, delay);
     return () => {
       request.abort();
       window.clearTimeout(timer);

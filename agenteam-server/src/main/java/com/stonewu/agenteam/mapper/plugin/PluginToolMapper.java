@@ -11,7 +11,11 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -49,6 +53,17 @@ public class PluginToolMapper {
 
     public List<PluginToolRecord> list(String enterprise, String version) {
         return statements.listPluginTool(enterprise, version).stream().map(this::map).toList();
+    }
+
+    public Map<String, List<PluginToolRecord>> listByVersions(String enterprise, Collection<String> versions) {
+        if (versions == null || versions.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, List<PluginToolRecord>> grouped = new LinkedHashMap<>();
+        for (var row : statements.listPluginToolsByVersions(enterprise, versions)) {
+            grouped.computeIfAbsent(row.getPluginVersionId(), ignored -> new ArrayList<>()).add(map(row));
+        }
+        return grouped;
     }
 
     private PluginToolRecord map(PluginToolQueryRow rows) {

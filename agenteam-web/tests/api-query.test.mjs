@@ -260,3 +260,60 @@ test("后台任务结束后停止定时轮询，切回页面仍可核对状态",
   assert.equal(query.requests.length, 3);
   assert.equal(query.render().loading, false);
 });
+
+test("并发相同 GET 请求复用同一在途连接，单个取消不影响其他订阅且结束后不缓存旧值", async () => {
+  const clientSource = readFileSync(new URL("../src/lib/http/api-client.ts", import.meta.url), "utf8");
+  const clientCompiled = ts.transpileModule(clientSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const apiExports = {};
+  vm.runInNewContext(clientCompiled, {
+    exports: apiExports,
+    require: (name) => {
+      if (name === "@/lib/form-errors") {
+        return { fieldErrorMessages: () => ({}) };
+      }
+      if (name === "./request-identity") {
+        return { identityRequestRejected: () => undefined, requestIdentity: () => "" };
+      }
+      if (name === "@/lib/i18n/locales") {
+        return { defaultLocale: "zh-CN", isLocale: () => true };
+      }
+      throw new Error(`Unexpected require: ${name}`);
+    },
+    AbortController, DOMException, Headers, window: { setTimeout, clearTimeout, dispatchEvent: () => undefined },
+    document: { documentElement: { lang: "zh-CN" } },
+    CustomEvent: class {},
+  });
+
+  let launches = 0;
+  let sharedAborted = false;
+  let finishFirst;
+  const controllerA = new AbortController();
+  const controllerB = new AbortController();
+  const start = (sharedSignal) => {
+    launches += 1;
+    sharedSignal.addEventListener("abort", () => {
+      sharedAborted = true;
+    }, { once: true });
+    return new Promise((resolve) => {
+      finishFirst = resolve;
+    });
+  };
+  const promiseA = apiExports.runDedupedGet("k1", controllerA.signal, start);
+  const promiseB = apiExports.runDedupedGet("k1", controllerB.signal, start);
+  assert.equal(launches, 1);
+  controllerA.abort();
+  await assert.rejects(promiseA, { name: "AbortError" });
+  assert.equal(sharedAborted, false);
+  finishFirst({ ok: 1 });
+  assert.deepEqual(await promiseB, { ok: 1 });
+
+  // 请求结束后再次调用不返回陈旧结果，且所有订阅方均取消时会中止底层连接。
+  const controllerC = new AbortController();
+  const promiseC = apiExports.runDedupedGet("k1", controllerC.signal, start);
+  assert.equal(launches, 2);
+  controllerC.abort();
+  await assert.rejects(promiseC, { name: "AbortError" });
+  assert.equal(sharedAborted, true);
+});

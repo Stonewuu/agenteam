@@ -8,6 +8,7 @@ import {
   applyConversationFrame,
   type ConversationState,
   fromSnapshot,
+  shouldRefreshAfterStreamEnd,
   streamSequence
 } from "../state/conversation-event-state";
 import {SnapshotRequired, validateMessage} from "../state/conversation-protocol";
@@ -149,6 +150,8 @@ export function useConversationStream(enterprise: string, conversation: string |
             continue;
           }
           initialRead = false;
+          const hadActiveRun = Boolean(existing.snapshot.activeRun);
+          let receivedEvent = false;
           commit({...existing, replaying: true});
           await readConversationEvents({
             enterprise, conversation, after: streamSequence(existing.snapshot),
@@ -157,6 +160,9 @@ export function useConversationStream(enterprise: string, conversation: string |
                 return;
               }
               failures = 0;
+              if (frame.kind === "event") {
+                receivedEvent = true;
+              }
               const previous = state.current;
               const next = applyConversationFrame(previous, frame, enterprise);
               commit(next);
@@ -171,6 +177,16 @@ export function useConversationStream(enterprise: string, conversation: string |
             }
           });
           if (!current()) {
+            return;
+          }
+          if (!shouldRefreshAfterStreamEnd({
+            hadActiveRun,
+            hasActiveRun: Boolean(state.current?.snapshot.activeRun),
+            receivedEvent
+          })) {
+            if (state.current?.replaying) {
+              commit({...state.current, replaying: false});
+            }
             return;
           }
           await refresh();
