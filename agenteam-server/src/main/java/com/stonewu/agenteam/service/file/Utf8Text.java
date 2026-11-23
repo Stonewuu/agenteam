@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 在完整字符边界截取文本，大小始终按实际编码字节计算。
@@ -34,6 +36,31 @@ public final class Utf8Text {
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(Messages.text("error.file.documentParserProcess.copySource.1"), impossible);
         }
+    }
+
+    /** 按字节上限拆分文本，保留完整字符；上限至少能容纳一个四字节字符。 */
+    public static List<String> chunks(String text, int maxBytes) {
+        if (maxBytes < 4) {
+            throw new IllegalArgumentException("Text chunk limit must be at least four bytes");
+        }
+        if (text == null || text.isEmpty()) {
+            return List.of();
+        }
+        var parts = new ArrayList<String>();
+        int start = 0, bytes = 0;
+        for (int offset = 0; offset < text.length();) {
+            int cp = text.codePointAt(offset);
+            int length = cp <= 0x7f || cp >= 0xd800 && cp <= 0xdfff ? 1 : cp <= 0x7ff ? 2 : cp <= 0xffff ? 3 : 4;
+            if (bytes + length > maxBytes) {
+                parts.add(text.substring(start, offset));
+                start = offset;
+                bytes = 0;
+            }
+            bytes += length;
+            offset += Character.charCount(cp);
+        }
+        parts.add(text.substring(start));
+        return List.copyOf(parts);
     }
 
     public static String prefix(String text, int maxBytes) {

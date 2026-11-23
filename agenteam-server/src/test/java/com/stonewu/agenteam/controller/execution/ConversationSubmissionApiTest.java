@@ -77,15 +77,15 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         assertEquals(1, count("agent_run"));
         assertEquals(2, count("agent_message"));
         assertEquals(1, count("run_attempt"));
-        assertEquals(3, count("agent_event"));
+        assertEquals(0, count("agent_event"));
         assertEquals(1, reserved());
         assertEquals(1, Math.toIntExact(databaseAccess.mapper(RunJobSqlMapper.class).selectCount(new LambdaQueryWrapper<BackgroundJobRow>().eq(BackgroundJobRow::getEnterpriseId, (enterprise)).eq(BackgroundJobRow::getKind, "run").eq(BackgroundJobRow::getStatus, "queued"))));
         assertEquals(version, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getAgentVersionId).eq(AgentRunRow::getEnterpriseId, (enterprise))).stream().map(fixtureRecord -> fixtureRecord.getAgentVersionId()).toList()));
         var fixed = json.readTree(DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getExecutionConfigJson).eq(AgentRunRow::getEnterpriseId, (enterprise))).stream().map(fixtureRecord -> fixtureRecord.getExecutionConfigJson()).toList()));
         assertEquals("这是仅供执行器读取的内部指令。", fixed.at("/config/instructions").asText());
         assertFalse(fixed.toString().contains("isolated-execution-secret"));
-        for (var event : events.after(enterprise, accepted.path("conversationId").asText(), 0, 10)) {
-            schemas.validate("ExecutionEvent", json.valueToTree(event));
+        for (var event : liveEvents(accepted.path("conversationId").asText())) {
+            schemas.validate("LiveExecutionEvent", json.valueToTree(event));
         }
         write(base() + "/conversations", Map.of("agentId", agent, "input", input("不同正文")), key).andExpect(status().isConflict());
         String id = accepted.path("conversationId").asText();
@@ -346,7 +346,7 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
         String batch = UUID.randomUUID().toString();
         messageWriter.save(lease, batch, changes);
         messageWriter.save(lease, batch, changes);
-        assertEquals(5, count("agent_event"));
+        assertEquals(0, count("agent_event"));
         assertThrows(IllegalStateException.class, () -> messageWriter.save(lease, batch, List.of(new ExecutionChange(block.update("不同的内容", "running"), null, "1", null, null, null))));
         assertEquals("已经保存的正文", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getContent).eq(AgentMessageRow::getId, (accepted.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getContent()).toList()));
     }
@@ -396,11 +396,13 @@ class ConversationSubmissionApiTest extends ExecutionApiTestSupport {
             assertEquals(callsBefore + 1, modelCalls.get());
             assertEquals(0, reserved());
             long sequence = 0;
-            for (var event : events.after(enterprise, accepted.path("conversationId").asText(), 0, 100)) {
-                assertEquals(Long.toString(++sequence), event.sequence());
-                schemas.validate("ExecutionEvent", json.valueToTree(event));
+            for (var event : liveEvents(accepted.path("conversationId").asText())) {
+                assertTrue(Long.parseLong(event.sequence()) > sequence);
+                sequence = Long.parseLong(event.sequence());
+                schemas.validate("LiveExecutionEvent", json.valueToTree(event));
             }
-            assertEquals(Long.toString(sequence), snapshot.path("lastSequence").asText());
+            assertEquals(Long.toString(conversationRecords.lastSequence(enterprise, accepted.path("conversationId").asText())),
+                snapshot.path("lastSequence").asText());
             assertEquals(0, Math.toIntExact(databaseAccess.mapper(RunStepSqlMapper.class).selectCount(new LambdaQueryWrapper<RunStepRow>().eq(RunStepRow::getEnterpriseId, (enterprise)).in(RunStepRow::getStatus, Arrays.asList("pending", "running")))));
         } finally {
             finish.countDown();

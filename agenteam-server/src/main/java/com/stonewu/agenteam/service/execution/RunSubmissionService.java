@@ -52,13 +52,11 @@ import java.util.UUID;
  */
 @Service
 public class RunSubmissionService {
-    @Value("${execution.events.live-enabled:true}")
-    private boolean liveEvents;
     private final ConversationMapper conversations;
     private final ExecutionMessageMapper messages;
     private final RunMapper runs;
     private final RunJobMapper jobs;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final ExecutionConfigurationService configuration;
     private final QuotaReservationService quotas;
     private final EnterpriseAuthorizationService authorization;
@@ -78,7 +76,7 @@ public class RunSubmissionService {
 
     public RunSubmissionService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                 RunJobMapper jobs,
-                                ExecutionEventMapper events, ExecutionConfigurationService configuration,
+                                ConversationChangePublisher events, ExecutionConfigurationService configuration,
                                 QuotaReservationService quotas, EnterpriseAuthorizationService authorization,
                                 Clock clock, SkillExecutionService skills, ExecutionSourceService sources,
                                 EnterpriseMapper enterprises, WorkflowGraphValidator workflowGraphs,
@@ -350,9 +348,6 @@ public class RunSubmissionService {
         }
         String run = prepared.run(), inputId = prepared.inputId(), outputId = prepared.outputId();
         boolean waiting = conversation.activeRunId() != null;
-        if (liveEvents && !waiting) {
-            conversations.enableLiveEvents(conversation);
-        }
         var now = clock.instant();
         if (waiting && !now.isAfter(conversation.updatedAt().plusMillis(1))) {
             now = conversation.updatedAt().plusMillis(1);

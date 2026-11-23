@@ -13,6 +13,18 @@ public final class MysqlCompatibleContainer extends MySQLContainer {
     public MysqlCompatibleContainer() {
         super("mysql:8.4.11");
         memoryStorage = Boolean.parseBoolean(System.getProperty("agenteam.test.mysql.tmpfs", "true"));
+        long processors = Long.getLong("agenteam.test.mysql.processors", 0L);
+        long memoryMb = Long.getLong("agenteam.test.mysql.memory-mb", 0L);
+        if (processors > 0 || memoryMb > 0) {
+            withCreateContainerCmdModifier(command -> {
+                if (processors > 0) {
+                    command.getHostConfig().withNanoCPUs(processors * 1_000_000_000L);
+                }
+                if (memoryMb > 0) {
+                    command.getHostConfig().withMemory(memoryMb * 1024 * 1024);
+                }
+            });
+        }
         // 日常测试使用内存文件系统；容量和恢复计时可明确关闭，保留真实磁盘读写。
         if (memoryStorage) {
             withTmpFs(Map.of("/var/lib/mysql", "rw,size=1g"));

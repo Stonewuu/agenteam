@@ -257,6 +257,9 @@ public final class LiveExecutionSession implements AutoCloseable {
         if (closed.compareAndSet(false, true)) {
             try {
                 drain();
+            } catch (RuntimeException failed) {
+                // 关闭资源时使用新的异常，避免与执行中已经抛出的同一异常互相抑制。
+                throw new IllegalStateException("Failed to finish conversation persistence", failed);
             } finally {
                 sender.shutdown();
                 saver.shutdown();

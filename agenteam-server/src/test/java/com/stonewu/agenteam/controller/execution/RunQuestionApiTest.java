@@ -57,7 +57,6 @@ class RunQuestionApiTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENV.properties(registry);
-        registry.add("execution.events.live-enabled", () -> true);
     }
 
     @AfterAll

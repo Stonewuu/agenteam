@@ -7,7 +7,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.mapper.agent.AgentHireMapper;
 import com.stonewu.agenteam.mapper.auth.AuthMapper;
 import com.stonewu.agenteam.mapper.execution.ConversationSqlMapper;
-import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
+import com.stonewu.agenteam.mapper.execution.LiveEventCache;
+import com.stonewu.agenteam.mapper.execution.ConversationMapper;
+import com.stonewu.agenteam.model.execution.response.LiveExecutionEvent;
+import com.stonewu.agenteam.model.execution.response.StreamCursor;
 import com.stonewu.agenteam.mapper.permission.PermissionMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceDraftTableMapper;
 import com.stonewu.agenteam.mapper.resource.ResourceSqlMapper;
@@ -44,6 +47,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.List;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -57,6 +61,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -131,7 +136,18 @@ public abstract class ExecutionApiTestSupport {
     protected final ApiContractAssertions schemas = new ApiContractAssertions();
 
     @Autowired
-    protected ExecutionEventMapper events;
+    protected LiveEventCache liveEventCache;
+    @Autowired
+    protected ConversationMapper conversationRecords;
+
+    protected List<LiveExecutionEvent> liveEvents(String conversation) {
+        assertDoesNotThrow(() -> await(() -> liveEventCache.position(enterprise, conversation)
+            .map(state -> state.appliedDatabaseVersion() >= conversationRecords.lastSequence(enterprise, conversation))
+            .orElse(false)));
+        var state = liveEventCache.position(enterprise, conversation).orElseThrow();
+        return liveEventCache.after(enterprise, conversation, new StreamCursor(state.cursor().generation(), "0"),
+            Duration.ZERO, 10000).stream().filter(event -> !event.type().equals("snapshot.required")).toList();
+    }
 
     @Autowired
     protected RunLifecycleService lifecycle;

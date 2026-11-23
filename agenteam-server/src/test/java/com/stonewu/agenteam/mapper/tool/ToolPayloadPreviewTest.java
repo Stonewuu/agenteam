@@ -1,7 +1,6 @@
 package com.stonewu.agenteam.mapper.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stonewu.agenteam.mapper.execution.ExecutionEventCodec;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
 import com.stonewu.agenteam.service.file.Utf8Text;
@@ -29,14 +28,14 @@ class ToolPayloadPreviewTest {
     }
 
     @Test
-    void replayLimitsLargeOldToolDataWithoutChangingStoredHashOrIdentity() {
+    void previewLimitsLargeToolDataWithoutChangingOriginalContentOrIdentity() {
         String full = "原始资料".repeat(10000);
         var block = Map.of("type", "tool", "id", "block", "tool", Map.of("name", "read_url", "input", full, "result", full));
         var stored = event("block.updated", Map.of("messageId", "message", "block", block));
-        var codec = new ExecutionEventCodec(json, new ResourceJson(json));
-        String hash = codec.encode(stored).hash();
+        var canonical = new ResourceJson(json);
+        String hash = canonical.hash(json.valueToTree(stored));
         var visible = ToolPayloadPreview.event(stored);
-        assertEquals(hash, codec.encode(stored).hash());
+        assertEquals(hash, canonical.hash(json.valueToTree(stored)));
         assertEquals(stored.eventId(), visible.eventId());
         assertEquals(stored.sequence(), visible.sequence());
         var tool = json.valueToTree(visible).at("/payload/block/tool");

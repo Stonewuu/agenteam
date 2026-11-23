@@ -242,9 +242,10 @@ class ScheduleTriggerApiTest extends ScheduleExecutionTestSupport {
             assertEquals(2, snapshot.path("messages").size());
             assertTrue(snapshot.toString().contains("本次独立计划已完成"));
             long sequence = 0;
-            for (var event : events.after(enterprise, item.path("conversationId").asText(), 0, 1000)) {
-                assertEquals(Long.toString(++sequence), event.sequence());
-                schemas.validate("ExecutionEvent", json.valueToTree(event));
+            for (var event : liveEvents(item.path("conversationId").asText())) {
+                assertTrue(Long.parseLong(event.sequence()) > sequence);
+                sequence = Long.parseLong(event.sequence());
+                schemas.validate("LiveExecutionEvent", json.valueToTree(event));
             }
         }
         assertEquals(2, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(QuotaBucketFixtureMapper.class).conversationManagementApiPreviewsStayOutOfTheNormalListAndExpireWithoutDeletingUsageOrOtherConversationsObject(enterprise)));

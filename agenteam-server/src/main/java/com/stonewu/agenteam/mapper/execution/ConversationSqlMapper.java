@@ -28,21 +28,6 @@ public interface ConversationSqlMapper extends MPJBaseMapper<AgentConversationRo
             .set(AgentConversationRow::getTitle, title).setIncrBy(AgentConversationRow::getRevision, 1));
     }
 
-    default String eventDeliveryMode(String enterprise, String id) {
-        var row = selectOne(
-            new LambdaQueryWrapper<AgentConversationRow>().select(AgentConversationRow::getEventDeliveryMode)
-                .eq(AgentConversationRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getId, id));
-        return row == null ? null : row.getEventDeliveryMode();
-    }
-
-    default int enableLiveEvents(String enterprise, String user, String id) {
-        return update(new LambdaUpdateWrapper<AgentConversationRow>()
-            .eq(AgentConversationRow::getEnterpriseId, enterprise).eq(AgentConversationRow::getUserId, user)
-            .eq(AgentConversationRow::getId, id).eq(AgentConversationRow::getStatus, "active")
-            .eq(AgentConversationRow::getEventDeliveryMode, "database").isNull(AgentConversationRow::getActiveRunId)
-            .set(AgentConversationRow::getEventDeliveryMode, "redis"));
-    }
-
     default int selectProject(String enterprise, String user, String id, long revision, String projectId,
                               boolean initial, Instant now) {
         return update(

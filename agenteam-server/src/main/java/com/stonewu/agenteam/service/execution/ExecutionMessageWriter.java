@@ -18,14 +18,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 同一事务更新完整消息块与连续事件，失去租约的旧进程无法保存晚到内容。
+ * 每轮完整内容与必要步骤在同一事务保存，正文未改变时不重复更新消息。
  */
 @Service
 public class ExecutionMessageWriter {
     private final ConversationMapper conversations;
     private final RunMapper runs;
     private final ExecutionMessageMapper messages;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final RunStepMapper steps;
     private final RunLifecycleService lifecycle;
     private final Clock clock;
@@ -33,7 +33,7 @@ public class ExecutionMessageWriter {
     private final ResourceJson json;
 
     public ExecutionMessageWriter(ConversationMapper conversations, RunMapper runs, ExecutionMessageMapper messages,
-                                  ExecutionEventMapper events, RunStepMapper steps, RunLifecycleService lifecycle,
+                                  ConversationChangePublisher events, RunStepMapper steps, RunLifecycleService lifecycle,
                                   Clock clock,
                                   RunJobMapper jobs, ResourceJson json) {
         this.conversations = conversations;
@@ -53,8 +53,7 @@ public class ExecutionMessageWriter {
             return;
         }
         var found = runs.find(lease.enterpriseId(), lease.runId(), false).orElseThrow();
-        var conversation = conversations.find(lease.enterpriseId(), lease.userId(), found.conversationId(), true)
-            .orElseThrow();
+        conversations.find(lease.enterpriseId(), lease.userId(), found.conversationId(), true).orElseThrow();
         var run = runs.find(lease.enterpriseId(), lease.runId(), true).orElseThrow();
         lifecycle.requireLease(run, lease);
         String hash = json.hash(json.tree(changes));
@@ -69,6 +68,7 @@ public class ExecutionMessageWriter {
         Map<String, ContentBlock> blocks = new LinkedHashMap<>();
         output.blocks().forEach(block -> blocks.put(block.id(), block));
         long sequence = run.lastSequence();
+        boolean contentChanged = false;
         for (var change : changes) {
             if (change.step() != null) {
                 steps.save(run, change.step(), change.input(), change.result(), clock.instant());
@@ -77,42 +77,34 @@ public class ExecutionMessageWriter {
             } else {
                 var block = change.block();
                 var previous = blocks.get(block.id());
-                if (conversation.liveEvents() && block.equals(previous)) {
+                if (block.equals(previous)) {
                     continue;
                 }
                 long expected = previous == null ? 1 : Math.addExact(Long.parseLong(previous.revision()), 1);
-                if (conversation.liveEvents()) {
-                    if (change.delta() != null || change.baseRevision() == null
-                        || !change.baseRevision().equals(previous == null ? "0" : previous.revision())
-                        || Long.parseLong(block.revision()) < expected) {
-                        throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.2"));
-                    }
-                } else if (Long.parseLong(block.revision()) != expected) {
-                    throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.3"));
+                if (change.delta() != null || change.baseRevision() == null
+                    || !change.baseRevision().equals(previous == null ? "0" : previous.revision())
+                    || Long.parseLong(block.revision()) < expected) {
+                    throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.2"));
                 }
                 if (previous != null && previous.displayOrder() != block.displayOrder()) {
                     throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.3"));
                 }
-                if (change.delta() != null && (previous == null || !previous.revision()
-                    .equals(change.baseRevision()))) {
-                    throw new IllegalStateException(Messages.text("error.execution.executionMessageWriter.save.4"));
-                }
                 blocks.put(block.id(), block);
-                Object payload = change.delta() == null ? Map.of("messageId", output.id(), "block", block)
-                    : Map.of("messageId", output.id(), "blockId", block.id(), "baseRevision", change.baseRevision(),
-                    "revision", block.revision(), "delta", change.delta());
+                contentChanged = true;
                 sequence = Long.parseLong(
-                    events.append(run, change.delta() == null ? "block.updated" : "message.delta", payload,
+                    events.append(run, "block.updated", Map.of("messageId", output.id(), "block", block),
                         clock.instant()).sequence());
             }
         }
-        var ordered = blocks.values().stream().sorted(Comparator.comparingInt(ContentBlock::displayOrder)).toList();
-        String text = ordered.stream().filter(block -> block.type().equals("text") && block.parentBlockId() == null)
-            .map(ContentBlock::text).collect(Collectors.joining("\n\n"));
-        if (text.length() > 1_000_000) {
-            throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.dispatch.1"));
+        if (contentChanged) {
+            var ordered = blocks.values().stream().sorted(Comparator.comparingInt(ContentBlock::displayOrder)).toList();
+            String text = ordered.stream().filter(block -> block.type().equals("text") && block.parentBlockId() == null)
+                .map(ContentBlock::text).collect(Collectors.joining("\n\n"));
+            if (text.length() > 1_000_000) {
+                throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.dispatch.1"));
+            }
+            messages.save(run.enterpriseId(), output.id(), text, ordered, "streaming", sequence, clock.instant());
         }
-        messages.save(run.enterpriseId(), output.id(), text, ordered, "streaming", sequence, clock.instant());
         jobs.savedEventBatch(lease, batchId, hash);
     }
 }

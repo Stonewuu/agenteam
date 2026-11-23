@@ -58,7 +58,7 @@ public class RunApprovalService {
     private final ToolPayloadMapper payloads;
     private final ResourceJson json;
     private final RunCheckpointService checkpoints;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final ApprovalConversationWriter messages;
     private final ConversationQueryService conversations;
     private final EnterpriseAuthorizationService authorization;
@@ -75,7 +75,7 @@ public class RunApprovalService {
                               RunLifecycleService lifecycle, ExecutionAccessService access,
                               ExecutionToolCatalog catalog, ToolCallTransactions toolTransactions,
                               ToolPayloadMapper payloads, ResourceJson json, RunCheckpointService checkpoints,
-                              ExecutionEventMapper events,
+                              ConversationChangePublisher events,
                               ApprovalConversationWriter messages, ConversationQueryService conversations,
                               EnterpriseAuthorizationService authorization, AuditEventService audit, Clock clock,
                               RunStepMapper steps,

@@ -295,7 +295,7 @@ export type ConversationFrame = {
   generation?: string;
 } | {
   kind: "reset";
-  reason: "events_expired" | "sequence_invalid" | "data_incomplete" | "protocol_changed";
+  reason: "events_expired" | "sequence_invalid" | "data_incomplete" | "protocol_changed" | "database_changed";
   lastSequence: string;
   generation?: string;
 };

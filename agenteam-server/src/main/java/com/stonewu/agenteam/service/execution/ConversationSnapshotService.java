@@ -5,7 +5,6 @@ import com.stonewu.agenteam.service.i18n.Messages;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.LiveSnapshotMapper;
 import com.stonewu.agenteam.mapper.execution.RunAttemptMapper;
-import com.stonewu.agenteam.mapper.execution.RunMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepMapper;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
 import com.stonewu.agenteam.model.execution.response.ConversationSnapshotView;
@@ -37,34 +36,23 @@ public class ConversationSnapshotService {
     private final LiveEventCache cache;
     private final LiveEventDelivery delivery;
     private final LiveSnapshotMapper mapper;
-    private final RunMapper runs;
     private final RunAttemptMapper attempts;
     private final RunStepMapper steps;
 
     public ConversationSnapshotService(ConversationQueryService queries, LiveEventCache cache,
                                        LiveEventDelivery delivery,
-                                       LiveSnapshotMapper mapper, RunMapper runs, RunAttemptMapper attempts,
+                                       LiveSnapshotMapper mapper, RunAttemptMapper attempts,
                                        RunStepMapper steps) {
         this.queries = queries;
         this.cache = cache;
         this.delivery = delivery;
         this.mapper = mapper;
-        this.runs = runs;
         this.attempts = attempts;
         this.steps = steps;
     }
 
     public ConversationSnapshotView read(AuthContext actor, String id) {
         var base = queries.snapshotBase(actor, id, false);
-        if (!base.conversation().liveEvents()) {
-            var decorated = queries.decorateMessages(actor, id, base.snapshot().messages());
-            var snapshot = base.snapshot();
-            return new ConversationSnapshotView(snapshot.conversation(), decorated, snapshot.activeRun(),
-                snapshot.lastSequence(), snapshot.hasOlderMessages(), snapshot.nextBeforeMessageId(),
-                snapshot.attachmentsEnabled(), snapshot.protocolVersion(), snapshot.streamCursor(),
-                snapshot.liveSteps(), snapshot.approvals(), snapshot.queuedMessages(),
-                stepHistory(actor.enterpriseId(), decorated));
-        }
         try {
             for (int attempt = 0; attempt < 8; attempt++) {
                 if (attempt > 0) {
@@ -88,16 +76,7 @@ public class ConversationSnapshotService {
                         merged.queuedMessages(), stepHistory(actor.enterpriseId(), decorated));
                 }
                 if (live.appliedDatabaseVersion() < base.conversation().lastSequence()) {
-                    var active = base.run();
-                    if (active == null) {
-                        var latest = base.snapshot().messages().stream().filter(message -> message.runId() != null)
-                            .reduce((left, right) -> right);
-                        active = latest.flatMap(message -> runs.find(actor.enterpriseId(), message.runId(), false))
-                            .orElse(null);
-                    }
-                    if (active != null) {
-                        delivery.recover(active);
-                    }
+                    delivery.recover(actor.enterpriseId(), actor.userId(), id);
                 }
             }
             throw new IllegalStateException(Messages.text("error.execution.conversationSnapshotService.read.1"));

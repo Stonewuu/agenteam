@@ -177,13 +177,14 @@ class FullConversationExecutionTest extends ExecutionApiTestSupport {
                 String[] parts = entry.split(":");
                 assertEquals(Integer.parseInt(parts[1]), byId.get(parts[0]).path("displayOrder").asInt());
             }
-            var all = events.after(enterprise, conversation, 0, 1000);
+            var all = liveEvents(conversation);
             long sequence = 0;
             for (var event : all) {
-                assertEquals(Long.toString(++sequence), event.sequence());
-                schemas.validate("ExecutionEvent", json.valueToTree(event));
+                assertTrue(Long.parseLong(event.sequence()) > sequence);
+                sequence = Long.parseLong(event.sequence());
+                schemas.validate("LiveExecutionEvent", json.valueToTree(event));
             }
-            assertEquals(snapshot.path("lastSequence").asText(), Long.toString(sequence));
+            assertEquals(snapshot.path("lastSequence").asText(), all.getLast().databaseVersion());
             assertFalse(snapshot.toString().contains("agent_key:"));
             assertFalse(snapshot.toString().contains("session_id:"));
             var export = data(write(base() + "/conversations/" + conversation + "/export", null, UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());

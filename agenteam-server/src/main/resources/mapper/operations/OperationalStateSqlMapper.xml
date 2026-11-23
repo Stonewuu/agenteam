@@ -14,8 +14,4 @@
     SELECT status, COUNT(*) AS total FROM agent_run WHERE status IN ('queued', 'running', 'waiting_approval','waiting_input',
     'cancelling') GROUP BY status
   </select>
-  <select timeout="10" id="readAgentEvent"
-          resultType="com.stonewu.agenteam.model.operations.entity.OperationalStateQueryRow">
-    SELECT COUNT(*) AS total, MIN(created_at) AS oldest FROM agent_event WHERE published_at IS NULL
-  </select>
 </mapper>

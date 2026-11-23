@@ -1,6 +1,6 @@
 package com.stonewu.agenteam.capacity;
 
-import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
+import com.stonewu.agenteam.service.execution.ConversationChangePublisher;
 import com.stonewu.agenteam.mapper.knowledge.KnowledgeChunkMapper;
 import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
 import com.stonewu.agenteam.service.execution.ExecutionTaskFactory;
@@ -52,7 +52,7 @@ public class CapacityInstrumentation {
                             return invocation.proceed();
                         }
                     };
-                } else if (bean instanceof ExecutionEventMapper) {
+                } else if (bean instanceof ConversationChangePublisher) {
                     advice = invocation -> {
                         Object result = invocation.proceed();
                         if (invocation.getMethod().getName().equals("append") && result instanceof ExecutionEvent event) {

@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -176,11 +177,12 @@ abstract class WorkflowExecutionApiTestSupport extends ExecutionApiTestSupport {
         return data(mvc.perform(get(base() + "/runs/" + run + "/approvals").cookie(cookie)).andExpect(status().isOk()).andReturn());
     }
 
-    protected void validateEvents(JsonNode accepted) {
+    protected void validateEvents(JsonNode accepted) throws Exception {
         long sequence = 0;
-        for (var event : events.after(enterprise, accepted.path("conversationId").asText(), 0, 1000)) {
-            assertEquals(Long.toString(++sequence), event.sequence());
-            schemas.validate("ExecutionEvent", json.valueToTree(event));
+        for (var event : liveEvents(accepted.path("conversationId").asText())) {
+            assertTrue(Long.parseLong(event.sequence()) > sequence);
+            sequence = Long.parseLong(event.sequence());
+            schemas.validate("LiveExecutionEvent", json.valueToTree(event));
         }
     }
 

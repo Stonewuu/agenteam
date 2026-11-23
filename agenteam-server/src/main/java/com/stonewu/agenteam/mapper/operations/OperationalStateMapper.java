@@ -8,7 +8,6 @@ import com.stonewu.agenteam.model.file.entity.FileObjectRow;
 import com.stonewu.agenteam.model.knowledge.entity.KnowledgeDocumentRow;
 import com.stonewu.agenteam.model.operations.entity.OperationalSnapshot;
 import com.stonewu.agenteam.model.tool.entity.ToolCallRow;
-import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
@@ -22,7 +21,7 @@ import java.util.List;
 @Repository
 public class OperationalStateMapper {
     public static final List<String> JOB_KINDS = List.of("run", "document_parse", "file_scan", "mail", "notification",
-        "event_publish", "export", "cleanup");
+        "export", "cleanup");
     public static final List<String> ACTIVE_RUN_STATES = List.of("queued", "running", "waiting_approval", "waiting_input", "cancelling");
     private final OperationalStateSqlMapper statements;
     private final FileSqlMapper files;
@@ -58,9 +57,6 @@ public class OperationalStateMapper {
         for (var row : statements.readAgentRun()) {
             values.put("run." + row.getStatus(), row.getTotal());
         }
-        var events = DataAccessUtils.nullableSingleResult(statements.readAgentEvent());
-        values.put("event.pending", events.getTotal());
-        values.put("event.oldest_seconds", age(now, events.getOldest()));
         values.put("file.rejected", files.selectCount(new LambdaQueryWrapper<FileObjectRow>()
             .eq(FileObjectRow::getStatus, "rejected").isNull(FileObjectRow::getDeletedAt)).doubleValue());
         values.put("knowledge.failed", documents.selectCount(new LambdaQueryWrapper<KnowledgeDocumentRow>()

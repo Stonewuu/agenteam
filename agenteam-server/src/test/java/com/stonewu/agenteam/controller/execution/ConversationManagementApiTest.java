@@ -25,7 +25,6 @@ import com.stonewu.agenteam.model.resource.entity.ResourceVersionRow;
 import com.stonewu.agenteam.model.usage.entity.QuotaEntryRow;
 import com.stonewu.agenteam.service.agent.ExecutionPaths;
 import com.stonewu.agenteam.service.execution.ConversationQueryService;
-import com.stonewu.agenteam.service.execution.ExecutionEventPublisher;
 import com.stonewu.agenteam.service.execution.PreviewRetentionService;
 import com.stonewu.agenteam.support.EnterpriseTestData;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
@@ -71,8 +70,6 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
     @Autowired
     private ExecutionPaths executionPaths;
 
-    @Autowired
-    private ExecutionEventPublisher publisher;
 
     @Autowired
     private LiveEventCache eventCache;
@@ -243,7 +240,6 @@ class ConversationManagementApiTest extends ExecutionApiTestSupport {
         var stateFile = Files.createDirectories(executionPaths.state(finished)).resolve("state.json");
         Files.writeString(workspaceFile, "预览工作内容");
         Files.writeString(stateFile, "预览状态内容");
-        publisher.publish(enterprise, conversation);
         assertTrue(eventCache.position(enterprise, conversation).isPresent());
         var retained = data(preview(Map.of("input", input("保留七天内的新预览")), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
         cancel(retained);

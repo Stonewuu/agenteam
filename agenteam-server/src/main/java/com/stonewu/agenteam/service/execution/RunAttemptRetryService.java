@@ -26,7 +26,7 @@ public class RunAttemptRetryService {
     private final RunMapper runs;
     private final RunAttemptMapper attempts;
     private final ExecutionMessageMapper messages;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final RunJobMapper jobs;
     private final RunCheckpointMapper checkpoints;
     private final RunApprovalMapper approvals;
@@ -36,7 +36,7 @@ public class RunAttemptRetryService {
     private final Clock clock;
 
     public RunAttemptRetryService(RunMapper runs, RunAttemptMapper attempts, ExecutionMessageMapper messages,
-                                  ExecutionEventMapper events, RunJobMapper jobs,
+                                  ConversationChangePublisher events, RunJobMapper jobs,
                                   RunCheckpointMapper checkpoints, RunApprovalMapper approvals, ToolCallMapper calls,
                                   RunActivityMapper activity, ScheduleRunStateService schedules, Clock clock) {
         this.runs = runs;

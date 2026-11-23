@@ -3,7 +3,6 @@ package com.stonewu.agenteam.service.execution;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.agent.AgentPublicEventMapper;
-import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepMapper;
 import com.stonewu.agenteam.mapper.file.FileMapper;
@@ -26,20 +25,18 @@ public class ExecutionPresentationFactory {
     private final ExecutionMessageWriter writer;
     private final ObjectMapper json;
     private final Scheduler eventPersistenceScheduler;
-    private final ConversationMapper conversations;
     private final LiveEventDelivery liveEvents;
 
     public ExecutionPresentationFactory(ExecutionMessageMapper messages, RunStepMapper steps, FileMapper files,
                                         ExecutionMessageWriter writer,
                                         ObjectMapper json, Scheduler eventPersistenceScheduler,
-                                        ConversationMapper conversations, LiveEventDelivery liveEvents) {
+                                        LiveEventDelivery liveEvents) {
         this.messages = messages;
         this.steps = steps;
         this.files = files;
         this.writer = writer;
         this.json = json;
         this.eventPersistenceScheduler = eventPersistenceScheduler;
-        this.conversations = conversations;
         this.liveEvents = liveEvents;
     }
 
@@ -52,9 +49,7 @@ public class ExecutionPresentationFactory {
                 .equals("ready"))
             .map(file -> json.convertValue(FileMapper.summary(file), new TypeReference<Map<String, Object>>() {
             })).orElse(null));
-        var conversation = conversations.find(run.enterpriseId(), run.userId(), run.conversationId(), false)
-            .orElseThrow();
-        var live = conversation.liveEvents() ? liveEvents.open(run, lease, output.blocks()) : null;
+        var live = liveEvents.open(run, lease, output.blocks());
         return new FrameEventPersistence(run, lease, mapper, writer, eventPersistenceScheduler, live);
     }
 }

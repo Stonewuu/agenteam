@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
+import com.stonewu.agenteam.model.execution.entity.ConversationRecord;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
 import com.stonewu.agenteam.model.execution.response.LiveExecutionEvent;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 实时事件与累计状态使用独立格式，不改变数据库旧事件的解码。
+ * 实时事件与累计状态使用独立编号，数据库版本表示已经提交的业务事务。
  */
 @Component
 public class LiveEventCodec {
@@ -90,6 +91,11 @@ public class LiveEventCodec {
                 event.createdAt(), "block.created".equals(event.type()) ? "block.updated" : event.type(), event.payload()), active, version);
     }
 
+    public String refresh(ConversationRecord conversation, Instant now) {
+        return envelope(UUID.randomUUID().toString(), conversation.enterpriseId(), conversation.id(),
+            conversation.activeRunId(), now.toString(), "snapshot.required", Map.of());
+    }
+
     private String envelope(String id, String enterprise, String conversation, String run, String created,
                             String type, Object payload) {
         var node = json.createObjectNode().put("protocolVersion", 2).put("eventId", id).put("enterpriseId", enterprise)
@@ -122,7 +128,7 @@ public class LiveEventCodec {
         }
     }
 
-    private String write(Object value) {
+    String write(Object value) {
         try {
             return json.writeValueAsString(value);
         } catch (JsonProcessingException invalid) {

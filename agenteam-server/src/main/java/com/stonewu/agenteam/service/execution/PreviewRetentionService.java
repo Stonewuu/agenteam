@@ -2,7 +2,6 @@ package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.service.i18n.Messages;
 
-import com.stonewu.agenteam.mapper.execution.ExecutionEventCache;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.PreviewRetentionMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -24,17 +23,15 @@ public class PreviewRetentionService {
     private final PreviewRetentionMapper retention;
     private final RunMapper runs;
     private final ExecutionFileCleanup files;
-    private final ExecutionEventCache cache;
     private final LiveEventCache live;
     private final Clock clock;
     private final FileRetentionService artifacts;
 
     public PreviewRetentionService(PreviewRetentionMapper retention, RunMapper runs, ExecutionFileCleanup files,
-                                   ExecutionEventCache cache, LiveEventCache live, Clock clock, FileRetentionService artifacts) {
+                                   LiveEventCache live, Clock clock, FileRetentionService artifacts) {
         this.retention = retention;
         this.runs = runs;
         this.files = files;
-        this.cache = cache;
         this.live = live;
         this.clock = clock;
         this.artifacts = artifacts;
@@ -52,26 +49,17 @@ public class PreviewRetentionService {
                     artifacts.removeRunFiles(run);
                     files.remove(run);
                 });
-                String owner = cache.claim(preview.enterprise(), preview.conversation());
+                String owner = live.claim(preview.enterprise(), preview.conversation());
                 if (owner == null) {
                     continue;
                 }
-                String liveOwner = null;
                 try {
-                    liveOwner = live.claim(preview.enterprise(), preview.conversation());
-                    if (liveOwner == null) {
-                        continue;
-                    }
-                    if (cache.remove(preview.enterprise(), preview.conversation(), owner)
-                        && live.remove(preview.enterprise(), preview.conversation(), liveOwner,
+                    if (live.remove(preview.enterprise(), preview.conversation(), owner,
                             executions.stream().map(run -> run.id()).toList())) {
                         retention.remove(preview, before);
                     }
                 } finally {
-                    if (liveOwner != null) {
-                        live.release(preview.enterprise(), preview.conversation(), liveOwner);
-                    }
-                    cache.release(preview.enterprise(), preview.conversation(), owner);
+                    live.release(preview.enterprise(), preview.conversation(), owner);
                 }
             } catch (RuntimeException failed) {
                 LOG.warn(Messages.log("log.execution.previewRetentionService.clean.1"),

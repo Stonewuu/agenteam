@@ -2,7 +2,7 @@ package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.service.i18n.Messages;
 
-import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
+import com.stonewu.agenteam.service.execution.ConversationChangePublisher;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunStepMapper;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -20,13 +20,13 @@ import java.util.Map;
 @Service
 public class QuestionConversationWriter {
     private final ExecutionMessageMapper messages;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final ToolCallMapper calls;
     private final RunStepMapper steps;
     private final RunQuestionContent content;
     private final Clock clock;
 
-    public QuestionConversationWriter(ExecutionMessageMapper messages, ExecutionEventMapper events, ToolCallMapper calls,
+    public QuestionConversationWriter(ExecutionMessageMapper messages, ConversationChangePublisher events, ToolCallMapper calls,
             RunStepMapper steps, RunQuestionContent content, Clock clock) {
         this.messages = messages;
         this.events = events;

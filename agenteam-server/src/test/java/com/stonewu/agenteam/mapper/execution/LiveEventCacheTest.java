@@ -119,6 +119,25 @@ class LiveEventCacheTest {
     }
 
     @Test
+    void oneCommittedTransactionUpdatesEveryBlockAndRetriesWithoutDuplicateEvents() {
+        var first = codec.committed(saved(block("first", "本轮正文", "5", "completed"), 1));
+        var second = codec.committed(saved(block("second", "本轮补充", "7", "completed"), 1));
+        var result = cache.commit(run.enterpriseId(), run.conversationId(), cursor, 1, List.of(first, second));
+        assertTrue(result.accepted());
+        assertEquals(1, result.databaseVersion());
+        var snapshot = cache.snapshot(run.enterpriseId(), run.conversationId()).orElseThrow();
+        assertEquals(2, snapshot.objects().size());
+        assertEquals("本轮正文", snapshot.objects().get("block:output:first").path("block").path("text").asText());
+        assertEquals("本轮补充", snapshot.objects().get("block:output:second").path("block").path("text").asText());
+        var values = cache.after(run.enterpriseId(), run.conversationId(), cursor, Duration.ZERO, 100);
+        assertEquals(2, values.size());
+        assertTrue(values.stream().allMatch(event -> event.databaseVersion().equals("1")));
+        assertEquals(result.cursor(), cache.commit(run.enterpriseId(), run.conversationId(), cursor, 1,
+            List.of(first, second)).cursor());
+        assertEquals(values, cache.after(run.enterpriseId(), run.conversationId(), cursor, Duration.ZERO, 100));
+    }
+
+    @Test
     void rejectsOutOfOrderDatabaseNotificationsWithoutChangingContent() {
         var first = block("text", "前", "1", "completed");
         var next = first.update("前后", "completed");

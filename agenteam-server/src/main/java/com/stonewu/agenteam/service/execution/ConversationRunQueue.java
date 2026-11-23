@@ -3,7 +3,7 @@ package com.stonewu.agenteam.service.execution;
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
-import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
+import com.stonewu.agenteam.service.execution.ConversationChangePublisher;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunJobMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
@@ -28,13 +28,13 @@ public class ConversationRunQueue {
     private final RunMapper runs;
     private final ConversationMapper conversations;
     private final ExecutionMessageMapper messages;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final RunJobMapper jobs;
     private final QuotaReservationService quotas;
     private final MessageAttachmentMapper attachments;
 
     public ConversationRunQueue(RunMapper runs, ConversationMapper conversations, ExecutionMessageMapper messages,
-                                ExecutionEventMapper events, RunJobMapper jobs, QuotaReservationService quotas,
+                                ConversationChangePublisher events, RunJobMapper jobs, QuotaReservationService quotas,
                                 MessageAttachmentMapper attachments) {
         this.attachments = attachments;
         this.runs = runs;

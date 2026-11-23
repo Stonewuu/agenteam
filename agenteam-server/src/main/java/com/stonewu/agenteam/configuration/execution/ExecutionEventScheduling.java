@@ -1,45 +1,35 @@
 package com.stonewu.agenteam.configuration.execution;
 
-import com.stonewu.agenteam.service.execution.ExecutionEventCompactionWorker;
-import com.stonewu.agenteam.service.execution.ExecutionEventPublisher;
+import com.stonewu.agenteam.mapper.execution.ExecutionEventSqlMapper;
 import com.stonewu.agenteam.service.execution.PreviewRetentionService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
+import java.time.Duration;
+
+import static com.stonewu.agenteam.mapper.execution.ExecutionJson.timestamp;
+
 /**
- * 分发失败不影响执行提交，未分发记录会在下次检查时继续处理。
+ * 定期清理到期预览和旧版本遗留事件；实时内容由 Redis 的保留期限管理。
  */
 @Component
 @ConditionalOnProperty(name = "execution.events.worker-enabled", havingValue = "true", matchIfMissing = true)
 public class ExecutionEventScheduling {
-
-    private final ExecutionEventPublisher publisher;
-
+    private final ExecutionEventSqlMapper history;
     private final PreviewRetentionService previews;
+    private final Clock clock;
 
-    private final ExecutionEventCompactionWorker compaction;
-
-    public ExecutionEventScheduling(ExecutionEventPublisher publisher, PreviewRetentionService previews,
-                                    ExecutionEventCompactionWorker compaction) {
-        this.publisher = publisher;
+    public ExecutionEventScheduling(ExecutionEventSqlMapper history, PreviewRetentionService previews, Clock clock) {
+        this.history = history;
         this.previews = previews;
-        this.compaction = compaction;
-    }
-
-    @Scheduled(fixedDelayString = "${execution.events.recovery-delay-ms:5000}", initialDelay = 1000)
-    public void distribute() {
-        publisher.publishPending();
+        this.clock = clock;
     }
 
     @Scheduled(fixedDelay = 60000, initialDelay = 60000)
     public void clean() {
         previews.clean();
-        publisher.removeExpired();
-    }
-
-    @Scheduled(fixedDelay = 5000, initialDelay = 10000)
-    public void compactHistory() {
-        compaction.compactPending();
+        history.removeExpiredAgentEvent(timestamp(clock.instant().minus(Duration.ofDays(7))));
     }
 }

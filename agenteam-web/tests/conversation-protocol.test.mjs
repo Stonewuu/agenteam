@@ -293,6 +293,9 @@ test("第二版读取确认必须与快照生命周期一致", () => {
   const delta = liveEvent("101", "message.delta", { messageId: "output", blockId: "text", baseRevision: "1", revision: "2", delta: "片段" });
   const parsed = parseConversationFrame(`id: 101\nevent: message.delta\ndata: ${JSON.stringify(delta.event)}`);
   assert.deepEqual(parsed, delta);
+  const reset = parseConversationFrame('event: stream.reset\ndata: {"lastSequence":"101","generation":"generation-1","reason":"database_changed"}');
+  assert.equal(reset.reason, "database_changed");
+  assert.throws(() => apply(state, reset), SnapshotRequired);
 });
 
 test("自动尝试保留失败正文，后续尝试使用独立消息并保持同一活动任务", () => {

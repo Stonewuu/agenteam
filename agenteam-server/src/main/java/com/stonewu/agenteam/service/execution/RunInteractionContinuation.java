@@ -1,6 +1,6 @@
 package com.stonewu.agenteam.service.execution;
 
-import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
+import com.stonewu.agenteam.service.execution.ConversationChangePublisher;
 import com.stonewu.agenteam.mapper.execution.RunActivityMapper;
 import com.stonewu.agenteam.mapper.execution.RunApprovalMapper;
 import com.stonewu.agenteam.mapper.execution.RunJobMapper;
@@ -22,13 +22,13 @@ public class RunInteractionContinuation {
     private final RunActivityMapper activity;
     private final RunJobMapper jobs;
     private final RunMapper runs;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final ScheduleRunStateService schedules;
     private final Clock clock;
     private final ObjectProvider<RunQuestionChannel> channels;
 
     public RunInteractionContinuation(RunQuestionMapper questions, RunApprovalMapper approvals, RunActivityMapper activity,
-            RunJobMapper jobs, RunMapper runs, ExecutionEventMapper events, ScheduleRunStateService schedules, Clock clock,
+            RunJobMapper jobs, RunMapper runs, ConversationChangePublisher events, ScheduleRunStateService schedules, Clock clock,
             ObjectProvider<RunQuestionChannel> channels) {
         this.questions = questions;
         this.approvals = approvals;

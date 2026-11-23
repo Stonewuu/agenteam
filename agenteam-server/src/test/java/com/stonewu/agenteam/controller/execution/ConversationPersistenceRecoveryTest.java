@@ -38,7 +38,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 模型已开始输出之后注入短时数据库故障，最终正文和事件都必须完整且不重复。
+ * 模型开始输出后注入短时数据库故障，最终正文完整且不重复，流式片段只保存在 Redis。
  */
 @Import(SharedEnterpriseTestEdition.class)
 class ConversationPersistenceRecoveryTest extends ExecutionApiTestSupport {
@@ -95,17 +95,19 @@ class ConversationPersistenceRecoveryTest extends ExecutionApiTestSupport {
             assertEquals(expected, DataAccessUtils.nullableSingleResult(databaseAccess.mapper(ExecutionMessageSqlMapper.class).selectList(new LambdaQueryWrapper<AgentMessageRow>().select(AgentMessageRow::getContent).eq(AgentMessageRow::getId, (accepted.path("outputMessageId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getContent()).toList()));
             int savedTextBlocks = 0;
             long sequence = 0;
-            for (var event : events.after(enterprise, conversation, 0, 1000)) {
-                assertEquals(Long.toString(++sequence), event.sequence());
-                schemas.validate("ExecutionEvent", json.valueToTree(event));
+            for (var event : liveEvents(conversation)) {
+                assertTrue(Long.parseLong(event.sequence()) > sequence);
+                sequence = Long.parseLong(event.sequence());
+                schemas.validate("LiveExecutionEvent", json.valueToTree(event));
                 var block = json.valueToTree(event.payload()).path("block");
-                if (event.type().equals("block.updated") && block.path("type").asText().equals("text")) {
+                if (event.type().equals("block.updated") && block.path("type").asText().equals("text")
+                    && block.path("status").asText().equals("completed")) {
                     assertEquals(expected, block.path("text").asText());
                     savedTextBlocks++;
                 }
-                assertTrue(!event.type().equals("message.delta"), "实时正文只在完整内容块结束后保存");
             }
             assertEquals(1, savedTextBlocks);
+            assertEquals(0, count("agent_event"));
             assertEquals(1, modelCalls.get() - callsBefore);
         } finally {
             worker.close();

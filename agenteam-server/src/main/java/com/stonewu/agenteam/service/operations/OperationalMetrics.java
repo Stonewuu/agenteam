@@ -55,9 +55,6 @@ public class OperationalMetrics {
             Gauge.builder("agenteam.executions", this, value -> value.value("run." + status)).tag("status", status)
                 .register(registry);
         }
-        gauge(registry, "agenteam.events.pending", "event.pending");
-        Gauge.builder("agenteam.events.oldest", this, value -> value.value("event.oldest_seconds")).baseUnit("seconds")
-            .register(registry);
         gauge(registry, "agenteam.files.rejected", "file.rejected");
         gauge(registry, "agenteam.knowledge.failed", "knowledge.failed");
         gauge(registry, "agenteam.tools.unknown", "tool.unknown");

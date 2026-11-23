@@ -327,9 +327,10 @@ class WorkflowModelInvocationApiTest extends ExecutionApiTestSupport {
 
     private void validateEvents(JsonNode accepted) {
         long sequence = 0;
-        for (var event : events.after(enterprise, accepted.path("conversationId").asText(), 0, 1000)) {
-            assertEquals(Long.toString(++sequence), event.sequence());
-            schemas.validate("ExecutionEvent", json.valueToTree(event));
+        for (var event : liveEvents(accepted.path("conversationId").asText())) {
+            assertTrue(Long.parseLong(event.sequence()) > sequence);
+                sequence = Long.parseLong(event.sequence());
+            schemas.validate("LiveExecutionEvent", json.valueToTree(event));
         }
     }
 

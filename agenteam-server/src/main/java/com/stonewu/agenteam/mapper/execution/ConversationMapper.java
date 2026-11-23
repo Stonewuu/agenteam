@@ -94,10 +94,6 @@ public class ConversationMapper {
         return DataAccessUtils.nullableSingleResult(statements.lastSequenceAgentConversation(enterprise, id));
     }
 
-    public String eventDeliveryMode(String enterprise, String id) {
-        return statements.eventDeliveryMode(enterprise, id);
-    }
-
     public List<ConversationRecord> list(String enterprise, String user, String status, Boolean favorite,
                                          String agentId, String query, PagePosition after, int limit,
                                          Instant oldestDeleted) {
@@ -163,9 +159,4 @@ public class ConversationMapper {
         }
     }
 
-    public void enableLiveEvents(ConversationRecord row) {
-        if (!row.liveEvents() && statements.enableLiveEvents(row.enterpriseId(), row.userId(), row.id()) != 1) {
-            throw new IllegalStateException(Messages.text("error.execution.conversationMapper.enableLiveEvents.1"));
-        }
-    }
 }

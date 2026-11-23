@@ -3,7 +3,6 @@ package com.stonewu.agenteam.service.execution;
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stonewu.agenteam.mapper.execution.ConversationMapper;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
@@ -22,20 +21,15 @@ import java.util.stream.Collectors;
 @Service
 public class LivePartialOutputRecovery {
     private static final Logger LOG = LoggerFactory.getLogger(LivePartialOutputRecovery.class);
-    private final ConversationMapper conversations;
     private final LiveEventCache cache;
     private final ObjectMapper json;
 
-    public LivePartialOutputRecovery(ConversationMapper conversations, LiveEventCache cache, ObjectMapper json) {
-        this.conversations = conversations;
+    public LivePartialOutputRecovery(LiveEventCache cache, ObjectMapper json) {
         this.cache = cache;
         this.json = json;
     }
 
     public MessageView merge(RunRecord run, MessageView saved) {
-        if (!"redis".equals(conversations.eventDeliveryMode(run.enterpriseId(), run.conversationId()))) {
-            return saved;
-        }
         try {
             cache.freeze(run);
             var current = cache.snapshot(run.enterpriseId(), run.conversationId());

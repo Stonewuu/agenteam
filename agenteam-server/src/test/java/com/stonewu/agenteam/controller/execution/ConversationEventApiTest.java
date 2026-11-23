@@ -1,81 +1,77 @@
 package com.stonewu.agenteam.controller.execution;
 
-import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
-import org.springframework.context.annotation.Import;
-
-import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
-
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.stonewu.agenteam.mapper.execution.*;
+import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
+import com.stonewu.agenteam.model.agent.entity.AgentStreamEvent;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
-import com.stonewu.agenteam.model.execution.entity.AgentConversationRow;
-import com.stonewu.agenteam.model.execution.entity.AgentEventRow;
-import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
-import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
+import com.stonewu.agenteam.model.execution.entity.CommittedConversationChanges;
+import com.stonewu.agenteam.model.execution.entity.ExecutionChange;
+import com.stonewu.agenteam.model.execution.response.ContentBlock;
+import com.stonewu.agenteam.model.execution.entity.JobLease;
+import com.stonewu.agenteam.model.execution.entity.RunRecord;
+import com.stonewu.agenteam.service.execution.ConversationChangePublisher;
 import com.stonewu.agenteam.service.execution.ConversationEventService;
-import com.stonewu.agenteam.service.execution.ExecutionEventPublisher;
+import com.stonewu.agenteam.service.execution.ConversationSnapshotService;
+import com.stonewu.agenteam.service.execution.ExecutionPresentationFactory;
+import com.stonewu.agenteam.service.execution.ExecutionMessageWriter;
+import com.stonewu.agenteam.service.execution.LiveEventDelivery;
+import com.stonewu.agenteam.service.auth.ConnectionAuthorization;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
+import com.stonewu.agenteam.support.SharedEnterpriseTestEdition;
+import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.support.DataAccessUtils;
-import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.data.redis.connection.stream.RecordId;
-import org.springframework.data.redis.connection.stream.StreamRecords;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doThrow;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 验证持久事件数据的编号、续读和到期清理，控制事件不占用正文序号。
+ * 验证业务事务版本、Redis 重读，以及通知遗漏后从业务结果恢复。
  */
 @Import(SharedEnterpriseTestEdition.class)
 class ConversationEventApiTest extends ExecutionApiTestSupport {
-
     private static final InvitationHttpTestEnvironment ENVIRONMENT = new InvitationHttpTestEnvironment();
-
     @Autowired
-    private ExecutionEventPublisher publisher;
-
-    @Autowired
-    private ExecutionEventCodec codec;
-
-    @Autowired
-    private StringRedisTemplate redis;
-
-    @MockitoSpyBean
-    private ExecutionEventCache cache;
-
-    @MockitoSpyBean
-    private ExecutionEventMapper eventRecords;
-
+    private ConversationSnapshotService snapshots;
     @Autowired
     private ConversationEventService connections;
+    @Autowired
+    private ConversationChangePublisher changes;
+    @Autowired
+    private PlatformTransactionManager transactions;
+    @Autowired
+    private ExecutionPresentationFactory presentation;
+    @Autowired
+    private ExecutionMessageWriter writer;
+    @MockitoSpyBean
+    private Clock clock;
+    @MockitoSpyBean
+    private ConnectionAuthorization authorization;
+    @MockitoSpyBean
+    private LiveEventDelivery delivery;
+    @MockitoSpyBean
+    private ExecutionMessageMapper messages;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.events.live-enabled", () -> "false");
     }
 
     @AfterAll
@@ -84,177 +80,162 @@ class ConversationEventApiTest extends ExecutionApiTestSupport {
     }
 
     @Test
-    void replayValidatesPositionsAndPreservesExactEventIds() throws Exception {
-        var accepted = submitAndCancel();
+    void oneSubmissionUsesOneBusinessVersionAndLegacyReadersReloadTheSnapshot() throws Exception {
+        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
         String conversation = accepted.path("conversationId").asText();
-        var saved = events.after(enterprise, conversation, 0, 100);
-        var frames = frames(read(conversation, "0", "0"));
-        assertEquals(saved.size() + 1, frames.size());
-        for (int i = 0; i < saved.size(); i++) {
-            var frame = frames.get(i);
-            assertEquals(saved.get(i).sequence(), frame.get("id"));
-            var value = json.readTree(frame.get("data"));
-            schemas.validate("ExecutionEvent", value);
-            assertEquals(saved.get(i).eventId(), value.path("eventId").asText());
-        }
-        var ready = frames.getLast();
-        assertEquals("stream.ready", ready.get("event"));
-        assertFalse(ready.containsKey("id"));
-        assertEquals(saved.getLast().sequence(), json.readTree(ready.get("data")).path("lastSequence").asText());
-        var resumed = frames(read(conversation, saved.getLast().sequence(), null));
-        assertEquals(1, resumed.size());
-        assertEquals("stream.ready", resumed.getFirst().get("event"));
-        for (String after : List.of("123456-0", "01", "-1", "9223372036854775808", "", "1.0")) {
-            mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", after)).andExpect(status().isBadRequest());
-        }
-        mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", "1").header("Last-Event-ID", "2")).andExpect(status().isBadRequest());
-        String other = provisioning.create("无法读取其他企业的对话", users.findById(admin).orElseThrow(), Instant.now()).enterpriseId();
-        mvc.perform(get("/api/v1/enterprises/" + other + "/conversations/" + conversation + "/events").cookie(cookie)).andExpect(status().isNotFound());
-        assertReset(conversation, "999", "sequence_invalid");
-        var original = events.after(enterprise, conversation, 0, 100);
-        long offset = 9_007_199_254_740_992L;
-        for (var value : original.reversed()) {
-            long sequence = offset + Long.parseLong(value.sequence());
-            var shifted = new ExecutionEvent(value.protocolVersion(), value.eventId(), value.enterpriseId(), value.conversationId(), value.runId(), Long.toString(sequence), value.createdAt(), value.type(), value.payload());
-            var encoded = codec.encode(shifted);
-            databaseAccess.mapper(ExecutionEventSqlMapper.class).update(new LambdaUpdateWrapper<AgentEventRow>().eq(AgentEventRow::getEventId, (value.eventId())).set(AgentEventRow::getConversationSequence, (sequence)).set(AgentEventRow::getPayloadJson, (encoded.data())).set(AgentEventRow::getPayloadHash, (encoded.hash())));
-        }
-        databaseAccess.mapper(ConversationSqlMapper.class).update(new LambdaUpdateWrapper<AgentConversationRow>().eq(AgentConversationRow::getId, (conversation)).set(AgentConversationRow::getLastSequence, (offset + original.size())));
-        publisher.publish(enterprise, conversation);
-        publisher.publish(enterprise, conversation);
-        var shiftedFrames = frames(read(conversation, Long.toString(offset), null));
-        assertEquals(Long.toString(offset + 1), shiftedFrames.getFirst().get("id"));
-        assertEquals(offset + original.size(), cache.last(enterprise, conversation).sequence());
-        assertEquals(original.size() + 1, shiftedFrames.size());
-    }
-
-    @Test
-    void publishingRecoversFromAcknowledgementAndCacheFailuresWithoutDuplicatingEvents() throws Exception {
-        String conversation = submitAndCancel().path("conversationId").asText();
-        int savedCount = events.after(enterprise, conversation, 0, 100).size();
-        doThrow(new DataAccessResourceFailureException("仅模拟分发结果暂时无法保存")).when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
-        try {
-            assertThrows(DataAccessResourceFailureException.class, () -> publisher.publish(enterprise, conversation));
-        } finally {
-            doCallRealMethod().when(eventRecords).publishedThrough(anyString(), anyString(), anyLong(), any(Instant.class));
-        }
-        assertEquals(savedCount, events.unpublished(enterprise, conversation, 100).size());
-        assertEquals(savedCount, redis.opsForStream().size(cache.key(enterprise, conversation)));
-        publisher.publish(enterprise, conversation);
-        publisher.publish(enterprise, conversation);
-        String key = cache.key(enterprise, conversation);
-        assertEquals(savedCount, redis.opsForStream().size(key));
-        assertTrue(redis.getExpire(key) > 86300);
-        assertEquals(0, events.unpublished(enterprise, conversation, 100).size());
-        var expected = frames(read(conversation, "0", null));
-        redis.delete(key);
-        assertEquals(expected, frames(read(conversation, "0", null)));
-        doThrow(new RedisConnectionFailureException("仅模拟事件缓存连接失败")).when(cache).after(anyString(), anyString(), anyLong(), anyInt());
-        try {
-            assertEquals(expected, frames(read(conversation, "0", null)));
-        } finally {
-            doCallRealMethod().when(cache).after(anyString(), anyString(), anyLong(), anyInt());
-        }
-        assertEquals(savedCount, count("agent_event"));
-        assertEquals(2, count("agent_message"));
-        redis.delete(key);
-        redis.opsForStream().add(StreamRecords.string(Map.of("data", "{}", "hash", "invalid")).withStreamKey(key).withId(RecordId.of("1-0")));
-        assertEquals(expected, frames(read(conversation, "0", null)));
-        redis.delete(key);
-        databaseAccess.mapper(ExecutionEventSqlMapper.class).delete(new LambdaQueryWrapper<AgentEventRow>().eq(AgentEventRow::getConversationId, (conversation)).eq(AgentEventRow::getConversationSequence, 2));
-        assertReset(conversation, "0", "data_incomplete");
-        databaseAccess.mapper(ExecutionEventSqlMapper.class).update(new LambdaUpdateWrapper<AgentEventRow>().eq(AgentEventRow::getConversationId, (conversation)).eq(AgentEventRow::getConversationSequence, 3).set(AgentEventRow::getPayloadHash, "invalid"));
-        assertReset(conversation, "2", "data_incomplete");
-    }
-
-    @Test
-    void expiryRemovesEventsButKeepsFullMessagesAndSignalsSnapshot() throws Exception {
-        String conversation = submitAndCancel().path("conversationId").asText();
-        databaseAccess.mapper(RunSqlMapper.class).update(new LambdaUpdateWrapper<AgentRunRow>().eq(AgentRunRow::getConversationId, (conversation)).set(AgentRunRow::getFinishedAt, (Timestamp.from(Instant.now().minusSeconds(8 * 86400)))));
-        publisher.removeExpired();
+        assertEquals("1", accepted.path("lastSequence").asText());
+        assertEquals(1, conversationRecords.lastSequence(enterprise, conversation));
         assertEquals(0, count("agent_event"));
-        assertEquals(2, count("agent_message"));
-        assertReset(conversation, "0", "events_expired");
-        var snapshot = data(mvc.perform(get(base() + "/conversations/" + conversation).cookie(cookie)).andExpect(status().isOk()).andReturn());
-        schemas.validate("ConversationSnapshot", snapshot);
-        assertFalse(snapshot.at("/messages/0/content").asText().isBlank());
-        assertEquals("stream.ready", frames(read(conversation, snapshot.path("lastSequence").asText(), null)).getFirst().get("event"));
+        var before = snapshots.read(actor(), conversation);
+        assertEquals(2, before.protocolVersion());
+        assertNotNull(before.streamCursor());
+        var reset = connections.connect(actor(), "legacy-reader", conversation, "0", null).blockFirst();
+        assertEquals("stream.reset", reset.event());
+        for (String invalid : List.of("-1", "01", "1e2", "9223372036854775808")) {
+            mvc.perform(get(base() + "/conversations/" + conversation + "/events").cookie(cookie)
+                .param("after", invalid)).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get(base() + "/conversations/" + conversation + "/events").cookie(cookie)
+            .param("after", "1").header("Last-Event-ID", "2")).andExpect(status().isBadRequest());
+        write(base() + "/runs/" + accepted.path("runId").asText() + "/cancel", Map.of(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted());
+        var frames = connections.connect(actor(), "reader", conversation, before.streamCursor().sequence(), null,
+            before.streamCursor().generation()).collectList().block(Duration.ofSeconds(10));
+        assertNotNull(frames);
+        assertTrue(frames.stream().anyMatch(frame -> "run.cancelled".equals(frame.event()) || "stream.reset".equals(frame.event())));
+        assertNull(snapshots.read(actor(), conversation).activeRun());
+        assertEquals(0, count("agent_event"));
     }
 
     @Test
-    void liveConnectionsPreserveReadinessAndIgnoreDisconnectsAndEarlierTerminalEvents() throws Exception {
-        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        String conversation = accepted.path("conversationId").asText();
-        var actor = new AuthContext(users.findById(admin).orElseThrow(), enterprise, Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
-        connections.connect(actor, "订阅建立后立即断开", conversation, "0", null).take(1).blockLast(Duration.ofSeconds(5));
-        assertEquals("queued", DataAccessUtils.nullableSingleResult(databaseAccess.mapper(RunSqlMapper.class).selectList(new LambdaQueryWrapper<AgentRunRow>().select(AgentRunRow::getStatus).eq(AgentRunRow::getId, (accepted.path("runId").asText()))).stream().map(fixtureRecord -> fixtureRecord.getStatus()).toList()));
-        var pending = mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", "0")).andExpect(request().asyncStarted()).andReturn();
-        await(() -> new String(pending.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8).contains("stream.ready"));
-        write(base() + "/runs/" + accepted.path("runId").asText() + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
-        pending.getAsyncResult(5000);
-        var frames = frames(mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
-        assertEquals("stream.ready", frames.get(3).get("event"));
-        assertFalse(frames.get(3).containsKey("id"));
-        assertEquals("3", json.readTree(frames.get(3).get("data")).path("lastSequence").asText());
-        assertEquals("run.cancelled", frames.getLast().get("event"));
-        var current = data(write(base() + "/conversations/" + conversation + "/messages", input("继续当前任务"), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        var currentConnection = mvc.perform(get(eventPath(conversation)).cookie(cookie).param("after", "0")).andExpect(request().asyncStarted()).andReturn();
-        await(() -> new String(currentConnection.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8).contains("stream.ready"));
-        assertThrows(IllegalStateException.class, () -> currentConnection.getAsyncResult(100));
-        write(base() + "/runs/" + current.path("runId").asText() + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
-        currentConnection.getAsyncResult(5000);
-        var received = frames(mvc.perform(asyncDispatch(currentConnection)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
-        assertEquals(2, received.stream().filter(frame -> "run.cancelled".equals(frame.get("event"))).count());
-        assertEquals(current.path("runId"), json.readTree(received.getLast().get("data")).path("runId"));
-    }
-
-    private JsonNode submitAndCancel() throws Exception {
-        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString()).andExpect(status().isAccepted()).andReturn());
-        write(base() + "/runs/" + accepted.path("runId").asText() + "/cancel", null, UUID.randomUUID().toString()).andExpect(status().isAccepted());
-        return accepted;
-    }
-
-    private String eventPath(String conversation) {
-        return base() + "/conversations/" + conversation + "/events";
-    }
-
-    private String read(String conversation, String after, String lastEventId) throws Exception {
-        var request = get(eventPath(conversation)).cookie(cookie);
-        if (after != null) {
-            request.param("after", after);
+    void rollbackRestoresBusinessDataAndVersionWithoutPublishingAnything() throws Exception {
+        var fixture = start();
+        try {
+            long version = conversationRecords.lastSequence(enterprise, fixture.run().conversationId());
+            var before = liveEventCache.position(enterprise, fixture.run().conversationId()).orElseThrow();
+            clearInvocations(delivery);
+            new TransactionTemplate(transactions).executeWithoutResult(transaction -> {
+                messages.save(enterprise, fixture.run().outputMessageId(), "不能出现的内容", List.of(), "streaming", version, Instant.now());
+                changes.append(fixture.run(), "message.created", messages.find(enterprise, fixture.run().conversationId(),
+                    fixture.run().outputMessageId()).orElseThrow(), Instant.now());
+                transaction.setRollbackOnly();
+            });
+            assertEquals(version, conversationRecords.lastSequence(enterprise, fixture.run().conversationId()));
+            assertEquals("", messages.find(enterprise, fixture.run().conversationId(), fixture.run().outputMessageId()).orElseThrow().content());
+            verify(delivery, never()).committed(any(CommittedConversationChanges.class));
+            assertEquals(before.cursor(), liveEventCache.position(enterprise, fixture.run().conversationId()).orElseThrow().cursor());
+            assertEquals(0, count("agent_event"));
+            var block = new ContentBlock("saved-round", "text", null, 1, "1", "完整本轮", "completed",
+                null, null, null, null, null, null);
+            var content = List.of(new ExecutionChange(block, null, "0", null, null, null));
+            String batch = UUID.randomUUID().toString();
+            writer.save(fixture.lease(), batch, content);
+            writer.save(fixture.lease(), batch, content);
+            assertEquals(version + 1, conversationRecords.lastSequence(enterprise, fixture.run().conversationId()));
+            assertThrows(IllegalStateException.class, () -> writer.save(fixture.lease(), batch,
+                List.of(new ExecutionChange(block.update("不同内容", "completed"), null, "1", null, null, null))));
+            assertEquals("完整本轮", messages.find(enterprise, fixture.run().conversationId(), fixture.run().outputMessageId()).orElseThrow().content());
+        } finally {
+            lifecycle.finish(fixture.lease(), "completed", null, null);
         }
-        if (lastEventId != null) {
-            request.header("Last-Event-ID", lastEventId);
-        }
-        MvcResult pending = mvc.perform(request).andExpect(request().asyncStarted()).andReturn();
-        pending.getAsyncResult(5000);
-        return mvc.perform(asyncDispatch(pending)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
-    private List<Map<String, String>> frames(String body) {
-        var values = new ArrayList<Map<String, String>>();
-        for (String frame : body.replace("\r", "").split("\n\n")) {
-            Map<String, String> fields = new HashMap<>();
-            for (String line : frame.split("\n")) {
-                int colon = line.indexOf(':');
-                if (colon > 0) {
-                    fields.put(line.substring(0, colon), line.substring(colon + 1).stripLeading());
-                }
+    @Test
+    void aConnectedReaderDetectsAMissedCompletionWithoutAnotherSnapshotRequest() throws Exception {
+        var fixture = start();
+        var cursor = snapshots.read(actor(), fixture.run().conversationId()).streamCursor();
+        doNothing().when(delivery).committed(any(CommittedConversationChanges.class));
+        lifecycle.finish(fixture.lease(), "completed", null, null);
+        long now = System.currentTimeMillis();
+        doReturn(now, now, now + 16000).when(clock).millis();
+        doReturn(true).when(authorization).allowed(eq("reader"), any(), eq("conversation.view"));
+        try {
+            var reset = connections.connect(actor(), "reader", fixture.run().conversationId(), cursor.sequence(), null,
+                cursor.generation()).filter(frame -> "stream.reset".equals(frame.event())).next().block(Duration.ofSeconds(5));
+            assertNotNull(reset);
+            assertEquals("database_changed", ((Map<?, ?>) reset.data()).get("reason"));
+            assertNull(snapshots.read(actor(), fixture.run().conversationId()).activeRun());
+        } finally {
+            doCallRealMethod().when(clock).millis();
+            doCallRealMethod().when(delivery).committed(any(CommittedConversationChanges.class));
+        }
+    }
+
+    @Test
+    void eachRoundSavesBeforeTheNextAndMissedNotificationsPreserveUnfinishedOutput() throws Exception {
+        var fixture = start();
+        try (var frames = presentation.open(fixture.run(), fixture.lease())) {
+            frames.accept(event("AGENT_START", "agent", null, null));
+            frames.flush();
+            var cursor = snapshots.read(actor(), fixture.run().conversationId()).streamCursor();
+            doNothing().when(delivery).committed(any(CommittedConversationChanges.class));
+            clearInvocations(messages);
+            frames.accept(event("MODEL_CALL_START", "first", null, null));
+            frames.accept(event("TEXT_BLOCK_START", "first", "one", null));
+            frames.accept(event("TEXT_BLOCK_DELTA", "first", "one", "第一轮完整内容"));
+            frames.accept(event("TEXT_BLOCK_END", "first", "one", null));
+            frames.accept(toolEvent("TOOL_CALL_START", null));
+            frames.accept(toolEvent("TOOL_CALL_DELTA", "{\"path\":\""));
+            for (int index = 0; index < 100; index++) {
+                frames.accept(toolEvent("TOOL_CALL_DELTA", "目录"));
             }
-            if (!fields.isEmpty()) {
-                values.add(fields);
-            }
+            frames.accept(toolEvent("TOOL_CALL_DELTA", "\"}"));
+            frames.accept(toolEvent("TOOL_CALL_END", null));
+            verify(messages, never()).save(eq(enterprise), eq(fixture.run().outputMessageId()), anyString(), anyList(), anyString(), anyLong(), any());
+            frames.accept(event("MODEL_CALL_END", "first", null, null));
+            frames.flush();
+            assertEquals("第一轮完整内容", messages.find(enterprise, fixture.run().conversationId(), fixture.run().outputMessageId()).orElseThrow().content());
+            verify(messages, times(1)).save(eq(enterprise), eq(fixture.run().outputMessageId()), anyString(), anyList(), anyString(), anyLong(), any());
+            frames.accept(event("MODEL_CALL_START", "second", null, null));
+            frames.accept(event("TEXT_BLOCK_START", "second", "two", null));
+            frames.accept(event("TEXT_BLOCK_DELTA", "second", "two", "第二轮仍在生成"));
+            frames.flush();
+            var recovered = snapshots.read(actor(), fixture.run().conversationId());
+            String text = recovered.messages().stream().filter(message -> message.id().equals(fixture.run().outputMessageId()))
+                .findFirst().orElseThrow().content();
+            assertEquals("第一轮完整内容\n\n第二轮仍在生成", text);
+            verify(messages, times(1)).save(eq(enterprise), eq(fixture.run().outputMessageId()), anyString(), anyList(), anyString(), anyLong(), any());
+            var reset = connections.connect(actor(), "missed-notification", fixture.run().conversationId(), cursor.sequence(),
+                null, cursor.generation()).filter(frame -> "stream.reset".equals(frame.event())).next().block(Duration.ofSeconds(5));
+            assertNotNull(reset);
+            frames.accept(event("TEXT_BLOCK_END", "second", "two", null));
+            frames.accept(event("MODEL_CALL_END", "second", null, null));
+            frames.flush();
+            verify(messages, times(2)).save(eq(enterprise), eq(fixture.run().outputMessageId()), anyString(), anyList(), anyString(), anyLong(), any());
+            assertEquals(text, messages.find(enterprise, fixture.run().conversationId(), fixture.run().outputMessageId()).orElseThrow().content());
+            assertEquals(0, count("agent_event"));
+        } finally {
+            doCallRealMethod().when(delivery).committed(any(CommittedConversationChanges.class));
+            lifecycle.finish(fixture.lease(), "completed", null, null);
         }
-        return values;
     }
 
-    private void assertReset(String conversation, String after, String reason) throws Exception {
-        var frames = frames(read(conversation, after, null));
-        assertEquals(1, frames.size());
-        assertEquals("stream.reset", frames.getFirst().get("event"));
-        assertFalse(frames.getFirst().containsKey("id"));
-        var data = json.readTree(frames.getFirst().get("data"));
-        schemas.validate("StreamReset", data);
-        assertEquals(reason, data.path("reason").asText());
+    private record Fixture(RunRecord run, JobLease lease) {
+    }
+
+    private Fixture start() throws Exception {
+        var accepted = data(write(base() + "/conversations", body(), UUID.randomUUID().toString())
+            .andExpect(status().isAccepted()).andReturn());
+        var lease = lifecycle.claim("event-test-" + UUID.randomUUID()).orElseThrow();
+        assertEquals(accepted.path("runId").asText(), lease.runId());
+        var run = lifecycle.start(lease).orElseThrow();
+        delivery.recover(run);
+        return new Fixture(run, lease);
+    }
+
+    private AuthContext actor() {
+        return new AuthContext(users.findById(admin).orElseThrow(), enterprise,
+            Set.copyOf(permissions.listPermissionCodes(admin, enterprise)));
+    }
+
+    private AgentStreamEvent event(String type, String reply, String block, String delta) {
+        return new AgentStreamEvent(UUID.randomUUID().toString(), type, null, reply, block, delta, null, null,
+            null, null, null, Instant.now().toString(), Map.of(), Map.of());
+    }
+
+    private AgentStreamEvent toolEvent(String type, String delta) {
+        return new AgentStreamEvent(UUID.randomUUID().toString(), type, null, "first", null, delta, "call", "list_files",
+            null, null, null, Instant.now().toString(), Map.of(), Map.of());
     }
 }

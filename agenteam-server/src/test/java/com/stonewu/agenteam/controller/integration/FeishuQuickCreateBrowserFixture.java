@@ -52,7 +52,6 @@ class FeishuQuickCreateBrowserFixture extends ExecutionApiTestSupport {
         registry.add("server.servlet.session.cookie.name", () -> System.getProperty("feishu.quick-create.cookie-name", "SESSION"));
         registry.add("execution.worker.enabled", () -> true);
         registry.add("execution.events.worker-enabled", () -> true);
-        registry.add("execution.events.live-enabled", () -> true);
         registry.add("chat.worker-enabled", () -> true);
         registry.add("chat.public-base-url", () -> System.getProperty("feishu.quick-create.web-url", "http://localhost:3000"));
         registry.add("agenteam.web.public-base-url", () -> System.getProperty("feishu.quick-create.web-url", "http://localhost:3000"));

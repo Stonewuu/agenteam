@@ -86,7 +86,8 @@ public class LiveSnapshotMapper {
             ordered.removeFirst();
         }
         var steps = new ArrayList<LiveRunStepView>();
-        var approvals = new ArrayList<RunApprovalView>();
+        var approvals = new LinkedHashMap<String, RunApprovalView>();
+        base.approvals().forEach(approval -> approvals.put(approval.id(), approval));
         for (var entry : live.objects().entrySet()) {
             if (entry.getKey().startsWith("step:")) {
                 var value = entry.getValue();
@@ -100,20 +101,21 @@ public class LiveSnapshotMapper {
                     steps.add(new LiveRunStepView(run, owner.id(), live.cursor().sequence(), step));
                 }
             } else if (entry.getKey().startsWith("approval:")) {
-                approvals.add(json.convertValue(entry.getValue(), RunApprovalView.class));
+                var approval = json.convertValue(entry.getValue(), RunApprovalView.class);
+                approvals.put(approval.id(), approval);
             }
         }
         return new ConversationSnapshotView(conversation(base.conversation(), active), ordered, active,
             Long.toString(live.appliedDatabaseVersion()), older,
             older && !ordered.isEmpty() ? ordered.getFirst().id() : null,
-            base.attachmentsEnabled(), 2, live.cursor(), steps, approvals,
+            base.attachmentsEnabled(), 2, live.cursor(), steps, List.copyOf(approvals.values()),
             queue.values().stream().sorted(Comparator.comparingLong(QueuedMessageView::position)).toList());
     }
 
     public ConversationSnapshotView unavailable(ConversationSnapshotView base) {
         return new ConversationSnapshotView(base.conversation(), base.messages(), base.activeRun(), base.lastSequence(),
             base.hasOlderMessages(), base.nextBeforeMessageId(), base.attachmentsEnabled(), 2, null, List.of(),
-            List.of(), base.queuedMessages());
+            base.approvals(), base.queuedMessages());
     }
 
     private MessageView mergeBlock(MessageView message, ContentBlock block) {

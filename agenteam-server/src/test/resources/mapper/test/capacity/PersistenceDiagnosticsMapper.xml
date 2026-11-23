@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stonewu.agenteam.mapper.test.capacity.PersistenceDiagnosticsMapper">
+  <select id="settings" resultType="map">
+    SELECT VERSION() AS version, @@innodb_flush_log_at_trx_commit AS redoFlush,
+    @@sync_binlog AS binlogSync, @@innodb_buffer_pool_size AS bufferPoolBytes
+  </select>
+  <select id="writes" resultType="map">
+    SHOW GLOBAL STATUS WHERE Variable_name IN ('Com_insert', 'Com_update', 'Com_delete')
+  </select>
+</mapper>

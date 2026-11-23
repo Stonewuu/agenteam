@@ -62409,6 +62409,12 @@
               "$ref": "#/components/schemas/QueuedMessage"
             },
             "maxItems": 20
+          },
+          "stepHistory": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RunStepHistory"
+            }
           }
         },
         "additionalProperties": false,
@@ -68493,7 +68499,8 @@
               "events_expired",
               "sequence_invalid",
               "data_incomplete",
-              "protocol_changed"
+              "protocol_changed",
+              "database_changed"
             ]
           },
           "lastSequence": {
@@ -71100,6 +71107,32 @@
           "position",
           "text"
         ]
+      },
+      "RunStepHistory": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunStep"
+            }
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunAttempt"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "steps",
+          "attempts",
+          "hasMore"
+        ],
+        "additionalProperties": false
       }
     }
   },

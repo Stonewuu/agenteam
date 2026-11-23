@@ -2,31 +2,31 @@ package com.stonewu.agenteam.service.execution;
 
 import com.stonewu.agenteam.service.i18n.Messages;
 
-import com.stonewu.agenteam.mapper.execution.ExecutionEventMapper;
 import com.stonewu.agenteam.mapper.execution.LiveEventCache;
 import com.stonewu.agenteam.mapper.execution.LiveEventCodec;
 import com.stonewu.agenteam.model.execution.entity.*;
 import com.stonewu.agenteam.model.execution.response.ContentBlock;
-import com.stonewu.agenteam.model.execution.response.ExecutionEvent;
 import com.stonewu.agenteam.model.execution.response.StreamCursor;
 import com.stonewu.agenteam.service.execution.RunLifecycleService.ExecutionStoppedException;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.context.event.EventListener;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
- * 正文直接写 Redis；数据库完成事件在提交后分发，失败时按需读取完整事件恢复。
+ * 流式正文直接写 Redis；业务事务提交后发送变化，遗漏通知时读取完整业务结果。
  */
 @Service
 public class LiveEventDelivery {
@@ -34,7 +34,6 @@ public class LiveEventDelivery {
     private final LiveEventCache cache;
     private final LiveEventCodec codec;
     private final LiveDatabaseStateReader database;
-    private final ExecutionEventMapper events;
     private final Clock clock;
     private final Map<String, LiveExecutionSession> sessions = new ConcurrentHashMap<>();
     private final ReentrantLock[] locks = new ReentrantLock[64];
@@ -42,11 +41,10 @@ public class LiveEventDelivery {
         new ArrayBlockingQueue<>(512), Thread.ofVirtual().name("live-event-notification-", 0).factory());
 
     public LiveEventDelivery(LiveEventCache cache, LiveEventCodec codec, LiveDatabaseStateReader database,
-                             ExecutionEventMapper events, Clock clock) {
+                             Clock clock) {
         this.cache = cache;
         this.codec = codec;
         this.database = database;
-        this.events = events;
         this.clock = clock;
         for (int i = 0; i < locks.length; i++) {
             locks[i] = new ReentrantLock();
@@ -155,11 +153,9 @@ public class LiveEventDelivery {
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void committed(CommittedExecutionEvent saved) {
-        if (saved.live()) {
-            dispatch(saved.run(), () -> publish(saved.run(), saved.event()));
-        }
+    @EventListener
+    public void committed(CommittedConversationChanges saved) {
+        dispatch(saved.run(), () -> publish(saved));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -170,26 +166,24 @@ public class LiveEventDelivery {
         }
     }
 
-    public void publish(RunRecord run, ExecutionEvent event) {
+    public void publish(CommittedConversationChanges saved) {
+        var run = saved.run();
         ReentrantLock lock = lock(run);
         lock.lock();
         try {
             var state = ensure(run);
-            if (Long.parseLong(event.sequence()) <= state.appliedDatabaseVersion()) {
-                events.publishedThrough(run.enterpriseId(), run.conversationId(), state.appliedDatabaseVersion(),
-                    clock.instant());
+            if (saved.version() <= state.appliedDatabaseVersion()) {
                 return;
             }
-            var result = cache.append(run.enterpriseId(), run.conversationId(), state.cursor(), null,
-                codec.committed(event));
+            var changes = new LinkedHashMap<String, LiveEventCodec.Mutation>();
+            saved.events().stream().map(codec::committed).forEach(change -> changes.put(change.objectId(), change));
+            var result = cache.commit(run.enterpriseId(), run.conversationId(), state.cursor(), saved.version(),
+                List.copyOf(changes.values()));
             if (!result.accepted()) {
                 recoverLocked(run);
-            } else {
-                events.publishedThrough(run.enterpriseId(), run.conversationId(), result.databaseVersion(),
-                    clock.instant());
             }
-            if (event.type().equals("run.completed") || event.type().equals("run.failed") || event.type()
-                .equals("run.cancelled")) {
+            if (saved.events().stream().anyMatch(event -> List.of("run.completed", "run.failed", "run.cancelled")
+                .contains(event.type()))) {
                 cache.compact(run.enterpriseId(), run.conversationId());
             }
         } finally {
@@ -208,24 +202,31 @@ public class LiveEventDelivery {
     }
 
     private void recoverLocked(RunRecord run) {
-        var state = ensure(run);
-        long applied = state.appliedDatabaseVersion();
-        for (int page = 0; page < 20; page++) {
-            var batch = events.after(run.enterpriseId(), run.conversationId(), applied, 100);
-            if (batch.isEmpty()) {
-                break;
-            }
-            for (var event : batch) {
-                var result = cache.append(run.enterpriseId(), run.conversationId(), state.cursor(), null,
-                    codec.committed(event));
-                if (!result.accepted()) {
-                    throw new IllegalStateException(Messages.text("error.execution.liveEventDelivery.recoverLocked.1", result.status()));
-                }
-                applied = result.databaseVersion();
-            }
+        recover(run.enterpriseId(), run.userId(), run.conversationId());
+    }
+
+    public void recover(String enterprise, String user, String conversation) {
+        String owner = cache.claim(enterprise, conversation);
+        if (owner == null) {
+            return;
         }
-        if (applied > 0) {
-            events.publishedThrough(run.enterpriseId(), run.conversationId(), applied, clock.instant());
+        try {
+            for (int attempt = 0; attempt < 8; attempt++) {
+                var previous = cache.snapshot(enterprise, conversation);
+                var baseline = database.recovery(enterprise, user, conversation);
+                if (previous.isEmpty()) {
+                    cache.initialize(enterprise, conversation, owner, baseline.conversation().lastSequence(),
+                        baseline.conversation().activeRunId(), null);
+                    return;
+                }
+                if (cache.reconcile(baseline.conversation(), previous.get(), owner, baseline.outputMessage(),
+                    baseline.revisions(), clock.instant())) {
+                    return;
+                }
+            }
+            throw new IllegalStateException("Conversation changed during cache recovery");
+        } finally {
+            cache.release(enterprise, conversation, owner);
         }
     }
 

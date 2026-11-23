@@ -79,7 +79,6 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
-        registry.add("execution.events.live-enabled", () -> "true");
         registry.add("execution.events.live-retained-events", () -> "4");
     }
 
@@ -138,7 +137,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             frames.accept(event("TEXT_BLOCK_END", "reply", "text", null));
             frames.flush();
             assertEquals(expected, saved(fixture));
-            assertEquals(1, textEvents(fixture));
+            assertEquals(0, textEvents(fixture));
             verify(writer, times(1)).save(any(), anyString(), anyList());
             verify(conversations, times(1)).advanceSequence(anyString(), anyString(), any());
             assertEquals(saved(fixture), displayed(snapshot(fixture), fixture));
@@ -158,7 +157,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             frames.accept(event("TEXT_BLOCK_END", "reply", "text", null));
             frames.flush();
             assertEquals("内存中的完整回复", saved(fixture));
-            assertEquals(1, textEvents(fixture));
+            assertEquals(0, textEvents(fixture));
         } finally {
             doCallRealMethod().when(live).append(anyString(), anyString(), any(), any(), any());
             lifecycle.finish(fixture.lease(), "completed", null, null);
@@ -188,7 +187,7 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             }).when(live).snapshot(enterprise, fixture.run().conversationId());
             clearInvocations(queries);
             assertEquals("保存交接中的完整内容", displayed(snapshot(fixture), fixture));
-            verify(queries, atLeast(2)).snapshotBase(any(), anyString());
+            verify(queries, atLeast(2)).snapshotBase(any(), anyString(), eq(false));
         } finally {
             doCallRealMethod().when(live).snapshot(anyString(), anyString());
             lifecycle.finish(fixture.lease(), "completed", null, null);
@@ -327,11 +326,11 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
             }
             assertEquals("第一段已完成", saved(fixture));
             assertEquals("第一段已完成\n\n第二段继续输出", displayed(snapshot(fixture), fixture));
-            assertEquals(1, textEvents(fixture));
+            assertEquals(0, textEvents(fixture));
             secondStream.finish("cancelled");
             frames.flush();
             assertEquals("第一段已完成\n\n第二段继续输出", saved(fixture));
-            assertEquals(2, textEvents(fixture));
+            assertEquals(0, textEvents(fixture));
         } finally {
             continueSave.countDown();
             doCallRealMethod().when(writer).save(any(), anyString(), anyList());
@@ -345,7 +344,6 @@ class LiveConversationExecutionTest extends ExecutionApiTestSupport {
         var lease = lifecycle.claim("live-test-" + UUID.randomUUID()).orElseThrow();
         assertEquals(accepted.path("runId").asText(), lease.runId());
         var run = lifecycle.start(lease).orElseThrow();
-        assertTrue(conversations.find(enterprise, admin, run.conversationId(), false).orElseThrow().liveEvents());
         // 先完成初始事件分发，后续用例再验证已经可见的输出。
         delivery.recover(run);
         return new Fixture(run, lease);

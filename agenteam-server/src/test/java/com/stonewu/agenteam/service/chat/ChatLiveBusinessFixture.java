@@ -80,7 +80,6 @@ class ChatLiveBusinessFixture extends ExecutionApiTestSupport {
         ENV.properties(registry);
         registry.add("execution.worker.enabled", () -> true);
         registry.add("execution.events.worker-enabled", () -> true);
-        registry.add("execution.events.live-enabled", () -> true);
 
         registry.add("chat.worker-enabled", () -> false);
 

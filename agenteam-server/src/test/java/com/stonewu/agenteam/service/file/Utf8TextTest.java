@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Utf8TextTest {
     @Test
@@ -20,6 +21,9 @@ class Utf8TextTest {
             assertEquals(value.getBytes(StandardCharsets.UTF_8).length, Utf8Text.size(value));
             String prefix = Utf8Text.prefix(value, 201);
             assertEquals(prefix.getBytes(StandardCharsets.UTF_8).length, Utf8Text.size(prefix));
+            var chunks = Utf8Text.chunks(value, 201);
+            assertEquals(value, String.join("", chunks));
+            assertTrue(chunks.stream().allMatch(chunk -> chunk.getBytes(StandardCharsets.UTF_8).length <= 201));
         }
     }
 }

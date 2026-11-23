@@ -12,12 +12,10 @@ import com.stonewu.agenteam.service.execution.ExecutionMessageWriter;
 import com.stonewu.agenteam.service.execution.LiveExecutionSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import reactor.core.Disposable;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -25,7 +23,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 短批次只用于实时发送；新流程在内容块结束时保存完整结果。
+ * 流式片段只用于实时发送，每轮模型输出结束时统一保存完整内容和调用参数。
  */
 public final class FrameEventPersistence implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(FrameEventPersistence.class);
@@ -35,7 +33,8 @@ public final class FrameEventPersistence implements AutoCloseable {
     private final ExecutionMessageWriter writer;
     private final LiveExecutionSession live;
     private final AgentEventChunkAggregator aggregator = new AgentEventChunkAggregator();
-    private final Sinks.Empty<Void> failure = Sinks.empty();
+    private final Map<String, ExecutionChange> pendingBlocks = new LinkedHashMap<>();
+    private final Map<String, ExecutionChange> pendingSteps = new LinkedHashMap<>();
     private final Map<String, Stream> streamOwners = new HashMap<>();
     private final Map<String, String> textScopes = new HashMap<>();
     private final Disposable timer;
@@ -44,17 +43,12 @@ public final class FrameEventPersistence implements AutoCloseable {
     private boolean closed;
 
     public FrameEventPersistence(RunRecord run, JobLease lease, AgentPublicEventMapper mapper,
-                                 ExecutionMessageWriter writer, Scheduler scheduler) {
-        this(run, lease, mapper, writer, scheduler, null);
-    }
-
-    public FrameEventPersistence(RunRecord run, JobLease lease, AgentPublicEventMapper mapper,
                                  ExecutionMessageWriter writer, Scheduler scheduler, LiveExecutionSession live) {
         this.run = run;
         this.lease = lease;
         this.mapper = mapper;
         this.writer = writer;
-        this.live = live;
+        this.live = Objects.requireNonNull(live);
         timer = scheduler.schedulePeriodically(() -> {
             try {
                 flushDelivery();
@@ -66,7 +60,7 @@ public final class FrameEventPersistence implements AutoCloseable {
     }
 
     public Sinks.Empty<Void> failure() {
-        return live == null ? failure : live.failure();
+        return live.failure();
     }
 
     /**
@@ -83,9 +77,7 @@ public final class FrameEventPersistence implements AutoCloseable {
             process(aggregator.flush(run.id()));
             dispatch(action.apply(mapper), false, (batch, values) -> writer.save(lease, batch, values), false);
         }
-        if (live != null) {
-            live.drain();
-        }
+        live.drain();
     }
 
     public void update(Function<AgentPublicEventMapper, List<ExecutionChange>> action,
@@ -95,9 +87,7 @@ public final class FrameEventPersistence implements AutoCloseable {
             process(aggregator.flush(run.id()));
             dispatch(action.apply(mapper), false, commit, true);
         }
-        if (live != null) {
-            live.drain();
-        }
+        live.drain();
     }
 
     public Stream stream() {
@@ -121,15 +111,12 @@ public final class FrameEventPersistence implements AutoCloseable {
                     return;
                 }
                 process(aggregator.flush(run.id()));
-                if (live != null) {
-                    dispatch(mapper.presentation().finishTextBlocks(blocks, status), true,
-                        (batch, values) -> writer.save(lease, batch, values), false);
-                }
+                dispatch(mapper.presentation().finishTextBlocks(blocks, status), true,
+                    (batch, values) -> writer.save(lease, batch, values), false);
+                persistPending();
                 ended = true;
             }
-            if (live != null) {
-                live.drain();
-            }
+            live.drain();
         }
 
         @Override
@@ -143,6 +130,7 @@ public final class FrameEventPersistence implements AutoCloseable {
     }
 
     private void accept(AgentStreamEvent event, Stream owner) {
+        boolean awaitSave;
         synchronized (this) {
             if (owner != null && owner.ended) {
                 return;
@@ -151,9 +139,9 @@ public final class FrameEventPersistence implements AutoCloseable {
             if (owner != null && textEvent(event.type())) {
                 streamOwners.put(eventKey(event), owner);
             }
-            process(aggregator.acceptForPersistence(event.withExecution(run.conversationId(), run.id(), ++sequence)));
+            awaitSave = process(aggregator.acceptForPersistence(event.withExecution(run.conversationId(), run.id(), ++sequence)));
         }
-        if (live != null && Set.of("TOOL_CALL_START", "MODEL_CALL_END", "AGENT_END").contains(event.type())) {
+        if (awaitSave) {
             live.drain();
         }
     }
@@ -163,9 +151,10 @@ public final class FrameEventPersistence implements AutoCloseable {
      */
     public void flush() {
         flushDelivery();
-        if (live != null) {
-            live.drain();
+        synchronized (this) {
+            persistPending();
         }
+        live.drain();
     }
 
     private synchronized void flushDelivery() {
@@ -184,12 +173,10 @@ public final class FrameEventPersistence implements AutoCloseable {
                 }
                 timer.dispose();
                 try {
-                    if (live != null) {
-                        process(aggregator.flush(run.id()));
-                        dispatch(mapper.presentation().finishTextBlocks(Set.copyOf(textScopes.keySet()), "running"),
-                            true,
-                            (batch, values) -> writer.save(lease, batch, values), false);
-                    }
+                    process(aggregator.flush(run.id()));
+                    dispatch(mapper.presentation().finishTextBlocks(Set.copyOf(textScopes.keySet()), "running"),
+                        true, (batch, values) -> writer.save(lease, batch, values), false);
+                    persistPending();
                 } finally {
                     closed = true;
                     aggregator.release(run.id());
@@ -197,28 +184,21 @@ public final class FrameEventPersistence implements AutoCloseable {
                 }
             }
         } finally {
-            if (live != null) {
-                live.close();
-            }
+            live.close();
         }
     }
 
-    private void process(List<AgentEventRecord> records) {
+    private boolean process(List<AgentEventRecord> records) {
         if (records.isEmpty()) {
-            return;
+            return false;
         }
+        boolean awaitSave = false;
         try {
-            if (live == null) {
-                var changes = new ArrayList<ExecutionChange>();
-                for (var record : records) {
-                    changes.addAll(mapper.accept(record));
-                }
-                legacySave(changes, (batch, values) -> writer.save(lease, batch, values), false);
-                return;
-            }
             for (var record : records) {
-                boolean boundary = Set.of("TOOL_CALL_START", "MODEL_CALL_END", "AGENT_END")
-                    .contains(record.eventType());
+                boolean modelToolCall = mapper.modelToolCall(record);
+                boolean boundary = Set.of("TOOL_RESULT_START", "TOOL_RESULT_END", "MODEL_CALL_END", "AGENT_END")
+                    .contains(record.eventType()) || record.eventType().startsWith("TOOL_CALL_") && !modelToolCall;
+                awaitSave |= boundary;
                 if (boundary) {
                     String scope = scope(record.source(), record.metadata(), record.replyId());
                     String prefix = scope(record.source(), record.metadata(), null);
@@ -244,8 +224,12 @@ public final class FrameEventPersistence implements AutoCloseable {
                     }
                 }
                 dispatch(changes, false, (batch, values) -> writer.save(lease, batch, values), false,
-                    record.eventType().endsWith("_DELTA"));
+                    record.eventType(), modelToolCall);
+                if (boundary) {
+                    persistPending();
+                }
             }
+            return awaitSave;
         } catch (RuntimeException failed) {
             error = failed;
             LOG.error(Messages.log("log.agent.frameEventPersistence.process.1"), run.id(), failed);
@@ -255,22 +239,36 @@ public final class FrameEventPersistence implements AutoCloseable {
 
     private void dispatch(List<ExecutionChange> changes, boolean partial,
                           BiConsumer<String, List<ExecutionChange>> commit, boolean saveEmpty) {
-        dispatch(changes, partial, commit, saveEmpty, false);
+        dispatch(changes, partial, commit, saveEmpty, "", false);
     }
 
     private void dispatch(List<ExecutionChange> changes, boolean partial,
-                          BiConsumer<String, List<ExecutionChange>> commit, boolean saveEmpty, boolean deltaEvent) {
-        if (live == null) {
-            legacySave(changes, commit, saveEmpty);
-            return;
-        }
+                          BiConsumer<String, List<ExecutionChange>> commit, boolean saveEmpty, String eventType,
+                          boolean modelToolCall) {
         var content = List.copyOf(mapper.presentation().blocks().values());
         long textLength = content.stream().filter(block -> block.type().equals("text") && block.parentBlockId() == null)
             .mapToLong(block -> block.text().length() + 2L).sum();
         if (textLength > 1_000_002) {
             throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.dispatch.1"));
         }
-        live.publish(changes, content);
+        live.publish(changes.stream().filter(change -> change.block() == null
+            || !Set.of("completed", "failed", "cancelled", "skipped").contains(change.block().status())).toList(), content);
+        if (modelToolCall) {
+            // 调用参数尚在生成时不保存消息；完整参数随本轮模型结果一起提交。
+            if (eventType.equals("TOOL_CALL_END")) {
+                for (var change : changes) {
+                    if (change.block() != null) {
+                        pendingBlocks.put(change.block().id(), change);
+                        var step = mapper.presentation().steps().get(change.block().stepId());
+                        if (step != null) {
+                            pendingSteps.put(step.id(), ExecutionChange.step(step));
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        boolean deltaEvent = eventType.endsWith("_DELTA");
         var completed = new LinkedHashMap<String, ExecutionChange>();
         for (var change : changes) {
             if (change.step() != null) {
@@ -281,41 +279,30 @@ public final class FrameEventPersistence implements AutoCloseable {
             boolean text = block.type().equals("text") || block.type().equals("thinking");
             boolean ended = Set.of("completed", "failed", "cancelled", "skipped").contains(block.status());
             if (change.delta() == null && (partial || (text ? ended : !deltaEvent))) {
-                completed.put("block:" + block.id(), change);
-            }
-        }
-        live.persist(List.copyOf(completed.values()), commit, saveEmpty);
-    }
-
-    private void legacySave(List<ExecutionChange> changes, BiConsumer<String, List<ExecutionChange>> commit,
-                            boolean saveEmpty) {
-        if (changes.isEmpty() && !saveEmpty) {
-            return;
-        }
-        try {
-            String batch = UUID.randomUUID().toString();
-            long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-            while (true) {
-                try {
-                    commit.accept(batch, changes);
-                    return;
-                } catch (DataAccessException unavailable) {
-                    LOG.warn(Messages.log("log.agent.frameEventPersistence.legacySave.1"), run.id(), batch, unavailable);
-                    if (System.nanoTime() >= deadline) {
-                        throw unavailable;
-                    }
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException interrupted) {
-                        Thread.currentThread().interrupt();
-                        unavailable.addSuppressed(interrupted);
-                        throw unavailable;
-                    }
+                if (text) {
+                    pendingBlocks.put(block.id(), change);
+                } else {
+                    completed.put("block:" + block.id(), change);
                 }
             }
-        } catch (RuntimeException failed) {
-            error = failed;
-            throw failed;
+        }
+        if (!completed.isEmpty() || saveEmpty) {
+            var saved = new ArrayList<>(pendingSteps.values());
+            saved.addAll(pendingBlocks.values());
+            saved.addAll(completed.values());
+            live.persist(saved, commit, saveEmpty);
+            pendingBlocks.clear();
+            pendingSteps.clear();
+        }
+    }
+
+    private void persistPending() {
+        if (!pendingBlocks.isEmpty() || !pendingSteps.isEmpty()) {
+            var saved = new ArrayList<>(pendingSteps.values());
+            saved.addAll(pendingBlocks.values());
+            live.persist(saved, (batch, values) -> writer.save(lease, batch, values), false);
+            pendingBlocks.clear();
+            pendingSteps.clear();
         }
     }
 
@@ -345,8 +332,6 @@ public final class FrameEventPersistence implements AutoCloseable {
         if (closed) {
             throw new IllegalStateException(Messages.text("error.agent.frameEventPersistence.requireOpen.1"));
         }
-        if (live != null) {
-            live.requireOpen();
-        }
+        live.requireOpen();
     }
 }

@@ -244,7 +244,7 @@ export function parseConversationFrame(frame: string): ConversationFrame | null 
     if (type === "stream.ready") {
       return {kind: "ready", lastSequence: value.lastSequence as string, ...generation};
     }
-    if (!["events_expired", "sequence_invalid", "data_incomplete", "protocol_changed"].includes(value.reason as string)) {
+    if (!["events_expired", "sequence_invalid", "data_incomplete", "protocol_changed", "database_changed"].includes(value.reason as string)) {
       throw new SnapshotRequired();
     }
     return {

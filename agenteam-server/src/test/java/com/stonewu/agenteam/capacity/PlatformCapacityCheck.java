@@ -8,7 +8,6 @@ import com.stonewu.agenteam.capacity.CapacityDataGenerator.Enterprise;
 import com.stonewu.agenteam.support.execution.ExecutionApiTestSupport;
 import com.stonewu.agenteam.mapper.resource.ResourceJson;
 import com.stonewu.agenteam.mapper.test.support.TestDatabaseAdministrationMapper;
-import com.stonewu.agenteam.service.execution.ExecutionEventPublisher;
 import com.stonewu.agenteam.support.InvitationHttpTestEnvironment;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -55,8 +54,6 @@ class PlatformCapacityCheck extends ExecutionApiTestSupport {
     @Autowired
     private ExecutionStreamMeasurements streamMeasurements;
 
-    @Autowired
-    private ExecutionEventPublisher publisher;
 
     @Autowired
     private KnowledgeDatabaseTimings databaseTimes;
@@ -128,7 +125,7 @@ class PlatformCapacityCheck extends ExecutionApiTestSupport {
             if (Boolean.getBoolean("capacity.checkExecution")) {
                 report.put("scope", "规定数据规模的真实接口、同企业二十次活动执行和实际事件接收");
                 allowModelCalls = true;
-                try (var execution = new ExecutionCapacityProbe(databaseAccess, json, lifecycle, tasks, streamMeasurements, publisher, uri("/"))) {
+                try (var execution = new ExecutionCapacityProbe(databaseAccess, json, lifecycle, tasks, streamMeasurements, uri("/"))) {
                     modelResponse = execution::reply;
                     var result = execution.run(enterprises.getFirst());
                     report.put("executionCapacity", result);

@@ -12,6 +12,10 @@ import com.stonewu.agenteam.service.agent.ExecutionGuardMiddleware;
 import com.stonewu.agenteam.service.agent.FrameEventPersistence;
 import com.stonewu.agenteam.service.agent.SubagentToolEvents;
 import com.stonewu.agenteam.service.execution.ExecutionMessageWriter;
+import com.stonewu.agenteam.service.execution.LiveExecutionSession;
+import com.stonewu.agenteam.service.execution.LiveEventDelivery;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import reactor.core.scheduler.Schedulers;
 
@@ -45,7 +49,7 @@ class SharedExecutionPresentationTest {
             return null;
         }).when(writer).save(any(), any(), any());
         var scheduler = Schedulers.newSingle("工作流消息验收");
-        try (var frames = new FrameEventPersistence(run, lease, mapper, writer, scheduler); var pool = Executors.newFixedThreadPool(2)) {
+        try (var frames = new FrameEventPersistence(run, lease, mapper, writer, scheduler, live(mapper)); var pool = Executors.newFixedThreadPool(2)) {
             var left = frames.stream();
             var right = frames.stream();
             left.accept(event("AGENT_START", "left", "left", null, null, null, null));
@@ -78,8 +82,9 @@ class SharedExecutionPresentationTest {
                 if (change.block() != null) {
                     var block = change.block();
                     long previous = versions.getOrDefault(block.id(), 0L);
-                    assertEquals(previous + 1, Long.parseLong(block.revision()));
-                    versions.put(block.id(), previous + 1);
+                    assertTrue(Long.parseLong(block.revision()) > previous);
+                    assertEquals(Long.toString(previous), change.baseRevision());
+                    versions.put(block.id(), Long.parseLong(block.revision()));
                 }
             }
         } finally {
@@ -91,7 +96,7 @@ class SharedExecutionPresentationTest {
     void repeatedResearchToolIdentifiersInDifferentNodesKeepIndependentParentsAndOutcomes() {
         var mapper = mapper();
         var scheduler = Schedulers.newSingle("工作流归属验收");
-        try (var frames = new FrameEventPersistence(run, lease, mapper, mock(ExecutionMessageWriter.class), scheduler)) {
+        try (var frames = new FrameEventPersistence(run, lease, mapper, mock(ExecutionMessageWriter.class), scheduler, live(mapper))) {
             for (String owner : List.of("left", "right")) {
                 frames.accept(event("AGENT_START", owner, owner, null, null, null, null));
                 frames.accept(event("TOOL_CALL_START", owner, owner, null, "same-call", null, null));
@@ -116,6 +121,11 @@ class SharedExecutionPresentationTest {
         } finally {
             scheduler.dispose();
         }
+    }
+
+    private LiveExecutionSession live(AgentPublicEventMapper mapper) {
+        return new LiveExecutionSession(mock(LiveEventDelivery.class), run, lease,
+            List.copyOf(mapper.presentation().blocks().values()), Clock.fixed(now, ZoneOffset.UTC));
     }
 
     private AgentPublicEventMapper mapper() {

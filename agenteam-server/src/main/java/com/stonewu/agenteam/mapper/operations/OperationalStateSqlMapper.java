@@ -16,6 +16,5 @@ public interface OperationalStateSqlMapper {
 
     List<OperationalStateQueryRow> readAgentRun();
 
-    List<OperationalStateQueryRow> readAgentEvent();
 
 }

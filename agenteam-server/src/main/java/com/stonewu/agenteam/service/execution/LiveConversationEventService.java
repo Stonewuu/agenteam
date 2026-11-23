@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 正常连接仅从 Redis 等待事件，数据库只用于低频权限和删除检查。
+ * 正常连接从 Redis 等待事件，低频核对权限与业务版本，遗漏通知时重新读取完整结果。
  */
 @Service
 public class LiveConversationEventService {
@@ -35,13 +35,15 @@ public class LiveConversationEventService {
     private final ConversationMapper conversations;
     private final ConnectionAuthorization authorization;
     private final Clock clock;
+    private final LiveEventDelivery delivery;
 
     public LiveConversationEventService(LiveEventCache cache, ConversationMapper conversations,
-                                        ConnectionAuthorization authorization, Clock clock) {
+                                        ConnectionAuthorization authorization, Clock clock, LiveEventDelivery delivery) {
         this.cache = cache;
         this.conversations = conversations;
         this.authorization = authorization;
         this.clock = clock;
+        this.delivery = delivery;
     }
 
     public Flux<ServerSentEvent<Object>> connect(AuthContext actor, String session, String conversation,
@@ -100,21 +102,25 @@ public class LiveConversationEventService {
         private Batch poll() {
             try {
                 long now = clock.millis();
-                if (now - checkedAt >= 15000) {
-                    checkedAt = now;
-                    if (!authorization.allowed(session, actor, "conversation.view")) {
+                var position = cache.position(actor.enterpriseId(), conversation).orElse(null);
+                if (position == null || !position.cursor().generation().equals(cursor.generation())
+                    || Long.parseLong(cursor.sequence()) > Long.parseLong(position.cursor().sequence())) {
+                    return reset("sequence_invalid");
+                }
+                if (now - checkedAt >= 15000 || position.activeRunId() == null) {
+                    if (now - checkedAt >= 15000 && !authorization.allowed(session, actor, "conversation.view")) {
                         return new Batch(List.of(), true);
                     }
+                    checkedAt = now;
                     var current = conversations.streamPosition(actor.enterpriseId(), actor.userId(), conversation,
                         clock.instant().minus(Duration.ofDays(7))).orElse(null);
                     if (current == null || current.status().equals("deleted")) {
                         return new Batch(List.of(), true);
                     }
-                }
-                var position = cache.position(actor.enterpriseId(), conversation).orElse(null);
-                if (position == null || !position.cursor().generation().equals(cursor.generation())
-                    || Long.parseLong(cursor.sequence()) > Long.parseLong(position.cursor().sequence())) {
-                    return reset("sequence_invalid");
+                    if (current.lastSequence() > position.appliedDatabaseVersion()) {
+                        delivery.recover(actor.enterpriseId(), actor.userId(), conversation);
+                        return reset("database_changed");
+                    }
                 }
                 if (boundary < 0) {
                     boundary = Long.parseLong(position.cursor().sequence());
@@ -124,6 +130,9 @@ public class LiveConversationEventService {
                 var values = cache.after(actor.enterpriseId(), conversation, cursor,
                     position.activeRunId() == null ? Duration.ZERO : Duration.ofSeconds(1), 100);
                 for (var event : values) {
+                    if (event.type().equals("snapshot.required")) {
+                        return reset("database_changed");
+                    }
                     if (event.protocolVersion() != 2 || Long.parseLong(event.sequence()) != Math.addExact(
                         Long.parseLong(cursor.sequence()), 1)) {
                         return reset("events_expired");

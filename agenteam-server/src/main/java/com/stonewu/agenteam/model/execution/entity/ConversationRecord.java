@@ -33,7 +33,4 @@ public record ConversationRecord(String id, String enterpriseId, String userId, 
             previewResourceId, approvalPolicy, modelSelection, projectId, "database");
     }
 
-    public boolean liveEvents() {
-        return "redis".equals(eventDeliveryMode);
-    }
 }

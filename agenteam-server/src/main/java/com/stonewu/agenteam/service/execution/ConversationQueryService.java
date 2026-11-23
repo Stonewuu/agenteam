@@ -13,6 +13,8 @@ import com.stonewu.agenteam.model.execution.entity.ConversationTitleJob;
 import com.stonewu.agenteam.model.execution.response.ConversationMetadataView;
 import com.stonewu.agenteam.mapper.execution.ExecutionMessageMapper;
 import com.stonewu.agenteam.mapper.execution.RunMapper;
+import com.stonewu.agenteam.mapper.execution.RunApprovalMapper;
+import com.stonewu.agenteam.model.execution.entity.RunApprovalRecord;
 import com.stonewu.agenteam.mapper.resource.ResourceVersionMapper;
 import com.stonewu.agenteam.mapper.tool.ToolPayloadPreview;
 import com.stonewu.agenteam.model.auth.entity.AuthContext;
@@ -63,6 +65,7 @@ public class ConversationQueryService {
     private final CollaborationMessageDisplayService collaborationMessages;
     private final BackgroundJobSqlMapper backgroundJobs;
     private final RunCheckpointRecovery checkpoints;
+    private final RunApprovalMapper approvals;
 
     public ConversationQueryService(ConversationMapper conversations, ExecutionMessageMapper messages, RunMapper runs,
                                     ExecutionConfigurationService configuration,
@@ -70,7 +73,8 @@ public class ConversationQueryService {
                                     ListPagination pagination, Clock clock, ResourceVersionMapper versions,
                                     ConversationAppearanceMapper appearances, CollaborationParticipantMapper collaborationParticipants,
                                     CollaborationMessageDisplayService collaborationMessages, BackgroundJobSqlMapper backgroundJobs,
-                                    RunCheckpointRecovery checkpoints) {
+                                    RunCheckpointRecovery checkpoints, RunApprovalMapper approvals) {
+        this.approvals = approvals;
         this.checkpoints = checkpoints;
         this.conversations = conversations;
         this.messages = messages;
@@ -157,7 +161,9 @@ public class ConversationQueryService {
         var snapshot = new ConversationSnapshotView(view(actor, row, new HashMap<>()),
             decorate ? decorateMessages(actor, id, ordered) : ordered,
             run == null ? null : RunView.from(run, false), Long.toString(row.lastSequence()), older, before,
-            attachments, 1, null, List.of(), List.of(), run != null && ConversationRunQueue.supported(run)
+            attachments, 2, null, List.of(), run == null ? List.of() : approvals.forRun(actor.enterpriseId(), run.id())
+                .stream().filter(approval -> actor.userId().equals(approval.approverUserId()))
+                .map(RunApprovalRecord::view).toList(), run != null && ConversationRunQueue.supported(run)
                 ? messages.waiting(actor.enterpriseId(), id) : List.of());
         return new SnapshotBase(row, snapshot, run);
     }

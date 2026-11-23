@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.mapper.execution.RunSqlMapper;
 import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
-import com.stonewu.agenteam.service.execution.ExecutionEventPublisher;
 import com.stonewu.agenteam.service.execution.ExecutionTaskFactory;
 import com.stonewu.agenteam.service.execution.RunLifecycleService;
 import com.stonewu.agenteam.service.execution.RunWorker;
@@ -53,8 +52,6 @@ final class ExecutionCapacityProbe implements AutoCloseable {
 
     private final ExecutionTaskFactory tasks;
 
-    private final ExecutionEventPublisher publisher;
-
     private final URI origin;
 
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -75,13 +72,12 @@ final class ExecutionCapacityProbe implements AutoCloseable {
 
     private final AtomicInteger maximumWorkerThreads = new AtomicInteger();
 
-    ExecutionCapacityProbe(MybatisTestDatabase databaseAccess, ObjectMapper json, RunLifecycleService lifecycle, ExecutionTaskFactory tasks, ExecutionStreamMeasurements measurements, ExecutionEventPublisher publisher, URI origin) {
+    ExecutionCapacityProbe(MybatisTestDatabase databaseAccess, ObjectMapper json, RunLifecycleService lifecycle, ExecutionTaskFactory tasks, ExecutionStreamMeasurements measurements, URI origin) {
         this.databaseAccess = databaseAccess;
         this.json = json;
         this.lifecycle = lifecycle;
         this.tasks = tasks;
         this.measurements = measurements;
-        this.publisher = publisher;
         this.origin = origin;
     }
 
@@ -95,14 +91,13 @@ final class ExecutionCapacityProbe implements AutoCloseable {
             sessions.add(login(enterprise.prefix() + "user_" + member));
         }
         String base = "/api/v1/enterprises/" + enterprise.id();
-        var polling = Executors.newScheduledThreadPool(3);
+        var polling = Executors.newScheduledThreadPool(2);
         try (var first = new RunWorker(lifecycle, tasks);
              var second = new RunWorker(lifecycle, tasks);
              var requests = Executors.newVirtualThreadPerTaskExecutor()) {
             try {
                 polling.scheduleWithFixedDelay(first::poll, 0, 1000, TimeUnit.MILLISECONDS);
                 polling.scheduleWithFixedDelay(second::poll, 0, 1000, TimeUnit.MILLISECONDS);
-                polling.scheduleWithFixedDelay(publisher::publishPending, 0, 100, TimeUnit.MILLISECONDS);
                 for (int round = 0; round < 5; round++) {
                     result.put("currentRound", round + 1);
                     modelStarts.clear();
@@ -214,49 +209,74 @@ final class ExecutionCapacityProbe implements AutoCloseable {
     }
 
     private void readEvents(String base, Submission submission) throws Exception {
-        var response = client.send(HttpRequest.newBuilder(origin.resolve(base + "/conversations/" + submission.conversation() + "/events")).header("Cookie", submission.session().cookie()).header("Accept", "text/event-stream").GET().build(), HttpResponse.BodyHandlers.ofInputStream());
-        assertEquals(200, response.statusCode());
-        var body = response.body();
-        synchronized (openStreams) {
-            openStreams.add(body);
-        }
         long readyAt = Long.MAX_VALUE;
-        String name = "";
-        var data = new StringBuilder();
-        try (body;
-             var reader = new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.startsWith("event:")) {
-                    name = line.substring(6).trim();
-                } else if (line.startsWith("data:")) {
-                    data.append(line.substring(5).stripLeading());
-                } else if (line.isEmpty()) {
-                    if (name.equals("stream.ready")) {
-                        if (readyAt == Long.MAX_VALUE) {
-                            readyAt = System.nanoTime();
-                            readersReady.countDown();
-                        }
-                    } else if (!data.isEmpty()) {
-                        var event = json.readTree(data.toString());
-                        measurements.received(event, readyAt);
-                        if (name.equals("run.completed")) {
-                            return;
-                        }
-                        if (name.equals("run.failed") || name.equals("stream.reset")) {
-                            throw new IOException("实际事件流没有完成：" + name);
-                        }
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
+        while (System.nanoTime() < deadline) {
+            String path = base + "/conversations/" + submission.conversation();
+            var snapshotResponse = client.send(HttpRequest.newBuilder(origin.resolve(path))
+                .header("Cookie", submission.session().cookie()).GET().build(), HttpResponse.BodyHandlers.ofString());
+            assertEquals(200, snapshotResponse.statusCode());
+            var snapshot = json.readTree(snapshotResponse.body()).path("data");
+            if (!submission.run().equals(snapshot.path("activeRun").path("id").asText())) {
+                for (var message : snapshot.path("messages")) {
+                    if (submission.run().equals(message.path("runId").asText()) && message.path("role").asText().equals("assistant")) {
+                        assertEquals("completed", message.path("status").asText());
+                        return;
                     }
-                    name = "";
-                    data.setLength(0);
                 }
             }
-            throw new IOException("事件连接在执行完成前结束");
-        } finally {
+            var cursor = snapshot.path("streamCursor");
+            if (cursor.isNull() || cursor.isMissingNode()) {
+                TimeUnit.MILLISECONDS.sleep(200);
+                continue;
+            }
+            var response = client.send(HttpRequest.newBuilder(origin.resolve(path + "/events?after="
+                    + cursor.path("sequence").asText() + "&generation=" + cursor.path("generation").asText()))
+                .header("Cookie", submission.session().cookie()).header("Accept", "text/event-stream").GET().build(),
+                HttpResponse.BodyHandlers.ofInputStream());
+            assertEquals(200, response.statusCode());
+            var body = response.body();
             synchronized (openStreams) {
-                openStreams.remove(body);
+                openStreams.add(body);
+            }
+            String name = "";
+            var data = new StringBuilder();
+            try (body; var reader = new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("event:")) {
+                        name = line.substring(6).trim();
+                    } else if (line.startsWith("data:")) {
+                        data.append(line.substring(5).stripLeading());
+                    } else if (line.isEmpty()) {
+                        if (name.equals("stream.ready")) {
+                            if (readyAt == Long.MAX_VALUE) {
+                                readyAt = System.nanoTime();
+                                readersReady.countDown();
+                            }
+                        } else if (name.equals("stream.reset")) {
+                            break;
+                        } else if (!data.isEmpty()) {
+                            var event = json.readTree(data.toString());
+                            measurements.received(event, readyAt);
+                            if (name.equals("run.completed") && submission.run().equals(event.path("runId").asText())) {
+                                return;
+                            }
+                            if (name.equals("run.failed") && submission.run().equals(event.path("runId").asText())) {
+                                throw new IOException("Execution failed while reading its event stream");
+                            }
+                        }
+                        name = "";
+                        data.setLength(0);
+                    }
+                }
+            } finally {
+                synchronized (openStreams) {
+                    openStreams.remove(body);
+                }
             }
         }
+        throw new IOException("Execution stream did not finish before the deadline");
     }
 
     private Session login(String username) throws Exception {

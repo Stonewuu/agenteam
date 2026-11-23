@@ -4,6 +4,7 @@ import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
+import com.stonewu.agenteam.model.execution.entity.ConversationRecord;
 import com.stonewu.agenteam.model.execution.entity.LiveConversationState;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.response.LiveExecutionEvent;
@@ -29,6 +30,7 @@ import java.util.*;
 public class LiveEventCache {
     private static final DefaultRedisScript<List> APPEND = script("live-append", List.class);
     private static final DefaultRedisScript<List> INITIALIZE = script("live-initialize", List.class);
+    private static final DefaultRedisScript<List> RECONCILE = script("live-reconcile", List.class);
     private static final DefaultRedisScript<List> DIRECTORY = script("live-directory", List.class);
     private static final DefaultRedisScript<List> SNAPSHOT = script("live-snapshot", List.class);
     private static final DefaultRedisScript<List> POSITION = script("live-position", List.class);
@@ -115,24 +117,54 @@ public class LiveEventCache {
         if (mutation.text().length() > 200_000) {
             throw new IllegalArgumentException(Messages.text("error.execution.liveEventCache.append.2"));
         }
+        return append(enterprise, conversation, cursor, leaseToken, mutation.databaseVersion(), List.of(mutation));
+    }
+
+    public AppendResult commit(String enterprise, String conversation, StreamCursor cursor, long version,
+                               List<LiveEventCodec.Mutation> changes) {
+        if (version <= 0 || changes.isEmpty() || changes.stream().anyMatch(change -> change.databaseVersion() != version)) {
+            throw new IllegalArgumentException("Committed changes must share one database version");
+        }
+        return append(enterprise, conversation, cursor, null, version, changes);
+    }
+
+    private AppendResult append(String enterprise, String conversation, StreamCursor cursor, String leaseToken,
+                                long version, List<LiveEventCodec.Mutation> changes) {
         String prefix = key(enterprise, conversation);
         var keys = coreKeys(prefix);
-        keys.add(prefix + ":body:" + mutation.objectId());
-        keys.add(prefix + ":lease:" + mutation.runId());
         keys.add(prefix + ":dirty");
-        long version = mutation.databaseVersion();
-        var result = strings(
-            redis.execute(APPEND, keys, cursor.generation(), mutation.runId(), leaseToken == null ? "" : leaseToken,
-                Long.toString(version), Long.toString(Math.max(0, version - 1)), mutation.id(), mutation.objectId(),
-                mutation.kind(),
-                mutation.expectedRevision(), mutation.revision(), mutation.state(), mutation.text(),
-                mutation.envelope(),
-                mutation.activeChange(), Integer.toString(eventLimit), "2048", cursor.sequence()));
+        for (var change : changes) {
+            keys.add(prefix + ":body:" + change.objectId());
+            keys.add(prefix + ":lease:" + change.runId());
+        }
+        var result = strings(redis.execute(APPEND, keys, cursor.generation(), leaseToken == null ? "" : leaseToken,
+            Long.toString(version), Long.toString(Math.max(0, version - 1)), cursor.sequence(),
+            Integer.toString(eventLimit), "2048", codec.write(changes)));
         if (result.isEmpty()) {
             throw new IllegalStateException(Messages.text("error.execution.liveEventCache.append.3"));
         }
         return result.size() == 4 ? new AppendResult(result.getFirst(), new StreamCursor(result.get(1), result.get(2)),
             Long.parseLong(result.get(3))) : new AppendResult(result.getFirst(), cursor, 0);
+    }
+
+    /**
+     * 业务记录覆盖到新版本后，保留当前执行尚未保存的正文，并让客户端重新读取完整结果。
+     */
+    public boolean reconcile(ConversationRecord conversation, LiveConversationState previous, String owner,
+                             String outputMessage, Map<String, String> revisions, Instant now) {
+        String prefix = key(conversation.enterpriseId(), conversation.id());
+        var keys = coreKeys(prefix);
+        keys.add(prefix + ":dirty");
+        keys.add(prefix + ":initialize");
+        keys.add(prefix + ":lease:" + Objects.toString(previous.activeRunId(), ""));
+        var objects = List.copyOf(previous.objects().keySet());
+        objects.forEach(object -> keys.add(prefix + ":body:" + object));
+        var result = strings(redis.execute(RECONCILE, keys, owner, previous.cursor().generation(),
+            previous.cursor().sequence(), Long.toString(previous.appliedDatabaseVersion()),
+            Long.toString(conversation.lastSequence()), Objects.toString(conversation.activeRunId(), ""),
+            outputMessage == null ? "" : "block:" + outputMessage + ":", codec.write(revisions),
+            codec.refresh(conversation, now), Integer.toString(eventLimit), codec.write(objects)));
+        return !result.isEmpty() && result.getFirst().equals("ok");
     }
 
     public Optional<LiveConversationState> position(String enterprise, String conversation) {

@@ -102,9 +102,8 @@ execution:
     stop-seconds: "${AGENTEAM_SANDBOX_STOP_SECONDS:10}"
     maximum-running-containers: "${AGENTEAM_SANDBOX_MAXIMUM_RUNNING_CONTAINERS:4}"
   events:
-    # 旧格式消息增量按小批次自动合并；关闭时只停止历史转换，新输出仍使用合并存储。
-    history-compaction-enabled: "${AGENTEAM_EVENT_HISTORY_COMPACTION_ENABLED:true}"
-    live-enabled: "${AGENTEAM_LIVE_EVENTS_ENABLED:true}"
+    # 近期流式事件的保留数量，累计正文单独保留。
+    live-retained-events: "${AGENTEAM_LIVE_RETAINED_EVENTS:10000}"
 agenteam:
   schedule:
     notification-actions-enabled: "${AGENTEAM_NOTIFICATION_ACTIONS_ENABLED:true}"

@@ -77,11 +77,12 @@ public abstract class ScheduleRetryTestSupport extends ExecutionApiTestSupport {
         for (var request : requests) {
             assertEquals(1, request.path("messages").findValuesAsText("role").stream().filter("user"::equals).count());
         }
-        var eventList = events.after(enterprise, accepted.path("conversationId").asText(), 0, 1000);
+        var eventList = liveEvents(accepted.path("conversationId").asText());
         long sequence = 0;
         for (var event : eventList) {
-            assertEquals(Long.toString(++sequence), event.sequence());
-            schemas.validate("ExecutionEvent", json.valueToTree(event));
+            assertTrue(Long.parseLong(event.sequence()) > sequence);
+                sequence = Long.parseLong(event.sequence());
+            schemas.validate("LiveExecutionEvent", json.valueToTree(event));
         }
         assertEquals(2, eventList.stream().filter(event -> event.type().equals("attempt.updated")).count());
         assertEquals(0, eventList.stream().filter(event -> event.type().equals("run.failed")).count());

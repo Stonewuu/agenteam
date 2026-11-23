@@ -124,6 +124,11 @@ public final class AgentPublicEventMapper {
         artifacts = lookup;
     }
 
+    /** 工作流直接调用工具时参数已经确定，只有模型调用的参数需要等待生成完成。 */
+    public boolean modelToolCall(AgentEventRecord event) {
+        return event.eventType().startsWith("TOOL_CALL_") && !directToolSessions.contains(source(event).key());
+    }
+
     public List<ExecutionChange> accept(AgentEventRecord event) {
         var changes = new ArrayList<ExecutionChange>();
         String type = event.eventType();
@@ -184,7 +189,7 @@ public final class AgentPublicEventMapper {
             replace(changes, block);
         }
         if (event.eventType().endsWith("_DELTA")) {
-            for (String delta : split(event.mergedDelta())) {
+            for (String delta : Utf8Text.chunks(event.mergedDelta(), 4096)) {
                 if (block.text().length() + delta.length() > 200_000) {
                     throw outputLimit();
                 }
@@ -475,24 +480,4 @@ public final class AgentPublicEventMapper {
         return text.substring(0, text.offsetByCodePoints(0, Math.min(200, text.codePointCount(0, text.length()))));
     }
 
-    private List<String> split(String value) {
-        if (value == null || value.isEmpty()) {
-            return List.of();
-        }
-        var parts = new ArrayList<String>();
-        int start = 0, size = 0;
-        for (int i = 0; i < value.length(); ) {
-            int point = value.codePointAt(i), width = Character.charCount(point);
-            int bytes = point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4;
-            if (size + bytes > 4096) {
-                parts.add(value.substring(start, i));
-                start = i;
-                size = 0;
-            }
-            size += bytes;
-            i += width;
-        }
-        parts.add(value.substring(start));
-        return parts;
-    }
 }

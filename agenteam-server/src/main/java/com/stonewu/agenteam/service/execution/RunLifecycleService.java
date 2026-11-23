@@ -3,7 +3,6 @@ package com.stonewu.agenteam.service.execution;
 import com.stonewu.agenteam.service.i18n.Messages;
 import com.stonewu.agenteam.configuration.system.RuntimeSettings;
 import com.stonewu.agenteam.model.system.entity.LimitValue;
-
 import com.stonewu.agenteam.mapper.enterprise.EnterpriseMapper;
 import com.stonewu.agenteam.mapper.execution.*;
 import com.stonewu.agenteam.mapper.tool.ToolCallMapper;
@@ -13,7 +12,6 @@ import com.stonewu.agenteam.model.execution.entity.ExecutionLimits;
 import com.stonewu.agenteam.model.execution.entity.JobLease;
 import com.stonewu.agenteam.model.execution.entity.RunRecord;
 import com.stonewu.agenteam.model.execution.entity.RunQuestionRow;
-import com.stonewu.agenteam.model.execution.response.RunStepView;
 import com.stonewu.agenteam.model.execution.response.RunView;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.service.permission.EnterpriseAuthorizationService;
@@ -31,7 +29,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -44,12 +41,11 @@ public class RunLifecycleService {
     private final RunMapper runs;
     private final RunJobMapper jobs;
     private final ExecutionMessageMapper messages;
-    private final ExecutionEventMapper events;
+    private final ConversationChangePublisher events;
     private final ExecutionAccessService access;
     private final EnterpriseAuthorizationService authorization;
     private final QuotaReservationService quotas;
     private final Clock clock;
-    private final RunStepMapper steps;
     private final RunActivityMapper activity;
     private final ToolCallMapper toolCalls;
     private final RunApprovalMapper approvals;
@@ -60,22 +56,21 @@ public class RunLifecycleService {
     private final RunAttemptRetryService retries;
     private final ExecutionNotificationService notifications;
     private final ApplicationEventPublisher leaseNotifications;
-    private final LivePartialOutputRecovery partialOutput;
+    private final RunOutputWriter output;
     private final RunQuestionLifecycle questions;
     private final ConversationRunQueue queue;
     private final RuntimeSettings settings;
 
     public RunLifecycleService(EnterpriseMapper enterprises, ConversationMapper conversations, RunMapper runs,
-                               RunJobMapper jobs,
-                               ExecutionMessageMapper messages, ExecutionEventMapper events,
-                               ExecutionAccessService access,
-                               EnterpriseAuthorizationService authorization, QuotaReservationService quotas,
-                               Clock clock, RunStepMapper steps, RunActivityMapper activity,
+                               RunJobMapper jobs, ExecutionMessageMapper messages, ConversationChangePublisher events,
+                               ExecutionAccessService access, EnterpriseAuthorizationService authorization,
+                               QuotaReservationService quotas,
+                               Clock clock, RunActivityMapper activity,
                                ToolCallMapper toolCalls, RunApprovalMapper approvals, RunCheckpointMapper checkpoints,
-                               ToolQueryPolicy toolQueries,
-                               ScheduleRunStateService scheduleStates, ScheduleRecheckService scheduleAccess,
+                               ToolQueryPolicy toolQueries, ScheduleRunStateService scheduleStates,
+                               ScheduleRecheckService scheduleAccess,
                                RunAttemptRetryService retries, ExecutionNotificationService notifications,
-                               ApplicationEventPublisher leaseNotifications, LivePartialOutputRecovery partialOutput,
+                               ApplicationEventPublisher leaseNotifications, RunOutputWriter output,
                                RunQuestionLifecycle questions, ConversationRunQueue queue, RuntimeSettings settings) {
         this.settings = settings;
         this.queue = queue;
@@ -89,7 +84,6 @@ public class RunLifecycleService {
         this.authorization = authorization;
         this.quotas = quotas;
         this.clock = clock;
-        this.steps = steps;
         this.activity = activity;
         this.toolCalls = toolCalls;
         this.approvals = approvals;
@@ -100,7 +94,7 @@ public class RunLifecycleService {
         this.retries = retries;
         this.notifications = notifications;
         this.leaseNotifications = leaseNotifications;
-        this.partialOutput = partialOutput;
+        this.output = output;
         this.questions = questions;
     }
 
@@ -480,31 +474,7 @@ public class RunLifecycleService {
                     clock.instant());
             }
         }
-        final String outcome = status;
-        for (var step : steps.list(run.enterpriseId(), run.id())) {
-            if (!List.of("pending", "running", "waiting_approval", "waiting_input").contains(step.status())) {
-                continue;
-            }
-            var finished = new RunStepView(step.id(), step.parentStepId(), step.attemptId(), step.kind(), step.title(),
-                step.displayOrder(), status, step.publicSummary(), step.startedAt(), clock.instant().toString(),
-                step.workflow());
-            steps.save(run, finished, null, clock.instant());
-            events.append(run, "step.updated", finished, clock.instant());
-        }
-        var storedOutput = messages.find(run.enterpriseId(), run.conversationId(), run.outputMessageId()).orElseThrow();
-        var output = partialOutput.merge(run, storedOutput);
-        var blocks = output.blocks().stream()
-            .map(block -> List.of("pending", "running", "waiting_approval", "waiting_input").contains(block.status())
-                ? block.update(block.text(), outcome) : block).toList();
-        for (int i = 0; i < blocks.size(); i++) {
-            var block = blocks.get(i);
-            if (storedOutput.blocks().stream().noneMatch(block::equals)) {
-                events.append(run, "block.updated", Map.of("messageId", output.id(), "block", blocks.get(i)),
-                    clock.instant());
-            }
-        }
-        messages.save(run.enterpriseId(), output.id(), output.content(), blocks, status, run.lastSequence(),
-            clock.instant());
+        output.finish(run, status);
         if (status.equals("failed") && retries.schedule(run, code, message)) {
             return;
         }
@@ -515,7 +485,7 @@ public class RunLifecycleService {
             notifications.finished(finalRun);
         }
         var event = events.append(finalRun, "run." + status, RunView.from(finalRun, false), clock.instant());
-        messages.status(run.enterpriseId(), output.id(), status, Long.parseLong(event.sequence()), clock.instant());
+        messages.status(run.enterpriseId(), run.outputMessageId(), status, Long.parseLong(event.sequence()), clock.instant());
         quotas.release(run.enterpriseId(), run.id());
         jobs.finish(run.enterpriseId(), run.id(), status, code, message, clock.instant());
         conversations.finish(run.enterpriseId(), run.conversationId(), run.id(), clock.instant());
