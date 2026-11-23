@@ -46,6 +46,21 @@
   background: var(--surface-hover);
 }
 
+.trigger[data-invalid="true"] {
+  --icon-context-color: currentColor;
+  color: var(--red-text);
+}
+
+.trigger[data-invalid="true"]:hover:not(:disabled) {
+  background: var(--red-soft);
+}
+
+.inlineReload {
+  color: var(--red-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .trigger:focus-visible {
   outline: 2px solid var(--input-border-focus);
   outline-offset: 1px;
@@ -176,7 +191,7 @@ button.rowAction:is(:hover, :focus-visible):not(:disabled) {
 .deleteBody p {margin:0; font-size:14px;}
 .target,.deleteChoice {display:flex; align-items:center; gap:11px;}
 .target div,.deleteChoice span {display:grid; gap:4px; min-width:0; overflow-wrap:anywhere;}
-.target strong,.deleteChoice strong {font-size:14px; font-weight:550;}
+.target strong,.deleteChoice strong {font-size:14px; font-weight:600;}
 .target small,.deleteChoice small {font-size:12px; color:var(--muted-foreground);}
 .deleteChoice {padding:13px 0 0; border-top:1px solid var(--border); cursor:pointer;}
 

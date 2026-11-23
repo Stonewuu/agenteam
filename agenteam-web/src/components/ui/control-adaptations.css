@@ -32,7 +32,7 @@
   display: block;
   margin-top: 4px;
   color: var(--secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .workspace-full-height {
@@ -80,8 +80,8 @@
 .sidebar-selection {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 5px;
+  right: 5px;
   height: 45px;
   border-radius: 999px;
   background: var(--nav-selected);

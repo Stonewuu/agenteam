@@ -1,7 +1,7 @@
 .content { display: grid; gap: 20px; min-width: 0; }
 .name { margin: 0; color: var(--muted); font-size: 13px; }
 .heading { display: grid; gap: 8px; }
-.heading h3 { margin: 0; font-size: 20px; font-weight: 650; }
+.heading h3 { margin: 0; font-size: 20px; font-weight: 600; }
 .heading p { margin: 0; color: var(--muted); line-height: 1.7; }
 .command { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .command input { min-width: 0; font-size: 13px; }

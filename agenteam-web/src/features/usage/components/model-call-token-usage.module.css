@@ -121,7 +121,7 @@
 .parts dd {
   margin: 0 0 0 auto;
   color: var(--text);
-  font-weight: 550;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }

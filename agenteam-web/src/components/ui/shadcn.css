@@ -34,5 +34,5 @@
   --radius-md: 12px;
   --radius-lg: var(--input-radius);
   --radius-xl: 20px;
-  --font-sans: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
 }

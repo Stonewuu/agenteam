@@ -42,7 +42,7 @@
 
 .dialog :global(.modal-header h2) {
   font-size: 22px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
   letter-spacing: -.3px;
   text-wrap: pretty;
@@ -72,7 +72,7 @@
   border: 1px solid color-mix(in srgb, var(--announcement-tone) 24%, var(--border-light));
   border-radius: 6px;
   color: var(--announcement-tone);
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .publishedAt {
@@ -328,7 +328,7 @@
   flex: 0 0 auto;
   width: 7px;
   height: 7px;
-  background: #d13b43;
+  background: var(--red);
   border-radius: 50%;
 }
 

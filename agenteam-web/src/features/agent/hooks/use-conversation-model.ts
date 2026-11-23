@@ -1,31 +1,31 @@
 "use client";
 
-import {useT} from "@/lib/i18n/locale-provider";
+import { useT } from "@/lib/i18n/locale-provider";
 
-import {useRef, useState} from "react";
-import {ApiError, ApiMutation, errorMessage} from "@/lib/http/api-client";
-import {useApiQuery} from "@/lib/http/use-api-query";
-import {organizationPath} from "@/features/enterprise/api/organization-api";
+import { useRef, useState } from "react";
+import { ApiError, ApiMutation, errorMessage } from "@/lib/http/api-client";
+import { useApiQuery } from "@/lib/http/use-api-query";
+import { organizationPath } from "@/features/enterprise/api/organization-api";
 import {
   type ModelSelection,
   type ReasoningEffort,
   sameModelSelection,
   selectModel
 } from "@/features/modelprofile/lib/reasoning-effort";
-import {conversationPath} from "../api/conversation-api";
-import type {Conversation, ConversationModelOptions} from "../types/execution";
+import { conversationPath } from "../api/conversation-api";
+import type { Conversation, ConversationModelOptions } from "../types/execution";
 
 /** 新对话随首次发送保存；已有对话保存成功后更新显示，失败时保留原选择。 */
 export function useConversationModel({
-                                       enterprise,
-                                       agentId,
-                                       draftKey,
-                                       conversation,
-                                       enabled,
-                                       busy,
-                                       onChanged,
-                                       initialOptions
-                                     }: {
+  enterprise,
+  agentId,
+  draftKey,
+  conversation,
+  enabled,
+  busy,
+  onChanged,
+  initialOptions
+}: {
   enterprise: string; agentId?: string | null; draftKey: string; conversation?: Conversation;
   enabled: boolean; busy: boolean; onChanged?: () => void;
   initialOptions?: ConversationModelOptions;
@@ -57,7 +57,7 @@ export function useConversationModel({
     }
     setFailure(null);
     if (!conversation) {
-      setDrafts((previous) => ({...previous, [draftKey]: next}));
+      setDrafts((previous) => ({ ...previous, [draftKey]: next }));
       return;
     }
     if (!current) {
@@ -81,7 +81,7 @@ export function useConversationModel({
         conversationId: conversation.id,
         requestId: error instanceof ApiError ? error.requestId : undefined,
       }, error);
-      setFailure({key: draftKey, message: errorMessage(error, uiText("模型选择未能保存，请重试。"))});
+      setFailure({ key: draftKey, message: errorMessage(error, uiText("模型选择未能保存，请重试。")) });
       query.retry();
       onChanged?.();
     } finally {
@@ -89,6 +89,9 @@ export function useConversationModel({
       setSaving(false);
     }
   }
+
+  const actionError = failure?.key === draftKey ? failure.message : query.error || "";
+  const invalidMessage = invalid || "";
 
   return {
     selection,
@@ -99,23 +102,25 @@ export function useConversationModel({
     saving,
     loading: query.loading && !displayed,
     visible: Boolean(path || initialOptions),
-    error: failure?.key === draftKey ? failure.message : query.error || invalid || "",
+    error: actionError || invalidMessage,
+    actionError,
+    invalidMessage,
     loadError: Boolean(query.error),
     reload: query.retry,
     ready: Boolean(query.data) && !query.error && !saving && !invalid,
     loaded: Boolean(query.data || query.error),
-    handoff: query.data ? {...query.data, selection} : undefined,
+    handoff: query.data ? { ...query.data, selection } : undefined,
     defaults: query.data?.defaultSelection ?? null,
     changeModel: (id: string, effort?: ReasoningEffort | null) => {
       const next = options.find((option) => option.id === id && option.available);
       if (!next || effort && !next.reasoningEfforts.includes(effort)) {
         return;
       }
-      void change(effort === undefined ? selectModel(next, selection) : {modelProfileId: id, reasoningEffort: effort});
+      void change(effort === undefined ? selectModel(next, selection) : { modelProfileId: id, reasoningEffort: effort });
     },
     changeEffort: (effort: ReasoningEffort | null) => {
       if (selection) {
-        void change({...selection, reasoningEffort: effort});
+        void change({ ...selection, reasoningEffort: effort });
       }
     },
     reset: () => {

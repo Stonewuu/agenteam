@@ -82,7 +82,7 @@
 .inline .expires {
   margin-top: 6px;
   color: var(--secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .description {
@@ -116,7 +116,7 @@
   border: 0;
   background: transparent;
   color: var(--secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .reasonToggle:hover {

@@ -51,7 +51,7 @@
   margin-top: 1.35em;
   margin-bottom: 0.55em;
   font-size: clamp(1.55rem, 2.6vw, 1.9rem);
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .markdown :global([data-streamdown="heading-2"]) {
@@ -154,7 +154,7 @@
   margin: 1em 0;
   padding: 0.7em 1em;
   color: var(--markdown-muted);
-  border-left: 3px solid var(--ring);
+  border-left: 3px solid var(--hero-border);
   border-radius: 0 8px 8px 0;
   background: linear-gradient(90deg, var(--surface-soft), transparent);
 }
@@ -181,7 +181,7 @@
   border-color: var(--border);
   border-radius: 12px;
   background: var(--markdown-surface);
-  box-shadow: 0 8px 24px rgba(43, 59, 89, 0.06);
+  box-shadow: 0 8px 24px rgb(49 40 28 / 0.06);
 }
 
 .markdown :global([data-streamdown="code-block-header"]) {
@@ -294,7 +294,7 @@
 .markdown :global([data-streamdown="image"]) {
   display: block;
   border: 1px solid var(--markdown-line);
-  box-shadow: 0 8px 24px rgba(43, 59, 89, 0.08);
+  box-shadow: 0 8px 24px rgb(49 40 28 / 0.08);
 }
 
 .thinkingBlock,
@@ -439,7 +439,7 @@
 .agentState {
   margin-left: auto;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .agentContent {
@@ -519,7 +519,7 @@
 .hitlState {
   margin-left: auto;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .toolInput {
@@ -562,7 +562,7 @@
 }
 
 .statusError {
-  color: #b15d64;
+  color: var(--red-text);
 }
 
 .replyActivity {

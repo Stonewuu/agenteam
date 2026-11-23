@@ -112,7 +112,7 @@
 
 .auth-story h2 {
   font-size: clamp(38px, 4.2vw, 62px);
-  font-weight: 550;
+  font-weight: 600;
   letter-spacing: -1.9px;
   line-height: 1.42;
   color: #f6f1e7;
@@ -192,7 +192,7 @@
 
 .auth-form-content h1 {
   font-size: clamp(38px, 2.8vw, 48px);
-  font-weight: 550;
+  font-weight: 600;
   letter-spacing: -1.2px;
 }
 

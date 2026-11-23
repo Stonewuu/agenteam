@@ -36,7 +36,7 @@
 .headingCopy h2, .headingCopy h3 {
   margin: 0;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.5;
   color: var(--text);
   overflow-wrap: anywhere;
@@ -69,7 +69,7 @@
   background: var(--surface-hover);
   color: var(--secondary);
   font-size: 12px;
-  font-weight: 550;
+  font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -126,7 +126,7 @@
 .setting label strong {
   font-size: 13px;
   line-height: 1.5;
-  font-weight: 550;
+  font-weight: 600;
   color: var(--text);
 }
 

@@ -1,5 +1,6 @@
 .trigger {
   position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
@@ -8,9 +9,9 @@
   width: var(--model-width, auto);
   max-width: 230px;
   height: 38px;
-  padding: 5px 8px;
+  padding: 5px 10px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 999px;
   background: transparent;
   color: var(--secondary);
   font-size: 12px;
@@ -18,9 +19,41 @@
   transition: width 200ms var(--motion-ease), background-color 200ms var(--motion-ease);
 }
 
+.trigger::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: var(--trigger-inset-y, 2px) 0;
+  border-radius: inherit;
+  background: transparent;
+  transition: background-color 200ms var(--motion-ease);
+}
+
 .trigger:hover:not(:disabled), .trigger[data-popup-open] {
-  background: var(--surface-hover);
   color: var(--foreground);
+}
+
+.trigger:hover:not(:disabled)::before, .trigger[data-popup-open]::before {
+  background: var(--surface-hover);
+}
+
+.trigger[data-invalid="true"] {
+  --icon-context-color: currentColor;
+  color: var(--red-text);
+}
+
+.trigger[data-invalid="true"]::before {
+  background: color-mix(in srgb, var(--red-soft) 72%, transparent);
+}
+
+.trigger[data-invalid="true"]:hover:not(:disabled)::before,
+.trigger[data-invalid="true"][data-popup-open]::before {
+  background: var(--red-soft);
+}
+
+.trigger[data-invalid="true"]:hover:not(:disabled),
+.trigger[data-invalid="true"][data-popup-open] {
+  color: var(--red-text);
 }
 
 .trigger:focus-visible {
@@ -97,14 +130,38 @@
 
 .optionText small {
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12px;
+}
+
+.menuNotice {
+  margin: 2px 2px 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--red-soft);
+  color: var(--red-text);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: normal;
 }
 
 .error {
-  margin: 8px 4px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--red) 35%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--red-soft) 45%, var(--surface));
   font-size: 12px;
   color: var(--red-text);
   line-height: 1.6;
+}
+
+.error[data-placement="top"] {
+  margin: 0 0 8px;
+  box-shadow: var(--shadow);
 }
 
 .error button {
@@ -131,26 +188,39 @@
 
 @media (max-width: 680px) {
   .trigger {
+    --trigger-inset-y: 5px;
     flex: 0 1 auto;
     min-width: 44px;
     max-width: min(130px, 100%);
     height: 44px;
-    padding-inline: 3px;
-    gap: 3px;
+    padding-inline: 8px;
+    gap: 4px;
     font-size: 11px;
   }
 
   .measure {
-    gap: 3px;
+    gap: 4px;
   }
 
-  .trigger > svg, .measure > svg {
+  .trigger > svg:last-child, .measure > svg:last-child {
     width: 10px;
     height: 10px;
   }
 
   .menu .option, .submenu .option, .error button {
     min-height: 44px;
+  }
+}
+
+@container (max-width: 310px) {
+  .trigger[data-invalid="true"] {
+    justify-content: center;
+    padding-inline: 8px;
+  }
+
+  .trigger[data-invalid="true"] .name,
+  .trigger[data-invalid="true"] .effort {
+    display: none;
   }
 }
 

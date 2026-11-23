@@ -210,7 +210,7 @@
   display: block;
   overflow-wrap: anywhere;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .providerItem small {
@@ -263,7 +263,7 @@
 .connectionHeading h2 {
   margin: 0 0 7px;
   font-size: 18px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .connectionHeading p {
@@ -329,7 +329,7 @@
 .modelCopy h3 {
   margin: 0 0 5px;
   font-size: 15px;
-  font-weight: 550;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -372,7 +372,7 @@
 
 .formSection > h3, .formSection > :global([data-slot="collapsible-trigger"]) {
   font-size: 14px;
-  font-weight: 550;
+  font-weight: 600;
   margin: 0;
 }
 

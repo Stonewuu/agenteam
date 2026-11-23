@@ -24,7 +24,7 @@
 .description { margin-top: 4px; color: var(--text); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
 .description p { margin: 0; }
 .description p + p { margin-top: 6px; }
-.description strong { font-weight: 650; }
+.description strong { font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 @media (max-width: 640px) {
   .actions > a, .actions > button { min-height: 44px; }

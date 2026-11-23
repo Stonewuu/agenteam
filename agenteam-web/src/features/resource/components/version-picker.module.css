@@ -10,7 +10,7 @@
 .compact > legend {
   padding: 0 0 8px;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .compact .selectedRow {
@@ -151,7 +151,7 @@
   flex-wrap: wrap;
   gap: 8px;
   font-size: 14px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .identity small {

@@ -34,7 +34,7 @@
 
 .danger {
   --icon-context-color: currentColor;
-  color: var(--danger, #b73249);
+  color: var(--red-text);
 }
 
 .button:disabled, .primary:disabled, .danger:disabled {
@@ -138,7 +138,7 @@
 
 .error {
   margin: 0;
-  color: var(--danger, #b73249);
+  color: var(--red-text);
   font-size: 13px;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -374,12 +374,12 @@
   color: var(--foreground);
   background: var(--card);
   overflow: auto;
-  box-shadow: 0 22px 85px #0003;
+  box-shadow: 0 22px 85px rgb(24 20 16 / 0.18);
   animation: appear 260ms ease-out;
 }
 
 .dialog::backdrop {
-  background: #11192c66;
+  background: var(--overlay);
   backdrop-filter: blur(4px);
 }
 
@@ -476,7 +476,7 @@
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .dialog::backdrop {
-    background: #11192ccc;
+    background: rgb(24 20 16 / 0.8);
     backdrop-filter: none;
   }
 }

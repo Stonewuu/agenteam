@@ -24,7 +24,7 @@
   margin-bottom: 32px;
   color: var(--foreground);
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -183,7 +183,7 @@
 
 .error {
   padding: 12px 28px;
-  color: var(--danger, #b73249);
+  color: var(--red-text);
 }
 
 .menu {

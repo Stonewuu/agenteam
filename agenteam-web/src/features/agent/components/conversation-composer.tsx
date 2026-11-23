@@ -118,6 +118,7 @@ export function ConversationComposer({
   return <div ref={container} className={styles.composerWrap}>
     {error && <p className={controls.composerNotice} role="alert">{localizeUiMessage(error ?? "", uiText)}</p>}
     {!activeRun && reason && <p className={controls.composerNotice}>{uiText(reason)}</p>}
+    <ConversationModelFeedback state={model} placement="top"/>
     <LoadingTransition state={waitingForAnswer ? "waiting_input" : "composer"} layout="stack"
       className={questionStyles.composerTransition} contentClassName={questionStyles.composerStates}>
       {waitingForAnswer && queue}
@@ -174,7 +175,7 @@ export function ConversationComposer({
           <ComposerTransition part="policy"><ConversationApprovalPolicy value={approvalPolicy.value} onChange={value => void approvalPolicy.change(value)}
             disabled={approvalPolicy.disabled || model.saving} saving={approvalPolicy.saving} running={Boolean(activeRun)}/></ComposerTransition>{canQueue && stopAction}</>}
         submitAction={activeRun && !canQueue ? stopAction : undefined}/>
-    </ComposerTransition><ConversationModelFeedback state={model}/></ComposerProjectFrame>
+    </ComposerTransition></ComposerProjectFrame>
       </div>
     </LoadingTransition>
   </div>;

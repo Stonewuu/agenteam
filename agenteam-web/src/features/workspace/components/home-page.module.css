@@ -37,7 +37,7 @@
   padding: 9px 13px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
   white-space: nowrap;
 }
@@ -115,18 +115,6 @@
   line-height: 1.7;
 }
 
-@media (max-width: 680px) {
-  .taskMask {
-    gap: 4px;
-    padding: 16px;
-    border-radius: 18px;
-  }
-
-  .taskMask h2 {
-    font-size: 16px;
-  }
-}
-
 .input {
   display: block;
   width: 100%;
@@ -141,7 +129,8 @@
   line-height: 1.9;
 }
 
-.input:focus, .input:focus-visible {
+.input:focus,
+.input:focus-visible {
   outline: none;
   border: 0;
   box-shadow: none;
@@ -239,7 +228,7 @@
   border-radius: 999px;
   background: var(--suggestion-bg);
   color: var(--suggestion-ink);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .examples button:nth-child(2) {
@@ -286,7 +275,8 @@
   grid-column: 1 / -1;
 }
 
-.section header, .employees header {
+.section header,
+.employees header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -294,7 +284,8 @@
   margin-bottom: 12px;
 }
 
-.section header h2, .employees header h2 {
+.section header h2,
+.employees header h2 {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -303,21 +294,24 @@
   font-weight: 600;
 }
 
-.section header h2 svg, .employees header h2 svg {
+.section header h2 svg,
+.employees header h2 svg {
   color: var(--icon-context-color, var(--icon-tone-color, var(--accent-text)));
 }
 
-.section header a, .employees header a {
+.section header a,
+.employees header a {
   display: inline-flex;
   gap: 7px;
   align-items: center;
   min-height: 32px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
   white-space: nowrap;
 }
 
-.section header a:hover, .employees header a:hover {
+.section header a:hover,
+.employees header a:hover {
   color: var(--accent-text);
 }
 
@@ -340,7 +334,8 @@
   border-top: 1px solid var(--border-light);
 }
 
-.recentTask:hover, .employee:hover {
+.recentTask:hover,
+.employee:hover {
   background: var(--surface-hover);
 }
 
@@ -360,7 +355,7 @@
 }
 
 .recentTask small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
 }
 
@@ -399,7 +394,7 @@
 }
 
 .itemLink small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
 }
 
@@ -429,7 +424,7 @@
 
 .compactEmpty p {
   margin: 7px 0 3px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
   color: var(--secondary);
 }
@@ -437,7 +432,7 @@
 .compactEmpty :global(.text-button) {
   padding-block: 5px;
   min-height: 30px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .employees {
@@ -509,7 +504,7 @@
 }
 
 .employee small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -519,6 +514,24 @@
 .employee > svg {
   color: var(--secondary);
   flex-shrink: 0;
+}
+
+@container (max-width: 480px) {
+  .taskActions {
+    gap: 8px;
+  }
+}
+
+@container (max-width: 340px) {
+  .taskActions {
+    grid-template-columns: minmax(102px, 1fr) minmax(132px, 1.15fr);
+    gap: 4px;
+  }
+
+  .mainTools,
+  .submitTools {
+    gap: 0;
+  }
 }
 
 @media (max-width: 1080px) {
@@ -539,7 +552,9 @@
 }
 
 @media (max-width: 680px) {
-  .sections, .employeeStrip, .employees {
+  .sections,
+  .employeeStrip,
+  .employees {
     grid-template-columns: 1fr;
   }
 
@@ -559,12 +574,31 @@
     margin-left: 0;
   }
 
-  .section header a, .employees header a, .compactEmpty :global(.text-button) {
+  .section header a,
+  .employees header a,
+  .compactEmpty :global(.text-button) {
     min-height: 44px;
   }
 
   .task {
-    padding: 18px 16px 16px;
+    padding: 14px 10px 8px;
+    border-radius: 18px;
+  }
+
+  .taskMask {
+    gap: 4px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .taskMask h2 {
+    font-size: 16px;
+  }
+
+  .input {
+    min-height: 88px;
+    font-size: 13px;
+    line-height: 1.75;
   }
 
   .greeting h1 {
@@ -572,7 +606,14 @@
   }
 
   .taskActions {
-    gap: 3px;
+    grid-template-columns: minmax(102px, 1fr) minmax(132px, 1.15fr);
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .mainTools,
+  .submitTools {
+    gap: 0;
   }
 
   .taskActions :global(.icon-button) {
@@ -582,8 +623,19 @@
   }
 
   .send {
+    width: 44px;
     height: 44px;
     flex-basis: 44px;
+    --send-inset: 5px;
+  }
+
+  .send > svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .task :global(.tag) {
+    font-size: 11px;
   }
 
   .examples {
@@ -600,81 +652,15 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .recentTask, .employee {
-    transition: none;
-  }
-}
-
 @media (max-width: 380px) {
   .taskActions {
     gap: 1px;
   }
 }
 
-@container (max-width: 480px) {
-  .taskActions {
-    gap: 8px;
-  }
-}
-
-@media (max-width: 680px) {
-  .taskActions {
-    gap: 8px;
-  }
-
-  .mainTools {
-    gap: 3px;
-  }
-
-  .send {
-    width: 44px;
-  }
-}
-
-@container (max-width: 340px) {
-  .taskActions {
-    grid-template-columns: minmax(102px, 1fr) minmax(132px, 1.15fr);
-    gap: 4px;
-  }
-
-  .mainTools, .submitTools {
-    gap: 0;
-  }
-}
-
-@media (max-width: 680px) {
-  .task {
-    padding: 14px 10px 8px;
-    border-radius: 18px;
-  }
-
-  .input {
-    min-height: 88px;
-    font-size: 13px;
-    line-height: 1.75;
-  }
-
-  .taskActions {
-    grid-template-columns: minmax(102px, 1fr) minmax(132px, 1.15fr);
-    gap: 4px;
-    margin-top: 8px;
-  }
-
-  .mainTools, .submitTools {
-    gap: 0;
-  }
-
-  .send {
-    --send-inset: 5px;
-  }
-
-  .send > svg {
-    width: 17px;
-    height: 17px;
-  }
-
-  .task :global(.tag) {
-    font-size: 11px;
+@media (prefers-reduced-motion: reduce) {
+  .recentTask,
+  .employee {
+    transition: none;
   }
 }

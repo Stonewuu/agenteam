@@ -33,7 +33,7 @@
 .option:has([role="radio"]:focus-visible), .customChoice:has([role="radio"]:focus-visible) { outline: 2px solid var(--input-border-focus); outline-offset: 3px; }
 .radio { margin-top: 3px; }
 .optionCopy { display: grid; gap: 6px; min-width: 0; }
-.optionTitle { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; color: var(--text); font-size: 14px; line-height: 1.5; font-weight: 550; overflow-wrap: anywhere; }
+.optionTitle { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; color: var(--text); font-size: 14px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
 .recommended { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; flex-shrink: 0; border-radius: 6px; color: var(--accent-text); background: var(--accent-soft); font-size: 10px; font-weight: 500; line-height: 1.5; }
 .description { font-size: 12px; line-height: 1.7; color: var(--secondary); overflow-wrap: anywhere; white-space: pre-wrap; }
 .customChoice { display: flex; align-items: center; min-height: 46px; gap: 12px; padding: 10px 16px; border: 1px solid transparent; border-radius: 12px; font-size: 13px; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease; }

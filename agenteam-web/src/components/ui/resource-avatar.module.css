@@ -1,6 +1,6 @@
 .avatar {
   --resource-avatar-bg: #efebf6;
-  --resource-avatar-fg: #746094;
+  --resource-avatar-fg: #695589;
 }
 
 .avatar:global(.tiny) {
@@ -11,52 +11,52 @@
 
 .purple {
   --resource-avatar-bg: #efebf6;
-  --resource-avatar-fg: #746094;
+  --resource-avatar-fg: #695589;
 }
 
 .pink {
   --resource-avatar-bg: #f7e9ee;
-  --resource-avatar-fg: #a95c79;
+  --resource-avatar-fg: #984a68;
 }
 
 .blue {
   --resource-avatar-bg: #e5eff8;
-  --resource-avatar-fg: #467cab;
+  --resource-avatar-fg: #386b99;
 }
 
 .amber {
   --resource-avatar-bg: #f7efdb;
-  --resource-avatar-fg: #9c7839;
+  --resource-avatar-fg: #846328;
 }
 
 .mint {
   --resource-avatar-bg: #e5f2e9;
-  --resource-avatar-fg: #50876a;
+  --resource-avatar-fg: #387153;
 }
 
 .teal {
   --resource-avatar-bg: #e1f0ef;
-  --resource-avatar-fg: #3e8582;
+  --resource-avatar-fg: #2f7370;
 }
 
 .coral {
   --resource-avatar-bg: #fae9e2;
-  --resource-avatar-fg: #b87055;
+  --resource-avatar-fg: #9c553b;
 }
 
 .indigo {
   --resource-avatar-bg: #e9ecf8;
-  --resource-avatar-fg: #6374ae;
+  --resource-avatar-fg: #52639d;
 }
 
 .plum {
   --resource-avatar-bg: #f1e8f2;
-  --resource-avatar-fg: #976797;
+  --resource-avatar-fg: #825482;
 }
 
 .slate {
   --resource-avatar-bg: #eaf0f1;
-  --resource-avatar-fg: #627d84;
+  --resource-avatar-fg: #526c73;
 }
 
 :global([data-theme="dark"]) .purple {

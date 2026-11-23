@@ -8,7 +8,7 @@ import {Button} from "@/components/ui/button";
 import {ResourceAvatar} from "@/components/ui/resource-avatar";
 import {toast} from "@/components/ui/toast";
 
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import type {DisplayMessage} from "../types/conversation-display";
@@ -22,7 +22,12 @@ import {IconBookmark, IconThumbDown, IconThumbUp, IconChartBar} from "@/componen
 import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {ConversationRunFeedback} from "./conversation-run-feedback";
 import {ConversationActivityIcon} from "./conversation-activity-icon";
-import {hasVisibleConversationContent, showReplyActivity} from "../lib/conversation-display";
+import {
+  hasVisibleConversationContent,
+  REPLY_ACTIVITY_DELAY_MS,
+  replyActivityWaitKey,
+  showReplyActivity
+} from "../lib/conversation-display";
 import {type LiveRunStep, mergeExecutionSteps, messageRunSteps, type RunStepHistory} from "../lib/conversation-steps";
 
 export function ConversationMessage({
@@ -60,10 +65,24 @@ export function ConversationMessage({
   const [busy, setBusy] = useState(false);
   const [usageOpen, setUsageOpen] = useState(false);
   const [acceptedRetry, setAcceptedRetry] = useState<string | null>(null);
+  const [delayedActivityKey, setDelayedActivityKey] = useState<string | null>(null);
   const ended = ["completed", "failed", "cancelled"].includes(message.status);
   const blocks = mergeExecutionSteps(message.blocks, messageRunSteps(message, stepHistory, liveSteps), message.status);
   const run = latestRun?.id === message.runId ? latestRun : null;
   const waitingForContent = Boolean(message.localDelivery) || showReplyActivity(message, run, blocks);
+  const activityWaitKey = waitingForContent && !message.localDelivery ? replyActivityWaitKey(message, blocks) : null;
+  const showWaitingActivity = waitingForContent && (activityWaitKey === null || delayedActivityKey === activityWaitKey);
+  useEffect(() => {
+    if (!activityWaitKey) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDelayedActivityKey(activityWaitKey);
+    }, REPLY_ACTIVITY_DELAY_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [activityWaitKey]);
   const superseded = message.supersededByRetry || (acceptedRetry !== null && acceptedRetry === message.runId);
   const memoryText = message.content.trim() || message.blocks.flatMap((block) => block.kind === "workflow" ? [block.summary] : []).join("\n");
 
@@ -105,7 +124,7 @@ export function ConversationMessage({
                           onChanged={onChanged}/> : message.content ? <ConversationMarkdown content={message.content}/>
         : message.status === "completed" ? <span
           className={styles.placeholder}>{message.hasMultipleAttempts ? uiText("本次尝试没有返回内容。") : uiText("本次任务没有返回内容。")}</span> : null}
-      {waitingForContent && <span className={styles.replyActivity} role="status"
+      {showWaitingActivity && <span className={styles.replyActivity} role="status"
         aria-label={message.localDelivery === "sending" ? uiText("正在发送…")
           : run?.status === "running" ? uiText("正在处理…") : uiText("等待执行…")}>
         <ConversationActivityIcon/>

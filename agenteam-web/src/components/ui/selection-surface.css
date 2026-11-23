@@ -23,7 +23,7 @@
 .selection-popup > header h2 {
   margin: 0;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .selection-popup > header .icon-button {
@@ -53,7 +53,7 @@
 
 .selection-hint {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
   line-height: 1.7;
 }
@@ -143,7 +143,7 @@
 
 .selection-results small, .selection-results p, .selection-results button > span > span {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
   line-height: 1.65;
 }

@@ -43,13 +43,15 @@
   color: var(--foreground);
   text-align: left;
   font: inherit;
-  box-shadow: 0 4px 16px rgb(0 0 0 / .04);
+  box-shadow: 0 4px 16px rgb(49 40 28 / 0.04);
   touch-action: none;
   user-select: none;
   transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.toolbar, .heading, .line {
+.toolbar,
+.heading,
+.line {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -57,7 +59,13 @@
   flex-wrap: wrap;
 }
 
-.toolbar h2, .heading h3 {
+.toolbar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar h2,
+.heading h3 {
   margin: 0;
   font-size: 18px;
 }
@@ -66,39 +74,108 @@
   width: auto;
 }
 
+.nodeHeading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.nodeHeading > div {
+  min-width: 0;
+}
+
 .node strong {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.node small, .node > span {
-  font-size: 11px;
+.node > span {
+  font-size: 12px;
   color: var(--muted-foreground);
 }
 
+.node small {
+  display: block;
+  font-size: 12px;
+  color: var(--secondary);
+  margin-top: 4px;
+}
+
+.node p {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+  margin: 10px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .node:focus-visible {
-  outline: 3px solid var(--ring);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
 .selectedNode {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--ring);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.invalidNode, .node[data-status="failed"] {
-  border-color: var(--danger, #b73249);
+.invalidNode,
+.node[data-status="failed"] {
+  border-color: var(--red-text);
 }
 
-.node[data-status="running"], .node[data-status="waiting_approval"] {
+.node[data-status="running"],
+.node[data-status="waiting_approval"] {
   border-width: 2px;
   border-color: var(--primary);
 }
 
-.node[data-status="skipped"], .node[data-status="cancelled"] {
+.node[data-status="skipped"],
+.node[data-status="cancelled"] {
   border-style: dashed;
+}
+
+.node :global(.react-flow__handle) {
+  width: 11px;
+  height: 11px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+}
+
+.canvasFrame .connection {
+  stroke: var(--workflow-edge);
+  stroke-width: 1.7;
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 180ms ease, stroke-width 180ms ease;
+}
+
+.canvasFrame :global(.react-flow__edge:hover) .connection,
+.canvasFrame :global(.react-flow__edge:focus-visible) .connection,
+.canvasFrame :global(.react-flow__edge.selected) .connection {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+.canvasFrame :global(.react-flow__attribution) {
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 9px;
+}
+
+.canvasFrame :global(.react-flow__node:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 13px;
 }
 
 .panel {
@@ -147,14 +224,23 @@
   resize: vertical;
 }
 
+.validation {
+  margin: 0;
+  padding: 17px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--mint-text);
+  font-size: 12px;
+}
+
 .errors {
   margin: 0;
   padding: 14px 14px 14px 32px;
-  color: var(--danger, #b73249);
+  color: var(--red-text);
   font-size: 14px;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
 }
 
 .errors button {
@@ -166,6 +252,10 @@
   cursor: pointer;
   font: inherit;
   padding: 5px 0;
+}
+
+.editor > p[role=alert] {
+  padding: 17px 20px;
 }
 
 .preview {
@@ -187,87 +277,6 @@
   gap: 12px;
 }
 
-@media (max-width: 600px) {
-  .panel {
-    padding: 14px;
-  }
-}
-
-.nodeHeading {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-
-.nodeHeading > div {
-  min-width: 0;
-}
-
-.node strong {
-  display: block;
-  font-size: 12px;
-  font-weight: 550;
-}
-
-.node small {
-  display: block;
-  font-size: 11px;
-  color: var(--secondary);
-  margin-top: 4px;
-}
-
-.node p {
-  color: var(--secondary);
-  font-size: 11px;
-  line-height: 1.6;
-  border-top: 1px solid var(--border-light);
-  padding-top: 12px;
-  margin: 12px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.node :global(.react-flow__handle) {
-  width: 11px;
-  height: 11px;
-  background: var(--surface);
-  border: 2px solid var(--accent);
-}
-
-.canvasFrame .connection {
-  stroke: var(--workflow-edge);
-  stroke-width: 1.7;
-  stroke-dasharray: 6 5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: stroke 180ms ease, stroke-width 180ms ease;
-}
-
-.canvasFrame :global(.react-flow__edge:hover) .connection,
-.canvasFrame :global(.react-flow__edge:focus-visible) .connection,
-.canvasFrame :global(.react-flow__edge.selected) .connection {
-  stroke: var(--accent);
-  stroke-width: 2.2;
-}
-
-.selectedNode {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.canvasFrame :global(.react-flow__attribution) {
-  background: var(--surface);
-  color: var(--secondary);
-  font-size: 9px;
-}
-
-.canvasFrame :global(.react-flow__node:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: 13px;
-}
-
 .configuration .heading {
   flex-wrap: nowrap;
 }
@@ -277,7 +286,7 @@
 }
 
 .graphCount {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
   white-space: nowrap;
 }
@@ -288,44 +297,6 @@
   gap: 0;
   padding: 0;
   border-radius: 16px;
-}
-
-@media (max-width: 600px) {
-
-  .toolbar {
-    gap: 14px;
-  }
-
-  .toolbar > div {
-    width: 100%;
-  }
-
-  .graphCount {
-    margin-left: auto;
-  }
-}
-
-.toolbar {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.validation {
-  margin: 0;
-  padding: 17px 20px;
-  border-top: 1px solid var(--border);
-  color: var(--mint-text);
-  font-size: 12px;
-}
-
-.errors {
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-radius: 0;
-}
-
-.editor > p[role=alert] {
-  padding: 17px 20px;
 }
 
 .contextMenu {
@@ -352,12 +323,6 @@
   color: var(--secondary);
 }
 
-@media (pointer: coarse) {
-  .contextMenu [data-slot=dropdown-menu-item]:not([data-node-choice]) {
-    min-height: 44px;
-  }
-}
-
 .breadcrumb {
   display: flex;
   flex-wrap: wrap;
@@ -369,24 +334,6 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-@media (max-width: 600px) {
-
-  .toolbar > div {
-    display: contents;
-  }
-
-  .historyControls > button {
-    width: 44px;
-    height: 44px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .layout, .node, .canvasFrame .connection {
-    transition: none;
-  }
 }
 
 .fillHeight,
@@ -484,8 +431,32 @@
   text-align: left;
 }
 
+@media (pointer: coarse) {
+  .contextMenu [data-slot=dropdown-menu-item]:not([data-node-choice]) {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 600px) {
-  .fillHeight .configuration > .heading :global(.icon-button), .dismissFeedback {
+  .panel {
+    padding: 14px;
+  }
+
+  .toolbar {
+    gap: 14px;
+  }
+
+  .toolbar > div {
+    display: contents;
+  }
+
+  .graphCount {
+    margin-left: auto;
+  }
+
+  .historyControls > button,
+  .fillHeight .configuration > .heading :global(.icon-button),
+  .dismissFeedback {
     width: 44px;
     height: 44px;
   }
@@ -494,9 +465,7 @@
     min-height: 58px;
     padding-right: 56px;
   }
-}
 
-@media (max-width: 600px) {
   .fillHeight .toolbar {
     padding: 8px 12px;
     flex-wrap: nowrap;
@@ -511,5 +480,13 @@
 
   .canvasFrame {
     --workflow-minimap-bottom: 124px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout,
+  .node,
+  .canvasFrame .connection {
+    transition: none;
   }
 }

@@ -72,7 +72,7 @@
 .operationForm {display:grid; gap:16px;}
 .dropOverlay {position:absolute; inset:5px; z-index:4; display:grid; place-items:center; pointer-events:none; border:2px dashed var(--icon-teal); border-radius:14px; background:color-mix(in srgb,var(--card) 84%,transparent);}
 .dropOverlay > div {display:grid; justify-items:center; gap:8px; max-width:90%; padding:18px 22px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 20px #0001;}
-.dropOverlay strong,.uploadZone strong {font-size:14px; font-weight:550;}
+.dropOverlay strong,.uploadZone strong {font-size:14px; font-weight:600;}
 .dropOverlay span {color:var(--muted-foreground); font-size:12px; overflow-wrap:anywhere;}
 .uploadZone {display:grid; justify-items:center; align-content:center; gap:10px; min-height:142px; padding:18px; border:1px dashed var(--border); border-radius:12px; background:var(--surface-soft); transition:border-color 160ms,background-color 160ms;}
 .uploadZone[data-dragging] {border-color:var(--icon-teal); background:color-mix(in srgb,var(--icon-teal) 9%,var(--card));}

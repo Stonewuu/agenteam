@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid var(--border, #e4e4e7);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   min-width: 0;
@@ -47,7 +47,7 @@
 
 .name span {
   font-size: 12px;
-  color: var(--muted-foreground, #71717a);
+  color: var(--muted-foreground);
 }
 
 .name p {

@@ -35,7 +35,7 @@
   flex: 0 0 auto;
   width: 7px;
   height: 7px;
-  background: #d13b43;
+  background: var(--red);
   border-radius: 50%;
 }
 
@@ -94,7 +94,7 @@
 .content strong {
   display: block;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 

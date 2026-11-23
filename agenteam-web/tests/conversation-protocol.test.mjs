@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 const load = createRequire(import.meta.url);
 const { fromSnapshot, applyConversationFrame } = load("../.test-build/conversation/agent/state/conversation-event-state.js");
 const { parseConversationFrame, SnapshotRequired } = load("../.test-build/conversation/agent/state/conversation-protocol.js");
-const { displayMessages, mergeRunApprovals, showReplyActivity } = load("../.test-build/conversation/agent/lib/conversation-display.js");
+const { displayMessages, mergeRunApprovals, replyActivityWaitKey, REPLY_ACTIVITY_DELAY_MS, showReplyActivity } = load("../.test-build/conversation/agent/lib/conversation-display.js");
 const time = "2026-09-14T08:00:00Z";
 const {mergeConversationMetadata, mergeConversationMetadataList} = load("../.test-build/conversation/agent/lib/conversation-metadata.js");
 
@@ -28,6 +28,13 @@ test("完成工具后等待下一段时显示无字指示，已有活动或需�
   assert.equal(showReplyActivity({...reply, status: "completed"}, run, tools), false);
   assert.equal(showReplyActivity(reply, {...run, outputMessageId: "new-attempt"}, tools), false);
   assert.equal(showReplyActivity(reply, null, tools), false);
+  assert.equal(REPLY_ACTIVITY_DELAY_MS, 1000);
+  assert.equal(replyActivityWaitKey(reply, []), null);
+  const afterTools = replyActivityWaitKey(reply, tools);
+  const afterText = replyActivityWaitKey({...reply, content: "已完成回答"}, [...tools, {id: "text-1", kind: "text", status: "completed", content: "已完成回答", blocks: []}]);
+  assert.ok(afterTools);
+  assert.ok(afterText);
+  assert.notEqual(afterTools, afterText);
 });
 
 test("显式重试只收起对应失败回复的操作，刷新和再次失败仍保留正确的工具与提问", () => {

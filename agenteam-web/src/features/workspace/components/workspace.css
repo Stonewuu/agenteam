@@ -31,6 +31,9 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* 为导航项的键盘焦点外框预留四边空间，避免被滚动容器裁切。 */
+  margin: -5px -5px 0;
+  padding: 5px 5px 0;
 }
 
 .brand {
@@ -40,7 +43,7 @@
   padding: 0 10px;
   text-align: left;
   color: var(--text);
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.35px;
   font-size: 15px;
   line-height: 1.3;
@@ -75,9 +78,9 @@
 
 .brand small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
-  letter-spacing: 1.3px;
+  letter-spacing: 0.8px;
   color: var(--secondary);
   line-height: 1.3;
   margin: 0;
@@ -95,9 +98,9 @@
 
 .nav-caption {
   margin: 40px 17px 14px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  letter-spacing: 1.2px;
+  letter-spacing: 0.8px;
 }
 
 .nav-item {
@@ -147,7 +150,7 @@
 .nav-item.selected {
   color: var(--nav-on-selected);
   background: var(--nav-selected);
-  font-weight: 550;
+  font-weight: 600;
   box-shadow: var(--button-shadow);
 }
 
@@ -245,7 +248,7 @@
   display: flex;
   align-items: center;
   gap: 13px;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
   color: var(--muted);
   min-width: 0;
@@ -253,7 +256,7 @@
 }
 
 .breadcrumbs strong {
-  font-weight: 450;
+  font-weight: 500;
   color: var(--text);
   min-width: 0;
   text-overflow: ellipsis;
@@ -277,7 +280,7 @@
   align-items: center;
   gap: 10px;
   color: var(--secondary);
-  font-size: 11px;
+  font-size: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
   padding: 9px 12px;
@@ -304,7 +307,7 @@
   align-items: center;
   gap: 9px;
   padding: 9px 6px;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -393,7 +396,7 @@
 .account-summary-copy strong {
   color: var(--text);
   font-size: 14px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .account-summary-copy > span {
@@ -450,7 +453,7 @@
 .popover-label {
   color: var(--secondary);
   padding: 6px 11px 11px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .popover > button {
@@ -491,7 +494,7 @@
 .popover small {
   display: block;
   color: var(--secondary);
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 4px;
 }
 
@@ -581,7 +584,7 @@
 .page-heading .eyebrow {
   margin-top: 0;
   margin-bottom: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--accent-text);
 }
 

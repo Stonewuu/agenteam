@@ -32,7 +32,7 @@
 .enterpriseName {
   margin: 0 12px 16px;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -79,7 +79,7 @@
 .header h1 {
   margin: 0;
   font-size: 28px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -.025em;
 }
 
@@ -336,13 +336,13 @@
   border-radius: 20px;
   background: var(--card);
   color: var(--foreground);
-  box-shadow: 0 24px 80px #0003;
+  box-shadow: 0 24px 80px rgb(24 20 16 / 0.18);
   overflow-y: auto;
   animation: dialog-appear 160ms ease-out;
 }
 
 .dialog::backdrop {
-  background: #131c3052;
+  background: var(--overlay);
   backdrop-filter: blur(3px);
 }
 
@@ -357,7 +357,7 @@
 .dialogHeader h2 {
   margin: 0;
   font-size: 21px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .closeButton {

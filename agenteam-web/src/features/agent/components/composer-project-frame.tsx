@@ -1,17 +1,13 @@
 "use client";
 
-import {localizeUiMessage} from "@/lib/i18n/ui-message";
-
 import {useT} from "@/lib/i18n/locale-provider";
 
 import type {ReactNode} from "react";
-import {Button} from "@/components/ui/button";
-import {AnimatedHeight} from "@/components/ui/animated-height";
 import {ConversationProjectControl} from "@/features/project/components/conversation-project-control";
 import type {useConversationProject} from "@/features/project/hooks/use-conversation-project";
 import styles from "./composer-project-frame.module.css";
 
-/** 预留展开高度，让项目卡片滑出时不遮挡消息或移动输入位置。 */
+/** 首页与触屏常驻显示项目栏，桌面对话页在输入区上沿按需滑出，减少对正文空间的占用。 */
 export function ComposerProjectFrame({state, children, alwaysShowProject = false}: {
   state: ReturnType<typeof useConversationProject>;
   children: ReactNode;
@@ -21,16 +17,15 @@ export function ComposerProjectFrame({state, children, alwaysShowProject = false
   if (!state.visible) {
     return children;
   }
-  return <div className={styles.frame}>
+  const hasError = Boolean(state.error);
+  return <div className={styles.frame} data-always-visible={alwaysShowProject || undefined}>
     <div className={styles.projectHover} data-saving={state.saving || undefined}
+         data-error={hasError || undefined}
          data-always-visible={alwaysShowProject || undefined} role="group" aria-label={uiText("项目")}>
       <div className={styles.project} data-composer-part="project"><ConversationProjectControl state={state}
-                                                                                               showError={false}/></div>
+                                                                                               showError={false}
+                                                                                               inlineReload={hasError}/></div>
     </div>
     <div className={styles.surface}>{children}</div>
-    <AnimatedHeight>{state.error &&
-      <p className={styles.error} role="alert">{localizeUiMessage(state.error ?? "", uiText)}
-        <Button type="button" onClick={state.reload}>{uiText("重新加载")}</Button>
-      </p>}</AnimatedHeight>
   </div>;
 }

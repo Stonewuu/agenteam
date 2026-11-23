@@ -78,6 +78,9 @@ export function hasVisibleConversationContent(block: DisplayBlock): boolean {
   return !["thinking", "text", "summary"].includes(block.kind) || block.blocks.some(hasVisibleConversationContent);
 }
 
+/** 已有可见内容后再进入等待间隙时，延迟显示加载动画，避免回答收尾瞬间一闪而过。 */
+export const REPLY_ACTIVITY_DELAY_MS = 1000;
+
 /** 当前回复仍在执行，且没有正在显示的内容或交互时，在末尾提示用户继续等待。 */
 export function showReplyActivity(message: DisplayMessage, run: Run | null, blocks: DisplayBlock[]): boolean {
   if (message.role !== "assistant" || (message.status !== "pending" && message.status !== "streaming")
@@ -93,6 +96,16 @@ export function showReplyActivity(message: DisplayMessage, run: Run | null, bloc
       && hasVisibleConversationContent(block)) || block.blocks.some(hasActiveContent);
   }
   return (blocks.length > 0 || !message.content.trim()) && !blocks.some(hasActiveContent);
+}
+
+/** 已有可见内容后需要延迟显示加载动画时，为本轮等待生成稳定键值，避免跨阶段复用旧延迟状态。 */
+export function replyActivityWaitKey(message: DisplayMessage, blocks: DisplayBlock[]): string | null {
+  const hasVisible = Boolean(message.content.trim()) || blocks.some(hasVisibleConversationContent);
+  if (!hasVisible) {
+    return null;
+  }
+  const blockStates = blocks.map((block) => `${block.id}:${"status" in block ? block.status : block.kind}`).join(",");
+  return `${message.id}:${message.content.length}:${blockStates}`;
 }
 
 /** 子任务调用保留原始工具身份，只在展示时使用子智能体版式。 */

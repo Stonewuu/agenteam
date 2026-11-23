@@ -3,9 +3,9 @@
 .memberSection { display: grid; gap: 10px; min-width: 0; }
 .inviteHeader, .inviteHeader > div { display: flex; align-items: center; gap: 9px; }
 .inviteHeader { justify-content: space-between; min-height: 32px; }
-.inviteHeader h3 { margin: 0; font-size: 14px; font-weight: 650; color: var(--foreground); }
+.inviteHeader h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--foreground); }
 .inviteHeader small { font-size: 12px; color: var(--secondary); }
-.selectedCount { padding: 4px 9px; border: 1px solid transparent; border-radius: 99px; background: var(--surface-soft); color: var(--secondary); font-size: 12px; font-weight: 550; cursor: pointer; }
+.selectedCount { padding: 4px 9px; border: 1px solid transparent; border-radius: 99px; background: var(--surface-soft); color: var(--secondary); font-size: 12px; font-weight: 600; cursor: pointer; }
 .selectedCount:disabled { cursor: default; }
 .selectedCount[aria-pressed=true] { color: var(--accent-text); border-color: var(--input-border-focus); }
 .memberPanel { min-width: 0; overflow: clip; border: 1px solid var(--border); border-radius: 16px; background: var(--card); }
@@ -35,7 +35,7 @@
 .newTask[aria-pressed=true] { color: var(--accent-text); background: var(--accent-soft); }
 .welcomeIcon { display: inline-grid; place-items: center; color: var(--accent-text); background: var(--accent-soft); }
 .welcomeIcon { width: 54px; height: 54px; border-radius: 16px; margin-bottom: 20px; }
-.mentionSign { font-size: 16px; line-height: 1; font-weight: 650; color: var(--accent-text); }
+.mentionSign { font-size: 16px; line-height: 1; font-weight: 600; color: var(--accent-text); }
 .mentionOptions { display: grid; gap: 2px; }
 .mentionOption { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--foreground); text-align: start; min-width: 0; min-height: 44px; font: inherit; font-size: 14px; cursor: pointer; }
 .mentionOption span { overflow-wrap: anywhere; }

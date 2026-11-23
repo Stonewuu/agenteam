@@ -21,7 +21,7 @@
 }
 
 .frame {
-  --tool-glow-rgb: 111 131 205;
+  --tool-glow-rgb: 197 109 69;
   --tool-border-opacity: var(--tool-light-border-opacity);
   --tool-glow-opacity: var(--tool-light-opacity);
   --tool-glow-core-light: var(--tool-light-core-light);

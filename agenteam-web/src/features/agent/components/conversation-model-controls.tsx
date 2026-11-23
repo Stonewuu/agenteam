@@ -7,7 +7,7 @@ import {localizeCatalog} from "@/lib/i18n/translate";
 
 import {type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {Button} from "@/components/ui/button";
-import {IconCheck, IconChevronDown} from "@/components/ui/icons";
+import {IconAlertCircle, IconCheck, IconChevronDown} from "@/components/ui/icons";
 import {AnimatedHeight} from "@/components/ui/animated-height";
 import {
   DropdownMenu,
@@ -54,10 +54,13 @@ export function ConversationModelControls({state}: { state: ModelState }) {
     }
   }, []);
   const visible = state.visible && (state.loading || state.loadError || state.configurable);
+  const invalidMessage = state.loading ? "" : state.invalidMessage;
+  const hasWarning = Boolean(invalidMessage);
   const name = state.loading ? uiText("正在加载模型…") : state.model?.name ?? (state.selection ? uiText("原模型不可用") : uiText("选择模型"));
-  const effort = state.loading ? "" : state.selection?.reasoningEffort
+  const effort = state.loading || !state.model?.available ? "" : state.selection?.reasoningEffort
     ? localizeCatalog(reasoningEffortLabels, uiText)[state.selection.reasoningEffort] : state.model?.reasoningEfforts.length ? uiText("默认") : "";
   const label = effort ? `${name} · ${effort}` : name;
+  const warningText = invalidMessage ? localizeUiMessage(invalidMessage, uiText) : "";
   useLayoutEffect(() => {
     const content = measure.current;
     const button = trigger.current;
@@ -97,7 +100,8 @@ export function ConversationModelControls({state}: { state: ModelState }) {
     state.changeModel(id, level);
   }
 
-  const identity = <><span className={styles.name}>{name}</span>{effort &&
+  const identity = <>{hasWarning && <IconAlertCircle size={14} data-icon-context="inherit"/>}<span
+    className={styles.name}>{name}</span>{effort &&
     <span className={styles.effort}>· {effort}</span>}<IconChevronDown size={12}/></>;
   return <DropdownMenu onOpenChange={(open) => {
     if (open) {
@@ -106,9 +110,11 @@ export function ConversationModelControls({state}: { state: ModelState }) {
   }}>
     <DropdownMenuTrigger
       render={<Button ref={trigger} type="button" className={styles.trigger} data-composer-part="model"
+                      data-invalid={hasWarning || undefined}
+                      aria-invalid={hasWarning || undefined}
                       disabled={state.disabled || state.loading}
-                      aria-label={uiText("模型与思考强度：{0}", [label])}
-                      title={state.saving ? uiText("正在保存模型选择…") : label}
+                      aria-label={warningText ? `${uiText("模型与思考强度：{0}", [label])}，${warningText}` : uiText("模型与思考强度：{0}", [label])}
+                      title={state.saving ? uiText("正在保存模型选择…") : warningText ? `${label} · ${warningText}` : label}
                       aria-busy={state.loading || state.saving || undefined}>
         {identity}<span ref={measure} className={styles.measure} aria-hidden="true">{identity}</span>
       </Button>}/>
@@ -117,6 +123,7 @@ export function ConversationModelControls({state}: { state: ModelState }) {
                          collisionAvoidance={{side: "flip", align: "shift"}}
                          positionerClassName={reasoningSpace ? styles.shiftPosition : undefined}
                          style={{"--reasoning-space": `${reasoningSpace}px`} as CSSProperties}>
+      {warningText && <p className={styles.menuNotice} role="status">{warningText}</p>}
       <DropdownMenuGroup>
         <DropdownMenuLabel>{uiText("模型")}</DropdownMenuLabel>
         {state.options.map((option) => {
@@ -161,10 +168,15 @@ export function ConversationModelControls({state}: { state: ModelState }) {
   </DropdownMenu>;
 }
 
-export function ConversationModelFeedback({state}: { state: ModelState }) {
+/** 仅在模型加载或保存失败时显示紧凑提示条；常态模型不可用由选择按钮和菜单就地提示，不额外占用输入区高度。 */
+export function ConversationModelFeedback({state, placement = "bottom"}: {
+  state: ModelState;
+  placement?: "top" | "bottom";
+}) {
   const uiText = useT();
-  return <AnimatedHeight>{state.visible && state.error &&
-    <p className={styles.error} role="alert">{localizeUiMessage(state.error ?? "", uiText)}
+  const message = state.actionError;
+  return <AnimatedHeight>{state.visible && message &&
+    <p className={styles.error} data-placement={placement} role="alert">{localizeUiMessage(message, uiText)}
       {state.loadError && <Button type="button" onClick={state.reload}>{uiText("重新加载")}</Button>}
     </p>}</AnimatedHeight>;
 }

@@ -28,20 +28,20 @@ export const TOOL_BORDER_GLOW_CONFIG: ToolBorderGlowConfig = {
 
   light: {
     // 动态光带的整体透明度，范围 0～1。
-    opacity: 0.7,
+    opacity: 0.72,
     // 中心亮线混入白色的程度，范围 0～1。
     coreLight: 0,
     // 静态彩色边框的透明度，范围 0～1。
     borderOpacity: 0.5,
-    // 沿光带依次渐变的四种颜色，使用六位十六进制颜色值。
-    colors: ["#9873d5", "#409ed0", "#d975ac", "#d3a05f"],
+    // 沿光带依次渐变的四种颜色（暖赤铜、琥珀金、烟陶粉、柔和青瓷），贴合暖纸主题。
+    colors: ["#c56d45", "#d49a4a", "#b86b72", "#5c8c84"],
   },
   // 深色主题使用相同的参数含义，可单独调整。
   dark: {
     opacity: 0.9,
-    coreLight: 0.5,
+    coreLight: 0.45,
     borderOpacity: 0.55,
-    colors: ["#be8cf4", "#58c9ed", "#f28dc5", "#f3cc91"],
+    colors: ["#ebad83", "#f0c878", "#de959e", "#87c4b8"],
   },
 };
 
