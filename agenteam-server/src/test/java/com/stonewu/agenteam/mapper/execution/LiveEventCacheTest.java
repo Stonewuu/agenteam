@@ -272,22 +272,25 @@ class LiveEventCacheTest {
         var block = block("text", "", "1", "running");
         publish(ExecutionChange.replace(block));
         String delta = "中文流式输出🙂";
-        for (int i = 0; i < 1000; i++) {
+        int events = Integer.getInteger("agenteam.test.stream-memory-events", 1000);
+        assertTrue(events >= 1000 && events <= 20000);
+        for (int i = 0; i < events; i++) {
             var next = block.update(block.text() + delta, "running");
             publish(ExecutionChange.delta(next, block.revision(), delta));
             block = next;
         }
         long before = memoryBytes();
-        assertEquals(1001, redis.opsForStream().size(key() + ":events"));
+        long retained = Math.min(events + 1, 10000);
+        assertEquals(retained, redis.opsForStream().size(key() + ":events"));
         cache = new LiveEventCache(redis, codec, 64);
         publish(ExecutionChange.delta(block.update(block.text() + delta, "running"), block.revision(), delta));
         long after = memoryBytes();
         var snapshot = cache.snapshot(run.enterpriseId(), run.conversationId()).orElseThrow();
-        assertEquals(delta.repeat(1001), snapshot.objects().get("block:output:text").path("block").path("text").asText());
+        assertEquals(delta.repeat(events + 1), snapshot.objects().get("block:output:text").path("block").path("text").asText());
         assertEquals(64, redis.opsForStream().size(key() + ":events"));
         assertTrue(after < before);
-        System.out.printf("实时缓存容量测量：1001 条事件占用 %d 字节；清理到 64 条后占用 %d 字节，已校验累计全文完整。%n",
-            before, after);
+        System.out.printf("Live cache memory: generated=%d, retained=%d, bytes=%d; retainedAfterTrim=64, bytesAfterTrim=%d; fullTextVerified=true%n",
+            events + 1, retained, before, after);
     }
 
     private long memoryBytes() {

@@ -83,6 +83,11 @@ public final class PlatformBrowserModel implements AutoCloseable {
             }
             exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
+            if (!input.path("tools").isEmpty() && reconnectScenario(exchange, input, question, toolResult)) {
+                exchange.getResponseBody().write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+                exchange.getResponseBody().flush();
+                return;
+            }
             if (input.path("messages").toString().contains("为用户提供的资料拟一个")) {
                 TimeUnit.SECONDS.sleep(6);
                 frame(exchange, Map.of("content", "团队活动筹备"), "stop");
@@ -116,7 +121,8 @@ public final class PlatformBrowserModel implements AutoCloseable {
                 frame(exchange, Map.of("tool_calls", List.of(Map.of("index", 0, "id", "browser-plugin-operation", "type", "function", "function", Map.of("name", selectedTool, "arguments", json.writeValueAsString(arguments))))), "tool_calls");
             } else if (question.contains("并行") && !toolResult) {
                 frame(exchange, Map.of("content", "我会分别整理两项资料。\n\n"), null);
-                frame(exchange, Map.of("tool_calls", List.of(spawn(0, "浏览器甲", "浏览器子任务甲"), spawn(1, "浏览器乙", "浏览器子任务乙"))), "tool_calls");
+                frame(exchange, Map.of("tool_calls", List.of(spawn(input, 0, "浏览器甲", "浏览器子任务甲"),
+                    spawn(input, 1, "浏览器乙", "浏览器子任务乙"))), "tool_calls");
             } else {
                 frame(exchange, Map.of("content", "这是" + (model.equals("ui-right") ? "模型乙" : "模型甲") + "的回答。\n\n"), null);
                 if (question.contains("暂停")) {
@@ -141,9 +147,55 @@ public final class PlatformBrowserModel implements AutoCloseable {
         }
     }
 
-    private Map<String, Object> spawn(int index, String label, String task) throws IOException {
+    private Map<String, Object> spawn(JsonNode input, int index, String label, String task) throws IOException {
+        String agentId = null;
+        for (var tool : input.path("tools")) {
+            if (tool.at("/function/name").asText().equals("agent_spawn")) {
+                agentId = tool.at("/function/parameters/properties/agent_id/enum/0").asText();
+            }
+        }
+        if (agentId == null || agentId.isBlank()) {
+            throw new IllegalStateException("Browser fixture requires a published subagent");
+        }
         return Map.of("index", index, "id", "browser-call-" + index, "type", "function", "function", Map.of("name", "agent_spawn",
-            "arguments", json.writeValueAsString(Map.of("agent_id", "researcher", "label", label, "task", task))));
+            "arguments", json.writeValueAsString(Map.of("agent_id", agentId, "label", label, "task", task))));
+    }
+
+    /** 固定编号用于逐项核对重开页面和停止后的内容，不依赖模型生成的措辞。 */
+    private boolean reconnectScenario(HttpExchange exchange, JsonNode input, String question, boolean toolResult)
+        throws IOException, InterruptedException {
+        if (!question.startsWith("重连验收")) {
+            return false;
+        }
+        if (question.contains("并行") && !toolResult) {
+            frame(exchange, Map.of("content", "父任务准备：按甲、乙、丙顺序启动三个子任务。\n\n"), null);
+            var calls = new ArrayList<Map<String, Object>>();
+            for (int index = 0; index < 3; index++) {
+                String label = List.of("甲", "乙", "丙").get(index);
+                calls.add(spawn(input, index, "核对" + label, "重连验收子任务" + label));
+            }
+            frame(exchange, Map.of("tool_calls", calls), "tool_calls");
+        } else if (question.startsWith("重连验收子任务")) {
+            String label = question.substring("重连验收子任务".length(), "重连验收子任务".length() + 1);
+            // 故意让后启动的乙先完成，检查页面是否仍按开始顺序排列。
+            long delay = label.equals("乙") ? 650 : label.equals("甲") ? 850 : 1050;
+            reconnectText(exchange, "子任务" + label, 60, delay);
+        } else if (toolResult) {
+            reconnectText(exchange, "父任务汇总", 6, 300);
+        } else {
+            reconnectText(exchange, "普通回复", 60, 900);
+        }
+        return true;
+    }
+
+    private void reconnectText(HttpExchange exchange, String label, int count, long delay)
+        throws IOException, InterruptedException {
+        for (int index = 1; index <= count; index++) {
+            frame(exchange, Map.of("content", label + "第" + String.format("%02d", index)
+                + "段：这段内容应当只显示一次，并保持原有顺序。\n\n"), null);
+            TimeUnit.MILLISECONDS.sleep(delay);
+        }
+        frame(exchange, Map.of("content", label + "已全部完成。"), "stop");
     }
 
     private Map<String, Object> sourceCall(JsonNode input, String question, boolean hasResult, JsonNode result) throws IOException {

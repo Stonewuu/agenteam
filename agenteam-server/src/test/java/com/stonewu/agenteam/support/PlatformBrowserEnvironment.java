@@ -35,7 +35,7 @@ public final class PlatformBrowserEnvironment {
             Map<String, Object> properties = new HashMap<>();
             isolated.properties((name, supplier) -> properties.put(name, supplier.get()));
             properties.put("server.address", "127.0.0.1");
-            properties.put("server.port", "0");
+            properties.put("server.port", Integer.getInteger("agenteam.test.browser.port", 0));
             properties.put("spring.profiles.active", "isolated-ui");
             properties.put("server.servlet.session.cookie.name", "AGENTEAM_PLATFORM_UI_SESSION");
             properties.put("server.servlet.session.cookie.secure", "false");
