@@ -71,7 +71,7 @@ const hookSource = readFileSync(new URL("../src/features/agent/hooks/use-convers
 const compiled = ts.transpileModule(hookSource, {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText;
 
 // 使用实际发送入口，替换网络和页面上下文，控制接口响应顺序。
-function workspace({queued = false, fresh = false, handoff = null, search = "agent=agent"} = {}) {
+function workspace({queued = false, fresh = false, handoff = null, search = "agent=agent", deferHistory = false} = {}) {
   const slots = [];
   const effects = [];
   const requests = [];
@@ -80,6 +80,8 @@ function workspace({queued = false, fresh = false, handoff = null, search = "age
   let complete;
   let fail;
   let path = fresh ? "/new-task" : "/conversations/conversation";
+  let pendingPath = null;
+  let locationPathname = path;
   const react = {
     useState(initial) {
       const index = cursor++;
@@ -106,12 +108,15 @@ function workspace({queued = false, fresh = false, handoff = null, search = "age
   const skills = {selected: [{name: "文件技能", versionId: "skill"}], loading: false, error: "", clear() {
     skills.selected = [];
   }};
-  const employee = {agentId: "agent", name: "工作助手", canRun: true, attachmentsEnabled: true};
+  const employee = {agentId: "agent", name: "工作助手", icon: "Notes", color: "orange", canRun: true, attachmentsEnabled: true};
   const stream = {state: fresh ? null : {snapshot: {
     conversation: {id: "conversation", agentId: "agent", mode: "normal", status: "active", canContinue: true},
     messages: [], attachmentsEnabled: true, activeRun: queued ? {id: "previous", mode: "interactive", status: "running"} : null
   }, latestRun: null}, reload() {}, updateMetadata() {}};
-  const policy = {ready: true, saving: false, value: "default", resetDraft() {}};
+  const modelHandoff = {configurable: true, selection: {modelProfileId: "model-1", reasoningEffort: "high"}, defaultSelection: null, models: []};
+  const selectedProject = {id: "project-1", name: "测试项目"};
+  const policy = {ready: true, saving: false, value: "auto_approve", resetDraft() {}};
+  let modelLoaded = true;
   const modules = {
     react, "next/navigation": {usePathname: () => path, useSearchParams: () => new URLSearchParams(search)},
     "@/lib/i18n/locale-provider": {useT: () => chineseText},
@@ -136,17 +141,47 @@ function workspace({queued = false, fresh = false, handoff = null, search = "age
     "../lib/conversation-reading": {conversationReadingPosition: () => null},
     "@/features/file/hooks/use-file-uploads": {useFileUploads: () => files},
     "@/features/skill/hooks/use-conversation-skills": {useConversationSkills: () => skills},
-    "./use-conversation-approval-policy": {useConversationApprovalPolicy: () => policy},
-    "./use-conversation-model": {useConversationModel: () => ({...policy, configurable: false, loaded: true})},
-    "@/features/project/hooks/use-conversation-project": {useConversationProject: () => policy},
+    "./use-conversation-approval-policy": {useConversationApprovalPolicy: ({conversationId, conversation, initialPolicy}) => ({
+      ...policy,
+      value: conversationId ? (conversation?.approvalPolicy ?? initialPolicy ?? "default") : policy.value
+    })},
+    "./use-conversation-model": {useConversationModel: ({conversation, initialOptions}) => ({
+      ...policy,
+      configurable: false,
+      loaded: modelLoaded,
+      handoff: conversation ? undefined : modelHandoff,
+      initialOptions
+    })},
+    "@/features/project/hooks/use-conversation-project": {useConversationProject: ({conversationId, conversation, initialProject}) => ({
+      ...policy,
+      selected: conversationId ? (conversation ? selectedProject : initialProject ?? null) : selectedProject,
+      initialProject
+    })},
     "../components/composer-handoff-context": {useComposerHandoff: () => handoff}
   };
   const exports = {};
+  const applyHistory = next => {
+    const split = next.indexOf("?");
+    const nextPathname = split < 0 ? next : next.slice(0, split);
+    const nextSearch = split < 0 ? "" : next.slice(split + 1);
+    locationPathname = nextPathname;
+    if (deferHistory) {
+      pendingPath = {pathname: nextPathname, search: nextSearch};
+    } else {
+      path = nextPathname;
+      if (split >= 0) {
+        search = nextSearch;
+      }
+    }
+  };
   vm.runInNewContext(compiled, {exports, crypto, URLSearchParams, window: {
+    location: {get pathname() {
+      return locationPathname;
+    }},
     addEventListener() {}, removeEventListener() {}, history: {pushState(_, __, next) {
-      path = next;
+      applyHistory(next);
     }, replaceState(_, __, next) {
-      path = next;
+      applyHistory(next);
     }}
   }, require: name => modules[name] ?? new Proxy({}, {get: () => () => ({})})});
   function render() {
@@ -163,9 +198,26 @@ function workspace({queued = false, fresh = false, handoff = null, search = "age
     }
     throw new Error("对话状态未能稳定");
   }
-  return {render, requests, files, skills, stream, path: () => path, resolve: value => complete(value), reject: error => fail(error), navigate: value => {
-    path = value;
-  }};
+  return {render, requests, files, skills, stream, path: () => path, locationPathname: () => locationPathname,
+    setModelLoaded: value => {
+      modelLoaded = value;
+    },
+    commitHistory() {
+      if (pendingPath) {
+        path = pendingPath.pathname;
+        search = pendingPath.search;
+        pendingPath = null;
+      }
+    },
+    resolve: value => complete(value), reject: error => fail(error), navigate: value => {
+      const split = value.indexOf("?");
+      path = split < 0 ? value : value.slice(0, split);
+      if (split >= 0) {
+        search = value.slice(split + 1);
+      }
+      locationPathname = path;
+      pendingPath = null;
+    }};
 }
 
 test("接口延迟时输入框和选择立即清空，重复点击只发送一次，失败完整恢复后可以重试", async () => {
@@ -319,4 +371,97 @@ test("创建接口早于对话页打开时也直接显示已提交消息，并�
   assert.equal(page.render().messages.length, 2);
   assert.equal(page.path(), "/conversations/conversation");
   assert.equal(page.render().messages[0].id, "input");
+});
+
+test("新对话页直接发送后，地址栏过渡未完成前仍保持消息、员工与输入区，返回新对话不复用旧过渡状态", async () => {
+  const page = workspace({fresh: true, deferHistory: true});
+  page.setModelLoaded(false);
+  page.render().setDraft("直接在新对话页发送");
+  const pending = page.render().submitMessageContent();
+  const sendingView = page.render();
+  assert.equal(sendingView.conversationId, null);
+  assert.equal(sendingView.messages.length, 2);
+  assert.equal(sendingView.agentName, "工作助手");
+
+  page.resolve(accepted);
+  await pending;
+
+  // Next.js replaceState 经 startTransition 延迟更新 pathname，此时路由仍在 /new-task，但不能闪回欢迎页。
+  assert.equal(page.path(), "/new-task");
+  assert.equal(page.locationPathname(), "/conversations/conversation");
+  const beforeRouteSync = page.render();
+  assert.equal(beforeRouteSync.conversationId, "conversation");
+  assert.equal(beforeRouteSync.messages.length, 2);
+  assert.equal(beforeRouteSync.messages[0].clientId, sendingView.messages[0].clientId);
+  assert.equal(beforeRouteSync.messages[1].clientId, sendingView.messages[1].clientId);
+  assert.equal(beforeRouteSync.messages[1].localDelivery, "accepted");
+  assert.equal(beforeRouteSync.agentName, "工作助手");
+  assert.equal(beforeRouteSync.employeeAppearance?.icon, "Notes");
+  assert.equal(beforeRouteSync.approvalPolicy.value, "auto_approve");
+  assert.equal(beforeRouteSync.model.initialOptions?.selection?.modelProfileId, "model-1");
+  assert.equal(beforeRouteSync.project.selected?.id, "project-1");
+  assert.equal(beforeRouteSync.composerHandoff, true);
+
+  // 路由切换完成但快照尚未到达，仍保持过渡显示，且清除发起路由绑定。
+  page.commitHistory();
+  assert.equal(page.path(), "/conversations/conversation");
+  const afterRouteSync = page.render();
+  assert.equal(afterRouteSync.conversationId, "conversation");
+  assert.equal(afterRouteSync.messages.length, 2);
+  assert.equal(afterRouteSync.messages[0].clientId, sendingView.messages[0].clientId);
+  assert.equal(afterRouteSync.agentName, "工作助手");
+  assert.equal(afterRouteSync.composerHandoff, true);
+
+  // 快照返回且模型选项就绪后自动释放过渡上下文，不再残留。
+  page.stream.state = {snapshot: {
+    conversation: {id: "conversation", agentId: "agent", agentName: "工作助手", agentIcon: "Notes", agentColor: "orange",
+      approvalPolicy: "auto_approve", mode: "normal", status: "active", canContinue: true},
+    messages: afterRouteSync.messages.map(message => ({
+      ...message, blocks: [], localDelivery: undefined, status: message.role === "user" ? "completed" : "streaming"
+    })),
+    attachmentsEnabled: true, activeRun: {id: "run", mode: "interactive", status: "running", outputMessageId: "output"}
+  }, latestRun: {id: "run", mode: "interactive", status: "running", outputMessageId: "output"}};
+  page.setModelLoaded(true);
+  const settled = page.render();
+  assert.equal(settled.composerHandoff, false);
+  assert.equal(settled.messages.length, 2);
+  assert.equal(settled.messages[0].clientId, sendingView.messages[0].clientId);
+  assert.equal(settled.messages[1].localDelivery, undefined);
+
+  // 路由已切到对话后若在快照到达前直接切回 /new-task，不能重新激活之前的创建过渡状态。
+  const backPage = workspace({fresh: true, deferHistory: true});
+  backPage.render().setDraft("再次创建");
+  const second = backPage.render().submitMessageContent();
+  backPage.resolve(accepted);
+  await second;
+  backPage.render();
+  backPage.commitHistory();
+  backPage.render();
+  backPage.navigate("/new-task?agent=agent");
+  const returnedNewTask = backPage.render();
+  assert.equal(returnedNewTask.conversationId, null);
+  assert.equal(returnedNewTask.messages.length, 0);
+  assert.equal(returnedNewTask.composerHandoff, false);
+});
+
+test("工作台交接在路由尚未切到新对话前不提前结束交接，避免快照先到时闪回空对话", () => {
+  const submission = {...sending(), accepted};
+  const handoff = {value: {userId: "user", enterpriseId: "enterprise", conversationId: "conversation", status: "accepted",
+    submission, employee: {agentId: "agent", name: "工作助手"}, focusInput: false}, finish(id) {
+    if (handoff.value?.conversationId === id) {
+      handoff.value = null;
+    }
+  }};
+  const page = workspace({fresh: true, handoff, search: `agent=agent&submission=${submission.id}`, deferHistory: true});
+  page.stream.state = {snapshot: {
+    conversation: {id: "conversation", agentId: "agent", agentName: "工作助手", mode: "normal", status: "active", canContinue: true},
+    messages: [], attachmentsEnabled: true, activeRun: null
+  }, latestRun: null};
+  const beforeSync = page.render();
+  assert.equal(beforeSync.conversationId, "conversation");
+  assert.notEqual(handoff.value, null);
+  page.commitHistory();
+  const afterSync = page.render();
+  assert.equal(afterSync.conversationId, "conversation");
+  assert.equal(handoff.value, null);
 });

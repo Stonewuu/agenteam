@@ -172,7 +172,7 @@ export function ConversationPane({
       role="status">{workspace.hasUnseenContent ? uiText("有新内容，可以回到底部查看。") : ""}</span>
     {loading && !workspace.messages.length && !stream.error && !workspace.composerHandoff
       && !workspace.detail?.collaborationTaskId && !isCollaboration && canRun && <ConversationComposerSkeleton />}
-    {!workspace.detail?.collaborationTaskId && (!loading || workspace.composerHandoff) && (canRun || run) && <ConversationComposer inputRef={composerInput}
+    {!workspace.detail?.collaborationTaskId && (!loading || workspace.composerHandoff || workspace.messages.length > 0) && (canRun || run) && <ConversationComposer inputRef={composerInput}
       activePicker={workspace.pickerOpen ? "employee" : workspace.skillPickerOpen ? "skill" : workspace.documentPickerOpen ? "document" : null}
       employee={workspace.employeeAppearance}
       employeeName={workspace.agentName}

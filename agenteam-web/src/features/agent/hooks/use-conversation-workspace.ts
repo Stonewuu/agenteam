@@ -10,7 +10,8 @@ import {useApiQuery} from "@/lib/http/use-api-query";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
 import type {Employee} from "@/features/employee/types/employee";
 import {conversationPath, loadRun, runPath, textInput} from "../api/conversation-api";
-import type {Conversation, RunAccepted} from "../types/execution";
+import type {Conversation, ConversationModelOptions, RunAccepted, ToolApprovalPolicy} from "../types/execution";
+import type {WorkspaceProject} from "@/features/project/types/project";
 import {displayMessages} from "../lib/conversation-display";
 import {createConversationSubmission, mergeConversationSubmissions, observeConversationSubmissions, type ConversationSubmission} from "../lib/conversation-submissions";
 import {useConversationList} from "./use-conversation-list";
@@ -39,6 +40,17 @@ export type ConversationLocation = {
   navigate: (path: string, replace: boolean) => void;
 };
 
+type CreatedConversation = {
+  userId: string;
+  enterpriseId: string;
+  conversationId: string;
+  originRoute: string | null;
+  employee: Employee | null;
+  approvalPolicy: ToolApprovalPolicy;
+  modelOptions?: ConversationModelOptions;
+  project?: WorkspaceProject | null;
+};
+
 export function useConversationWorkspace(userId: string, enterpriseId: string, canRun: boolean, canUseSkills: boolean, canUseKnowledge: boolean, sharedList?: ReturnType<typeof useConversationList>, canManage = false, location?: ConversationLocation) {
   const uiText = useT();
   const browserPathname = usePathname();
@@ -48,6 +60,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const search = location?.search;
   const params = useMemo(() => embedded ? new URLSearchParams(search ?? "") : browserParams,
     [embedded, search, browserParams]);
+  const routeKey = `${pathname}?${params.toString()}`;
   const scope = useId();
   const guarded = useGuardedNavigation(embedded ? scope : undefined);
   const parts = workspaceParts(pathname);
@@ -59,7 +72,14 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     && params.get("submission") === handoffValue?.submission.id);
   const arrival = sameHandoffScope && (pendingArrival || routeConversationId && handoffValue?.conversationId === routeConversationId)
     ? handoffValue : null;
-  const conversationId = routeConversationId ?? (pendingArrival ? arrival?.conversationId ?? null : null);
+  // 新建对话成功后在地址栏与首个快照就绪前延续本次会话编号和展示信息，避免路由过渡帧丢失状态。
+  const [createdConversation, setCreatedConversation] = useState<CreatedConversation | null>(null);
+  const sameCreatedScope = createdConversation?.userId === userId && createdConversation.enterpriseId === enterpriseId;
+  const activeCreated = sameCreatedScope && (routeConversationId === createdConversation.conversationId
+    || (!routeConversationId && createdConversation.originRoute !== null && createdConversation.originRoute === routeKey))
+    ? createdConversation : null;
+  const carryover = arrival ?? activeCreated;
+  const conversationId = routeConversationId ?? carryover?.conversationId ?? null;
   const creating = Boolean(arrival && arrival.status !== "accepted");
   const creationPending = arrival?.status === "sending";
   const recent = useApiQuery<HomeSummary>(!conversationId && !params.get("agent") && canRun ? organizationPath(enterpriseId, "/home") : null);
@@ -84,18 +104,18 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const skills = useConversationSkills(userId, enterpriseId, detail?.agentId ?? selectedAgent, conversationId, params.get("skill"), canUseSkills);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [chosenEmployee, setChosenEmployee] = useState<Employee | null>(null);
-  const employeeId = detail ? detail.agentId : selectedAgent ?? arrival?.employee.agentId ?? null;
+  const employeeId = detail ? detail.agentId : selectedAgent ?? carryover?.employee?.agentId ?? null;
   const preloadedEmployee = !conversationId && employeeId
     ? (chosenEmployee?.agentId === employeeId ? chosenEmployee
       : recent.data?.employees?.find((value) => value.agentId === employeeId)
-        ?? (arrival?.employee.agentId === employeeId ? arrival.employee : null))
+        ?? (carryover?.employee?.agentId === employeeId ? carryover.employee : null))
     : null;
   // 已有对话由会话快照提供外观与可用状态，新对话优先复用首页/选择器已读取的员工详情。
   const employee = useApiQuery<Employee>(!conversationId && employeeId && !preloadedEmployee
     ? organizationPath(enterpriseId, `/employees/${encodeURIComponent(employeeId)}`) : null);
   const resolvedEmployee = employee.data ?? preloadedEmployee;
   const employeeLoading = !conversationId && (recent.loading || (!preloadedEmployee && employee.loading));
-  const displayEmployee = resolvedEmployee ?? (arrival?.employee.agentId === employeeId ? arrival.employee : null);
+  const displayEmployee = resolvedEmployee ?? (carryover?.employee?.agentId === employeeId ? carryover.employee : null);
   const employeeAppearance = detail ? {
     icon: detail.agentIcon ?? "",
     color: detail.agentColor ?? "purple"
@@ -161,7 +181,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     awayFromBottom,
     hasUnseenContent
   } = useConversationScroll(draftKey, scrollMessages, stream.state?.steps);
-  const currentRoute = useRef(pathname + "?" + params.toString());
+  const currentRoute = useRef(routeKey);
   const historySnapshot = stream.state?.snapshot;
   useEffect(() => {
     const position = conversationReadingPosition(draftKey);
@@ -174,8 +194,8 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   const base = ``;
 
   useEffect(() => {
-    currentRoute.current = pathname + "?" + params.toString();
-  }, [pathname, params]);
+    currentRoute.current = routeKey;
+  }, [routeKey]);
 
   const refreshList = list.refresh;
   const reloadConversation = stream.reload;
@@ -183,10 +203,11 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   useEffect(() => {
     if (acceptedConversationId) {
       const path = `/conversations/${encodeURIComponent(acceptedConversationId)}`;
-      refreshList();
       if (location) {
+        refreshList();
         location.navigate(path, true);
-      } else {
+      } else if (typeof window !== "undefined" && window.location?.pathname !== path) {
+        refreshList();
         window.history.replaceState(null, "", path);
       }
     }
@@ -206,7 +227,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     enabled: canRun && (!conversationId || canManage),
     busy: submitting || creating || Boolean(stream.state?.snapshot.activeRun),
     onChanged: changed,
-    initialPolicy: arrival?.approvalPolicy
+    initialPolicy: carryover?.approvalPolicy
   });
   const model = useConversationModel({
     enterprise: enterpriseId,
@@ -216,7 +237,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     enabled: canRun && (!conversationId || Boolean(detail)),
     busy: submitting || creating || approvalPolicy.saving || Boolean(stream.state?.snapshot.activeRun),
     onChanged: changed,
-    initialOptions: arrival?.modelOptions
+    initialOptions: carryover?.modelOptions
   });
   const project = useConversationProject({
     enterprise: enterpriseId,
@@ -226,13 +247,21 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     enabled: canRun,
     busy: submitting || creating || approvalPolicy.saving || model.saving || Boolean(stream.state?.snapshot.activeRun),
     onChanged: changed,
-    initialProject: arrival?.project
+    initialProject: carryover?.project
   });
+  const createdSettled = Boolean(activeCreated && routeConversationId === activeCreated.conversationId
+    && detail && (model.loaded || !canRun));
+  if (createdConversation && (!activeCreated || createdSettled)) {
+    setCreatedConversation(null);
+  } else if (activeCreated && routeConversationId === activeCreated.conversationId && activeCreated.originRoute !== null) {
+    setCreatedConversation({...activeCreated, originRoute: null});
+  }
   useEffect(() => {
-    if (arrival?.conversationId && detail && (displayEmployee || conversationId) && (model.loaded || !canRun)) {
+    if (arrival?.conversationId && routeConversationId === arrival.conversationId
+      && detail && (displayEmployee || conversationId) && (model.loaded || !canRun)) {
       finishHandoff?.(arrival.conversationId);
     }
-  }, [arrival, detail, displayEmployee, conversationId, finishHandoff, stream.error, model.loaded, canRun]);
+  }, [arrival, routeConversationId, detail, displayEmployee, conversationId, finishHandoff, stream.error, model.loaded, canRun]);
   useEffect(() => {
     const refresh = (event: Event) => {
       const detail = (event as CustomEvent<{ enterpriseId: string; conversationId: string }>).detail;
@@ -284,6 +313,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
       files.clear();
       skills.clear();
       setDocuments((current) => ({...current, [draftKey]: []}));
+      setCreatedConversation(null);
       if (creating && arrival) {
         handoff?.discard(arrival.submission.id);
       }
@@ -343,6 +373,11 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     setSubmitting(true);
     setActionError("");
     const route = currentRoute.current;
+    const creatingConversation = !conversationId;
+    const createdEmployee = initial?.employee ?? displayEmployee;
+    const createdApprovalPolicy = initial?.approvalPolicy ?? approvalPolicy.value;
+    const createdModelOptions = initial?.modelOptions ?? model.handoff;
+    const createdProject = initial ? initial.project : project.selected;
     const submission = initial ? {...initial.submission, failed: false} : createConversationSubmission({
       scope: draftKey, text: content, messages, queued: canQueue,
       attachments: files.items.flatMap(item => item.reference?.status === "ready" ? [item.reference] : []),
@@ -370,8 +405,8 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
         body: conversationId ? input : {
           agentId: initial?.employee.agentId ?? selectedAgent,
           input,
-          approvalPolicy: initial?.approvalPolicy ?? approvalPolicy.value,
-          projectId: (initial ? initial.project : project.selected)?.id ?? null
+          approvalPolicy: createdApprovalPolicy,
+          projectId: createdProject?.id ?? null
         },
       });
       const confirmed = {...submission, accepted: response, scope: `${userId}:${enterpriseId}:${response.conversationId}`};
@@ -380,7 +415,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
         handoff?.update(confirmed);
       }
       list.refresh();
-      if (!conversationId) {
+      if (creatingConversation) {
         approvalPolicy.resetDraft();
         model.resetDraft();
         project.resetDraft();
@@ -393,9 +428,21 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
         return;
       }
       setDraft("");
-      if (conversationId) {
+      if (!creatingConversation) {
         stream.reload();
       } else {
+        if (!initial) {
+          setCreatedConversation({
+            userId,
+            enterpriseId,
+            conversationId: response.conversationId,
+            originRoute: route,
+            employee: createdEmployee,
+            approvalPolicy: createdApprovalPolicy,
+            modelOptions: createdModelOptions,
+            project: createdProject
+          });
+        }
         navigate(`${base}/conversations/${encodeURIComponent(response.conversationId)}`, true);
       }
     } catch (failed) {
@@ -506,7 +553,7 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
     displayEmployee,
     employeeAppearance,
     employeeLoading,
-    composerHandoff: Boolean(arrival),
+    composerHandoff: Boolean(carryover),
     focusComposerAfterSend: Boolean(arrival?.focusInput),
     employeeReady: Boolean(conversationId || resolvedEmployee),
     selectedAgent,
