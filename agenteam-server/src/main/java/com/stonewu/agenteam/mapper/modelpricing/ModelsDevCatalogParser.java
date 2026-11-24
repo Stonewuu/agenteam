@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.stonewu.agenteam.model.modelpricing.entity.ModelPriceCatalogEntry;
+import com.stonewu.agenteam.service.modelpricing.ModelsDevCatalogClient;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -78,7 +79,8 @@ public class ModelsDevCatalogParser {
             }
         }
         for (var model : models) {
-            result.add(new ModelPriceCatalogEntry(id, name, model.api() == null ? api : model.api(), model.modelId(),
+            result.add(new ModelPriceCatalogEntry("models_dev", "models.dev", ModelsDevCatalogClient.SOURCE,
+                "USD", "UTC", id, name, model.api() == null ? api : model.api(), model.modelId(),
                 model.modelName(), model.canonicalModelId(), model.rules(), model.notices()));
         }
     }
@@ -103,7 +105,8 @@ public class ModelsDevCatalogParser {
             }
             String api = model.path("provider").path("api").isTextual()
                 ? checked(model.path("provider").path("api").textValue(), 2048) : null;
-            result.add(new ModelPriceCatalogEntry(null, null, api, id, checked(model.path("name").asText(id), 256),
+            result.add(new ModelPriceCatalogEntry("models_dev", "models.dev", ModelsDevCatalogClient.SOURCE,
+                "USD", "UTC", null, null, api, id, checked(model.path("name").asText(id), 256),
                 checked(model.path("canonical_model_id").asText(id), 256), mapped.rules(), mapped.notices()));
         }
     }

@@ -214,5 +214,89 @@
   "log.modelpricing.modelsDevCatalogCache.load.1": {
     "zh-CN": "等待价格目录被中断，模型={}",
     "en": "Waiting for the price catalog was interrupted; model={}"
+  },
+  "error.modelpricing.modelPriceCatalogService.currency.1": {
+    "zh-CN": "请选择有效的币种筛选条件。",
+    "en": "Select a valid currency filter."
+  },
+  "error.modelpricing.modelPriceCatalogService.unavailable.1": {
+    "zh-CN": "暂时无法读取公开价格目录，可稍后重试或手动配置。",
+    "en": "Public price catalogs are unavailable. Try again later or configure prices manually."
+  },
+  "error.modelpricing.llmAbacusCatalogParser.require.1": {
+    "zh-CN": "人民币价格目录格式或大小不符合读取要求。",
+    "en": "The CNY price catalog format or size cannot be processed."
+  },
+  "error.modelpricing.llmAbacusCatalogClient.fetch.1": {
+    "zh-CN": "人民币价格目录请求失败，HTTP 状态={0}",
+    "en": "The CNY price catalog request failed. HTTP status={0}"
+  },
+  "error.modelpricing.llmAbacusCatalogClient.fetch.2": {
+    "zh-CN": "人民币价格目录超过允许大小。",
+    "en": "The CNY price catalog exceeds the allowed size."
+  },
+  "error.modelpricing.llmAbacusCatalogCache.load.1": {
+    "zh-CN": "人民币价格目录读取已中断，请重试。",
+    "en": "CNY price retrieval was interrupted. Please try again."
+  },
+  "error.modelpricing.llmAbacusCatalogCache.available.1": {
+    "zh-CN": "暂时无法读取人民币价格目录，可稍后重试或手动配置。",
+    "en": "CNY price catalog is unavailable. Try again later or configure prices manually."
+  },
+  "text.modelpricing.llmAbacusCatalogParser.timeRule.1": {
+    "zh-CN": "分时价格（{0}）",
+    "en": "Time-based price ({0})"
+  },
+  "text.modelpricing.llmAbacusCatalogParser.timeFallback.1": {
+    "zh-CN": "该模型存在分时优惠，当前仅导入默认单价；如需分时计费，请在草稿中补充时段规则。",
+    "en": "This model has time-based pricing, and only the default unit price was imported. Add time rules in the draft if needed."
+  },
+  "text.modelpricing.modelPriceCatalogService.llmAbacusNote.1": {
+    "zh-CN": "LLM Abacus (llmabacus.com)：{0}/{1}；公开人民币文本价格，不含专属折扣。",
+    "en": "LLM Abacus (llmabacus.com): {0}/{1}; public CNY text pricing, excluding custom discounts."
+  },
+  "error.modelpricing.exchangeRateService.currency.1": {
+    "zh-CN": "请选择有效的源币种和目标币种。",
+    "en": "Select valid source and target currencies."
+  },
+  "error.modelpricing.exchangeRateService.unsupported.1": {
+    "zh-CN": "暂未获取到 {0} 到 {1} 的参考汇率，请手动填写。",
+    "en": "Reference exchange rate from {0} to {1} is unavailable. Enter it manually."
+  },
+  "error.modelpricing.exchangeRateClient.fetch.1": {
+    "zh-CN": "汇率接口请求失败，HTTP 状态={0}",
+    "en": "The exchange rate request failed. HTTP status={0}"
+  },
+  "error.modelpricing.exchangeRateClient.fetch.2": {
+    "zh-CN": "汇率接口响应超过允许大小。",
+    "en": "The exchange rate response exceeds the allowed size."
+  },
+  "error.modelpricing.exchangeRateClient.parse.1": {
+    "zh-CN": "汇率数据格式不符合读取要求。",
+    "en": "The exchange rate format cannot be processed."
+  },
+  "error.modelpricing.exchangeRateCache.load.1": {
+    "zh-CN": "汇率读取已中断，请重试。",
+    "en": "Exchange rate retrieval was interrupted. Please try again."
+  },
+  "error.modelpricing.exchangeRateCache.available.1": {
+    "zh-CN": "暂时无法获取实时参考汇率，可手动填写汇率进行换算。",
+    "en": "Live reference exchange rates are unavailable. Enter an exchange rate manually."
+  },
+  "log.modelpricing.llmAbacusCatalogCache.load.1": {
+    "zh-CN": "等待人民币价格目录被中断，模型={}",
+    "en": "Waiting for the CNY price catalog was interrupted; model={}"
+  },
+  "log.modelpricing.exchangeRateCache.load.1": {
+    "zh-CN": "等待实时汇率刷新被中断，来源={}",
+    "en": "Waiting for exchange rate refresh was interrupted; source={}"
+  },
+  "log.modelpricing.modelPriceCatalogService.partialFailure.1": {
+    "zh-CN": "部分价格目录加载失败，已降级使用其余可用来源，来源={}，模型={}",
+    "en": "A price catalog source failed and fell back to other available sources; source={}, model={}"
+  },
+  "log.modelpricing.exchangeRateService.fallback.1": {
+    "zh-CN": "主汇率源不可用或未覆盖币种，已切换备选汇率源，从={}，到={}",
+    "en": "Primary exchange rate source failed or missed currency, falling back to secondary source; from={}, to={}"
   }
 }

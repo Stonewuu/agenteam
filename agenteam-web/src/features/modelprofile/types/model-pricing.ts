@@ -20,12 +20,17 @@ export type PricePreview = {
   items: {meter: PriceRate["meter"]; cacheTtlSeconds: number; quantity: string; pricePerMillion: string; amount: string}[];
 };
 export type CatalogPrice = {
-  providerId: string; providerName: string; modelId: string; modelName: string; matched: boolean;
+  sourceId: string; sourceName: string; providerId: string; providerName: string;
+  modelId: string; modelName: string; matched: boolean;
   configuration: PriceConfiguration; notices: string[];
 };
 export type PriceCatalog = {
   items: CatalogPrice[]; total: number; offset: number; hasMore: boolean; fetchedAt: string; stale: boolean;
-  providers: {id: string; name: string}[];
+  providers: {id: string; name: string}[]; currencies: string[];
+};
+export type ExchangeRateQuote = {
+  baseCurrency: string; targetCurrency: string; rate: string; effectiveDate: string;
+  fetchedAt: string; sourceName: string; sourceUrl: string; stale: boolean;
 };
 
 export const priceMeters: {value: PriceRate["meter"]; label: string}[] = [

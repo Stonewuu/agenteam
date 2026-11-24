@@ -7,6 +7,7 @@ import com.stonewu.agenteam.model.modelpricing.response.ModelPricePreviewView;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceDraftRequest;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPricePreviewRequest;
+import com.stonewu.agenteam.model.modelpricing.response.ExchangeRateView;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPriceVersionView;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPriceCatalogView;
 import com.stonewu.agenteam.service.auth.AuthContextService;
@@ -30,19 +31,26 @@ public class ModelPriceApiService {
     private final ModelPricePreviewService previews;
     private final IdempotentRequestService requests;
     private final ModelPriceCatalogService catalog;
+    private final ExchangeRateService exchangeRates;
 
     public ModelPriceApiService(AuthContextService identity, ModelPriceService prices, ModelPricePreviewService previews,
-                                 IdempotentRequestService requests, ModelPriceCatalogService catalog) {
+                                IdempotentRequestService requests, ModelPriceCatalogService catalog,
+                                ExchangeRateService exchangeRates) {
         this.identity = identity;
         this.prices = prices;
         this.previews = previews;
         this.requests = requests;
         this.catalog = catalog;
+        this.exchangeRates = exchangeRates;
     }
 
-    public ModelPriceCatalogView catalog(String enterprise, String model, String query, String provider, int offset, boolean suggested,
-                                        HttpServletRequest request) {
-        return catalog.search(identity.requireEnterprise(request.getSession(false), enterprise), model, query, provider, offset, suggested);
+    public ModelPriceCatalogView catalog(String enterprise, String model, String query, String provider, String currency,
+                                         int offset, boolean suggested, HttpServletRequest request) {
+        return catalog.search(identity.requireEnterprise(request.getSession(false), enterprise), model, query, provider, currency, offset, suggested);
+    }
+
+    public ExchangeRateView exchangeRate(String enterprise, String from, String to, HttpServletRequest request) {
+        return exchangeRates.quote(identity.requireEnterprise(request.getSession(false), enterprise), from, to);
     }
 
     public List<ModelPriceVersionView> list(String enterprise, String model, Long before, HttpServletRequest request) {

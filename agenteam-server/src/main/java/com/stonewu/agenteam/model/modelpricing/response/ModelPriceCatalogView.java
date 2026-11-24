@@ -6,11 +6,13 @@ import java.time.Instant;
 import java.util.List;
 
 public record ModelPriceCatalogView(List<Item> items, int total, int offset, boolean hasMore,
-                                    Instant fetchedAt, boolean stale, List<Provider> providers) {
+                                    Instant fetchedAt, boolean stale, List<Provider> providers,
+                                    List<String> currencies) {
     public record Provider(String id, String name) {
     }
 
-    public record Item(String providerId, String providerName, String modelId, String modelName,
-                       boolean matched, ModelPriceConfiguration configuration, List<String> notices) {
+    public record Item(String sourceId, String sourceName, String providerId, String providerName,
+                       String modelId, String modelName, boolean matched,
+                       ModelPriceConfiguration configuration, List<String> notices) {
     }
 }

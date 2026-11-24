@@ -14,7 +14,7 @@ const model = {id: "model", name: "已使用的模型", revision: "4", providerI
     inputTypes: ["text", "image"], reasoningEfforts: ["high"], protocolOptions: protocol.defaultProtocolOptions("openai")}};
 
 // 使用真实表单和菜单事件，界面外观及网络入口替换为轻量对象。
-function component(file, exported, props, busy = false) {
+function component(file, exported, props, busy = false, dataOverride = null) {
   const slots = [], calls = [];
   let cursor = 0, pending;
   const action = {busy, fieldErrors: {}, clearFieldError(...fields) {
@@ -41,6 +41,14 @@ function component(file, exported, props, busy = false) {
         slots[index] = typeof value === "function" ? value(slots[index]) : value;
       }];
     },
+    useRef(initial) {
+      const index = cursor++;
+      if (!(index in slots)) {
+        slots[index] = {current: initial};
+      }
+      return slots[index];
+    },
+    useEffect() {},
     useId() {
       return `field-${cursor++}`;
     },
@@ -53,9 +61,19 @@ function component(file, exported, props, busy = false) {
     "@/features/auth/hooks/use-form-action": {useFormAction: () => action},
     "@/features/workspace/components/use-confirm-close": {useConfirmClose: () => ({finish: (callback) => callback(), dialogRef: {}})},
     "@/features/enterprise/api/organization-api": {organizationPath: (enterprise, path) => `/enterprises/${enterprise}${path}`},
-    "@/lib/http/use-api-query": {useApiQuery: (path) => ({data: path.endsWith("/model-providers") ? [provider] : [model], loading: false})},
+    "@/lib/http/use-api-query": {useApiQuery: (path) => ({
+      data: path.endsWith("/model-providers")
+        ? (dataOverride?.providers ?? [provider])
+        : (dataOverride?.models ?? [model]),
+      loading: false,
+      fetching: false,
+      error: "",
+      retry() {},
+    })},
     "@/components/ui/dialog": {Dialog: "Dialog", DialogCancel: "DialogCancel", DialogActions: "DialogActions",
       useDialogControl: () => ({ref: {}, close: (callback) => callback()})},
+    "@/components/ui/detail-section": {DetailStatus: "DetailStatus"},
+    "@/components/ui/toast": {toast: {success() {}, error() {}}},
     "../lib/model-protocol": protocol,
     "../lib/model-token-length": loadSource("features/modelprofile/lib/model-token-length"),
     "../lib/reasoning-effort": loadSource("features/modelprofile/lib/reasoning-effort"),
@@ -234,7 +252,7 @@ test("已使用连接可以修改协议和地址，空密钥仍表示保留原�
 
 test("已使用模型的删除操作可用，确认后按当前版本请求删除", async () => {
   const page = component("model-management", "ModelManagement", {enterpriseId: "enterprise", canManage: true});
-  const deletion = page.find("DropdownMenuItem", (props) => props.children.includes("删除模型"));
+  const deletion = page.find("DropdownMenuItem", (props) => Array.isArray(props.children) && props.children.includes("删除模型"));
   assert.ok(deletion);
   assert.ok(!deletion.props.disabled);
   deletion.props.onClick();
@@ -248,4 +266,114 @@ test("已使用模型的删除操作可用，确认后按当前版本请求删�
   assert.equal(page.calls[0].path, "/enterprises/enterprise/models/model");
   const readonly = component("model-management", "ModelManagement", {enterpriseId: "enterprise", canManage: false});
   assert.equal(readonly.find("DropdownMenuItem"), undefined);
+});
+
+test("模型配置页采用分组工作台布局，去除重复连接按钮并支持快捷启停与行内价格入口", async () => {
+  const page = component("model-management", "ModelManagement", {enterpriseId: "enterprise", canManage: true});
+  const allNodes = page.nodes();
+  const textContent = (node) => {
+    if (typeof node === "string" || typeof node === "number") {
+      return String(node);
+    }
+    if (Array.isArray(node)) {
+      return node.map(textContent).join("");
+    }
+    if (node && typeof node === "object") {
+      return textContent(node.props?.children);
+    }
+    return "";
+  };
+  const buttons = allNodes.filter((node) => node.type === "Button");
+  assert.equal(buttons.filter((node) => textContent(node).includes("编辑连接")).length, 1);
+  assert.equal(buttons.filter((node) => textContent(node).includes("配置连接")).length, 0);
+  assert.ok(buttons.some((node) => node.props["aria-label"] === "已使用的模型的价格配置"));
+  const addModelButton = buttons.find((node) => textContent(node).includes("新增模型"));
+  assert.ok(addModelButton);
+  addModelButton.props.onClick();
+  const modelDialog = page.find("ModelProfileDialog");
+  assert.equal(modelDialog.props.preferredProvider, provider.id);
+  modelDialog.props.onClose();
+  const pageText = textContent(page.render());
+  assert.match(pageText, /OpenAI Chat Completions/);
+  assert.match(pageText, /上下文 128K/);
+  assert.match(pageText, /输出 8,192/);
+  assert.match(pageText, /支持思考/);
+  assert.match(pageText, /请先删除此提供方下的模型/);
+  const disableProvider = page.find("DropdownMenuItem", (props) => Array.isArray(props.children) && props.children.includes("停用提供方"));
+  assert.ok(disableProvider);
+  disableProvider.props.onClick();
+  await page.finished();
+  assert.equal(page.calls[0].method, "PUT");
+  assert.equal(page.calls[0].path, "/enterprises/enterprise/model-providers/provider");
+  assert.equal(page.calls[0].revision, "3");
+  assert.equal(page.calls[0].body.apiKey, null);
+  assert.equal(page.calls[0].body.enabled, false);
+  const enableModel = page.find("DropdownMenuItem", (props) => Array.isArray(props.children) && props.children.includes("启用模型"));
+  assert.ok(enableModel);
+  enableModel.props.onClick();
+  await page.finished();
+  assert.equal(page.calls[1].method, "PUT");
+  assert.equal(page.calls[1].path, "/enterprises/enterprise/models/model");
+  assert.equal(page.calls[1].revision, "4");
+  assert.equal(page.calls[1].body.enabled, true);
+});
+
+test("多提供方场景默认仅展开前 3 个，支持搜索自动展开与超长模型列表按需展开", () => {
+  const manyProviders = Array.from({length: 6}, (_, index) => ({
+    ...provider,
+    id: `provider-${index + 1}`,
+    name: `提供方 ${index + 1}`,
+    modelCount: index === 0 ? 10 : 1,
+  }));
+  const manyModels = [
+    ...Array.from({length: 10}, (_, index) => ({
+      ...model,
+      id: `model-1-${index + 1}`,
+      providerId: "provider-1",
+      providerName: "提供方 1",
+      name: `模型 ${index + 1}`,
+      modelName: `m-${index + 1}`,
+      enabled: true,
+    })),
+    ...manyProviders.slice(1).map((item, index) => ({
+      ...model,
+      id: `model-extra-${index + 2}`,
+      providerId: item.id,
+      providerName: item.name,
+      name: `专属模型 ${index + 2}`,
+      modelName: `special-${index + 2}`,
+      enabled: true,
+    })),
+  ];
+  const page = component(
+    "model-management",
+    "ModelManagement",
+    {enterpriseId: "enterprise", canManage: true},
+    false,
+    {providers: manyProviders, models: manyModels}
+  );
+  const collapsibles = page.nodes().filter((node) => node.type === "Collapsible");
+  assert.equal(collapsibles.length, 6);
+  assert.deepEqual(collapsibles.map((node) => node.props.open), [true, true, true, false, false, false]);
+  // 第 1 个提供方有 10 个模型，总览先展示 6 个并提供“展开其余 4 个模型”
+  const firstArticles = page.nodes(collapsibles[0]).filter((node) => node.type === "article");
+  assert.equal(firstArticles.length, 6);
+  const overflowButton = page.find("Button", (props) => props.children === "展开其余 4 个模型");
+  assert.ok(overflowButton);
+  overflowButton.props.onClick();
+  const expandedFirst = page.nodes().filter((node) => node.type === "Collapsible")[0];
+  assert.equal(page.nodes(expandedFirst).filter((node) => node.type === "article").length, 10);
+  // 通过提供方下拉筛选锁定第 6 个提供方时，仅展示该提供方并自动展开
+  const select = page.find("SearchableSelect");
+  assert.ok(select);
+  select.props.onChange({value: "provider-6", label: "提供方 6（1）"});
+  const focused = page.nodes().filter((node) => node.type === "Collapsible");
+  assert.equal(focused.length, 1);
+  assert.equal(focused[0].props.open, true);
+  // 清除筛选后按关键词搜索第 6 个提供方的模型，命中并自动展开
+  page.find("SearchableSelect").props.onChange(null);
+  page.find("SearchInput").props.onChange({target: {value: "special-6"}});
+  const searched = page.nodes().filter((node) => node.type === "Collapsible");
+  assert.equal(searched.length, 1);
+  assert.equal(searched[0].props.open, true);
 });

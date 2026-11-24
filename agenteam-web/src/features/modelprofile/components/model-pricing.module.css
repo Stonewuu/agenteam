@@ -178,9 +178,78 @@
   overflow-wrap: anywhere;
 }
 
+.catalogFilters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, 0.75fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.catalogFilters :global(.select-control) {
+  width: 100%;
+}
+
+.catalogHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.catalogBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sourceTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.conversionCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.rateInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rateInputRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 820px) {
+  .catalogFilters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 600px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rateInputRow {
+    flex-wrap: wrap;
   }
 
   .version, .toolbar {

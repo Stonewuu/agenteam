@@ -5,6 +5,7 @@ import com.stonewu.agenteam.model.modelpricing.response.ModelPricePreviewView;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceConfiguration;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPriceDraftRequest;
 import com.stonewu.agenteam.model.modelpricing.request.ModelPricePreviewRequest;
+import com.stonewu.agenteam.model.modelpricing.response.ExchangeRateView;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPriceVersionView;
 import com.stonewu.agenteam.model.modelpricing.response.ModelPriceCatalogView;
 import com.stonewu.agenteam.service.http.ApiResponses;
@@ -55,10 +56,18 @@ public class ModelPriceApiController {
     public ApiResponse<ModelPriceCatalogView> catalog(@PathVariable String enterpriseId, @PathVariable String modelId,
                                                      @RequestParam(defaultValue = "") String query,
                                                      @RequestParam(defaultValue = "") String provider,
+                                                     @RequestParam(defaultValue = "") String currency,
                                                      @RequestParam(defaultValue = "0") int offset,
                                                      @RequestParam(defaultValue = "false") boolean suggested,
                                                      HttpServletRequest request) {
-        return responses.success(service.catalog(enterpriseId, modelId, query, provider, offset, suggested, request), request);
+        return responses.success(service.catalog(enterpriseId, modelId, query, provider, currency, offset, suggested, request), request);
+    }
+
+    @GetMapping("/exchange-rate")
+    public ApiResponse<ExchangeRateView> exchangeRate(@PathVariable String enterpriseId, @PathVariable String modelId,
+                                                      @RequestParam String from, @RequestParam String to,
+                                                      HttpServletRequest request) {
+        return responses.success(service.exchangeRate(enterpriseId, from, to, request), request);
     }
 
     @PostMapping
