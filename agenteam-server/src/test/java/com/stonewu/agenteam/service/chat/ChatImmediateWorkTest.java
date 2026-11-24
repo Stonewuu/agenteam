@@ -236,7 +236,12 @@ class ChatImmediateWorkTest extends ChatApiTestSupport {
         config.setWorkerEnabled(true);
         var origin = mock(ChatSendWorker.class);
         var owner = mock(ChatSendWorker.class);
+        var localStarted = new CountDownLatch(1);
         var received = new CountDownLatch(1);
+        when(origin.runOnce()).thenAnswer(call -> {
+            localStarted.countDown();
+            return false;
+        });
         when(owner.runOnce()).thenAnswer(call -> {
             received.countDown();
             return false;
@@ -252,6 +257,7 @@ class ChatImmediateWorkTest extends ChatApiTestSupport {
                 subscriber.start();
                 first.committed(new ChatWorkRequested(Stage.SEND));
                 assertTrue(received.await(5, TimeUnit.SECONDS), "持有连接的另一实例应收到通知并发送");
+                assertTrue(localStarted.await(5, TimeUnit.SECONDS), "发出通知的实例也应执行本地发送");
                 verify(owner, times(1)).runOnce();
                 verify(origin, times(1)).runOnce();
             } finally {
