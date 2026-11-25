@@ -131,6 +131,42 @@
   display: none;
 }
 
+.messageBody > .attemptSummary {
+  min-height: 32px;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.attemptSummary:lang(zh) > span {
+  position: relative;
+  inset-block-start: -0.06em;
+}
+
+.attemptHistory {
+  margin-block: 4px 8px;
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--border);
+}
+
+.attemptRecord {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.attemptRecord + .attemptRecord {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.attemptRecord > p, .attemptRecord > time {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+}
+
 .messageActions {
   position: relative;
   display: flex;
@@ -514,6 +550,10 @@
 }
 
 @media (max-width: 600px) {
+  .messageBody > .attemptSummary {
+    min-height: 44px;
+  }
+
   .welcome {
     padding-top: 15px;
   }

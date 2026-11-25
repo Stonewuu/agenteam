@@ -130,7 +130,7 @@ public class ExecutionMessageMapper {
             message -> new MessageView(message.id(), message.runId(), message.attemptNo(), message.role(),
                 message.content(), message.status(),
                 message.blocks(), List.copyOf(files.getOrDefault(message.id(), List.of())), message.feedback(),
-                message.createdAt(), message.updatedAt(), message.supersededByRetry())).toList();
+                message.createdAt(), message.updatedAt(), message.supersededByRetry(), message.inputMessageId())).toList();
     }
 
     public void save(String enterprise, String id, String content, List<ContentBlock> blocks, String status,
@@ -164,6 +164,7 @@ public class ExecutionMessageMapper {
     private MessageView map(ExecutionMessageQueryRow row) {
         return new MessageView(row.getId(), row.getRunId(), row.getAttemptNo(), row.getRole(),
             row.getContent(), row.getStatus(), json.blocks(row.getBlocksJson()), List.of(), row.getFeedback(),
-            instant(row.getCreatedAt()).toString(), instant(row.getUpdatedAt()).toString());
+            instant(row.getCreatedAt()).toString(), instant(row.getUpdatedAt()).toString(), false,
+            "assistant".equals(row.getRole()) ? row.getInputMessageId() : null);
     }
 }

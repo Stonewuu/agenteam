@@ -18,7 +18,7 @@ final class ModelResponseBody extends ResponseBody {
 
     ModelResponseBody(ResponseBody original, ModelHttpSession session, ModelRequestDiagnostics diagnostics, boolean inspectErrors) {
         this.original = original;
-        var input = new ModelResponseInputStream(original.byteStream(), session);
+        var input = new ModelResponseInputStream(original.byteStream(), session, diagnostics);
         this.source = Okio.buffer(Okio.source(inspectErrors ? new ModelSseErrorInputStream(input, diagnostics) : input));
     }
 

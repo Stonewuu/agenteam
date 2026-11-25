@@ -74,6 +74,7 @@ export type Citation = {
 };
 export type ConversationMessage = {
   id: string;
+  inputMessageId?: string;
   supersededByRetry?: boolean;
   runId: string | null;
   attemptNo: number;

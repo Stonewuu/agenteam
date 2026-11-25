@@ -8,6 +8,7 @@ export const runtimeFields: Record<string, {label: string; hint: string}> = {
   userActiveRuns: {label: "每位用户的活动任务上限", hint: "按用户在同一企业中的任务数量计算。"},
   conversationQueuedMessages: {label: "每个对话的等待消息上限", hint: "当前任务执行期间，可追加的消息数量。"},
   modelIdleSeconds: {label: "默认模型无输出超时（秒）", hint: "模型请求未单独设置等待时间时使用。"},
+  conversationModelRetries: {label: "普通对话自动重试次数", hint: "在原回复中重试，可展开查看中断前的内容。设为 0 可关闭。"},
   modelInputMb: {label: "模型输入容量（MB）", hint: "填 0 按后端可用内存自动确定。"},
   toolInlineKb: {label: "直接返回模型的内容（KB）", hint: "超过此大小的部分由模型按需继续读取。"},
   toolLargeInlineKb: {label: "长上下文模型的返回内容（KB）", hint: "适用于上下文长度不少于一百万的模型。"},
@@ -45,8 +46,8 @@ export const runtimeSections: {id: RuntimeSection; label: string; description: s
   {id: "execution", label: "任务执行", description: "调整任务并发、活动任务数量和排队时间。", note: "并发数降低后，正在执行的任务继续完成；排队时间对当前等待中的任务也生效。", icon: IconPlayerPlay,
     groups: [{"title":"并发与排队","keys":["workerConcurrent","queueTimeoutSeconds","enterpriseActiveRuns","userActiveRuns","conversationQueuedMessages"]}]
   },
-  {id: "model", label: "模型与工具", description: "设置模型等待时间和工具结果的内容大小。", note: "保存后用于后续模型请求和工具操作。", icon: IconRobot,
-    groups: [{"title":"模型请求","keys":["modelIdleSeconds","modelInputMb"]},{"title":"工具结果","keys":["toolInlineKb","toolLargeInlineKb","toolPreviewKb","toolReadKb","toolReadLines","toolBatchMultiplier","toolFileMb"]}]
+  {id: "model", label: "模型与工具", description: "调整模型请求和工具结果的设置。", note: "重试次数用于新提交的对话消息，其他设置用于后续模型请求和工具操作。", icon: IconRobot,
+    groups: [{"title":"模型请求","keys":["modelIdleSeconds","conversationModelRetries","modelInputMb"]},{"title":"工具结果","keys":["toolInlineKb","toolLargeInlineKb","toolPreviewKb","toolReadKb","toolReadLines","toolBatchMultiplier","toolFileMb"]}]
   },
   {id: "collaboration", label: "协作任务", description: "设置新建协作任务的默认限制和共享上下文大小。", note: "任务默认值用于新建任务，共享上下文设置用于后续执行。", icon: IconCollaboration,
     groups: [{"title":"新任务默认值","keys":["collaborationWorks","collaborationHandoffs","collaborationRuns","collaborationParallel","collaborationDeadlineHours"]},{"title":"共享上下文","keys":["collaborationContextCharacters","collaborationContextMessages"]}]

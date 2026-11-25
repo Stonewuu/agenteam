@@ -15,6 +15,10 @@
     "zh-CN": "请输入不小于 {0} 的整数，或选择不限。",
     "en": "Enter a whole number of at least {0}, or select Unlimited."
   },
+  "error.system.runtimeSettings.bounded": {
+    "zh-CN": "请输入 {0} 到 {1} 之间的整数。",
+    "en": "Enter a whole number between {0} and {1}."
+  },
   "error.system.runtimeSettings.integerRange": {
     "zh-CN": "数值超出整数支持的范围，请减少数值或选择不限。",
     "en": "This value exceeds the supported integer range. Enter a smaller value or select Unlimited."

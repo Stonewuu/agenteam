@@ -22,7 +22,7 @@
   </update>
   <update id="retryAgentRun">
     UPDATE agent_run SET status = 'queued', current_attempt_no = current_attempt_no + 1, output_message_id = #{output},
-    next_attempt_at = #{available}, queued_at = #{available}, execution_phase = 'between_steps', error_code = NULL,
+    next_attempt_at = #{available}, queued_at = #{available}, execution_phase = #{phase}, error_code = NULL,
     error_message = NULL,
     active_millis = active_millis + IF(active_segment_started_at IS NULL, 0, GREATEST(0, TIMESTAMPDIFF(MICROSECOND,
     active_segment_started_at, #{now}) DIV 1000)),

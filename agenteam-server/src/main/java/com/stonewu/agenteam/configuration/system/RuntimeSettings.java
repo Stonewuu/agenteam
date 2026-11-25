@@ -33,6 +33,10 @@ public class RuntimeSettings {
                     value = environment.getProperty(setting.property(), Long.class, value);
                 }
             }
+            if (setting.maximum() != null && !setting.accepts(value)) {
+                throw new IllegalArgumentException("Invalid deployment value for " + setting.property()
+                    + ": expected " + setting.minimum() + " to " + setting.maximum());
+            }
             initial.put(setting.key(), value);
         }
         defaults = Map.copyOf(initial);

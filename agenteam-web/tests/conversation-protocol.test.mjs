@@ -6,6 +6,7 @@ const load = createRequire(import.meta.url);
 const { fromSnapshot, applyConversationFrame } = load("../.test-build/conversation/agent/state/conversation-event-state.js");
 const { parseConversationFrame, SnapshotRequired } = load("../.test-build/conversation/agent/state/conversation-protocol.js");
 const { displayMessages, mergeRunApprovals, replyActivityWaitKey, REPLY_ACTIVITY_DELAY_MS, showReplyActivity } = load("../.test-build/conversation/agent/lib/conversation-display.js");
+const { conversationRowId, groupConversationReplies } = load("../.test-build/conversation/agent/lib/conversation-replies.js");
 const time = "2026-09-14T08:00:00Z";
 const {mergeConversationMetadata, mergeConversationMetadataList} = load("../.test-build/conversation/agent/lib/conversation-metadata.js");
 
@@ -312,8 +313,33 @@ test("自动尝试保留失败正文，后续尝试使用独立消息并保持�
   assert.equal(state.snapshot.messages[1].status, "pending");
   assert.deepEqual(displayMessages(state).map((message) => [message.attemptNo, message.hasMultipleAttempts]), [[1, true], [2, true]]);
   assert.deepEqual(displayMessages(fromSnapshot(state.snapshot)).map((message) => [message.attemptNo, message.hasMultipleAttempts]), [[1, true], [2, true]]);
+  for (const source of [state, fromSnapshot(state.snapshot)]) {
+    const rows = groupConversationReplies(displayMessages(source));
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].id, "second-output");
+    assert.equal(rows[0].content, "");
+    assert.equal(rows[0].previousAttempts[0].content, text.text);
+    assert.equal(rows[0].previousAttempts[0].blocks[0].id, text.id);
+  }
   assert.throws(() => apply(state, event("7", "message.delta", { messageId: "output", blockId: text.id, baseRevision: "1", revision: "2", delta: "旧尝试晚到正文" })), SnapshotRequired);
   assert.throws(() => apply(fromSnapshot(initial), event("4", "attempt.updated", { id: "wrong-attempt", attemptNo: 2, outputMessageId: "output", status: "failed" })), SnapshotRequired);
+});
+
+test("重试按原提问合并，保留最新消息编号并在加载旧尝试时保持同一显示位置", () => {
+  const question = {id: "q", role: "user", runId: "first-run", content: "再检查一下"};
+  const first = {id: "first", runId: "first-run", role: "assistant", attemptNo: 1, content: "中断的半句", clientId: "optimistic"};
+  const manual = {id: "manual", runId: "retry-run", inputMessageId: "q", role: "assistant", attemptNo: 1, content: "再次中断"};
+  const current = {...manual, id: "current", attemptNo: 2, content: "完整回复"};
+  const other = {...question, id: "other-q", runId: "other-run"};
+  const otherReply = {...first, id: "other-reply", runId: other.runId, clientId: undefined};
+  const result = groupConversationReplies([question, first, other, otherReply, manual, current]);
+  assert.deepEqual(result.map(row => row.id), ["q", "current", "other-q", "other-reply"]);
+  assert.deepEqual(result[1].previousAttempts.map(item => item.id), ["first", "manual"]);
+  assert.equal(result[1].clientId, first.clientId);
+  assert.equal(result[1].content, current.content);
+  assert.equal(conversationRowId(result[1]), conversationRowId(groupConversationReplies([current])[0]));
+  assert.notEqual(conversationRowId(result[1]), conversationRowId(result[3]));
+  assert.equal(first.inputMessageId, undefined);
 });
 
 test("超过普通数字范围的连续序号仍精确，重复事件不会重复追加", () => {

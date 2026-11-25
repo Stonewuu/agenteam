@@ -50,6 +50,10 @@ public class RuntimeSettingsManagement {
             var setting = RuntimeSetting.find(key).filter(found -> found.section().equals(section))
                 .orElseThrow(() -> ApiException.invalidField("values." + key, Messages.text("error.system.runtimeSettings.field")));
             if (!setting.accepts(value)) {
+                if (setting.maximum() != null) {
+                    throw ApiException.invalidField("values." + key, Messages.text(
+                        "error.system.runtimeSettings.bounded", setting.minimum(), setting.maximum()));
+                }
                 throw ApiException.invalidField("values." + key, Messages.text(
                     value != null && value > Integer.MAX_VALUE ? "error.system.runtimeSettings.integerRange"
                         : "error.system.runtimeSettings.range", setting.minimum()));
@@ -80,7 +84,7 @@ public class RuntimeSettingsManagement {
     private RuntimeSettingsView view(RuntimeSettingsStore.Saved saved) {
         var bounds = new LinkedHashMap<String, RuntimeSettingsView.Bounds>();
         for (var setting : RuntimeSetting.values()) {
-            bounds.put(setting.key(), new RuntimeSettingsView.Bounds(setting.minimum()));
+            bounds.put(setting.key(), new RuntimeSettingsView.Bounds(setting.minimum(), setting.maximum()));
         }
         return new RuntimeSettingsView(String.valueOf(saved == null ? 1 : saved.revision()),
             settings.values(saved), Map.copyOf(bounds));

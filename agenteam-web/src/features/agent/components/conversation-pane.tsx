@@ -11,6 +11,7 @@ import { type RefObject, useEffect, useRef } from "react";
 import type { useConversationWorkspace } from "../hooks/use-conversation-workspace";
 import type { DisplayMessage } from "../types/conversation-display";
 import { readConversationMessage } from "../lib/conversation-ui-adapter";
+import { conversationRowId } from "../lib/conversation-replies";
 import { ConversationMessage } from "./conversation-message";
 import { ConversationUserMessage } from "./conversation-user-message";
 import { ConversationComposer } from "./conversation-composer";
@@ -135,7 +136,7 @@ export function ConversationPane({
                 return null;
               }
               return <MessagePrimitive.Root asChild>
-                <div data-conversation-message={content.id}
+                <div data-conversation-message={conversationRowId(content)}
                   className={`${styles.messageRow} ${content.role === "user" ? styles.userMessageRow : styles.assistantMessageRow}`}>
                   {content.role === "user" ? <ConversationUserMessage message={content} enterprise={enterprise} />
                     : <ConversationMessage employeeName={workspace.agentName} employee={workspace.employeeAppearance}
@@ -143,7 +144,7 @@ export function ConversationPane({
                       latestRun={stream.state?.latestRun ?? null}
                       liveApprovals={stream.state?.approvals}
                       liveSteps={stream.state?.steps}
-                      stepHistory={content.runId ? workspace.steps.history.get(content.runId) : undefined}
+                      stepHistories={workspace.steps.history}
                       onReloadSteps={workspace.steps.retry}
                       onFeedback={stream.setFeedback} onChanged={stream.reload} onMemory={onMemory}
                       onRetry={workspace.retry} retrying={workspace.submitting}

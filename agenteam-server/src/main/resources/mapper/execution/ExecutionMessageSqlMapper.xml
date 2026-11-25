@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.stonewu.agenteam.mapper.execution.ExecutionMessageSqlMapper">
   <select id="historyMessages" resultType="com.stonewu.agenteam.model.execution.entity.ExecutionMessageQueryRow">
-    SELECT m.*, f.value AS feedback FROM agent_message m
+    SELECT m.*, f.value AS feedback, r.input_message_id FROM agent_message m
     JOIN agent_conversation c ON c.enterprise_id = m.enterprise_id AND c.id = m.conversation_id
     LEFT JOIN agent_run r ON r.enterprise_id = m.enterprise_id AND r.conversation_id = m.conversation_id AND r.id = m.run_id
     LEFT JOIN message_feedback f ON f.enterprise_id = m.enterprise_id AND f.message_id = m.id AND f.user_id = c.user_id

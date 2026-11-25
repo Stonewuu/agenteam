@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 新尝试共用原输入和次数，保留失败输出；已有写入或人工拒绝时不能整体重发。
+ * 新尝试共用原输入并保留失败回复。普通对话从模型调用前的状态继续，定时任务按计划重新执行。
  */
 @Service
 @Transactional(propagation = Propagation.MANDATORY)
@@ -53,9 +53,16 @@ public class RunAttemptRetryService {
     }
 
     public boolean schedule(RunRecord run, String code, String message) {
-        if (!List.of("scheduled", "manual_schedule").contains(run.mode()) || !run.status()
-            .equals("running") || run.cancelRequestedAt() != null
+        boolean conversation = ConversationRunQueue.supported(run);
+        if ((!conversation && !List.of("scheduled", "manual_schedule").contains(run.mode()))
+            || !run.status().equals("running") || run.cancelRequestedAt() != null
             || run.currentAttemptNo() >= run.maxAttempts() || code == null || !TEMPORARY.contains(code)) {
+            return false;
+        }
+        var used = activity.get(run);
+        if (conversation && (!code.equals("MODEL_TEMPORARY_FAILURE") || !"model".equals(used.phase())
+            || checkpoints.find(run.enterpriseId(), run.id())
+                .filter(saved -> saved.leaseVersion() == run.leaseVersion()).isEmpty())) {
             return false;
         }
         if (approvals.forRun(run.enterpriseId(), run.id()).stream()
@@ -64,21 +71,21 @@ public class RunAttemptRetryService {
         }
         var tools = calls.forRun(run.enterpriseId(), run.id());
         if (tools.stream()
-            .anyMatch(value -> value.status().equals("unknown") || !value.readOnly() && value.submittedAt() != null)) {
+            .anyMatch(value -> value.status().equals("unknown") || !conversation && !value.readOnly() && value.submittedAt() != null)) {
             return false;
         }
         if (!code.equals("MODEL_TEMPORARY_FAILURE") && tools.stream().noneMatch(
             value -> value.readOnly() && value.status().equals("failed") && code.equals(value.errorCode()))) {
             return false;
         }
-        var used = activity.get(run);
         var limits = ExecutionLimits.from(run);
         if ((limits.maxSteps() > 0 && used.usedSteps() >= limits.maxSteps())
             || (limits.timeoutSeconds() > 0 && used.elapsed(clock.instant()) >= limits.timeoutSeconds() * 1000L)) {
             return false;
         }
         var now = clock.instant();
-        var available = now.plusSeconds(run.currentAttemptNo() == 1 ? 30 : 120);
+        long scheduleDelay = run.currentAttemptNo() == 1 ? 30 : 120;
+        var available = now.plusSeconds(conversation ? 2L * run.currentAttemptNo() : scheduleDelay);
         attempts.fail(run, code, message, now);
         var previous = attempts.list(run.enterpriseId(), run.id()).stream()
             .filter(value -> value.attemptNo() == run.currentAttemptNo()).findFirst().orElseThrow();
@@ -89,8 +96,11 @@ public class RunAttemptRetryService {
             run.currentAttemptNo() + 1, now);
         messages.associate(run.enterpriseId(), output, run.id());
         attempts.next(run, output);
-        runs.retry(run, output, available, now);
-        checkpoints.remove(run.enterpriseId(), run.id());
+        // 等待自动重试时用户可以停止任务，保留模型阶段才能随后从同一份工具结果手动继续。
+        runs.retry(run, output, available, now, conversation ? used.phase() : "between_steps");
+        if (!conversation) {
+            checkpoints.remove(run.enterpriseId(), run.id());
+        }
         jobs.retry(run.enterpriseId(), run.id(), available, now);
         var queued = runs.find(run.enterpriseId(), run.id(), false).orElseThrow();
         schedules.changed(queued);

@@ -62086,6 +62086,11 @@
           "supersededByRetry": {
             "type": "boolean"
           },
+          "inputMessageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "这条回复对应的原始用户消息编号。"
+          },
           "createdAt": {
             "type": "string",
             "minLength": 20,

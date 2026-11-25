@@ -71,7 +71,7 @@ public final class ToolPayloadPreview {
         return new MessageView(message.id(), message.runId(), message.attemptNo(), message.role(), message.content(),
             message.status(),
             message.blocks().stream().map(ToolPayloadPreview::block).toList(), message.attachments(),
-            message.feedback(), message.createdAt(), message.updatedAt(), message.supersededByRetry());
+            message.feedback(), message.createdAt(), message.updatedAt(), message.supersededByRetry(), message.inputMessageId());
     }
 
     /**

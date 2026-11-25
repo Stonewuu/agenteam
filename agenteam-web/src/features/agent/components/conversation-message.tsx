@@ -11,7 +11,7 @@ import {toast} from "@/components/ui/toast";
 import {useEffect, useRef, useState} from "react";
 import {ApiMutation, errorMessage} from "@/lib/http/api-client";
 import {organizationPath} from "@/features/enterprise/api/organization-api";
-import type {DisplayMessage} from "../types/conversation-display";
+import type {ConversationRow, DisplayMessage} from "../types/conversation-display";
 import type {Run, RunApproval} from "../types/execution";
 import {ConversationBlocks, ConversationMarkdown} from "./conversation-message-blocks";
 import styles from "./assistant-message.module.css";
@@ -22,6 +22,7 @@ import {IconBookmark, IconThumbDown, IconThumbUp, IconChartBar} from "@/componen
 import {ConversationModelUsageDialog} from "@/features/usage/components/conversation-model-usage-dialog";
 import {ConversationRunFeedback} from "./conversation-run-feedback";
 import {ConversationActivityIcon} from "./conversation-activity-icon";
+import {ConversationAttemptHistory} from "./conversation-attempt-history";
 import {
   hasVisibleConversationContent,
   REPLY_ACTIVITY_DELAY_MS,
@@ -37,7 +38,7 @@ export function ConversationMessage({
                                       latestRun,
                                       liveApprovals,
                                       liveSteps,
-                                      stepHistory,
+                                      stepHistories,
                                       onReloadSteps,
                                       onFeedback,
                                       onChanged,
@@ -48,8 +49,8 @@ export function ConversationMessage({
                                       employeeName: providedEmployeeName,
                                       employee
                                     }: {
-  message: DisplayMessage; enterprise: string; conversationId?: string | null; latestRun: Run | null; liveApprovals?: ReadonlyMap<string, RunApproval>;
-  liveSteps?: ReadonlyMap<string, LiveRunStep>; stepHistory?: RunStepHistory; onReloadSteps?: () => void;
+  message: ConversationRow; enterprise: string; conversationId?: string | null; latestRun: Run | null; liveApprovals?: ReadonlyMap<string, RunApproval>;
+  liveSteps?: ReadonlyMap<string, LiveRunStep>; stepHistories?: ReadonlyMap<string, RunStepHistory>; onReloadSteps?: () => void;
   onRetry: (runId: string) => Promise<boolean>; retrying: boolean; retryError: string;
   onFeedback: (id: string, value: "positive" | "negative" | null) => void;
   onChanged?: () => void;
@@ -67,9 +68,12 @@ export function ConversationMessage({
   const [acceptedRetry, setAcceptedRetry] = useState<string | null>(null);
   const [delayedActivityKey, setDelayedActivityKey] = useState<string | null>(null);
   const ended = ["completed", "failed", "cancelled"].includes(message.status);
+  const stepHistory = message.runId ? stepHistories?.get(message.runId) : undefined;
   const blocks = mergeExecutionSteps(message.blocks, messageRunSteps(message, stepHistory, liveSteps), message.status);
   const run = latestRun?.id === message.runId ? latestRun : null;
   const waitingForContent = Boolean(message.localDelivery) || showReplyActivity(message, run, blocks);
+  const waitingForRetry = (Boolean(message.previousAttempts?.length) || message.attemptNo > 1)
+    && !message.content.trim() && !blocks.some(hasVisibleConversationContent);
   const activityWaitKey = waitingForContent && !message.localDelivery ? replyActivityWaitKey(message, blocks) : null;
   const showWaitingActivity = waitingForContent && (activityWaitKey === null || delayedActivityKey === activityWaitKey);
   useEffect(() => {
@@ -111,23 +115,24 @@ export function ConversationMessage({
     }
   }
 
-  if (superseded && !message.content.trim() && !blocks.some(hasVisibleConversationContent)) {
+  if (superseded && !message.previousAttempts?.length && !message.content.trim() && !blocks.some(hasVisibleConversationContent)) {
     return null;
   }
   return <div className={styles.assistantMessage}>
     <ConversationReplyAuthor avatar={employee && <ResourceAvatar icon={employee.icon} color={employee.color} size="small"/>}
-      name={employeeName} createdAt={message.createdAt}/>
-    {message.hasMultipleAttempts &&
-      <p className={layout.resultNotice}>{uiText("第 ")}{message.attemptNo}{uiText(" 次尝试")}</p>}
+      name={employeeName} createdAt={message.previousAttempts?.[0].createdAt ?? message.createdAt}/>
+    {message.previousAttempts && <ConversationAttemptHistory attempts={message.previousAttempts} enterprise={enterprise}
+      histories={stepHistories} liveSteps={liveSteps} approvals={liveApprovals} onChanged={onChanged} onReloadSteps={onReloadSteps}/>}
     <div className={layout.messageBody} ref={contentRef}>{blocks.length ?
       <ConversationBlocks blocks={blocks} enterprise={enterprise} runId={message.runId} liveApprovals={liveApprovals}
                           onChanged={onChanged}/> : message.content ? <ConversationMarkdown content={message.content}/>
         : message.status === "completed" ? <span
           className={styles.placeholder}>{message.hasMultipleAttempts ? uiText("本次尝试没有返回内容。") : uiText("本次任务没有返回内容。")}</span> : null}
       {showWaitingActivity && <span className={styles.replyActivity} role="status"
-        aria-label={message.localDelivery === "sending" ? uiText("正在发送…")
+        aria-label={waitingForRetry ? uiText("正在重试…") : message.localDelivery === "sending" ? uiText("正在发送…")
           : run?.status === "running" ? uiText("正在处理…") : uiText("等待执行…")}>
         <ConversationActivityIcon/>
+        {waitingForRetry && <span aria-hidden="true">{uiText("正在重试…")}</span>}
       </span>}
     </div>
     {stepHistory?.error &&

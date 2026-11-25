@@ -53,6 +53,9 @@ public final class RunCheckpointRecovery {
 
     public boolean restore(RunRecord run, EncryptedAgentStateStore target) {
         if (checkpoints.find(run.enterpriseId(), run.id()).isEmpty()) {
+            if (run.currentAttemptNo() > 1 && ConversationRunQueue.supported(run)) {
+                throw unavailable();
+            }
             return false;
         }
         load(run).copyTo(target);

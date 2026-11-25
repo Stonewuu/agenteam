@@ -13,6 +13,7 @@ import {conversationPath, loadRun, runPath, textInput} from "../api/conversation
 import type {Conversation, ConversationModelOptions, RunAccepted, ToolApprovalPolicy} from "../types/execution";
 import type {WorkspaceProject} from "@/features/project/types/project";
 import {displayMessages} from "../lib/conversation-display";
+import {conversationRowId, groupConversationReplies} from "../lib/conversation-replies";
 import {createConversationSubmission, mergeConversationSubmissions, observeConversationSubmissions, type ConversationSubmission} from "../lib/conversation-submissions";
 import {useConversationList} from "./use-conversation-list";
 import {useConversationMetadata} from "./use-conversation-metadata";
@@ -155,13 +156,15 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   if (observedSubmissions !== submissions) {
     setSubmissions(observedSubmissions);
   }
-  const messages = useMemo(() => mergeConversationSubmissions(savedMessages, observedSubmissions, draftKey),
+  const messages = useMemo(() => groupConversationReplies(mergeConversationSubmissions(savedMessages, observedSubmissions, draftKey)),
     [savedMessages, observedSubmissions, draftKey]);
   const sending = observedSubmissions.some(value => value.scope === draftKey && !value.accepted && !value.failed);
-  const scrollMessages = useMemo(() => messages.map(message => ({
-    id: message.id, content: message.content, status: message.status,
-    blocks: stream.state?.snapshot.messages.find(saved => saved.id === message.id)?.blocks
-  })), [messages, stream.state]);
+  const scrollMessages = useMemo(() => {
+    const savedBlocks = new Map(stream.state?.snapshot.messages.map(message => [message.id, message.blocks]));
+    return messages.map(message => ({
+      id: conversationRowId(message), content: message.content, status: message.status, blocks: savedBlocks.get(message.id)
+    }));
+  }, [messages, stream.state]);
   const files = useFileUploads(enterpriseId, "attachment", draftKey);
   const [documents, setDocuments] = useState<Record<string, DocumentOption[]>>({});
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
@@ -186,11 +189,11 @@ export function useConversationWorkspace(userId: string, enterpriseId: string, c
   useEffect(() => {
     const position = conversationReadingPosition(draftKey);
     if (position && !position.atBottom && position.anchorId && historySnapshot?.conversation.id === conversationId
-      && !historySnapshot.messages.some(message => message.id === position.anchorId) && historySnapshot.hasOlderMessages
+      && !scrollMessages.some(message => message.id === position.anchorId) && historySnapshot.hasOlderMessages
       && !stream.loadingOlder && !stream.loading && !stream.error) {
       void stream.loadOlder();
     }
-  }, [draftKey, conversationId, historySnapshot, stream]);
+  }, [draftKey, conversationId, historySnapshot, scrollMessages, stream]);
   const base = ``;
 
   useEffect(() => {

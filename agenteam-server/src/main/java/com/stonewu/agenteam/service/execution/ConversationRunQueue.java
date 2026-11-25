@@ -1,5 +1,6 @@
 package com.stonewu.agenteam.service.execution;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.stonewu.agenteam.service.i18n.Messages;
 
 import com.stonewu.agenteam.mapper.execution.ConversationMapper;
@@ -46,7 +47,11 @@ public class ConversationRunQueue {
     }
 
     public static boolean supported(RunRecord run) {
-        return "interactive".equals(run.mode()) && !"collaboration".equals(run.executionConfig().path("sourceType").asText());
+        return supported(run.mode(), run.executionConfig());
+    }
+
+    static boolean supported(String mode, JsonNode config) {
+        return "interactive".equals(mode) && !"collaboration".equals(config.path("sourceType").asText());
     }
 
     public void afterFinish(RunRecord previous, Instant now) {

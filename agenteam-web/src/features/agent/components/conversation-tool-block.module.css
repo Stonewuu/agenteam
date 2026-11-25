@@ -26,11 +26,17 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--execution-header-gap);
   min-width: 0;
   min-height: 40px;
-  padding: 4px 9px;
+  padding: 4px var(--execution-header-padding);
   border-radius: inherit;
+  line-height: 1.5;
+}
+
+.title, .status > span:last-child:not(:global(.sr-only)), .trigger > span, .subject > span, .subject button > span {
+  position: relative;
+  inset-block-start: var(--execution-label-offset, 0px);
 }
 
 .heading {
@@ -130,7 +136,7 @@
 .icon {
   display: grid;
   place-items: center;
-  flex: 0 0 22px;
+  flex: 0 0 var(--execution-icon-width);
   height: 22px;
   border-radius: 6px;
   color: var(--secondary);
@@ -227,7 +233,7 @@
 @container conversation-tool (max-width: 440px) {
   .header {
     flex-wrap: wrap;
-    gap: 3px 6px;
+    gap: 3px var(--execution-header-gap);
   }
 
   .heading {
@@ -235,7 +241,7 @@
   }
 
   .status {
-    margin-left: 28px;
+    margin-inline-start: calc(var(--execution-icon-width) + var(--execution-header-gap));
     margin-right: auto;
   }
 

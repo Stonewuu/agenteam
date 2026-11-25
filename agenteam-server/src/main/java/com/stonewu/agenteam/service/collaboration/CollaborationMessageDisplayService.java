@@ -47,7 +47,7 @@ public class CollaborationMessageDisplayService {
             String text = renderLatestInput(source.requirements(), mentions);
             var blocks = value.blocks().stream().map(block -> replaceBody(block, value.content(), text)).toList();
             return new MessageView(value.id(), value.runId(), value.attemptNo(), value.role(), text, value.status(), blocks,
-                source.filter(value.attachments()), value.feedback(), value.createdAt(), value.updatedAt(), value.supersededByRetry());
+                source.filter(value.attachments()), value.feedback(), value.createdAt(), value.updatedAt(), value.supersededByRetry(), value.inputMessageId());
         }).toList();
     }
 

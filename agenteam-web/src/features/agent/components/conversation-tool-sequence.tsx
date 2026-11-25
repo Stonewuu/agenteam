@@ -10,6 +10,7 @@ import {useExecutionDisclosure} from "../hooks/use-execution-disclosure";
 import {ToolActivityIcon} from "./conversation-tool-block";
 import {ConversationToolGlowLayer} from "./conversation-tool-glow-layer";
 import {TOOL_BORDER_GLOW_CONFIG, toolBorderGlowPadding} from "./conversation-tool-border-glow-config";
+import executionStyles from "./conversation-execution.module.css";
 import styles from "./conversation-tool-sequence.module.css";
 
 const panelStyle = {"--tool-glow-padding": toolBorderGlowPadding(TOOL_BORDER_GLOW_CONFIG)} as CSSProperties;
@@ -35,13 +36,13 @@ export function ConversationToolSequence({count, status, failedCount, pendingIds
       : status === "cancelled" ? t("已停止") : status === "skipped" ? t("已跳过") : t("已完成");
 
   return <Collapsible className={styles.sequence} data-single={single || undefined} open={open} onOpenChange={choose}>
-    {!single && <CollapsibleTrigger className={styles.trigger} aria-label={open
+    {!single && <CollapsibleTrigger className={executionStyles.summaryTrigger} aria-label={open
       ? t("收起 {0} 次工具调用", [count]) : t("展开 {0} 次工具调用", [count])}>
-      <span className={styles.icon} aria-hidden="true"><ToolActivityIcon status={status}/></span>
-      <span className={styles.title}>{t("工具调用 · {0} 次", [count])}</span>
+      <span className={executionStyles.summaryIcon} aria-hidden="true"><ToolActivityIcon status={status}/></span>
+      <span>{t("工具调用 · {0} 次", [count])}</span>
       <span className={styles.state} data-failed={failedCount > 0 || undefined}>{failedCount > 0
         ? t("{0} 次未完成", [failedCount]) : statusText}</span>
-      <IconChevronDown size={14} className={styles.chevron}/>
+      <IconChevronDown size={14}/>
     </CollapsibleTrigger>}
     <CollapsibleContent className={`agenteam-disclosure-content ${styles.panel}`} style={panelStyle}
                         data-animate-height keepMounted inert={!open}>

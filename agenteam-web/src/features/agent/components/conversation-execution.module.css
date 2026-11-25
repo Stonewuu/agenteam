@@ -1,4 +1,10 @@
 .flow {
+  --execution-header-padding: 9px;
+  --execution-icon-width: 22px;
+  --execution-header-gap: 7px;
+  --execution-icon-center: calc(1px + var(--execution-header-padding) + var(--execution-icon-width) / 2);
+  --execution-title-start: calc(1px + var(--execution-header-padding) + var(--execution-icon-width) + var(--execution-header-gap));
+  --execution-summary-height: 34px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
@@ -8,6 +14,11 @@
 .flow > * {
   min-width: 0;
   max-width: 100%;
+}
+
+/* 中文字形在系统字体的行框内略偏下，按字号校正可见文字与图标的中心。 */
+.flow:lang(zh) {
+  --execution-label-offset: -0.06em;
 }
 
 .standaloneStep {
@@ -52,7 +63,7 @@
   background: color-mix(in srgb, var(--surface) 46%, transparent);
 }
 
-.block > :global([data-slot="collapsible-trigger"]), .thinkingTrigger {
+.block > :global([data-slot="collapsible-trigger"]) {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -67,26 +78,26 @@
   display: none;
 }
 
-.block > :global([data-slot="collapsible-trigger"]):focus-visible, .thinkingTrigger:focus-visible {
+.block > :global([data-slot="collapsible-trigger"]):focus-visible, .summaryTrigger:focus-visible {
   outline: 2px solid var(--input-border-focus);
   outline-offset: 2px;
   border-radius: 10px;
 }
 
-.block > :global([data-slot="collapsible-trigger"]) strong, .thinkingTrigger strong {
+.block > :global([data-slot="collapsible-trigger"]) strong {
   min-width: 0;
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 
-.block > :global([data-slot="collapsible-trigger"]) > svg, .thinkingTrigger > svg {
+.block > :global([data-slot="collapsible-trigger"]) > svg, .summaryTrigger > svg {
   flex-shrink: 0;
   color: var(--muted);
   transform: rotate(-90deg);
   transition: transform 180ms var(--motion-ease);
 }
 
-.block[data-open] > :global([data-slot="collapsible-trigger"]) > svg, .thinkingTrigger[aria-expanded="true"] > svg {
+.block[data-open] > :global([data-slot="collapsible-trigger"]) > svg, .summaryTrigger[aria-expanded="true"] > svg {
   transform: rotate(0);
 }
 
@@ -144,28 +155,52 @@
   color: var(--secondary);
 }
 
-.thinkingTrigger {
-  width: 100%;
-  border: 0;
-  border-radius: inherit;
+.summaryTrigger {
+  display: flex;
+  align-items: center;
+  gap: var(--execution-header-gap);
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--execution-summary-height);
+  padding: 4px var(--execution-header-padding);
+  border: 1px solid transparent;
+  border-radius: 9px;
   background: transparent;
-  color: inherit;
-  text-align: left;
-}
-
-.thinkingTrigger > svg {
-  transition-duration: 220ms;
-}
-
-.block[data-kind="thinking"] {
-  border-color: transparent;
-  background: transparent;
-}
-
-.block[data-kind="thinking"] .thinkingTrigger {
-  min-height: 32px;
-  padding: 4px 8px;
   color: var(--secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.summaryTrigger > span:not(.summaryIcon) {
+  position: relative;
+  inset-block-start: -0.06em;
+}
+
+.summaryTrigger:lang(en) > span:not(.summaryIcon) {
+  inset-block-start: -0.12em;
+}
+
+.summaryTrigger:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.summaryIcon {
+  display: grid;
+  flex: 0 0 var(--execution-icon-width);
+  place-items: center;
+}
+
+.thinking > .summaryTrigger {
+  width: 100%;
+}
+
+.thinking > .summaryTrigger > .summaryIcon {
+  color: var(--accent-text);
 }
 
 .fileToolGroup {
@@ -240,7 +275,7 @@
   background: transparent;
 }
 
-.children .block > :global([data-slot="collapsible-trigger"]), .children .thinkingTrigger {
+.children .block > :global([data-slot="collapsible-trigger"]) {
   padding-inline: 0;
 }
 
@@ -312,7 +347,11 @@
 }
 
 @media (max-width: 600px) {
-  .block > :global([data-slot="collapsible-trigger"]), .thinkingTrigger {
+  .flow {
+    --execution-summary-height: 44px;
+  }
+
+  .block > :global([data-slot="collapsible-trigger"]) {
     min-height: 44px;
     padding-inline: 10px;
   }
@@ -336,7 +375,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .block > :global([data-slot="collapsible-trigger"]) > svg, .thinkingTrigger > svg, .thinkingPanel {
+  .block > :global([data-slot="collapsible-trigger"]) > svg, .summaryTrigger > svg, .thinkingPanel {
     transition: none;
   }
 
@@ -353,8 +392,6 @@
   text-align: left;
 }
 
-@media (max-width: 600px) {
-  .block[data-kind="thinking"] .thinkingTrigger {
-    min-height: 44px;
-  }
+.thinkingScroll > .body {
+  padding-inline-start: var(--execution-title-start);
 }

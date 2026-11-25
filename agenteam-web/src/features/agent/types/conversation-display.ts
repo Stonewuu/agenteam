@@ -60,3 +60,5 @@ export type DisplayMessage = Omit<ConversationMessage, "blocks"> & {
   blocks: DisplayBlock[];
   hasMultipleAttempts: boolean
 };
+
+export type ConversationRow = DisplayMessage & {previousAttempts?: DisplayMessage[]};

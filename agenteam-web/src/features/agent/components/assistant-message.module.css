@@ -568,6 +568,7 @@
 .replyActivity {
   display: flex;
   align-items: center;
+  gap: 7px;
   width: fit-content;
   height: 22px;
   animation: reply-activity-in 180ms ease-out both;

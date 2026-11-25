@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
  */
 public final class ModelRequestDiagnostics {
     private static final Logger LOG = LoggerFactory.getLogger(ModelRequestDiagnostics.class);
+    private static final String STREAM_INTERRUPTED = "STREAM_INTERRUPTED";
     private static final Pattern SECRET = Pattern.compile("(?i)(?:Bearer\\s+\\S+|(?:api[-_]?key|token|secret|password|authorization)\\s*[:=]\\s*[^\\s,;]+)");
     private static final Pattern QUOTED = Pattern.compile("\"[^\"]*\"|'[^']*'|`[^`]*`");
     private static final Pattern QUERY = Pattern.compile("(https?://[^\\s?\"'<>]+)\\?[^\\s\"'<>]*");
@@ -127,6 +128,17 @@ public final class ModelRequestDiagnostics {
         reason = message == null ? Messages.log("log.modelprofile.modelRequestDiagnostics.captureError.1", errorCode) : clean(message);
     }
 
+    void responseInterrupted(IOException failure) {
+        if (acceptedResponse() && category == null) {
+            category = STREAM_INTERRUPTED;
+            reason = clean(failure.getMessage());
+        }
+    }
+
+    private boolean acceptedResponse() {
+        return httpStatus != null && httpStatus >= 200 && httpStatus < 300;
+    }
+
     public RuntimeException failure(Throwable failure) {
         captureNativeFailure(failure);
         if (category == null) {
@@ -138,7 +150,9 @@ public final class ModelRequestDiagnostics {
         var safe = safeCause(failure, new IdentityHashMap<>());
         LOG.warn(Messages.log("log.modelprofile.modelRequestDiagnostics.failure.1"),
             callId, method, path, httpStatus, errorCode, reason, requestId, safe);
-        return httpStatus == null ? new HttpTransportException(reason, safe)
+        // 成功状态属于响应头，保留在调用记录中。正文读取中断按连接故障交给上层。
+        boolean interrupted = acceptedResponse() && (STREAM_INTERRUPTED.equals(category) || "TIMEOUT".equals(category));
+        return httpStatus == null || interrupted ? new HttpTransportException(reason, safe)
             : new HttpTransportException(reason, httpStatus, null, safe);
     }
 

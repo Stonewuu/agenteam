@@ -134,6 +134,7 @@ function workspace({queued = false, fresh = false, handoff = null, search = "age
     "@/features/enterprise/api/organization-api": {organizationPath: (_, suffix) => suffix},
     "../api/conversation-api": {conversationPath: (_, id) => id ? `/conversations/${id}` : "/conversations", textInput: text => ({text})},
     "../lib/conversation-display": loadSource("features/agent/lib/conversation-display"),
+    "../lib/conversation-replies": loadSource("features/agent/lib/conversation-replies"),
     "../lib/conversation-submissions": submissions,
     "./use-conversation-stream": {useConversationStream: () => stream},
     "./use-conversation-list": {useConversationList: () => ({items: [], refresh() {}, updateMetadata() {}})},

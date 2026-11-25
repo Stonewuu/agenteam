@@ -92,7 +92,10 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
       if (event.payload.runId !== event.runId || snapshot.messages.some((message) => message.id === event.payload.id)) {
         throw new SnapshotRequired();
       }
-      snapshot = {...snapshot, messages: [...snapshot.messages, event.payload]};
+      const message = event.payload;
+      const created = message.role === "assistant" && !message.inputMessageId && latestRun?.id === event.runId
+        ? {...message, inputMessageId: latestRun.inputMessageId} : message;
+      snapshot = {...snapshot, messages: [...snapshot.messages, created]};
       break;
     }
     case "queue.updated": {
@@ -187,6 +190,7 @@ export function applyConversationFrame(state: ConversationState, frame: Conversa
           }
           return message.id === run.outputMessageId ? {
             ...message,
+            inputMessageId: message.inputMessageId ?? run.inputMessageId,
             status: ended ? run.status as "completed" | "failed" | "cancelled" : run.status === "queued" ? "pending" : "streaming",
             updatedAt: event.createdAt
           } : message;

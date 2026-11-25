@@ -3,5 +3,5 @@ export type RuntimeSection = "execution" | "model" | "collaboration" | "environm
 export type RuntimeSettings = {
   revision: string;
   values: Record<string, number>;
-  bounds: Record<string, {minimum: number}>;
+  bounds: Record<string, {minimum: number; maximum?: number}>;
 };

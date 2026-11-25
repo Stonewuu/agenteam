@@ -361,6 +361,9 @@ public class RunSubmissionService {
         messages.create(actor.enterpriseId(), conversation.id(), outputId, "assistant", null, initialBlocks, now);
         prepared.fixed().put("approvalPolicy",
             mode.equals("interactive") ? conversation.approvalPolicy() : ToolApprovalPolicy.DEFAULT.value());
+        if (ConversationRunQueue.supported(mode, prepared.fixed())) {
+            maxAttempts = 1 + settings.value(RuntimeSetting.CONVERSATION_MODEL_RETRIES);
+        }
         runs.create(run, actor.enterpriseId(), actor.userId(), conversation.id(), inputId, outputId,
             selected.versionId(),
             mode, prepared.fixed(), maxAttempts, waiting ? conversation.lastSequence() + 1 : null, now);

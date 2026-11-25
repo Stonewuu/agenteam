@@ -158,7 +158,7 @@ public interface RunSqlMapper extends MPJBaseMapper<AgentRunRow> {
 
     int retryAgentRun(@Param("output") String output, @Param("available") Timestamp available,
                       @Param("now") Timestamp now, @Param("enterpriseId") String enterpriseId, @Param("id") String id,
-                      @Param("currentAttemptNo") int currentAttemptNo);
+                      @Param("currentAttemptNo") int currentAttemptNo, @Param("phase") String phase);
 
     default int requestCancelAgentRun(Timestamp now, String enterpriseId, String id) {
         return update(new LambdaUpdateWrapper<AgentRunRow>().eq(AgentRunRow::getEnterpriseId, enterpriseId)

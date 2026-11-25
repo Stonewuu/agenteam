@@ -18,11 +18,11 @@ export function ConversationThinkingBlock({status, children}: {
   const {open, setOpen, finished} = useExecutionDisclosure(status);
   const scroll = useThinkingScroll(open, !finished);
 
-  return <Collapsible className={styles.block} data-kind="thinking" open={open}
+  return <Collapsible className={styles.thinking} data-kind="thinking" open={open}
                       onOpenChange={setOpen}>
-    <CollapsibleTrigger className={styles.thinkingTrigger}>
-      <span className={styles.blockIcon}><IconBulb size={17}/></span>
-      <strong>{finished ? uiText("已思考") : uiText("思考中")}</strong><IconChevronDown size={14}/>
+    <CollapsibleTrigger className={styles.summaryTrigger}>
+      <span className={styles.summaryIcon} aria-hidden="true"><IconBulb size={18}/></span>
+      <span>{finished ? uiText("已思考") : uiText("思考中")}</span><IconChevronDown size={14}/>
     </CollapsibleTrigger>
     <CollapsibleContent className={styles.thinkingPanel} keepMounted>
       <div {...scroll} className={styles.thinkingScroll} role="region" aria-label={uiText("思考内容")}

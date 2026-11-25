@@ -4,10 +4,12 @@ import {useState} from "react";
 import {AnimatedHeight} from "@/components/ui/animated-height";
 import {Button} from "@/components/ui/button";
 import {DetailSection} from "@/components/ui/detail-section";
+import {Field} from "@/components/ui/field";
 import {IconAdjustments} from "@/components/ui/icons";
 import {LimitField, UNLIMITED_VALUE} from "@/components/ui/limit-field";
 import {PageHeader} from "@/components/ui/page-header";
 import {QueryState} from "@/components/ui/query-state";
+import {Select} from "@/components/ui/select";
 import {Tabs} from "@/components/ui/tabs";
 import {SystemManagementGate} from "@/features/auth/components/system-management-gate";
 import {FormFeedback} from "@/features/auth/components/settings-forms";
@@ -53,8 +55,8 @@ function RuntimeSettingsForm({initial}: {initial: RuntimeSettings}) {
   const [clientErrors, setClientErrors] = useState<Record<string, string[]>>({});
   const action = useFormAction();
   const current = runtimeSections.find(value => value.id === section)!;
-  const keys = current.groups.flatMap(group => group.keys);
-  const changed = (key: string) => draft[key] !== String(saved.values[key]);
+  const keys = current.groups.flatMap(group => group.keys).filter(key => saved.bounds[key]);
+  const changed = (key: string) => draft[key] !== undefined && draft[key] !== String(saved.values[key]);
   const dirty = Object.keys(draft).some(changed);
   const sectionDirty = keys.some(changed);
   useBlockNavigation(dirty, action.busy);
@@ -67,7 +69,7 @@ function RuntimeSettingsForm({initial}: {initial: RuntimeSettings}) {
 
   function accept(value: RuntimeSettings, acceptedKeys: string[]) {
     setDraft(previous => Object.fromEntries(Object.entries(value.values).map(([key, number]) => [
-      key, acceptedKeys.includes(key) || previous[key] === String(saved.values[key]) ? String(number) : previous[key],
+      key, acceptedKeys.includes(key) || previous[key] === undefined || previous[key] === String(saved.values[key]) ? String(number) : previous[key],
     ])));
     setSaved(value);
   }
@@ -99,6 +101,11 @@ function RuntimeSettingsForm({initial}: {initial: RuntimeSettings}) {
             const bounds = saved.bounds[key];
             if (!draft[key].trim()) {
               errors["values." + key] = [t("请填写{0}。", [t(runtimeFields[key].label)])];
+            } else if (bounds.maximum !== undefined) {
+              const value = Number(draft[key]);
+              if (!Number.isSafeInteger(value) || value < bounds.minimum || value > bounds.maximum) {
+                errors["values." + key] = [t("请输入 {0} 到 {1} 之间的整数。", [bounds.minimum, bounds.maximum])];
+              }
             } else if (!Number.isSafeInteger(Number(draft[key])) || Number(draft[key]) !== UNLIMITED_VALUE && Number(draft[key]) < bounds.minimum) {
               errors["values." + key] = [t("请输入不小于 {0} 的整数，或选择不限。", [bounds.minimum])];
             }
@@ -124,11 +131,25 @@ function RuntimeSettingsForm({initial}: {initial: RuntimeSettings}) {
           {current.groups.map(group => <DetailSection key={group.title} icon={<current.icon size={21}/>}
             title={t(group.title)}>
             <div className={styles.fields}>
-              {group.keys.map(key => {
+              {group.keys.filter(key => saved.bounds[key]).map(key => {
                 const definition = runtimeFields[key];
                 const bounds = saved.bounds[key];
                 const name = "values." + key;
                 const error = fieldErrors[name]?.map(message => localizeUiMessage(message, t)).join(" ");
+                if (bounds.maximum !== undefined) {
+                  return <Field key={key} label={t(definition.label)} hint={t(definition.hint)} error={error}>
+                    <Select name={name} value={draft[key]} disabled={action.busy} onChange={event => {
+                      const value = event.target.value;
+                      setDraft(previous => ({...previous, [key]: value}));
+                      clearFieldError(name);
+                    }}>
+                      {Array.from({length: bounds.maximum - bounds.minimum + 1}, (_, index) => {
+                        const value = bounds.minimum + index;
+                        return <option key={value} value={value}>{value}</option>;
+                      })}
+                    </Select>
+                  </Field>;
+                }
                 return <LimitField key={key} label={t(definition.label)} hint={t(definition.hint)} error={error}
                   name={name} minimum={bounds.minimum} value={draft[key]} restoreValue={finiteValues[key]} disabled={action.busy} onChange={value => {
                     if (value === String(UNLIMITED_VALUE) && draft[key] !== value) {

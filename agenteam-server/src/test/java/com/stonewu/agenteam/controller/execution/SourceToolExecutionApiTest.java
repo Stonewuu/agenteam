@@ -88,6 +88,7 @@ class SourceToolExecutionApiTest extends ModelToolApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
+        registry.add("execution.model.conversation-retries", () -> 0);
         registry.add("files.scan.host", () -> "127.0.0.1");
         registry.add("files.scan.port", SCANNER::port);
         registry.add("files.root", () -> TestOutputPaths.path("p05-source-tool-files").toString());
@@ -472,6 +473,8 @@ class SourceToolExecutionApiTest extends ModelToolApiTestSupport {
         assertEquals(first.path("outputMessageId"), refreshed.at("/messages/1/id"));
         assertEquals(failed.at("/messages/1/blocks"), refreshed.at("/messages/1/blocks"));
         assertTrue(refreshed.at("/messages/1/supersededByRetry").asBoolean());
+        assertEquals(first.path("inputMessageId"), refreshed.at("/messages/1/inputMessageId"));
+        assertEquals(first.path("inputMessageId"), refreshed.at("/messages/2/inputMessageId"));
         assertEquals("completed", refreshed.at("/messages/2/status").asText());
         var details = data(mvc.perform(get(originalPath).cookie(cookie)).andExpect(status().isOk()).andReturn());
         assertFalse(details.path("canRetry").asBoolean());

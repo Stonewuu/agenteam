@@ -122,6 +122,7 @@
   "回复未完成。": "The reply was interrupted.",
   "模型暂时无法回复。": "The model is temporarily unavailable.",
   "正在重试…": "Retrying…",
+  "重试前的内容": "Previous attempts",
   "查找已雇佣员工": "Search your employees",
   "查看图片": "View image",
   "查看对话列表": "Show conversations",

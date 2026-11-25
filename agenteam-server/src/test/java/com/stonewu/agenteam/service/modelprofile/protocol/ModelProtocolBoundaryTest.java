@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stonewu.agenteam.configuration.modelprofile.ModelLibraryLogging;
 import com.stonewu.agenteam.configuration.modelprofile.ModelRequestLimits;
+import com.stonewu.agenteam.mapper.execution.ModelFailureMapper;
 import com.stonewu.agenteam.service.http.ApiException;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelCapabilities;
 import com.stonewu.agenteam.model.modelprofile.entity.ModelProfileRecord;
@@ -65,6 +66,8 @@ class ModelProtocolBoundaryTest {
     private HttpServer server;
     private String reply;
     private int status;
+    private boolean truncateResponse;
+    private boolean waitAfterHeaders;
     private CountDownLatch responseGate;
 
     @BeforeEach
@@ -76,22 +79,32 @@ class ModelProtocolBoundaryTest {
         server.createContext("/", exchange -> {
             sends.incrementAndGet();
             request.set(json.readTree(exchange.getRequestBody()));
-            if (responseGate != null) {
-                try {
-                    responseGate.await(10, TimeUnit.SECONDS);
-                } catch (InterruptedException interrupted) {
-                    Thread.currentThread().interrupt();
-                }
+            if (!waitAfterHeaders) {
+                awaitResponseGate();
             }
             byte[] body = reply.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", status == 200 ? "text/event-stream" : "application/json");
             exchange.getResponseHeaders().set("x-request-id", "trace-unit");
-            exchange.sendResponseHeaders(status, body.length);
+            exchange.sendResponseHeaders(status, truncateResponse ? body.length + 16 : body.length);
             try (exchange) {
+                if (waitAfterHeaders) {
+                    exchange.getResponseBody().flush();
+                    awaitResponseGate();
+                }
                 exchange.getResponseBody().write(body);
             }
         });
         server.start();
+    }
+
+    private void awaitResponseGate() {
+        if (responseGate != null) {
+            try {
+                responseGate.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     @AfterEach
@@ -173,9 +186,27 @@ class ModelProtocolBoundaryTest {
             case "anthropic" -> "event: error\ndata: {\"type\":\"error\",\"error\":" + error + "}\n\n";
             default -> "data: {\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\",\"message\":\"service overloaded private-api-key private-prompt\"}}\n\n";
         };
-        assertThatThrownBy(() -> invoke(protocol, ModelProtocolOptions.defaults(), null)).isInstanceOf(HttpTransportException.class);
+        assertThatThrownBy(() -> invoke(protocol, ModelProtocolOptions.defaults(), null))
+            .isInstanceOfSatisfying(HttpTransportException.class, failure -> assertThat(failure.getStatusCode()).isEqualTo(200));
         assertFailure(output, protocol.equals("gemini") ? "UNAVAILABLE" : "overloaded_error");
         assertThat(output.getAll()).contains("service overloaded", "httpStatus=200", "trace-unit");
+    }
+
+    @Test
+    void interruptedResponseKeepsAcceptedStatusAndReportsATemporaryFailure(CapturedOutput output) {
+        truncateResponse = true;
+        reply = ": keep-alive\n\n";
+        assertThatThrownBy(() -> invoke("openai_responses", ModelProtocolOptions.defaults(), null))
+            .isInstanceOfSatisfying(HttpTransportException.class, failure ->
+                assertThat(ModelFailureMapper.map(failure).orElseThrow().code()).isEqualTo("MODEL_TEMPORARY_FAILURE"));
+        var saved = ArgumentCaptor.forClass(ModelUsageSnapshot.class);
+        verify(service).save(saved.capture());
+        assertThat(saved.getValue().httpStatus()).isEqualTo(200);
+        assertThat(saved.getValue().errorCategory()).isEqualTo("STREAM_INTERRUPTED");
+        assertThat(saved.getValue().callStatus()).isEqualTo("failed");
+        assertThat(sends.get()).isEqualTo(1);
+        assertThat(output.getAll()).contains("Model request failed", "httpStatus=200", "trace-unit")
+            .doesNotContain("private-api-key", "private-prompt");
     }
 
     @ParameterizedTest
@@ -239,19 +270,25 @@ class ModelProtocolBoundaryTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"openai", "openai_responses", "anthropic", "gemini"})
-    void silentModelRequestsEndEvenWhenTheTaskHasNoTimeLimit(String protocol, CapturedOutput output) {
+    @CsvSource({"openai,false", "openai_responses,false", "openai_responses,true", "anthropic,false", "gemini,false"})
+    void silentModelRequestsEndEvenWhenTheTaskHasNoTimeLimit(String protocol, boolean accepted, CapturedOutput output) {
         responseGate = new CountDownLatch(1);
+        waitAfterHeaders = accepted;
         reply = "";
         var bounded = new ModelProtocolFactory(new OutboundAddressPolicy(""), json,
             new ModelUsageJournal(service, Clock.systemUTC()), new ModelProtocolValidation(),
             new ModelRequestLimits(Duration.ofSeconds(2), 1024 * 1024));
         assertThatThrownBy(() -> invoke(protocol, ModelProtocolOptions.defaults(), null, bounded, "private-prompt"))
-            .isInstanceOf(RuntimeException.class);
+            .isInstanceOfSatisfying(HttpTransportException.class, failure ->
+                assertThat(ModelFailureMapper.map(failure).orElseThrow().code()).isEqualTo("MODEL_TEMPORARY_FAILURE"));
         assertThat(sends.get()).isEqualTo(1);
         var saved = ArgumentCaptor.forClass(ModelUsageSnapshot.class);
         verify(service).save(saved.capture());
         assertThat(saved.getValue().callStatus()).isEqualTo("failed");
+        if (accepted) {
+            assertThat(saved.getValue().httpStatus()).isEqualTo(200);
+            assertThat(saved.getValue().errorCategory()).isEqualTo("TIMEOUT");
+        }
         assertThat(output.getAll()).doesNotContain("private-prompt", "private-api-key");
     }
 

@@ -1,9 +1,10 @@
 import type {AppendMessage, ThreadMessageLike} from "@assistant-ui/react";
-import type {DisplayMessage} from "../types/conversation-display";
+import {conversationRowId} from "./conversation-replies";
+import type {ConversationRow} from "../types/conversation-display";
 
-export function toAssistantMessage(message: DisplayMessage): ThreadMessageLike {
+export function toAssistantMessage(message: ConversationRow): ThreadMessageLike {
   return {
-    id: message.clientId ?? message.id, role: message.role === "user" ? "user" : "assistant", content: message.content,
+    id: message.clientId ?? conversationRowId(message), role: message.role === "user" ? "user" : "assistant", content: message.content,
     ...(message.role !== "user" ? {
       status: message.status === "pending" || message.status === "streaming"
         ? {type: "running" as const} : message.status === "failed" ? {
@@ -19,12 +20,12 @@ export function toAssistantMessage(message: DisplayMessage): ThreadMessageLike {
   };
 }
 
-export function readConversationMessage(metadata: { custom?: Record<string, unknown> }): DisplayMessage | null {
+export function readConversationMessage(metadata: { custom?: Record<string, unknown> }): ConversationRow | null {
   const value = metadata.custom?.conversationMessage;
   if (!value || typeof value !== "object") {
     return null;
   }
-  const message = value as DisplayMessage;
+  const message = value as ConversationRow;
   return typeof message.id === "string" && typeof message.content === "string" && Array.isArray(message.blocks) ? message : null;
 }
 

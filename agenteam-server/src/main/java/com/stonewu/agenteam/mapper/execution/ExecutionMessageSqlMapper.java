@@ -64,6 +64,10 @@ public interface ExecutionMessageSqlMapper extends MPJBaseMapper<AgentMessageRow
     default List<ExecutionMessageQueryRow> findAgentMessage(String enterprise, String conversation, String id) {
         var criteria = JoinWrappers.lambda(AgentMessageRow.class).selectAll(AgentMessageRow.class)
             .selectAs(MessageFeedbackRow::getValue, ExecutionMessageQueryRow::getFeedback)
+            .selectAs(AgentRunRow::getInputMessageId, ExecutionMessageQueryRow::getInputMessageId)
+            .leftJoin(AgentRunRow.class, on -> on.eq(AgentRunRow::getEnterpriseId, AgentMessageRow::getEnterpriseId)
+                .eq(AgentRunRow::getConversationId, AgentMessageRow::getConversationId)
+                .eq(AgentRunRow::getId, AgentMessageRow::getRunId))
             .innerJoin(AgentConversationRow.class,
                 on -> on.eq(AgentConversationRow::getEnterpriseId, AgentMessageRow::getEnterpriseId)
                     .eq(AgentConversationRow::getId, AgentMessageRow::getConversationId))

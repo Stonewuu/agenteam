@@ -117,9 +117,9 @@ public class RunMapper {
         statements.updateSequenceAgentRun(sequence, enterprise, id);
     }
 
-    public void retry(RunRecord run, String output, Instant available, Instant now) {
+    public void retry(RunRecord run, String output, Instant available, Instant now, String phase) {
         int changed = statements.retryAgentRun(output, timestamp(available), timestamp(now), run.enterpriseId(),
-            run.id(), run.currentAttemptNo());
+            run.id(), run.currentAttemptNo(), phase);
         if (changed != 1) {
             throw new IllegalStateException(Messages.text("error.execution.runMapper.retry.1"));
         }

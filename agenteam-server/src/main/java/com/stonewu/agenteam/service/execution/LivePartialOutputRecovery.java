@@ -57,7 +57,7 @@ public class LivePartialOutputRecovery {
             }
             return new MessageView(saved.id(), saved.runId(), saved.attemptNo(), saved.role(), text, saved.status(),
                 ordered,
-                saved.attachments(), saved.feedback(), saved.createdAt(), saved.updatedAt(), saved.supersededByRetry());
+                saved.attachments(), saved.feedback(), saved.createdAt(), saved.updatedAt(), saved.supersededByRetry(), saved.inputMessageId());
         } catch (RuntimeException unavailable) {
             LOG.warn(Messages.log("log.execution.livePartialOutputRecovery.merge.1"),
                 run.id(), run.conversationId(), unavailable);

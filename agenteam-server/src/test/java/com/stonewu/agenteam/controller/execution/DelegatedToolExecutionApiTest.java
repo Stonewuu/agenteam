@@ -43,6 +43,7 @@ class DelegatedToolExecutionApiTest extends ModelToolApiTestSupport {
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
         ENVIRONMENT.properties(registry);
+        registry.add("execution.model.conversation-retries", () -> 0);
         registry.add("execution.workspace-root", () -> TestOutputPaths.path("delegated-tools/framework").toString());
         registry.add("execution.state-root", () -> TestOutputPaths.path("delegated-tools/states").toString());
     }

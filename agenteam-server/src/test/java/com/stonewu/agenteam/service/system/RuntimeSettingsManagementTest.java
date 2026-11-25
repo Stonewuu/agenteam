@@ -70,6 +70,10 @@ class RuntimeSettingsManagementTest {
 
     @Test
     void permissionsFieldTypesAndRelationsCannotChangeSavedSettings() throws Exception {
+        for (int invalid : new int[]{-1, 3}) {
+            assertThrows(ApiException.class, () -> management.save(administrator, "model", 1,
+                request("conversationModelRetries", invalid)));
+        }
         var member = mock(UserEntity.class);
         assertEquals("RUNTIME_SETTINGS_DENIED", assertThrows(ApiException.class, () -> management.read(member)).code());
         assertEquals("RUNTIME_SETTINGS_DENIED", assertThrows(ApiException.class,
@@ -111,13 +115,13 @@ class RuntimeSettingsManagementTest {
         long revision = 1;
         for (String section : Arrays.stream(RuntimeSetting.values()).map(RuntimeSetting::section).distinct().toList()) {
             var values = new LinkedHashMap<String, Long>();
-            Arrays.stream(RuntimeSetting.values()).filter(setting -> setting.section().equals(section))
+            Arrays.stream(RuntimeSetting.values()).filter(setting -> setting.section().equals(section) && setting.maximum() == null)
                 .forEach(setting -> values.put(setting.key(), -1L));
             management.save(administrator, section, revision++, new RuntimeSettingsRequest(values));
         }
         var restored = new RuntimeSettings(store(), new MockEnvironment());
         for (var setting : RuntimeSetting.values()) {
-            assertEquals(-1, restored.value(setting));
+            assertEquals(setting.maximum() == null ? -1 : setting.fallback(), restored.value(setting));
         }
         assertFalse(restored.queueExpired(Instant.EPOCH, Instant.now()));
         var model = new ModelRequestLimits(Duration.ofMinutes(15), 0, store());

@@ -11,6 +11,7 @@ public enum RuntimeSetting {
     USER_ACTIVE_RUNS("userActiveRuns", "execution", "execution.user-active-runs", 3, 1),
     CONVERSATION_QUEUED_MESSAGES("conversationQueuedMessages", "execution", "execution.conversation-queued-messages", 20, 1),
     MODEL_IDLE_SECONDS("modelIdleSeconds", "model", "execution.model.idle-timeout", 900, 1),
+    CONVERSATION_MODEL_RETRIES("conversationModelRetries", "model", "execution.model.conversation-retries", 1, 0, 2),
     MODEL_INPUT_MB("modelInputMb", "model", "execution.model.maximum-input-bytes", 0, 0),
     TOOL_INLINE_KB("toolInlineKb", "model", "tools.results.inline-kb", 32, 1),
     TOOL_LARGE_INLINE_KB("toolLargeInlineKb", "model", "tools.results.large-context-inline-kb", 64, 1),
@@ -47,13 +48,19 @@ public enum RuntimeSetting {
     private final String property;
     private final long fallback;
     private final long minimum;
+    private final Integer maximum;
 
     RuntimeSetting(String key, String section, String property, long fallback, long minimum) {
+        this(key, section, property, fallback, minimum, null);
+    }
+
+    RuntimeSetting(String key, String section, String property, long fallback, long minimum, Integer maximum) {
         this.key = key;
         this.section = section;
         this.property = property;
         this.fallback = fallback;
         this.minimum = minimum;
+        this.maximum = maximum;
     }
 
     public String key() {
@@ -77,7 +84,12 @@ public enum RuntimeSetting {
     }
 
     public boolean accepts(Long value) {
-        return value != null && LimitValue.validInteger(value, minimum);
+        return value != null && (maximum == null ? LimitValue.validInteger(value, minimum)
+            : value >= minimum && value <= maximum);
+    }
+
+    public Integer maximum() {
+        return maximum;
     }
 
     public static Optional<RuntimeSetting> find(String key) {
