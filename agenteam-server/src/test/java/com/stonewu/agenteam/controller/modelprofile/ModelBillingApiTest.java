@@ -8,7 +8,9 @@ import com.stonewu.agenteam.model.execution.entity.AgentRunRow;
 import com.stonewu.agenteam.model.modelusage.entity.ModelUsageRecordRow;
 import com.stonewu.agenteam.service.execution.RunWorker;
 import com.stonewu.agenteam.service.modelusage.ModelUsageRecoveryWorker;
+import com.stonewu.agenteam.service.modelpricing.LlmAbacusCatalogClient;
 import com.stonewu.agenteam.service.modelpricing.ModelsDevCatalogClient;
+import com.stonewu.agenteam.mapper.modelpricing.LlmAbacusCatalogParser;
 import com.stonewu.agenteam.mapper.modelpricing.ModelsDevCatalogParser;
 import com.stonewu.agenteam.mapper.modelpricing.ModelsDevPriceMapper;
 import com.stonewu.agenteam.support.EnterpriseTestData;
@@ -49,6 +51,8 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
     private ModelUsageRecoveryWorker recovery;
     @MockitoBean
     private ModelsDevCatalogClient priceCatalog;
+    @MockitoBean
+    private LlmAbacusCatalogClient cnyPriceCatalog;
 
     @DynamicPropertySource
     static void dependencies(DynamicPropertyRegistry registry) {
@@ -204,13 +208,31 @@ class ModelBillingApiTest extends ExecutionApiTestSupport {
             """;
         var entries = new ModelsDevCatalogParser(new ModelsDevPriceMapper()).read(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
         when(priceCatalog.fetch(anyString())).thenReturn(entries);
+        String cnyBody = """
+            {"vendors":[{"id":"deepseek","name":"DeepSeek","currency":"CNY"}],"models":[
+              {"id":"deepseek-flash","name":"DeepSeek Flash","vendorId":"deepseek","modality":["text"],
+                "priceCurrency":"CNY","inputPrice":2,"outputPrice":8,"cachedInputPrice":0.04}]}
+            """;
+        var cnyEntries = new LlmAbacusCatalogParser().read(new ByteArrayInputStream(cnyBody.getBytes(StandardCharsets.UTF_8)));
+        when(cnyPriceCatalog.fetch(anyString())).thenReturn(cnyEntries);
         var suggested = data(mvc.perform(get(path + "/catalog").param("suggested", "true").cookie(cookie))
             .andExpect(status().isOk()).andReturn());
         assertThat(suggested.path("items")).isEmpty();
-        var found = data(mvc.perform(get(path + "/catalog").param("query", "deepsek flas").cookie(cookie))
+        var mixed = data(mvc.perform(get(path + "/catalog").param("query", "deepsek flas").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(mixed.path("items")).hasSize(2);
+        assertThat(json.convertValue(mixed.path("currencies"), String[].class)).containsExactlyInAnyOrder("CNY", "USD");
+        assertThat(mixed.path("items").findValuesAsText("sourceId")).containsExactlyInAnyOrder("llmabacus", "models_dev");
+        var cny = data(mvc.perform(get(path + "/catalog").param("currency", "CNY").cookie(cookie))
+            .andExpect(status().isOk()).andReturn());
+        assertThat(cny.path("items")).hasSize(1);
+        assertThat(cny.at("/items/0/configuration/currency").asText()).isEqualTo("CNY");
+        assertThat(cny.at("/items/0/providerId").asText()).isEqualTo("llmabacus:deepseek");
+        var found = data(mvc.perform(get(path + "/catalog").param("query", "deepsek flas").param("currency", "USD").cookie(cookie))
             .andExpect(status().isOk()).andReturn());
         assertThat(found.path("items")).hasSize(1);
         assertThat(found.at("/providers/0/id").asText()).isEqualTo("deepseek");
+        assertThat(found.at("/items/0/configuration/currency").asText()).isEqualTo("USD");
         var filtered = data(mvc.perform(get(path + "/catalog").param("provider", "another-provider").cookie(cookie))
             .andExpect(status().isOk()).andReturn());
         assertThat(filtered.path("items")).isEmpty();
