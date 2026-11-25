@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {completedManifest, hasNewerCompletedVersion, imageKinds, isNewerVersion, publicationPlan, publishCommunityImages} from "./community-publication.mjs";
+import {groupPlatformImages, imageMatrix, platformImageDigest, verifyPlatformIndex} from "./community-platforms.mjs";
 
 function fixture() {
   const parameters = {source: {version: "1.2.3", commit: "a".repeat(40), dirty: false},
@@ -8,7 +9,9 @@ function fixture() {
     release: {id: 2, tag_name: "v1.2.3", draft: false, prerelease: false}, publish: true, runId: "123"};
   const plan = publicationPlan(parameters);
   const records = imageKinds.map((kind, index) => ({kind, version: plan.version, commit: plan.commit,
-    image: plan.targets[kind], digest: `sha256:${String(index + 1).repeat(64)}`, extra: "不得公开的附加资料"}));
+    image: plan.targets[kind], digest: `sha256:${String(index + 1).repeat(64)}`,
+    platforms: {"linux/amd64": `sha256:${String(index + 1).repeat(64)}`, "linux/arm64": `sha256:${String(index + 2).repeat(64)}`},
+    extra: "不得公开的附加资料"}));
   const images = new Map(records.map((record) => [
     `${record.image.replace(/:[^:]+$/, "")}@${record.digest}`, record.digest]));
   const writes = [];
@@ -128,4 +131,36 @@ test("更高版本尚未构建完成时不阻断当前版本，完整发布后�
   assert.equal(await hasNewerCompletedVersion("1.2.3", releases, async () => document), true);
   document.status = "incomplete";
   await assert.rejects(hasNewerCompletedVersion("1.2.3", releases, async () => document), /无法确认/);
+});
+
+test("两种架构全部通过才能合并，架构摘要和原生构建节点保持对应", () => {
+  const {plan, records} = fixture();
+  const matrix = imageMatrix(plan);
+  assert.equal(matrix.length, 10);
+  assert.ok(matrix.filter((entry) => entry.architecture === "arm64").every((entry) => entry.runner === "ubuntu-24.04-arm"));
+  const platforms = records.flatMap((record) => Object.entries(record.platforms).map(([platform, digest]) => ({
+    kind: record.kind, architecture: platform.split("/")[1], version: record.version,
+    commit: record.commit, image: record.image, digest,
+  })));
+  const groups = groupPlatformImages(plan, platforms);
+  assert.equal(groups.length, 5);
+  const descriptor = {manifests: Object.entries(groups[0].platforms).map(([platform, digest]) => ({
+    digest, platform: {os: "linux", architecture: platform.split("/")[1]},
+  }))};
+  verifyPlatformIndex(descriptor, groups[0].platforms);
+  assert.throws(() => groupPlatformImages(plan, platforms.slice(1)), /不完整/);
+  assert.throws(() => groupPlatformImages(plan, [...platforms.slice(0, 9), platforms[0]]), /不一致/);
+  assert.throws(() => verifyPlatformIndex({manifests: [descriptor.manifests[0], descriptor.manifests[0]]}, groups[0].platforms), /没有保留/);
+  assert.equal(platformImageDigest({manifests: [descriptor.manifests[1]]}, "arm64", records[0].digest), groups[0].platforms["linux/arm64"]);
+  assert.throws(() => platformImageDigest(descriptor, "arm64", records[0].digest), /未知内容/);
+});
+
+test("发布拒绝缺少架构的镜像和不属于当前版本的公共程序包", () => {
+  const {plan, records} = fixture();
+  const missing = structuredClone(records);
+  delete missing[0].platforms["linux/arm64"];
+  assert.throws(() => completedManifest(plan, missing), /处理器架构/);
+  const libraryArtifact = {name: "agenteam-1.2.3.jar", sha256: "f".repeat(64)};
+  assert.deepEqual(completedManifest({...plan, libraryArtifact}, records).community.artifacts.library, libraryArtifact);
+  assert.throws(() => completedManifest({...plan, libraryArtifact: {...libraryArtifact, name: "agenteam-1.2.4.jar"}}, records), /程序包/);
 });

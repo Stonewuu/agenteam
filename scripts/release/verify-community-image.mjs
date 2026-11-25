@@ -6,12 +6,14 @@ import {imageKinds} from "./community-publication.mjs";
 
 const kind = process.env.IMAGE_KIND;
 const reference = process.env.IMAGE_REFERENCE;
-if (!imageKinds.includes(kind) || !/^docker\.io\/stonewuu\/agenteam-[a-z-]+:build-\d+-\d+$/.test(reference ?? "")) {
+const architecture = process.env.IMAGE_ARCHITECTURE;
+if (!imageKinds.includes(kind) || !["amd64", "arm64"].includes(architecture)
+  || !/^docker\.io\/stonewuu\/agenteam-[a-z-]+:build-\d+-\d+-(amd64|arm64)$/.test(reference ?? "")) {
   throw new Error("只能检查本次社区候选镜像。");
 }
 const docker = (args) => execFileSync("docker", args, {encoding: "utf8", timeout: 120000, windowsHide: true});
 const metadata = JSON.parse(docker(["image", "inspect", reference]))[0];
-assert.equal(metadata.Architecture, "amd64");
+assert.equal(metadata.Architecture, architecture);
 assert.equal(metadata.Os, "linux");
 assert.equal(metadata.Config.Labels["org.opencontainers.image.revision"], process.env.RELEASE_COMMIT);
 assert.equal(metadata.Config.Labels["org.opencontainers.image.version"], process.env.RELEASE_VERSION);

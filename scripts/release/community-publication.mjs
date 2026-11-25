@@ -17,7 +17,8 @@ export function publicationPlan({source, repository, release, publish, runId}) {
   }
   return {version: source.version, commit: source.commit, repository: repository.full_name,
     repositoryId: repository.id, releaseId: publish ? release.id : null, publish,
-    batchId: `${source.version}-github-${runId}`, targets: communityTargets(source.version)};
+    batchId: `${source.version}-github-${runId}`, targets: communityTargets(source.version),
+    platforms: ["linux/amd64", "linux/arm64"]};
 }
 
 export function completedManifest(plan, records) {
@@ -31,10 +32,22 @@ export function completedManifest(plan, records) {
       || record.image !== plan.targets[kind] || !digestPattern.test(record.digest ?? "")) {
       throw new Error("镜像结果的版本、提交、目标或内容摘要不一致。");
     }
-    images[kind] = {image: record.image, digest: record.digest};
+    if (plan.platforms && (!isDeepStrictEqual(Object.keys(record.platforms ?? {}).sort(), [...plan.platforms].sort())
+      || Object.values(record.platforms).some((digest) => !digestPattern.test(digest)))) {
+      throw new Error("正式镜像缺少已经验证的处理器架构。");
+    }
+    images[kind] = {image: record.image, digest: record.digest,
+      ...plan.platforms ? {platforms: Object.fromEntries(plan.platforms.map((platform) => [platform, record.platforms[platform]]))} : {}};
+  }
+  const artifacts = plan.libraryArtifact ? {library: plan.libraryArtifact} : undefined;
+  if (artifacts && (artifacts.library.name !== `agenteam-${plan.version}.jar`
+    || !/^[a-f0-9]{64}$/.test(artifacts.library.sha256 ?? "")
+    || Object.keys(artifacts.library).sort().join() !== "name,sha256")) {
+    throw new Error("公共程序包记录与当前版本不一致。");
   }
   return {formatVersion: 1, status: "complete", version: plan.version, batchId: plan.batchId,
-    community: {repository: plan.repository, repositoryId: plan.repositoryId, commit: plan.commit, images}};
+    community: {repository: plan.repository, repositoryId: plan.repositoryId, commit: plan.commit, images,
+      ...artifacts ? {artifacts} : {}}};
 }
 
 export function isNewerVersion(left, right) {

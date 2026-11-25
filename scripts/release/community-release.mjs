@@ -1,10 +1,12 @@
 import {execFileSync} from "node:child_process";
+import {createHash} from "node:crypto";
 import {appendFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {isDeepStrictEqual} from "node:util";
 import {readCommunitySource} from "./community-backend.mjs";
 import {hasNewerCompletedVersion, imageKinds, publicationPlan, publishCommunityImages} from "./community-publication.mjs";
 import {publicImageDigest} from "./community-registry.mjs";
+import {groupPlatformImages, imageMatrix, imagePlatforms, platformImageDigest, verifyPlatformIndex} from "./community-platforms.mjs";
 
 const output = resolve(".runtime/release");
 mkdirSync(output, {recursive: true});
@@ -34,12 +36,7 @@ if (command === "plan") {
   const plan = publicationPlan({source, repository: github("repos/Stonewuu/agenteam"),
     release, publish, runId: process.env.GITHUB_RUN_ID});
   save("plan.json", plan);
-  const matrix = imageKinds.map((name) => ({
-    kind: name, directory: name === "executor" ? "backend" : name,
-    file: name === "deployment" ? "registry/Dockerfile" : "Dockerfile",
-    target: name === "executor" ? "sandbox-server" : ["frontend", "backend"].includes(name) ? "application" : "",
-    image: plan.targets[name].replace(/:[^:]+$/, ""),
-  }));
+  const matrix = imageMatrix(plan);
   for (const [name, value] of Object.entries({version: plan.version, commit: plan.commit,
     publish: String(publish), matrix: JSON.stringify({include: matrix})})) {
     appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
@@ -54,16 +51,51 @@ if (command === "plan") {
   const names = {backend: "backend", frontend: "frontend", executor: "sandbox-server",
     office: "sandbox-office", deployment: "deployment"};
   const repository = `docker.io/stonewuu/agenteam-${names[kind]}`;
-  const candidate = `${repository}:build-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`;
-  const digest = await publicImageDigest(candidate);
-  if (!digest) {
+  const architecture = process.env.IMAGE_ARCHITECTURE;
+  if (!imagePlatforms.some((platform) => platform.architecture === architecture)) {
+    throw new Error("镜像记录缺少有效的处理器架构。");
+  }
+  const candidate = `${repository}:build-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}-${architecture}`;
+  const publishedDigest = await publicImageDigest(candidate);
+  if (!publishedDigest) {
     throw new Error("候选镜像没有推送成功。");
   }
-  save(`${kind}.json`, {kind, version: source.version, commit: source.commit,
+  const digest = platformImageDigest(JSON.parse(execute("docker", ["buildx", "imagetools", "inspect", "--raw", candidate])),
+    architecture, publishedDigest);
+  save(`${kind}-${architecture}.json`, {kind, architecture, version: source.version, commit: source.commit,
     image: `${repository}:${source.version}`, digest});
   console.log(`${kind} 候选镜像已推送并可公开读取。`);
+} else if (command === "combine") {
+  const plan = JSON.parse(readFileSync(resolve(output, "plan.json"), "utf8"));
+  const records = readdirSync(resolve(output, "platform-images")).filter((name) => name.endsWith(".json"))
+    .map((name) => JSON.parse(readFileSync(resolve(output, "platform-images", name), "utf8")));
+  mkdirSync(resolve(output, "combined"), {recursive: true});
+  for (const group of groupPlatformImages(plan, records)) {
+    const repository = group.image.replace(/:[^:]+$/, "");
+    const candidate = `${repository}:build-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`;
+    execute("docker", ["buildx", "imagetools", "create", "--tag", candidate,
+      ...Object.values(group.platforms).map((digest) => `${repository}@${digest}`)]);
+    const digest = await publicImageDigest(candidate);
+    if (!digest) {
+      throw new Error("多架构候选镜像未能公开读取。");
+    }
+    verifyPlatformIndex(JSON.parse(execute("docker", ["buildx", "imagetools", "inspect", "--raw", `${repository}@${digest}`])), group.platforms);
+    save(`combined/${group.kind}.json`, {...group, digest});
+  }
+  console.log("Both image architectures verified and combined.");
 } else if (command === "publish") {
   const plan = JSON.parse(readFileSync(resolve(output, "plan.json"), "utf8"));
+  const build = JSON.parse(readFileSync(resolve(".build/backend/build-inputs.json"), "utf8"));
+  if (build.version !== plan.version || build.communityCommit !== plan.commit || build.status !== "complete"
+    || !build.release || !build.testsExecuted || build.artifacts?.community?.file !== `agenteam-${plan.version}.jar`) {
+    throw new Error("公共程序包不是当前提交通过完整验证的产物。");
+  }
+  const libraryPath = resolve(".build/backend/artifacts", build.artifacts.community.file);
+  const libraryBytes = readFileSync(libraryPath);
+  if (createHash("sha256").update(libraryBytes).digest("hex") !== build.artifacts.community.sha256) {
+    throw new Error("公共程序包内容已经变化。");
+  }
+  plan.libraryArtifact = {name: build.artifacts.community.file, sha256: build.artifacts.community.sha256};
   const records = readdirSync(resolve(output, "images"))
     .filter((name) => name.endsWith(".json"))
     .map((name) => JSON.parse(readFileSync(resolve(output, "images", name), "utf8")));
@@ -110,6 +142,19 @@ if (command === "plan") {
         throw new Error("正式清单发生变化，不能覆盖。");
       }
       if (!existing) {
+        const release = getRelease();
+        const assets = release.assets.filter((asset) => asset.name === plan.libraryArtifact.name);
+        if (assets.length > 1) {
+          throw new Error("公共程序包附件重复。");
+        }
+        if (!assets.length) {
+          execute("gh", ["release", "upload", `v${plan.version}`, libraryPath, "--repo", "Stonewuu/agenteam"]);
+        } else {
+          const response = await fetch(assets[0].browser_download_url, {signal: AbortSignal.timeout(30000)});
+          if (!response.ok || createHash("sha256").update(Buffer.from(await response.arrayBuffer())).digest("hex") !== plan.libraryArtifact.sha256) {
+            throw new Error("已有公共程序包附件内容不同，不能覆盖。");
+          }
+        }
         save("release-batch.json", document);
         execute("gh", ["release", "upload", `v${plan.version}`, resolve(output, "release-batch.json"),
           "--repo", "Stonewuu/agenteam"]);
@@ -129,5 +174,5 @@ if (command === "plan") {
   console.log(result.latest === "complete" ? "五类正式镜像和 latest 均已确认。"
     : "五类正式镜像已确认；已有更高正式版本，latest 保持原值。");
 } else {
-  throw new Error("请指定 plan、record 或 publish。");
+  throw new Error("请指定 plan、record、combine 或 publish。");
 }
